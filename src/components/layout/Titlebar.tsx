@@ -1,0 +1,264 @@
+// src/components/layout/Titlebar.tsx
+// Stellar — カスタムタイトルバー
+// Tauri の decorations: false に対応したドラッグ可能なタイトルバー
+// ウィンドウ操作ボタン（最小化・最大化・閉じる）を含む
+
+import type React from "react";
+import { useCallback } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { useThemeStore } from "../../stores/useThemeStore";
+import { useUIStore } from "../../stores/useUIStore";
+
+export const Titlebar: React.FC = () => {
+  const cycleTheme = useThemeStore((s) => s.cycleTheme);
+  const toggleSearchModal = useUIStore((s) => s.toggleSearchModal);
+  const appWindow = getCurrentWindow();
+
+  const handleMinimize = useCallback(() => {
+    void appWindow.minimize();
+  }, [appWindow]);
+
+  const handleMaximize = useCallback(() => {
+    void appWindow.toggleMaximize();
+  }, [appWindow]);
+
+  const handleClose = useCallback(() => {
+    void appWindow.close();
+  }, [appWindow]);
+
+  return (
+    <header
+      data-tauri-drag-region
+      className="flex items-center justify-between shrink-0 select-none"
+      style={{
+        height: "var(--titlebar-height)",
+        backgroundColor: "var(--color-bg-titlebar)",
+        borderBottom: "1px solid var(--color-border-secondary)",
+        boxShadow: "var(--shadow-titlebar)",
+        zIndex: "var(--z-titlebar)",
+        paddingLeft: "var(--space-4)",
+        paddingRight: "var(--space-2)",
+      }}
+    >
+      {/* 左側: アプリロゴ & タイトル */}
+      <div className="flex items-center gap-2" data-tauri-drag-region>
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ color: "var(--color-accent-primary)" }}
+        >
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+        </svg>
+        <span
+          className="text-sm font-semibold"
+          style={{ color: "var(--color-text-primary)" }}
+          data-tauri-drag-region
+        >
+          Stellar
+        </span>
+      </div>
+
+      {/* 中央: 検索バー（クリックで検索モーダルを開く） */}
+      <button
+        onClick={toggleSearchModal}
+        className="flex items-center gap-2 px-3 py-1 text-xs"
+        style={{
+          backgroundColor: "var(--color-bg-tertiary)",
+          color: "var(--color-text-tertiary)",
+          borderRadius: "var(--radius-input)",
+          border: "1px solid var(--color-border-secondary)",
+          minWidth: "240px",
+          transition: "all var(--transition-fast)",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = "var(--color-border-focus)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = "var(--color-border-secondary)";
+        }}
+      >
+        {/* 検索アイコン */}
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <span>検索...</span>
+        <kbd
+          className="ml-auto text-xs px-1 py-0.5"
+          style={{
+            backgroundColor: "var(--color-bg-hover)",
+            borderRadius: "4px",
+            color: "var(--color-text-tertiary)",
+            fontSize: "10px",
+          }}
+        >
+          Ctrl+K
+        </kbd>
+      </button>
+
+      {/* 右側: テーマ切替 & ウィンドウ操作ボタン */}
+      <div className="flex items-center">
+        {/* テーマ切替ボタン */}
+        <button
+          onClick={cycleTheme}
+          className="flex items-center justify-center w-8 h-8"
+          style={{
+            borderRadius: "var(--radius-button)",
+            color: "var(--color-text-secondary)",
+            transition: "all var(--transition-fast)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent";
+          }}
+          title="テーマを切り替え"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+        </button>
+
+        {/* セパレーター */}
+        <div
+          className="w-px h-4 mx-1"
+          style={{ backgroundColor: "var(--color-border-secondary)" }}
+        />
+
+        {/* 最小化ボタン */}
+        <button
+          onClick={handleMinimize}
+          className="flex items-center justify-center w-8 h-8"
+          style={{
+            borderRadius: "var(--radius-button)",
+            color: "var(--color-text-secondary)",
+            transition: "all var(--transition-fast)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent";
+          }}
+          title="最小化"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12">
+            <rect
+              x="2"
+              y="5.5"
+              width="8"
+              height="1"
+              fill="currentColor"
+              rx="0.5"
+            />
+          </svg>
+        </button>
+
+        {/* 最大化ボタン */}
+        <button
+          onClick={handleMaximize}
+          className="flex items-center justify-center w-8 h-8"
+          style={{
+            borderRadius: "var(--radius-button)",
+            color: "var(--color-text-secondary)",
+            transition: "all var(--transition-fast)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent";
+          }}
+          title="最大化"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12">
+            <rect
+              x="2"
+              y="2"
+              width="8"
+              height="8"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1"
+              rx="1"
+            />
+          </svg>
+        </button>
+
+        {/* 閉じるボタン */}
+        <button
+          onClick={handleClose}
+          className="flex items-center justify-center w-8 h-8"
+          style={{
+            borderRadius: "var(--radius-button)",
+            color: "var(--color-text-secondary)",
+            transition: "all var(--transition-fast)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "var(--color-accent-danger)";
+            e.currentTarget.style.color = "var(--color-text-inverse)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent";
+            e.currentTarget.style.color = "var(--color-text-secondary)";
+          }}
+          title="閉じる"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12">
+            <line
+              x1="3"
+              y1="3"
+              x2="9"
+              y2="9"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+            />
+            <line
+              x1="9"
+              y1="3"
+              x2="3"
+              y2="9"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+      </div>
+    </header>
+  );
+};

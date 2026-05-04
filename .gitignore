@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Rust build
+src-tauri/target/
+
+# Wrangler local state
+.wrangler/
+
+# Environment variables
+.env
+.env.local
+.dev.vars
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tauri debug
+src-tauri/gen/
+
+# PM2
+.pm2/
+pids/
+logs/
+*.log
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Backup files
+*.backup
+*.bak
+*.tar.gz
+*.zip

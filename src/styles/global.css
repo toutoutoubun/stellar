@@ -1,0 +1,344 @@
+/* src/styles/global.css */
+/* Stellar — グローバルスタイル */
+/* CSS リセット / 日本語フォントスタック / スクロールバー / 禁則処理 / ::selection */
+
+@import "tailwindcss";
+
+/* ============================================================
+   1. CSS リセット
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  /* テキストサイズの自動調整を防止 */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* スムーズスクロール */
+  scroll-behavior: smooth;
+  /* タブサイズ */
+  tab-size: 4;
+}
+
+body {
+  min-height: 100vh;
+  line-height: var(--line-height-normal);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  /* アンチエイリアス（macOS / Linux で美しいレンダリング） */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  /* Tauri カスタムタイトルバー用: テキスト選択を制限 */
+  user-select: none;
+  /* オーバースクロール防止 */
+  overscroll-behavior: none;
+}
+
+/* コンテンツ領域はテキスト選択を許可 */
+[data-selectable="true"],
+.selectable,
+input,
+textarea,
+[contenteditable="true"],
+pre,
+code {
+  user-select: text;
+}
+
+/* リスト・リンク・画像のリセット */
+ul,
+ol {
+  list-style: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img,
+svg,
+video,
+canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* フォームのリセット */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  outline: none;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* テーブルのリセット */
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+/* ============================================================
+   2. 日本語フォントスタック設定
+   ============================================================ */
+
+:root {
+  /* 英数フォント → 日本語フォント の順で指定 */
+  --font-family-sans: "Inter", "Hiragino Kaku Gothic ProN", "Yu Gothic",
+    "Meiryo", "Noto Sans JP", sans-serif;
+  --font-family-mono: "JetBrains Mono", "Fira Code", "Source Han Code JP",
+    "Noto Sans Mono CJK JP", monospace;
+}
+
+body {
+  font-family: var(--font-family-sans);
+}
+
+code,
+pre,
+kbd,
+samp,
+.font-mono {
+  font-family: var(--font-family-mono);
+}
+
+/* ============================================================
+   3. スクロールバーのカスタムスタイル（テーマ色に連動）
+   ============================================================ */
+
+/* Webkit ベース（Chrome / Safari / Tauri WebView） */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-scrollbar-thumb);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  transition: background-color var(--transition-fast);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-scrollbar-thumb-hover);
+}
+
+/* 非アクティブ時にスクロールバーを薄くする */
+::-webkit-scrollbar-thumb:window-inactive {
+  background-color: var(--color-scrollbar-thumb);
+  opacity: 0.5;
+}
+
+/* コーナー（縦横スクロールバーの交差点） */
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-scrollbar-thumb) var(--color-scrollbar-track);
+}
+
+/* ============================================================
+   4. ::selection のカスタムスタイル
+   ============================================================ */
+
+::selection {
+  background-color: var(--color-bg-selection);
+  color: inherit;
+}
+
+::-moz-selection {
+  background-color: var(--color-bg-selection);
+  color: inherit;
+}
+
+/* ============================================================
+   5. 禁則処理（日本語テキスト）
+   ============================================================ */
+
+body {
+  /* 日本語の禁則処理: 行頭禁則・行末禁則を適用 */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  /* 追加の禁則処理（句読点のぶら下げ等） */
+  hanging-punctuation: allow-end;
+}
+
+/* 長いURL・コードパス等はワードブレークを許可 */
+a[href],
+code,
+pre {
+  word-break: break-all;
+}
+
+/* ============================================================
+   6. Tauri カスタムタイトルバー用スタイル
+   ============================================================ */
+
+/* タイトルバーのドラッグ領域 */
+[data-tauri-drag-region] {
+  -webkit-app-region: drag;
+}
+
+/* タイトルバー上のボタンはドラッグ対象外 */
+[data-tauri-drag-region] button,
+[data-tauri-drag-region] a,
+[data-tauri-drag-region] input {
+  -webkit-app-region: no-drag;
+}
+
+/* ============================================================
+   7. アニメーション基盤
+   ============================================================ */
+
+/* transform・opacity のみ使用し、layout プロパティの変更は禁止 */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ユーティリティクラス */
+.animate-fade-in {
+  animation: fade-in var(--transition-normal) both;
+}
+
+.animate-scale-in {
+  animation: scale-in var(--transition-normal) both;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right var(--transition-normal) both;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left var(--transition-normal) both;
+}
+
+/* ============================================================
+   8. フォーカスリング（アクセシビリティ）
+   ============================================================ */
+
+/* キーボード操作時のフォーカスリング */
+:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* マウス操作時はフォーカスリングを非表示 */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ============================================================
+   9. ユーティリティ
+   ============================================================ */
+
+/* テキストの省略表示 */
+.truncate-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 複数行テキストの省略 */
+.truncate-multiline {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* スクロール可能領域 */
+.scrollable {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* 視覚的に非表示だがスクリーンリーダーには読み上げさせる */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

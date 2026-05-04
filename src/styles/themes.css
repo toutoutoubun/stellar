@@ -1,0 +1,370 @@
+/* src/styles/themes.css */
+/* Stellar — CSS テーマシステム */
+/* 4テーマ: white / ivory / dark-blue / black */
+/* 切り替え: document.documentElement.setAttribute('data-theme', theme) */
+
+/* ============================================================
+   White テーマ — 清潔感のある純白ベース
+   ============================================================ */
+[data-theme="white"] {
+  /* ── 背景色 ── */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f8f9fa;
+  --color-bg-tertiary: #f0f1f3;
+  --color-bg-hover: #e9ecef;
+  --color-bg-active: #dee2e6;
+  --color-bg-sidebar: #f8f9fa;
+  --color-bg-titlebar: #ffffff;
+  --color-bg-modal: #ffffff;
+  --color-bg-card: #ffffff;
+  --color-bg-input: #ffffff;
+  --color-bg-tooltip: #212529;
+  --color-bg-code: #f0f1f3;
+  --color-bg-selection: rgba(66, 133, 244, 0.2);
+
+  /* ── テキスト色 ── */
+  --color-text-primary: #1a1a2e;
+  --color-text-secondary: #495057;
+  --color-text-tertiary: #868e96;
+  --color-text-disabled: #adb5bd;
+  --color-text-inverse: #ffffff;
+  --color-text-link: #4285f4;
+  --color-text-on-tooltip: #ffffff;
+
+  /* ── ボーダー色 ── */
+  --color-border-primary: #dee2e6;
+  --color-border-secondary: #e9ecef;
+  --color-border-focus: #4285f4;
+  --color-border-error: #e03131;
+
+  /* ── アクセントカラー ── */
+  --color-accent-primary: #4285f4;
+  --color-accent-primary-hover: #3b78db;
+  --color-accent-primary-active: #2f6ac4;
+  --color-accent-secondary: #34a853;
+  --color-accent-warning: #fbbc04;
+  --color-accent-danger: #e03131;
+  --color-accent-info: #4cc9f0;
+
+  /* ── ハイライトカラー ── */
+  --color-highlight-yellow: rgba(251, 188, 4, 0.35);
+  --color-highlight-blue: rgba(66, 133, 244, 0.30);
+  --color-highlight-green: rgba(52, 168, 83, 0.30);
+  --color-highlight-pink: rgba(234, 67, 149, 0.30);
+
+  /* ── シャドウ ── */
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.08);
+  --shadow-card-hover: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.16);
+  --shadow-dropdown: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-tooltip: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --shadow-titlebar: 0 1px 0 rgba(0, 0, 0, 0.06);
+
+  /* ── スクロールバー ── */
+  --color-scrollbar-track: transparent;
+  --color-scrollbar-thumb: #ced4da;
+  --color-scrollbar-thumb-hover: #adb5bd;
+
+  /* ── グラフビュー ── */
+  --color-graph-node-paper: #4285f4;
+  --color-graph-node-note: #34a853;
+  --color-graph-edge: #dee2e6;
+  --color-graph-label: #495057;
+
+  /* ── タグカラー ── */
+  --color-tag-bg: #e8f0fe;
+  --color-tag-text: #1967d2;
+  --color-tag-border: #c6dafc;
+}
+
+/* ============================================================
+   Ivory テーマ — 温かみのあるアイボリーベース
+   ============================================================ */
+[data-theme="ivory"] {
+  /* ── 背景色 ── */
+  --color-bg-primary: #faf8f5;
+  --color-bg-secondary: #f5f0eb;
+  --color-bg-tertiary: #ece5dc;
+  --color-bg-hover: #e6ddd2;
+  --color-bg-active: #ddd2c4;
+  --color-bg-sidebar: #f5f0eb;
+  --color-bg-titlebar: #faf8f5;
+  --color-bg-modal: #faf8f5;
+  --color-bg-card: #faf8f5;
+  --color-bg-input: #ffffff;
+  --color-bg-tooltip: #3d3329;
+  --color-bg-code: #f0e9df;
+  --color-bg-selection: rgba(180, 120, 60, 0.2);
+
+  /* ── テキスト色 ── */
+  --color-text-primary: #2c2416;
+  --color-text-secondary: #5c4f3d;
+  --color-text-tertiary: #8a7d6b;
+  --color-text-disabled: #b8ad9e;
+  --color-text-inverse: #faf8f5;
+  --color-text-link: #b4783c;
+  --color-text-on-tooltip: #faf8f5;
+
+  /* ── ボーダー色 ── */
+  --color-border-primary: #ddd2c4;
+  --color-border-secondary: #e6ddd2;
+  --color-border-focus: #b4783c;
+  --color-border-error: #c9302c;
+
+  /* ── アクセントカラー ── */
+  --color-accent-primary: #b4783c;
+  --color-accent-primary-hover: #a06930;
+  --color-accent-primary-active: #8c5b26;
+  --color-accent-secondary: #6b8e50;
+  --color-accent-warning: #d4a843;
+  --color-accent-danger: #c9302c;
+  --color-accent-info: #5a9bb5;
+
+  /* ── ハイライトカラー ── */
+  --color-highlight-yellow: rgba(212, 168, 67, 0.35);
+  --color-highlight-blue: rgba(90, 155, 181, 0.30);
+  --color-highlight-green: rgba(107, 142, 80, 0.30);
+  --color-highlight-pink: rgba(200, 100, 130, 0.30);
+
+  /* ── シャドウ ── */
+  --shadow-card: 0 4px 24px rgba(44, 36, 22, 0.08);
+  --shadow-card-hover: 0 8px 32px rgba(44, 36, 22, 0.12);
+  --shadow-modal: 0 24px 64px rgba(44, 36, 22, 0.16);
+  --shadow-dropdown: 0 8px 24px rgba(44, 36, 22, 0.12);
+  --shadow-tooltip: 0 4px 12px rgba(44, 36, 22, 0.15);
+  --shadow-titlebar: 0 1px 0 rgba(44, 36, 22, 0.06);
+
+  /* ── スクロールバー ── */
+  --color-scrollbar-track: transparent;
+  --color-scrollbar-thumb: #ccc1b2;
+  --color-scrollbar-thumb-hover: #b8ad9e;
+
+  /* ── グラフビュー ── */
+  --color-graph-node-paper: #b4783c;
+  --color-graph-node-note: #6b8e50;
+  --color-graph-edge: #ddd2c4;
+  --color-graph-label: #5c4f3d;
+
+  /* ── タグカラー ── */
+  --color-tag-bg: #f0e4d4;
+  --color-tag-text: #8c5b26;
+  --color-tag-border: #ddd2c4;
+}
+
+/* ============================================================
+   Dark Blue テーマ — 落ち着いたダークブルー
+   ============================================================ */
+[data-theme="dark-blue"] {
+  /* ── 背景色 ── */
+  --color-bg-primary: #1a1f2e;
+  --color-bg-secondary: #161b28;
+  --color-bg-tertiary: #232a3b;
+  --color-bg-hover: #2a3348;
+  --color-bg-active: #323d55;
+  --color-bg-sidebar: #161b28;
+  --color-bg-titlebar: #141824;
+  --color-bg-modal: #1e2535;
+  --color-bg-card: #1e2535;
+  --color-bg-input: #232a3b;
+  --color-bg-tooltip: #e8eaf0;
+  --color-bg-code: #232a3b;
+  --color-bg-selection: rgba(100, 160, 255, 0.25);
+
+  /* ── テキスト色 ── */
+  --color-text-primary: #e0e4ec;
+  --color-text-secondary: #a8b0c0;
+  --color-text-tertiary: #6b7690;
+  --color-text-disabled: #4a5468;
+  --color-text-inverse: #1a1f2e;
+  --color-text-link: #64a0ff;
+  --color-text-on-tooltip: #1a1f2e;
+
+  /* ── ボーダー色 ── */
+  --color-border-primary: #2a3348;
+  --color-border-secondary: #232a3b;
+  --color-border-focus: #64a0ff;
+  --color-border-error: #ff6b6b;
+
+  /* ── アクセントカラー ── */
+  --color-accent-primary: #64a0ff;
+  --color-accent-primary-hover: #5490ee;
+  --color-accent-primary-active: #4480dd;
+  --color-accent-secondary: #56c98a;
+  --color-accent-warning: #f0c040;
+  --color-accent-danger: #ff6b6b;
+  --color-accent-info: #56c9e0;
+
+  /* ── ハイライトカラー ── */
+  --color-highlight-yellow: rgba(240, 192, 64, 0.35);
+  --color-highlight-blue: rgba(100, 160, 255, 0.30);
+  --color-highlight-green: rgba(86, 201, 138, 0.30);
+  --color-highlight-pink: rgba(255, 107, 156, 0.30);
+
+  /* ── シャドウ ── */
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.25);
+  --shadow-card-hover: 0 8px 32px rgba(0, 0, 0, 0.35);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.45);
+  --shadow-dropdown: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-tooltip: 0 4px 12px rgba(0, 0, 0, 0.30);
+  --shadow-titlebar: 0 1px 0 rgba(0, 0, 0, 0.20);
+
+  /* ── スクロールバー ── */
+  --color-scrollbar-track: transparent;
+  --color-scrollbar-thumb: #3a4560;
+  --color-scrollbar-thumb-hover: #4a5878;
+
+  /* ── グラフビュー ── */
+  --color-graph-node-paper: #64a0ff;
+  --color-graph-node-note: #56c98a;
+  --color-graph-edge: #2a3348;
+  --color-graph-label: #a8b0c0;
+
+  /* ── タグカラー ── */
+  --color-tag-bg: #253050;
+  --color-tag-text: #7db4ff;
+  --color-tag-border: #2a3a60;
+}
+
+/* ============================================================
+   Black テーマ — 真の黒ベース（OLED対応）
+   ============================================================ */
+[data-theme="black"] {
+  /* ── 背景色 ── */
+  --color-bg-primary: #0a0a0a;
+  --color-bg-secondary: #111111;
+  --color-bg-tertiary: #1a1a1a;
+  --color-bg-hover: #222222;
+  --color-bg-active: #2a2a2a;
+  --color-bg-sidebar: #0e0e0e;
+  --color-bg-titlebar: #080808;
+  --color-bg-modal: #141414;
+  --color-bg-card: #141414;
+  --color-bg-input: #1a1a1a;
+  --color-bg-tooltip: #e8e8e8;
+  --color-bg-code: #1a1a1a;
+  --color-bg-selection: rgba(160, 140, 255, 0.25);
+
+  /* ── テキスト色 ── */
+  --color-text-primary: #e8e8e8;
+  --color-text-secondary: #a0a0a0;
+  --color-text-tertiary: #666666;
+  --color-text-disabled: #444444;
+  --color-text-inverse: #0a0a0a;
+  --color-text-link: #a08cff;
+  --color-text-on-tooltip: #0a0a0a;
+
+  /* ── ボーダー色 ── */
+  --color-border-primary: #2a2a2a;
+  --color-border-secondary: #1e1e1e;
+  --color-border-focus: #a08cff;
+  --color-border-error: #ff5555;
+
+  /* ── アクセントカラー ── */
+  --color-accent-primary: #a08cff;
+  --color-accent-primary-hover: #9078ee;
+  --color-accent-primary-active: #8068dd;
+  --color-accent-secondary: #66d9a0;
+  --color-accent-warning: #f0c040;
+  --color-accent-danger: #ff5555;
+  --color-accent-info: #55ccdd;
+
+  /* ── ハイライトカラー ── */
+  --color-highlight-yellow: rgba(240, 192, 64, 0.35);
+  --color-highlight-blue: rgba(160, 140, 255, 0.30);
+  --color-highlight-green: rgba(102, 217, 160, 0.30);
+  --color-highlight-pink: rgba(255, 100, 150, 0.30);
+
+  /* ── シャドウ ── */
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.50);
+  --shadow-card-hover: 0 8px 32px rgba(0, 0, 0, 0.60);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.70);
+  --shadow-dropdown: 0 8px 24px rgba(0, 0, 0, 0.55);
+  --shadow-tooltip: 0 4px 12px rgba(0, 0, 0, 0.50);
+  --shadow-titlebar: 0 1px 0 rgba(255, 255, 255, 0.04);
+
+  /* ── スクロールバー ── */
+  --color-scrollbar-track: transparent;
+  --color-scrollbar-thumb: #333333;
+  --color-scrollbar-thumb-hover: #444444;
+
+  /* ── グラフビュー ── */
+  --color-graph-node-paper: #a08cff;
+  --color-graph-node-note: #66d9a0;
+  --color-graph-edge: #2a2a2a;
+  --color-graph-label: #a0a0a0;
+
+  /* ── タグカラー ── */
+  --color-tag-bg: #1e1a30;
+  --color-tag-text: #b8a8ff;
+  --color-tag-border: #302850;
+}
+
+/* ============================================================
+   共通デザイントークン（テーマ非依存）
+   ============================================================ */
+:root {
+  /* ── 角丸 ── */
+  --radius-card: 16px;
+  --radius-button: 10px;
+  --radius-input: 10px;
+  --radius-modal: 20px;
+  --radius-tag: 999px;
+  --radius-tooltip: 8px;
+
+  /* ── スペーシング（4の倍数） ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ── フォントサイズ ── */
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-md: 15px;
+  --font-size-lg: 18px;
+  --font-size-xl: 22px;
+  --font-size-2xl: 28px;
+
+  /* ── 行の高さ ── */
+  --line-height-tight: 1.3;
+  --line-height-normal: 1.6;
+  --line-height-relaxed: 1.8;
+
+  /* ── フォントウェイト ── */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* ── アニメーション ── */
+  --transition-fast: 150ms ease-out;
+  --transition-normal: 200ms ease-out;
+  --transition-slow: 250ms ease-out;
+
+  /* ── z-index 階層 ── */
+  --z-base: 0;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal-overlay: 300;
+  --z-modal: 400;
+  --z-tooltip: 500;
+  --z-titlebar: 600;
+  --z-toast: 700;
+
+  /* ── サイドバー ── */
+  --sidebar-width: 260px;
+  --sidebar-width-collapsed: 56px;
+
+  /* ── タイトルバー ── */
+  --titlebar-height: 40px;
+
+  /* ── コンテキストパネル ── */
+  --context-panel-width: 320px;
+}
