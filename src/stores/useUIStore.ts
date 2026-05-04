@@ -38,6 +38,8 @@ interface UIState {
   toggleSearchModal: () => void;
   /** 検索モーダルを閉じる */
   closeSearchModal: () => void;
+  /** 設定ビューを開く */
+  openSettings: () => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -81,4 +83,10 @@ export const useUIStore = create<UIState>((set) => ({
     set((state) => ({ searchModalOpen: !state.searchModalOpen })),
 
   closeSearchModal: () => set({ searchModalOpen: false }),
+
+  openSettings: () =>
+    set({
+      mainPaneContent: { type: "settings" },
+      sidebarView: "settings",
+    }),
 }));

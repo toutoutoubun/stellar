@@ -17,6 +17,7 @@ const App: React.FC = () => {
   const theme = useThemeStore((s) => s.theme);
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
   const toggleSearchModal = useUIStore((s) => s.toggleSearchModal);
+  const openSettings = useUIStore((s) => s.openSettings);
 
   // テーマ変更時に data-theme 属性を更新
   useEffect(() => {
@@ -31,10 +32,15 @@ const App: React.FC = () => {
         e.preventDefault();
         toggleSearchModal();
       }
+      // Cmd+, / Ctrl+, → 設定を開く
+      if ((e.metaKey || e.ctrlKey) && e.key === ",") {
+        e.preventDefault();
+        openSettings();
+      }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [toggleSearchModal]);
+  }, [toggleSearchModal, openSettings]);
 
   return (
     <div

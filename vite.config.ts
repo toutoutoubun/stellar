@@ -45,5 +45,6 @@ export default defineConfig({
     minify: !process.env.TAURI_DEBUG ? "esbuild" : false,
     // ソースマップはデバッグ時のみ
     sourcemap: !!process.env.TAURI_DEBUG,
+    chunkSizeWarningLimit: 2000,
   },
 });

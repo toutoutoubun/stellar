@@ -232,7 +232,7 @@ export const THEME_LABELS: Record<Theme, string> = {
 // ============================================================
 
 /** サイドバーのナビゲーションビュー */
-export type SidebarView = 'library' | 'notes' | 'graph' | 'search';
+export type SidebarView = 'library' | 'notes' | 'graph' | 'search' | 'settings';
 
 /** メインペインに表示するコンテンツ種別 */
 export type MainPaneContent =
@@ -240,7 +240,8 @@ export type MainPaneContent =
   | { type: 'paper'; paperId: string }
   | { type: 'note'; noteId: string }
   | { type: 'graph' }
-  | { type: 'search' };
+  | { type: 'search' }
+  | { type: 'settings' };
 
 /** ソート方向 */
 export type SortDirection = 'asc' | 'desc';
@@ -371,6 +372,62 @@ export interface GraphNodeExtended extends GraphNode {
   fx?: number;
   fy?: number;
 }
+
+// ============================================================
+// 設定（Settings）
+// ============================================================
+
+/** 設定タブ種別 */
+export type SettingsTab = 'appearance' | 'data' | 'shortcuts' | 'citation';
+
+/** 外観設定 */
+export interface AppearanceSettings {
+  /** フォントサイズ (px) */
+  fontSize: number;
+  /** 行の高さ */
+  lineHeight: number;
+  /** エディタフォント */
+  editorFont: string;
+}
+
+/** 外観設定のデフォルト値 */
+export const DEFAULT_APPEARANCE_SETTINGS: AppearanceSettings = {
+  fontSize: 14,
+  lineHeight: 1.6,
+  editorFont: 'system-ui',
+};
+
+/** エディタフォント選択肢 */
+export const EDITOR_FONTS: { value: string; label: string }[] = [
+  { value: 'system-ui', label: 'システムフォント' },
+  { value: '"Noto Sans JP", sans-serif', label: 'Noto Sans JP' },
+  { value: '"Noto Serif JP", serif', label: 'Noto Serif JP' },
+  { value: '"Source Code Pro", monospace', label: 'Source Code Pro' },
+  { value: '"JetBrains Mono", monospace', label: 'JetBrains Mono' },
+  { value: '"IBM Plex Mono", monospace', label: 'IBM Plex Mono' },
+];
+
+/** データサマリー情報 */
+export interface DataSummary {
+  paperCount: number;
+  noteCount: number;
+  highlightCount: number;
+  diskUsage: string;
+  dataPath: string;
+}
+
+/** ショートカット定義 */
+export interface ShortcutEntry {
+  /** ショートカットキー表記 */
+  keys: string;
+  /** 説明 */
+  description: string;
+  /** カテゴリ */
+  category: string;
+}
+
+/** 日本語著者名順序 */
+export type AuthorNameOrder = 'surname-first' | 'given-first';
 
 // ============================================================
 // ユーティリティ型

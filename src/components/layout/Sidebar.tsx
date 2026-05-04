@@ -14,6 +14,8 @@ interface NavItem {
   view: SidebarView;
   label: string;
   icon: React.ReactNode;
+  /** 下部に配置するか */
+  bottom?: boolean;
 }
 
 /** ナビゲーションアイコン群（Lucide 風の SVG） */
@@ -58,6 +60,17 @@ const NAV_ITEMS: NavItem[] = [
       </svg>
     ),
   },
+  {
+    view: "settings",
+    label: "設定",
+    bottom: true,
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+      </svg>
+    ),
+  },
 ];
 
 export const Sidebar: React.FC = () => {
@@ -67,6 +80,8 @@ export const Sidebar: React.FC = () => {
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const openGraph = useUIStore((s) => s.openGraph);
 
+  const openSettings = useUIStore((s) => s.openSettings);
+
   const handleNavClick = useCallback(
     (view: SidebarView) => {
       setSidebarView(view);
@@ -74,8 +89,12 @@ export const Sidebar: React.FC = () => {
       if (view === "graph") {
         openGraph();
       }
+      // 設定ビューの場合はメインペインも切り替え
+      if (view === "settings") {
+        openSettings();
+      }
     },
-    [setSidebarView, openGraph]
+    [setSidebarView, openGraph, openSettings]
   );
 
   return (
@@ -95,7 +114,51 @@ export const Sidebar: React.FC = () => {
     >
       {/* ナビゲーションアイテム */}
       <nav className="flex flex-col gap-1 p-2 flex-1">
-        {NAV_ITEMS.map((item) => (
+        {/* 上部: メインナビ */}
+        {NAV_ITEMS.filter((item) => !item.bottom).map((item) => (
+          <button
+            key={item.view}
+            onClick={() => handleNavClick(item.view)}
+            className={clsx(
+              "flex items-center gap-3 px-3 py-2 text-sm font-medium",
+              "transition-all"
+            )}
+            style={{
+              borderRadius: "var(--radius-button)",
+              color:
+                sidebarView === item.view
+                  ? "var(--color-accent-primary)"
+                  : "var(--color-text-secondary)",
+              backgroundColor:
+                sidebarView === item.view
+                  ? "var(--color-bg-hover)"
+                  : "transparent",
+              justifyContent: sidebarCollapsed ? "center" : "flex-start",
+              transition: "all var(--transition-fast)",
+            }}
+            onMouseEnter={(e) => {
+              if (sidebarView !== item.view) {
+                e.currentTarget.style.backgroundColor =
+                  "var(--color-bg-hover)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (sidebarView !== item.view) {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }
+            }}
+            title={sidebarCollapsed ? item.label : undefined}
+          >
+            <span className="shrink-0">{item.icon}</span>
+            {!sidebarCollapsed && <span>{item.label}</span>}
+          </button>
+        ))}
+
+        {/* スペーサー */}
+        <div className="flex-1" />
+
+        {/* 下部: 設定ナビ */}
+        {NAV_ITEMS.filter((item) => item.bottom).map((item) => (
           <button
             key={item.view}
             onClick={() => handleNavClick(item.view)}

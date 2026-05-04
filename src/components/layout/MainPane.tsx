@@ -10,6 +10,7 @@ import { ReaderView } from "../reader/ReaderView";
 import { NoteEditor } from "../notes/NoteEditor";
 import { NoteList } from "../notes/NoteList";
 import { GraphView } from "../graph/GraphView";
+import { SettingsView } from "../settings/SettingsView";
 
 /** 空状態のウェルカム画面 */
 const EmptyState: React.FC = () => (
@@ -155,6 +156,8 @@ export const MainPane: React.FC = () => {
             <p className="text-sm">検索結果 — 実装予定</p>
           </div>
         );
+      case "settings":
+        return <SettingsView />;
       case "empty":
       default:
         return <EmptyState />;

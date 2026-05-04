@@ -300,6 +300,22 @@
 }
 
 /* ============================================================
+   テーマ遷移アニメーション
+   body[data-theme-transition] が付与された 300ms 間、
+   背景色・テキスト色・ボーダー色・box-shadow をスムーズに補間する
+   ============================================================ */
+[data-theme-transition],
+[data-theme-transition] *,
+[data-theme-transition] *::before,
+[data-theme-transition] *::after {
+  transition:
+    background-color 300ms ease,
+    color 300ms ease,
+    border-color 300ms ease,
+    box-shadow 300ms ease !important;
+}
+
+/* ============================================================
    共通デザイントークン（テーマ非依存）
    ============================================================ */
 :root {
