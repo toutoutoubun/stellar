@@ -162,13 +162,54 @@ export interface CreateLinkInput {
 // 検索（Search）
 // ============================================================
 
-/** 全文検索結果 */
+/** 検索タブ種別 */
+export type SearchTab = 'all' | 'paper' | 'note' | 'highlight';
+
+/** 全文検索結果（Rustバックエンドから返される個別アイテム） */
 export interface SearchResult {
   id: string;
   contentType: 'paper' | 'note';
   title: string;
   snippet: string;
   rank: number;
+}
+
+/** 検索結果アイテム（UI表示用拡張 — ハイライト含む） */
+export interface SearchResultItem {
+  id: string;
+  /** アイテム種別 */
+  itemType: 'paper' | 'note' | 'highlight';
+  /** 表示タイトル */
+  title: string;
+  /** スニペット（[[match]] 形式でヒット箇所を囲む） */
+  snippet: string;
+  /** 補助テキスト（著者·年 / 更新日 / ページ番号など） */
+  meta: string;
+  /** ハイライトカラー（highlight の場合のみ） */
+  highlightColor?: HighlightColor;
+  /** 関連する論文ID（highlight の場合） */
+  paperId?: string;
+  /** 関連するノートID（note の場合） */
+  noteId?: string;
+  /** 検索ランク */
+  rank: number;
+}
+
+/** グループ化された検索結果 */
+export interface GroupedSearchResults {
+  papers: SearchResultItem[];
+  notes: SearchResultItem[];
+  highlights: SearchResultItem[];
+  total: number;
+}
+
+/** 最近開いた項目（検索前の表示用） */
+export interface RecentItem {
+  id: string;
+  itemType: 'paper' | 'note';
+  title: string;
+  meta: string;
+  accessedAt: string;
 }
 
 // ============================================================
