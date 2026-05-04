@@ -1,0 +1,417 @@
+// src/components/graph/GraphView.tsx
+// Stellar — グラフビュー本体
+// 全画面キャンバス + 浮遊パネル（凡例 / フィルタ） + ノードポップアップ
+// ノートと論文のつながりを Force-Directed Graph として可視化する
+
+import type React from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import type { ForceGraphMethods } from "react-force-graph-2d";
+import { useGraphData } from "../../hooks/useGraphData";
+import { useUIStore } from "../../stores/useUIStore";
+import type { GraphNodeExtended, GraphLink } from "../../types";
+import { ForceGraph } from "./ForceGraph";
+import { GraphFilterPanel } from "./GraphFilterPanel";
+import { GraphLegendPanel } from "./GraphLegendPanel";
+import { GraphMiniMap } from "./GraphMiniMap";
+import { NodeDetailPopup } from "./NodeDetailPopup";
+
+export const GraphView: React.FC = () => {
+  // グラフデータフック
+  const {
+    filteredNodes,
+    filteredLinks,
+    isLoading,
+    error,
+    selectedNodeId,
+    setSelectedNodeId,
+    filters,
+    setFilters,
+    resetFilters,
+    refetch,
+    allTags,
+    rawData,
+  } = useGraphData();
+
+  // UI ストア
+  const openNote = useUIStore((s) => s.openNote);
+  const openPaper = useUIStore((s) => s.openPaper);
+
+  // ローカル状態
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const [hoveredNode, setHoveredNode] = useState<GraphNodeExtended | null>(
+    null,
+  );
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const graphMethodsRef = useRef<ForceGraphMethods<
+    GraphNodeExtended,
+    GraphLink
+  > | null>(null);
+
+  /** コンテナサイズの監視 */
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        setContainerSize({ width, height });
+      }
+    });
+
+    observer.observe(container);
+    // 初期サイズ設定
+    setContainerSize({
+      width: container.clientWidth,
+      height: container.clientHeight,
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  /** マウス位置の追跡（ポップアップ用） */
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (rect) {
+      setMousePos({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      });
+    }
+  }, []);
+
+  /** ノードクリック → 選択 */
+  const handleNodeClick = useCallback(
+    (node: GraphNodeExtended) => {
+      setSelectedNodeId(
+        selectedNodeId === node.id ? null : node.id,
+      );
+    },
+    [selectedNodeId, setSelectedNodeId],
+  );
+
+  /** ノードダブルクリック → 遷移 */
+  const handleNodeDoubleClick = useCallback(
+    (node: GraphNodeExtended) => {
+      if (node.type === "note") {
+        openNote(node.id);
+      } else {
+        openPaper(node.id);
+      }
+    },
+    [openNote, openPaper],
+  );
+
+  /** ノードホバー */
+  const handleNodeHover = useCallback(
+    (node: GraphNodeExtended | null) => {
+      setHoveredNode(node);
+    },
+    [],
+  );
+
+  /** 背景クリック → 選択解除 */
+  const handleBackgroundClick = useCallback(() => {
+    setSelectedNodeId(null);
+  }, [setSelectedNodeId]);
+
+  /** zoomToFit */
+  const handleZoomToFit = useCallback(() => {
+    graphMethodsRef.current?.zoomToFit(400, 60);
+  }, []);
+
+  /** ForceGraph ref 受け取り */
+  const handleGraphReady = useCallback(
+    (methods: ForceGraphMethods<GraphNodeExtended, GraphLink>) => {
+      graphMethodsRef.current = methods;
+    },
+    [],
+  );
+
+  /** ミニマップからグラフ中心を移動 */
+  const handleMiniMapCenterAt = useCallback(
+    (x: number, y: number) => {
+      graphMethodsRef.current?.centerAt(x, y, 400);
+    },
+    [],
+  );
+
+  /** キーボードショートカット */
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // ESC → 選択解除
+      if (e.key === "Escape") {
+        setSelectedNodeId(null);
+      }
+      // Ctrl/Cmd + 0 → 全体表示
+      if ((e.metaKey || e.ctrlKey) && e.key === "0") {
+        e.preventDefault();
+        handleZoomToFit();
+      }
+      // Cmd/Ctrl + A → 全ノード選択（スコープテスト用）
+      if ((e.metaKey || e.ctrlKey) && e.key === "a") {
+        e.preventDefault();
+        // 全ノードの最初のノードを選択状態にする（全選択のインジケータ）
+        // 実際の全選択ハイライトは connectedNodeIds が全ノードを含む形で実現
+        if (filteredNodes.length > 0) {
+          setSelectedNodeId("__all__");
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [setSelectedNodeId, handleZoomToFit, filteredNodes]);
+
+  // ローディング状態
+  if (isLoading) {
+    return (
+      <div
+        className="flex items-center justify-center h-full"
+        style={{ color: "var(--color-text-tertiary)" }}
+      >
+        <div className="flex flex-col items-center gap-3">
+          <svg
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            style={{ animation: "spin 1s linear infinite" }}
+          >
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+          </svg>
+          <span className="text-sm">グラフデータを読み込み中…</span>
+        </div>
+      </div>
+    );
+  }
+
+  // エラー状態
+  if (error) {
+    return (
+      <div
+        className="flex items-center justify-center h-full"
+        style={{ color: "var(--color-text-tertiary)" }}
+      >
+        <div className="flex flex-col items-center gap-3">
+          <svg
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ color: "var(--color-accent-danger)" }}
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span className="text-sm">グラフの読み込みに失敗しました</span>
+          <button
+            type="button"
+            onClick={refetch}
+            className="text-xs"
+            style={{
+              color: "var(--color-accent-primary)",
+              padding: "6px 16px",
+              borderRadius: "8px",
+              border: "1px solid var(--color-accent-primary)",
+            }}
+          >
+            再読み込み
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 空データ
+  if (filteredNodes.length === 0 && !isLoading) {
+    return (
+      <div
+        className="flex items-center justify-center h-full"
+        style={{ color: "var(--color-text-tertiary)" }}
+      >
+        <div className="flex flex-col items-center gap-4">
+          <svg
+            width="48"
+            height="48"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ opacity: 0.35 }}
+          >
+            <circle cx="12" cy="12" r="3" />
+            <circle cx="19" cy="5" r="2" />
+            <circle cx="5" cy="5" r="2" />
+            <circle cx="5" cy="19" r="2" />
+            <circle cx="19" cy="19" r="2" />
+            <line x1="14.5" y1="9.5" x2="17.5" y2="6.5" />
+            <line x1="9.5" y1="9.5" x2="6.5" y2="6.5" />
+            <line x1="9.5" y1="14.5" x2="6.5" y2="17.5" />
+            <line x1="14.5" y1="14.5" x2="17.5" y2="17.5" />
+          </svg>
+          <div className="text-center">
+            <p className="text-sm mb-1">グラフに表示するノードがありません</p>
+            <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+              ノートと論文にリンクを作成すると、ここに関係図が表示されます
+            </p>
+          </div>
+          {rawData && rawData.nodes.length > 0 && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="text-xs"
+              style={{
+                color: "var(--color-accent-primary)",
+                padding: "6px 16px",
+                borderRadius: "8px",
+                border: "1px solid var(--color-accent-primary)",
+              }}
+            >
+              フィルタをリセット
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative h-full w-full overflow-hidden"
+      onMouseMove={handleMouseMove}
+      style={{ backgroundColor: "var(--color-bg-primary)" }}
+    >
+      {/* グラフキャンバス */}
+      {containerSize.width > 0 && containerSize.height > 0 && (
+        <ForceGraph
+          nodes={filteredNodes}
+          links={filteredLinks}
+          onNodeClick={handleNodeClick}
+          onNodeDoubleClick={handleNodeDoubleClick}
+          onNodeHover={handleNodeHover}
+          onBackgroundClick={handleBackgroundClick}
+          selectedNodeId={selectedNodeId}
+          width={containerSize.width}
+          height={containerSize.height}
+          onGraphReady={handleGraphReady}
+        />
+      )}
+
+      {/* 凡例パネル（左下） */}
+      <GraphLegendPanel
+        onZoomToFit={handleZoomToFit}
+        nodeCount={filteredNodes.length}
+        linkCount={filteredLinks.length}
+      />
+
+      {/* フィルタパネル（右上） */}
+      <GraphFilterPanel
+        filters={filters}
+        onFiltersChange={setFilters}
+        onReset={resetFilters}
+        allTags={allTags}
+        totalNodes={rawData?.nodes.length ?? 0}
+        filteredNodes={filteredNodes.length}
+        isOpen={filterPanelOpen}
+        onToggle={() => setFilterPanelOpen((p) => !p)}
+      />
+
+      {/* ミニマップ（右下） */}
+      {filteredNodes.length > 0 && (
+        <GraphMiniMap
+          nodes={filteredNodes}
+          links={filteredLinks}
+          selectedNodeId={selectedNodeId}
+          width={200}
+          height={150}
+          onCenterAt={handleMiniMapCenterAt}
+        />
+      )}
+
+      {/* ノード詳細ポップアップ */}
+      <NodeDetailPopup
+        node={hoveredNode}
+        mouseX={mousePos.x}
+        mouseY={mousePos.y}
+        containerWidth={containerSize.width}
+        containerHeight={containerSize.height}
+      />
+
+      {/* 選択中ノード情報バー（下部） */}
+      {selectedNodeId && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: "12px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 20,
+            animation: "fade-in 200ms ease-out both",
+          }}
+        >
+          <div
+            className="flex items-center gap-3"
+            style={{
+              backgroundColor: "var(--color-bg-card)",
+              border: "1px solid var(--color-border-primary)",
+              borderRadius: "10px",
+              boxShadow: "var(--shadow-card)",
+              padding: "8px 16px",
+              fontSize: "12px",
+              color: "var(--color-text-secondary)",
+            }}
+          >
+            <span>
+              {filteredNodes.find((n) => n.id === selectedNodeId)?.type ===
+              "note"
+                ? "📝"
+                : "📄"}{" "}
+              {filteredNodes.find((n) => n.id === selectedNodeId)?.name ??
+                "選択中"}
+            </span>
+            <span style={{ color: "var(--color-text-tertiary)" }}>|</span>
+            <button
+              type="button"
+              onClick={() => {
+                const node = filteredNodes.find(
+                  (n) => n.id === selectedNodeId,
+                );
+                if (node) handleNodeDoubleClick(node);
+              }}
+              className="text-xs"
+              style={{
+                color: "var(--color-accent-primary)",
+                cursor: "pointer",
+              }}
+            >
+              開く
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedNodeId(null)}
+              className="text-xs"
+              style={{
+                color: "var(--color-text-tertiary)",
+                cursor: "pointer",
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

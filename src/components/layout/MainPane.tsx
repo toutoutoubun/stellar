@@ -9,6 +9,7 @@ import { LibraryView } from "../library/LibraryView";
 import { ReaderView } from "../reader/ReaderView";
 import { NoteEditor } from "../notes/NoteEditor";
 import { NoteList } from "../notes/NoteList";
+import { GraphView } from "../graph/GraphView";
 
 /** 空状態のウェルカム画面 */
 const EmptyState: React.FC = () => (
@@ -144,14 +145,7 @@ export const MainPane: React.FC = () => {
       case "note":
         return <NoteEditor noteId={mainPaneContent.noteId} />;
       case "graph":
-        return (
-          <div
-            className="flex items-center justify-center h-full"
-            style={{ color: "var(--color-text-tertiary)" }}
-          >
-            <p className="text-sm">グラフビュー — 実装予定</p>
-          </div>
-        );
+        return <GraphView />;
       case "search":
         return (
           <div

@@ -293,6 +293,45 @@ export interface OutlineHeading {
 }
 
 // ============================================================
+// グラフビュー — フィルタ・拡張ノード
+// ============================================================
+
+/** グラフフィルタ設定 */
+export interface GraphFilters {
+  /** ノートを表示するか */
+  showNotes: boolean;
+  /** 論文を表示するか */
+  showPapers: boolean;
+  /** タグフィルタ（空配列 = 全タグ表示） */
+  selectedTags: string[];
+  /** 最小リンク数（この数以上のリンクを持つノードのみ表示） */
+  minLinkCount: number;
+}
+
+/** グラフフィルタのデフォルト値 */
+export const DEFAULT_GRAPH_FILTERS: GraphFilters = {
+  showNotes: true,
+  showPapers: true,
+  selectedTags: [],
+  minLinkCount: 0,
+};
+
+/** 拡張グラフノード（描画・インタラクション用に追加プロパティを持つ） */
+export interface GraphNodeExtended extends GraphNode {
+  /** リンク数（接続エッジ数） */
+  linkCount: number;
+  /** タグ一覧 */
+  tags: string[];
+  /** 最終更新日 */
+  updatedAt: string;
+  /** 座標（react-force-graph-2d が設定） */
+  x?: number;
+  y?: number;
+  fx?: number;
+  fy?: number;
+}
+
+// ============================================================
 // ユーティリティ型
 // ============================================================
 
