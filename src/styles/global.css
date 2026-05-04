@@ -296,6 +296,27 @@ pre {
   }
 }
 
+/* スピナーアニメーション（PDFローディング等） */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* パルスアニメーション（スケルトンローディング） */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
 /* ユーティリティクラス */
 .animate-fade-in {
   animation: fade-in var(--transition-normal) both;

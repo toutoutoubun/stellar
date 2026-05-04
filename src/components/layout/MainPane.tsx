@@ -6,6 +6,7 @@
 import type React from "react";
 import { useUIStore } from "../../stores/useUIStore";
 import { LibraryView } from "../library/LibraryView";
+import { ReaderView } from "../reader/ReaderView";
 
 /** 空状態のウェルカム画面 */
 const EmptyState: React.FC = () => (
@@ -90,16 +91,7 @@ export const MainPane: React.FC = () => {
 
     switch (mainPaneContent.type) {
       case "paper":
-        return (
-          <div
-            className="flex items-center justify-center h-full"
-            style={{ color: "var(--color-text-tertiary)" }}
-          >
-            <p className="text-sm">
-              論文ビューア（ID: {mainPaneContent.paperId}）— 実装予定
-            </p>
-          </div>
-        );
+        return <ReaderView paperId={mainPaneContent.paperId} />;
       case "note":
         return (
           <div
