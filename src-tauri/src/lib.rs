@@ -10,11 +10,11 @@ use tauri::Manager;
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 /// マイグレーション定義を返す
-/// SQLite の FTS5 仮想テーブル・トリガー・インデックスを含む初期スキーマ
+/// SQLite の FTS5 仮想テーブル（trigram tokenizer）・トリガー・インデックスを含む初期スキーマ
 fn get_migrations() -> Vec<Migration> {
     vec![Migration {
         version: 1,
-        description: "初期スキーマ — papers / notes / highlights / links / FTS5",
+        description: "初期スキーマ — papers / notes / highlights / links / FTS5(trigram)",
         sql: include_str!("db/migrations/V001__initial.sql"),
         kind: MigrationKind::Up,
     }]
@@ -53,26 +53,34 @@ pub fn run() {
         })
         // ── Tauri コマンド登録 ──
         .invoke_handler(tauri::generate_handler![
-            commands::papers::create_paper,
-            commands::papers::get_all_papers,
+            // 論文 CRUD（ページネーション・フィルタ・バックリンク付き詳細）
+            commands::papers::get_papers,
             commands::papers::get_paper,
+            commands::papers::create_paper,
             commands::papers::update_paper,
             commands::papers::delete_paper,
-            commands::notes::create_note,
-            commands::notes::get_all_notes,
+            commands::papers::attach_pdf,
+            commands::papers::get_all_tags,
+            // ノート CRUD（ページネーション・NoteDetail・ハイライトからの自動生成）
+            commands::notes::get_notes,
             commands::notes::get_note,
+            commands::notes::create_note,
             commands::notes::update_note,
             commands::notes::delete_note,
-            commands::notes::get_notes_by_paper,
+            commands::notes::create_note_from_highlights,
+            // ハイライト CRUD（FTS5 インデックス連動）
+            commands::highlights::get_highlights,
             commands::highlights::create_highlight,
-            commands::highlights::get_highlights_by_paper,
-            commands::highlights::update_highlight,
+            commands::highlights::update_highlight_comment,
             commands::highlights::delete_highlight,
+            // リンク CRUD（重複チェック・バックリンク・グラフデータ）
             commands::links::create_link,
-            commands::links::get_links_for_node,
-            commands::links::get_all_links,
+            commands::links::get_backlinks,
             commands::links::delete_link,
+            commands::links::get_graph_data,
+            // 全文検索（FTS5 trigram・カテゴリ別・オートコンプリート）
             commands::search::full_text_search,
+            commands::search::get_link_suggestions,
         ])
         .run(tauri::generate_context!())
         .expect("Stellar の起動に失敗しました");

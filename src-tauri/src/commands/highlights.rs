@@ -1,55 +1,14 @@
 // src-tauri/src/commands/highlights.rs
 // Stellar — ハイライト CRUD コマンド
 // PDF上のハイライト（テキスト選択＋コメント）を管理する
+// FTS5 インデックスはトリガーで自動同期される
 
-use serde::{Deserialize, Serialize};
+use crate::db::models::{parse_highlight_row, CreateHighlightDto, HighlightResponse};
+use serde_json::Value;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_sql::{DbInstances, DbPool};
 
-/// ハイライトの矩形座標
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HighlightRect {
-    pub x1: f64,
-    pub y1: f64,
-    pub x2: f64,
-    pub y2: f64,
-}
-
-/// ハイライト作成時の入力データ
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CreateHighlightInput {
-    pub paper_id: String,
-    pub text: String,
-    pub comment: Option<String>,
-    pub color: String,
-    pub page: i32,
-    pub rect: HighlightRect,
-}
-
-/// ハイライト更新時の入力データ
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct UpdateHighlightInput {
-    pub comment: Option<String>,
-    pub color: Option<String>,
-}
-
-/// フロントエンドに返すハイライトデータ
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct HighlightResponse {
-    pub id: String,
-    pub paper_id: String,
-    pub text: String,
-    pub comment: Option<String>,
-    pub color: String,
-    pub page: i32,
-    pub rect: HighlightRect,
-    pub created_at: String,
-}
-
-/// DB インスタンスを取得するヘルパー
+/// DB 接続プールを取得するヘルパー
 async fn get_db(app: &AppHandle) -> Result<std::sync::Arc<DbPool>, String> {
     let db_instances = app.state::<DbInstances>();
     let instances = db_instances.0.read().await;
@@ -59,168 +18,140 @@ async fn get_db(app: &AppHandle) -> Result<std::sync::Arc<DbPool>, String> {
         .ok_or_else(|| "データベース接続が見つかりません".to_string())
 }
 
-/// ハイライトを新規作成する
+// ────────────────────────────────────────────────────────────
+// get_highlights — 論文のハイライト一覧を取得する
+// ────────────────────────────────────────────────────────────
+
+/// 論文のハイライト一覧（ページ番号・作成日時順）
 #[tauri::command]
-pub async fn create_highlight(
-    app: AppHandle,
-    input: CreateHighlightInput,
-) -> Result<HighlightResponse, String> {
-    let db = get_db(&app).await?;
-    let id = uuid::Uuid::new_v4().to_string();
-    let now = chrono::Utc::now().to_rfc3339();
-    let rect_json = serde_json::to_string(&input.rect).map_err(|e| e.to_string())?;
-
-    db.execute(
-        "INSERT INTO highlights (id, paper_id, text, comment, color, page, rect, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        vec![
-            serde_json::Value::String(id.clone()),
-            serde_json::Value::String(input.paper_id.clone()),
-            serde_json::Value::String(input.text.clone()),
-            input.comment.clone().map_or(serde_json::Value::Null, serde_json::Value::String),
-            serde_json::Value::String(input.color.clone()),
-            serde_json::Value::Number(input.page.into()),
-            serde_json::Value::String(rect_json),
-            serde_json::Value::String(now.clone()),
-        ],
-    )
-    .await
-    .map_err(|e| format!("ハイライトの作成に失敗しました: {}", e))?;
-
-    Ok(HighlightResponse {
-        id,
-        paper_id: input.paper_id,
-        text: input.text,
-        comment: input.comment,
-        color: input.color,
-        page: input.page,
-        rect: input.rect,
-        created_at: now,
-    })
-}
-
-/// 特定の論文に紐づくハイライトを全件取得する
-#[tauri::command]
-pub async fn get_highlights_by_paper(
+pub async fn get_highlights(
     app: AppHandle,
     paper_id: String,
 ) -> Result<Vec<HighlightResponse>, String> {
     let db = get_db(&app).await?;
-    let rows: Vec<serde_json::Value> = db
+
+    let rows: Vec<Value> = db
         .select(
             "SELECT * FROM highlights WHERE paper_id = ? ORDER BY page ASC, created_at ASC",
-            vec![serde_json::Value::String(paper_id)],
+            vec![Value::String(paper_id)],
         )
         .await
-        .map_err(|e| format!("ハイライト一覧の取得に失敗しました: {}", e))?;
+        .map_err(|e| format!("ハイライト一覧の取得に失敗: {}", e))?;
 
     rows.iter()
-        .map(|row| parse_highlight_row(row))
+        .map(parse_highlight_row)
         .collect::<Result<Vec<_>, _>>()
 }
 
-/// ハイライトを更新する（コメントと色のみ変更可能）
+// ────────────────────────────────────────────────────────────
+// create_highlight — ハイライトを新規作成する
+// FTS5 インデックス (fts_highlights) はトリガーで自動追加される
+// ────────────────────────────────────────────────────────────
+
 #[tauri::command]
-pub async fn update_highlight(
+pub async fn create_highlight(
+    app: AppHandle,
+    dto: CreateHighlightDto,
+) -> Result<HighlightResponse, String> {
+    let db = get_db(&app).await?;
+    let id = uuid::Uuid::new_v4().to_string();
+    let now = chrono::Utc::now().to_rfc3339();
+    let rect_json = serde_json::to_string(&dto.rect).map_err(|e| e.to_string())?;
+
+    db.execute(
+        "INSERT INTO highlights (id, paper_id, text, comment, color, page, rect, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        vec![
+            Value::String(id.clone()),
+            Value::String(dto.paper_id.clone()),
+            Value::String(dto.text.clone()),
+            dto.comment.clone().map_or(Value::Null, Value::String),
+            Value::String(dto.color.clone()),
+            Value::Number(dto.page.into()),
+            Value::String(rect_json),
+            Value::String(now.clone()),
+        ],
+    )
+    .await
+    .map_err(|e| format!("ハイライトの作成に失敗: {}", e))?;
+
+    Ok(HighlightResponse {
+        id,
+        paper_id: dto.paper_id,
+        text: dto.text,
+        comment: dto.comment,
+        color: dto.color,
+        page: dto.page,
+        rect: dto.rect,
+        created_at: now,
+    })
+}
+
+// ────────────────────────────────────────────────────────────
+// update_highlight_comment — ハイライトのコメントを更新する
+// FTS5 インデックス (fts_highlights) はトリガーで自動更新される
+// ────────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub async fn update_highlight_comment(
     app: AppHandle,
     id: String,
-    input: UpdateHighlightInput,
+    comment: String,
 ) -> Result<HighlightResponse, String> {
     let db = get_db(&app).await?;
 
     // 現在のハイライトを取得
-    let rows: Vec<serde_json::Value> = db
+    let rows: Vec<Value> = db
         .select(
             "SELECT * FROM highlights WHERE id = ?",
-            vec![serde_json::Value::String(id.clone())],
+            vec![Value::String(id.clone())],
         )
         .await
-        .map_err(|e| format!("ハイライトの取得に失敗しました: {}", e))?;
+        .map_err(|e| format!("ハイライトの取得に失敗: {}", e))?;
 
     let current = rows
         .first()
         .ok_or_else(|| format!("ハイライトが見つかりません: {}", id))
         .and_then(parse_highlight_row)?;
 
-    let comment = if input.comment.is_some() {
-        input.comment
+    // 空文字列は NULL として保存する
+    let comment_value = if comment.is_empty() {
+        None
     } else {
-        current.comment
+        Some(comment)
     };
-    let color = input.color.unwrap_or(current.color);
 
     db.execute(
-        "UPDATE highlights SET comment=?, color=? WHERE id=?",
+        "UPDATE highlights SET comment = ? WHERE id = ?",
         vec![
-            comment.clone().map_or(serde_json::Value::Null, serde_json::Value::String),
-            serde_json::Value::String(color.clone()),
-            serde_json::Value::String(id.clone()),
+            comment_value.clone().map_or(Value::Null, Value::String),
+            Value::String(id.clone()),
         ],
     )
     .await
-    .map_err(|e| format!("ハイライトの更新に失敗しました: {}", e))?;
+    .map_err(|e| format!("ハイライトのコメント更新に失敗: {}", e))?;
 
     Ok(HighlightResponse {
         id,
-        paper_id: current.paper_id,
-        text: current.text,
-        comment,
-        color,
-        page: current.page,
-        rect: current.rect,
-        created_at: current.created_at,
+        comment: comment_value,
+        ..current
     })
 }
 
-/// ハイライトを削除する
+// ────────────────────────────────────────────────────────────
+// delete_highlight — ハイライトを削除する
+// FTS5 インデックス (fts_highlights) はトリガーで自動削除される
+// ────────────────────────────────────────────────────────────
+
 #[tauri::command]
 pub async fn delete_highlight(app: AppHandle, id: String) -> Result<(), String> {
     let db = get_db(&app).await?;
+
     db.execute(
         "DELETE FROM highlights WHERE id = ?",
-        vec![serde_json::Value::String(id)],
+        vec![Value::String(id)],
     )
     .await
-    .map_err(|e| format!("ハイライトの削除に失敗しました: {}", e))?;
+    .map_err(|e| format!("ハイライトの削除に失敗: {}", e))?;
 
     Ok(())
-}
-
-/// DB行データを HighlightResponse に変換するヘルパー関数
-fn parse_highlight_row(row: &serde_json::Value) -> Result<HighlightResponse, String> {
-    let get_str = |key: &str| -> String {
-        row.get(key)
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string()
-    };
-    let get_opt_str = |key: &str| -> Option<String> {
-        row.get(key)
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string())
-            .filter(|s| !s.is_empty())
-    };
-
-    let rect: HighlightRect =
-        serde_json::from_str(&get_str("rect")).unwrap_or(HighlightRect {
-            x1: 0.0,
-            y1: 0.0,
-            x2: 0.0,
-            y2: 0.0,
-        });
-
-    let page = row
-        .get("page")
-        .and_then(|v| v.as_i64())
-        .unwrap_or(0) as i32;
-
-    Ok(HighlightResponse {
-        id: get_str("id"),
-        paper_id: get_str("paper_id"),
-        text: get_str("text"),
-        comment: get_opt_str("comment"),
-        color: get_str("color"),
-        page,
-        rect,
-        created_at: get_str("created_at"),
-    })
 }
