@@ -6,8 +6,8 @@
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
-    "beforeDevCommand": "pnpm dev",
-    "beforeBuildCommand": "pnpm build"
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
   },
   "app": {
     "windows": [
@@ -38,6 +38,17 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+      "dmg": {
+        "appPosition": { "x": 180, "y": 170 },
+        "applicationFolderPosition": { "x": 480, "y": 170 },
+        "windowSize": { "width": 660, "height": 400 }
+      }
+    },
+    "category": "DeveloperTool",
+    "shortDescription": "研究支援デスクトップアプリ — 文献管理・ノート・グラフビュー",
+    "longDescription": "Stellar は文献管理、ノートテイキング、グラフビューを1つのアプリで完結させる、ローカルファーストの研究支援ツールです。",
     "android": {
       "debugApplicationIdSuffix": ".debug"
     }
