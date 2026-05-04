@@ -261,6 +261,38 @@ export const CITATION_STYLE_LABELS: Record<CitationStyle, string> = {
 export type LibraryViewMode = 'grid' | 'list';
 
 // ============================================================
+// ノートエディタ・双方向リンク
+// ============================================================
+
+/** 自動保存ステータス */
+export type AutoSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+
+/** WikiLink オートコンプリート候補 */
+export interface LinkSuggestion {
+  id: string;
+  title: string;
+  type: NodeType;
+  /** 補助テキスト（著者名・更新日など） */
+  detail?: string;
+}
+
+/** バックリンクアイテム（コンテキストパネル表示用） */
+export interface BacklinkItem {
+  id: string;
+  sourceType: NodeType;
+  sourceId: string;
+  sourceTitle: string;
+  context: string | null;
+}
+
+/** アウトライン見出しアイテム */
+export interface OutlineHeading {
+  level: number;
+  text: string;
+  line: number;
+}
+
+// ============================================================
 // ユーティリティ型
 // ============================================================
 

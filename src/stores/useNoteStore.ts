@@ -1,6 +1,6 @@
 // src/stores/useNoteStore.ts
-// Stellar — ノートストア
-// ノートデータの CRUD 操作と状態管理を行う
+// Stellar — ノートストア（拡張版）
+// ノートデータの CRUD 操作・自動保存ステータス・未保存変更フラグを管理
 
 import { create } from "zustand";
 import type {
@@ -9,6 +9,7 @@ import type {
   UpdateNoteInput,
   NoteSortKey,
   SortDirection,
+  AutoSaveStatus,
 } from "../types";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -28,19 +29,31 @@ interface NoteState {
   sortDirection: SortDirection;
   /** フィルタークエリ（ノート一覧内フィルタ） */
   filterQuery: string;
+  /** 未保存変更ありフラグ */
+  isModified: boolean;
+  /** 自動保存ステータス */
+  autoSaveStatus: AutoSaveStatus;
 
   /** 全ノートを取得する */
   fetchNotes: () => Promise<void>;
   /** 特定の論文に紐づくノートを取得する */
   fetchNotesByPaper: (paperId: string) => Promise<Note[]>;
+  /** ノートを開く（activeNote を設定） */
+  openNote: (id: string) => Promise<void>;
   /** ノートを新規作成する */
   createNote: (input: CreateNoteInput) => Promise<Note>;
   /** ノートを更新する */
   updateNote: (id: string, input: UpdateNoteInput) => Promise<Note>;
+  /** ノート内容を保存する（autoSaveStatus を連動更新） */
+  saveNote: (id: string, content: string) => Promise<void>;
   /** ノートを削除する */
   deleteNote: (id: string) => Promise<void>;
   /** 編集中のノートを設定する */
   setActiveNote: (note: Note | null) => void;
+  /** 未保存変更フラグを設定する */
+  setIsModified: (modified: boolean) => void;
+  /** 自動保存ステータスを設定する */
+  setAutoSaveStatus: (status: AutoSaveStatus) => void;
   /** ソートキーを設定する */
   setSortKey: (key: NoteSortKey) => void;
   /** ソート方向を設定する */
@@ -57,6 +70,8 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   sortKey: "updatedAt",
   sortDirection: "desc",
   filterQuery: "",
+  isModified: false,
+  autoSaveStatus: "idle",
 
   fetchNotes: async () => {
     set({ loading: true, error: null });
@@ -78,6 +93,16 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     }
   },
 
+  openNote: async (id) => {
+    set({ loading: true, error: null, isModified: false, autoSaveStatus: "idle" });
+    try {
+      const note = await invoke<Note>("get_note", { id });
+      set({ activeNote: note, loading: false });
+    } catch (e) {
+      set({ error: String(e), loading: false, activeNote: null });
+    }
+  },
+
   createNote: async (input) => {
     const note = await invoke<Note>("create_note", { input });
     set((state) => ({ notes: [note, ...state.notes] }));
@@ -88,10 +113,28 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     const note = await invoke<Note>("update_note", { id, input });
     set((state) => ({
       notes: state.notes.map((n) => (n.id === id ? note : n)),
-      // 編集中のノートが更新対象なら同期する
       activeNote: state.activeNote?.id === id ? note : state.activeNote,
     }));
     return note;
+  },
+
+  // 自動保存用：content のみ更新し、ステータスを連動させる
+  saveNote: async (id, content) => {
+    set({ autoSaveStatus: "saving" });
+    try {
+      const note = await invoke<Note>("update_note", {
+        id,
+        input: { content } satisfies UpdateNoteInput,
+      });
+      set((state) => ({
+        notes: state.notes.map((n) => (n.id === id ? note : n)),
+        activeNote: state.activeNote?.id === id ? note : state.activeNote,
+        isModified: false,
+        autoSaveStatus: "saved",
+      }));
+    } catch (e) {
+      set({ autoSaveStatus: "error", error: String(e) });
+    }
   },
 
   deleteNote: async (id) => {
@@ -99,10 +142,16 @@ export const useNoteStore = create<NoteState>((set, get) => ({
     set((state) => ({
       notes: state.notes.filter((n) => n.id !== id),
       activeNote: state.activeNote?.id === id ? null : state.activeNote,
+      isModified: state.activeNote?.id === id ? false : state.isModified,
     }));
   },
 
-  setActiveNote: (note) => set({ activeNote: note }),
+  setActiveNote: (note) =>
+    set({ activeNote: note, isModified: false, autoSaveStatus: "idle" }),
+
+  setIsModified: (modified) => set({ isModified: modified }),
+
+  setAutoSaveStatus: (status) => set({ autoSaveStatus: status }),
 
   setSortKey: (key) => {
     const currentKey = get().sortKey;
