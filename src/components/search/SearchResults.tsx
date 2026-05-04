@@ -1,8 +1,11 @@
 // src/components/search/SearchResults.tsx
 // Stellar — 検索結果表示コンポーネント
 // タブ切り替え + グループ化された結果リスト + 空状態 + 最近開いた項目
+// 100件超の結果には @tanstack/react-virtual による仮想スクロールを適用
 
 import type React from "react";
+import { useRef, useEffect } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import type {
   SearchTab,
   GroupedSearchResults,
@@ -43,6 +46,9 @@ const TABS: { key: SearchTab; label: string }[] = [
   { key: "note", label: "ノート" },
   { key: "highlight", label: "ハイライト" },
 ];
+
+/** 仮想スクロールを有効にする閾値 */
+const VIRTUAL_SCROLL_THRESHOLD = 100;
 
 /** タブごとの件数を取得 */
 function getTabCount(
@@ -283,7 +289,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             </div>
           </div>
         ) : (
-          // 結果あり
+          // 結果あり — 100件超なら仮想スクロール
           <ResultList
             results={results}
             flatResults={flatResults}
@@ -357,6 +363,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
 
 // ============================================================
 // 結果リスト（グループ表示 or フラット表示）
+// 100件超の場合は仮想スクロールを使用
 // ============================================================
 
 interface ResultListProps {
@@ -368,6 +375,73 @@ interface ResultListProps {
   onItemClick: (item: SearchResultItem) => void;
 }
 
+/** 仮想スクロール対応のフラットリスト */
+const VirtualResultList: React.FC<{
+  items: SearchResultItem[];
+  selectedIndex: number;
+  onSelectedIndexChange: (index: number) => void;
+  onItemClick: (item: SearchResultItem) => void;
+}> = ({ items, selectedIndex, onSelectedIndexChange, onItemClick }) => {
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: items.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 56, // 推定行高さ (px)
+    overscan: 10,
+  });
+
+  // 選択中アイテムが変わったらスクロール追従
+  useEffect(() => {
+    if (selectedIndex >= 0 && selectedIndex < items.length) {
+      virtualizer.scrollToIndex(selectedIndex, { align: "auto" });
+    }
+  }, [selectedIndex, items.length, virtualizer]);
+
+  return (
+    <div
+      ref={parentRef}
+      style={{
+        height: "100%",
+        overflow: "auto",
+      }}
+    >
+      <div
+        style={{
+          height: `${virtualizer.getTotalSize()}px`,
+          width: "100%",
+          position: "relative",
+        }}
+      >
+        {virtualizer.getVirtualItems().map((virtualRow) => {
+          const item = items[virtualRow.index];
+          if (!item) return null;
+          return (
+            <div
+              key={`${item.itemType}-${item.id}`}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: `${virtualRow.size}px`,
+                transform: `translateY(${virtualRow.start}px)`,
+              }}
+            >
+              <SearchResultCard
+                item={item}
+                isSelected={virtualRow.index === selectedIndex}
+                onClick={() => onItemClick(item)}
+                onMouseEnter={() => onSelectedIndexChange(virtualRow.index)}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 const ResultList: React.FC<ResultListProps> = ({
   results,
   flatResults,
@@ -376,8 +450,10 @@ const ResultList: React.FC<ResultListProps> = ({
   onSelectedIndexChange,
   onItemClick,
 }) => {
-  // 「すべて」タブはグループ表示
-  if (activeTab === "all" && results) {
+  const useVirtual = flatResults.length > VIRTUAL_SCROLL_THRESHOLD;
+
+  // 「すべて」タブはグループ表示（仮想スクロール閾値以下の場合のみ）
+  if (activeTab === "all" && results && !useVirtual) {
     let runningIndex = 0;
 
     const groups: { label: string; items: SearchResultItem[] }[] = [];
@@ -428,7 +504,19 @@ const ResultList: React.FC<ResultListProps> = ({
     );
   }
 
-  // 特定タブ: フラット表示
+  // 100件超 → 仮想スクロール
+  if (useVirtual) {
+    return (
+      <VirtualResultList
+        items={flatResults}
+        selectedIndex={selectedIndex}
+        onSelectedIndexChange={onSelectedIndexChange}
+        onItemClick={onItemClick}
+      />
+    );
+  }
+
+  // 特定タブ or 100件以下: 通常フラット表示
   return (
     <div className="flex flex-col gap-0.5">
       {flatResults.map((item, i) => (

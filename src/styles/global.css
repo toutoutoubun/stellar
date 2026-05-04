@@ -317,6 +317,73 @@ pre {
   }
 }
 
+/* ── 画面遷移アニメーション（App.tsx ScreenTransition 用） ── */
+
+/* data-entering="true" → 右からスライドイン (200ms ease-out) */
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* data-leaving="true" → 左へスライドアウト (200ms) */
+@keyframes slideOutToLeft {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+}
+
+/* 戻る操作: 左からスライドイン */
+@keyframes slideInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 戻る操作: 右へスライドアウト */
+@keyframes slideOutToRight {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+}
+
+/* data-entering / data-leaving 属性ベースのアニメーション適用 */
+[data-entering="true"][data-direction="forward"] {
+  animation: slideInFromRight 200ms ease-out both;
+}
+
+[data-entering="true"][data-direction="backward"] {
+  animation: slideInFromLeft 200ms ease-out both;
+}
+
+[data-leaving="true"][data-direction="forward"] {
+  animation: slideOutToLeft 200ms ease-out both;
+}
+
+[data-leaving="true"][data-direction="backward"] {
+  animation: slideOutToRight 200ms ease-out both;
+}
+
 /* ユーティリティクラス */
 .animate-fade-in {
   animation: fade-in var(--transition-normal) both;

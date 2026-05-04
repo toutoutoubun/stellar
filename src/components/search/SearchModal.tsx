@@ -1,6 +1,6 @@
 // src/components/search/SearchModal.tsx
 // Stellar — グローバル全文検索モーダル
-// React Portal で body 直下にマウント
+// React Portal で body 直下にマウント（常時マウント、visibility:hidden で非表示）
 // Cmd+K で開閉、ESC / バックドロップクリックで閉じる
 // 検索入力 + タブフィルタ + 結果表示 + キーボードナビゲーション
 
@@ -106,24 +106,27 @@ export const SearchModal: React.FC = () => {
     [handleClose],
   );
 
-  if (!isOpen) return null;
-
+  // 常時マウント: visibility: hidden で非表示にし、DOM を保持する
   return createPortal(
     <div
       className="fixed inset-0 flex justify-center"
       style={{
         zIndex: "var(--z-modal-overlay)",
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        backdropFilter: "blur(8px)",
-        WebkitBackdropFilter: "blur(8px)",
+        backgroundColor: isOpen ? "rgba(0, 0, 0, 0.5)" : "transparent",
+        backdropFilter: isOpen ? "blur(8px)" : "none",
+        WebkitBackdropFilter: isOpen ? "blur(8px)" : "none",
         paddingTop: "max(20vh, 100px)",
-        animation: "fade-in 150ms ease-out both",
+        visibility: isOpen ? "visible" : "hidden",
+        opacity: isOpen ? 1 : 0,
+        pointerEvents: isOpen ? "auto" : "none",
+        transition: "opacity 150ms ease-out, visibility 150ms ease-out",
       }}
       onClick={handleBackdropClick}
       onKeyDown={() => {}}
       role="dialog"
       aria-modal="true"
       aria-label="全文検索"
+      aria-hidden={!isOpen}
     >
       {/* モーダル本体 */}
       <div
@@ -138,7 +141,8 @@ export const SearchModal: React.FC = () => {
           boxShadow: "var(--shadow-modal)",
           border: "1px solid var(--color-border-primary)",
           overflow: "hidden",
-          animation: "scale-in 150ms ease-out both",
+          transform: isOpen ? "scale(1)" : "scale(0.95)",
+          transition: "transform 150ms ease-out",
           alignSelf: "flex-start",
         }}
       >

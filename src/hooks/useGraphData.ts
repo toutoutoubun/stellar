@@ -2,8 +2,10 @@
 // Stellar — グラフデータ管理フック
 // invoke('get_graph_data') でRustからデータ取得し、フィルタを適用して返す
 // フィルタ変更時はクライアント側で再計算（APIは再コールしない）
+// requestAnimationFrame でフィルタ再計算をスケジューリングし、
+// 高頻度のフィルタ変更（スライダー操作等）でもフレーム落ちを防ぐ
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type {
   GraphData,
@@ -119,6 +121,14 @@ export function useGraphData(): UseGraphDataReturn {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [filters, setFilters] = useState<GraphFilters>(DEFAULT_GRAPH_FILTERS);
 
+  // rAF ベースのフィルタ結果バッファ
+  // フィルタ変更時に即座に再計算せず、次フレームでまとめて計算する
+  const [deferredFilterResult, setDeferredFilterResult] = useState<{
+    nodes: GraphNodeExtended[];
+    links: GraphLink[];
+  }>({ nodes: [], links: [] });
+  const rafIdRef = useRef<number>(0);
+
   /** データ取得 */
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -161,19 +171,36 @@ export function useGraphData(): UseGraphDataReturn {
     return Array.from(tagSet).sort((a, b) => a.localeCompare(b, "ja"));
   }, [extendedNodes]);
 
-  /** フィルタ適用結果 */
-  const { nodes: filteredNodes, links: filteredLinks } = useMemo(
-    () =>
-      rawData
-        ? applyFilters(extendedNodes, rawData.links, filters)
-        : { nodes: [], links: [] },
-    [rawData, extendedNodes, filters],
-  );
+  /**
+   * フィルタ適用を requestAnimationFrame でスケジューリング。
+   * スライダー操作等の高頻度変更でもフレーム落ちしない。
+   */
+  useEffect(() => {
+    // 前回のrAFをキャンセル
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current);
+    }
+
+    rafIdRef.current = requestAnimationFrame(() => {
+      if (rawData) {
+        const result = applyFilters(extendedNodes, rawData.links, filters);
+        setDeferredFilterResult(result);
+      } else {
+        setDeferredFilterResult({ nodes: [], links: [] });
+      }
+    });
+
+    return () => {
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+    };
+  }, [rawData, extendedNodes, filters]);
 
   /** フィルタ済みノードIDセット */
   const filteredNodeIds = useMemo(
-    () => new Set(filteredNodes.map((n) => n.id)),
-    [filteredNodes],
+    () => new Set(deferredFilterResult.nodes.map((n) => n.id)),
+    [deferredFilterResult.nodes],
   );
 
   /** フィルタリセット */
@@ -183,8 +210,8 @@ export function useGraphData(): UseGraphDataReturn {
 
   return {
     rawData,
-    filteredNodes,
-    filteredLinks,
+    filteredNodes: deferredFilterResult.nodes,
+    filteredLinks: deferredFilterResult.links,
     isLoading,
     error,
     selectedNodeId,

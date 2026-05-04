@@ -1,10 +1,10 @@
 // src/components/library/PaperCard.tsx
 // Stellar — 論文カード（グリッド表示用）
-// PDFサムネイル / タイトル / 著者 / 年 / ジャーナル / タグバッジ を表示
-// クリックで選択、ダブルクリックでPDFリーダーへ遷移、右クリックでコンテキストメニュー
+// React.memo + カスタム props 比較でメモ化
+// IntersectionObserver による PDF サムネイルの遅延読み込み（rootMargin "100px"）
 
 import type React from "react";
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, memo } from "react";
 import type { Paper, CitationStyle } from "../../types";
 import { CITATION_STYLE_LABELS } from "../../types";
 import { Badge } from "../ui/Badge";
@@ -20,6 +20,21 @@ interface PaperCardProps {
   onDoubleClick: (id: string) => void;
   onDelete: (id: string) => void;
   onEdit: (id: string) => void;
+}
+
+/** カスタム props 比較: paper.id, selected, animationDelay のみ比較 */
+function arePropsEqual(prev: PaperCardProps, next: PaperCardProps): boolean {
+  return (
+    prev.paper.id === next.paper.id &&
+    prev.paper.updatedAt === next.paper.updatedAt &&
+    prev.paper.pdfPath === next.paper.pdfPath &&
+    prev.selected === next.selected &&
+    prev.animationDelay === next.animationDelay &&
+    prev.onSelect === next.onSelect &&
+    prev.onDoubleClick === next.onDoubleClick &&
+    prev.onDelete === next.onDelete &&
+    prev.onEdit === next.onEdit
+  );
 }
 
 /** 著者表示のフォーマット（1行、複数著者は et al.） */
@@ -39,7 +54,103 @@ interface ContextMenuItem {
   submenu?: { label: string; action: () => void }[];
 }
 
-export const PaperCard: React.FC<PaperCardProps> = ({
+/** PDF サムネイル遅延読み込みコンポーネント */
+const LazyPdfThumbnail: React.FC<{ pdfPath: string | null }> = ({
+  pdfPath,
+}) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "100px" },
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className="w-full flex items-center justify-center shrink-0"
+      style={{
+        height: "140px",
+        backgroundColor: "var(--color-bg-tertiary)",
+        borderBottom: "1px solid var(--color-border-secondary)",
+      }}
+    >
+      {isVisible ? (
+        pdfPath ? (
+          /* PDF がありビューポートに入ったらアイコンを表示 */
+          <div className="flex flex-col items-center gap-2">
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ color: "var(--color-accent-primary)" }}
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+              <polyline points="10 9 9 9 8 9" />
+            </svg>
+            <span
+              className="text-xs"
+              style={{ color: "var(--color-text-tertiary)" }}
+            >
+              PDF
+            </span>
+          </div>
+        ) : (
+          /* PDF なしのプレースホルダー */
+          <div className="flex flex-col items-center gap-2">
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ color: "var(--color-text-disabled)" }}
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+            <span
+              className="text-xs"
+              style={{ color: "var(--color-text-disabled)" }}
+            >
+              PDF未添付
+            </span>
+          </div>
+        )
+      ) : (
+        /* ビューポート外: 空プレースホルダー */
+        null
+      )}
+    </div>
+  );
+};
+
+const PaperCardInner: React.FC<PaperCardProps> = ({
   paper,
   selected,
   animationDelay,
@@ -88,7 +199,7 @@ export const PaperCard: React.FC<PaperCardProps> = ({
       setContextMenu({ x: e.clientX, y: e.clientY });
       setShowCitationSub(false);
     },
-    [paper.id, onSelect]
+    [paper.id, onSelect],
   );
 
   // ── 引用コピー ──
@@ -97,7 +208,7 @@ export const PaperCard: React.FC<PaperCardProps> = ({
       const success = await copyCitationToClipboard(paper, style);
       if (success) {
         toast.success(
-          `${CITATION_STYLE_LABELS[style]} 形式で引用をコピーしました`
+          `${CITATION_STYLE_LABELS[style]} 形式で引用をコピーしました`,
         );
       } else {
         toast.error("クリップボードへのコピーに失敗しました");
@@ -105,7 +216,7 @@ export const PaperCard: React.FC<PaperCardProps> = ({
       setContextMenu(null);
       setShowCitationSub(false);
     },
-    [paper]
+    [paper],
   );
 
   // ── コンテキストメニュー定義 ──
@@ -189,68 +300,8 @@ export const PaperCard: React.FC<PaperCardProps> = ({
         tabIndex={0}
         aria-label={`論文: ${paper.title}`}
       >
-        {/* ── PDFサムネイル / プレースホルダー ── */}
-        <div
-          className="w-full flex items-center justify-center shrink-0"
-          style={{
-            height: "140px",
-            backgroundColor: "var(--color-bg-tertiary)",
-            borderBottom: "1px solid var(--color-border-secondary)",
-          }}
-        >
-          {paper.pdfPath ? (
-            /* PDF があればアイコン + ファイル名表示 */
-            <div className="flex flex-col items-center gap-2">
-              <svg
-                width="32"
-                height="32"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{ color: "var(--color-accent-primary)" }}
-              >
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-                <polyline points="10 9 9 9 8 9" />
-              </svg>
-              <span
-                className="text-xs"
-                style={{ color: "var(--color-text-tertiary)" }}
-              >
-                PDF
-              </span>
-            </div>
-          ) : (
-            /* PDF なしのプレースホルダー */
-            <div className="flex flex-col items-center gap-2">
-              <svg
-                width="32"
-                height="32"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{ color: "var(--color-text-disabled)" }}
-              >
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-              </svg>
-              <span
-                className="text-xs"
-                style={{ color: "var(--color-text-disabled)" }}
-              >
-                PDF未添付
-              </span>
-            </div>
-          )}
-        </div>
+        {/* ── PDF サムネイル (IntersectionObserver 遅延読み込み) ── */}
+        <LazyPdfThumbnail pdfPath={paper.pdfPath} />
 
         {/* ── カード本体情報 ── */}
         <div
@@ -323,7 +374,6 @@ export const PaperCard: React.FC<PaperCardProps> = ({
             }}
             onClick={(e) => {
               e.stopPropagation();
-              // TODO: PDF添付フロー
               toast.info("PDF添付機能は今後実装予定です");
             }}
             onMouseEnter={(e) => {
@@ -382,7 +432,6 @@ export const PaperCard: React.FC<PaperCardProps> = ({
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor =
                     "var(--color-bg-hover)";
-                  // 引用メニュー以外はサブメニューを閉じる
                   if (item.label !== "引用をコピー") {
                     setShowCitationSub(false);
                   }
@@ -455,3 +504,6 @@ export const PaperCard: React.FC<PaperCardProps> = ({
     </>
   );
 };
+
+/** メモ化された PaperCard — カスタム比較でリレンダリングを最小化 */
+export const PaperCard = memo(PaperCardInner, arePropsEqual);

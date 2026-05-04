@@ -222,8 +222,16 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
       ctx.shadowColor = "transparent";
       ctx.shadowBlur = 0;
 
-      // ラベル（globalScale > 0.7 の場合のみ）
-      if (globalScale > 0.7) {
+      // ラベル表示の最適化:
+      // ノード数が300を超える場合はズーム > 1.5 のときのみラベルを表示
+      // それ以外は globalScale > 0.7 で表示
+      const nodeCount = nodes.length;
+      const showLabel =
+        isHovered ||
+        isSelected ||
+        (nodeCount > 300 ? globalScale > 1.5 : globalScale > 0.7);
+
+      if (showLabel) {
         const label = truncateLabel(node.name, 10);
         const fontSize = Math.max(9 / globalScale, 3);
         ctx.font = `${fontSize}px "Inter", "Hiragino Kaku Gothic ProN", sans-serif`;
@@ -236,7 +244,7 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
 
       ctx.globalAlpha = 1;
     },
-    [selectedNodeId, hoveredNodeId, connectedNodeIds],
+    [selectedNodeId, hoveredNodeId, connectedNodeIds, nodes.length],
   );
 
   /** ノードのヒットエリア描画 */
