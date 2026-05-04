@@ -1,0 +1,588 @@
+// src/components/library/AddPaperModal.tsx
+// Stellar — 論文追加モーダル
+// 3タブ構成: URLから追加 / DOIから追加 / 手動入力
+// メタデータプレビュー → 編集可能 → 保存
+
+import type React from "react";
+import { useState, useCallback } from "react";
+import type { CreatePaperInput } from "../../types";
+import { Modal } from "../ui/Modal";
+import { Button } from "../ui/Button";
+import { Input } from "../ui/Input";
+import { toast } from "../ui/Toast";
+import { invoke } from "@tauri-apps/api/core";
+
+/** タブの種別 */
+type AddPaperTab = "url" | "doi" | "manual";
+
+/** タブ定義 */
+const TABS: { key: AddPaperTab; label: string }[] = [
+  { key: "url", label: "URLから追加" },
+  { key: "doi", label: "DOIから追加" },
+  { key: "manual", label: "手動入力" },
+];
+
+interface AddPaperModalProps {
+  open: boolean;
+  onClose: () => void;
+  onSave: (input: CreatePaperInput) => Promise<void>;
+}
+
+/** フォームの初期値 */
+const EMPTY_FORM: CreatePaperInput = {
+  title: "",
+  authors: [],
+  year: null,
+  journal: null,
+  volume: null,
+  issue: null,
+  pages: null,
+  doi: null,
+  url: null,
+  abstract: null,
+  pdfPath: null,
+  tags: [],
+};
+
+/** 骨格スクリーン（ローディング表示） */
+const SkeletonField: React.FC<{ width?: string }> = ({ width = "100%" }) => (
+  <div
+    className="animate-pulse"
+    style={{
+      height: "32px",
+      backgroundColor: "var(--color-bg-tertiary)",
+      borderRadius: "var(--radius-input)",
+      width,
+    }}
+  />
+);
+
+const SkeletonForm: React.FC = () => (
+  <div className="flex flex-col gap-3">
+    <SkeletonField />
+    <SkeletonField width="70%" />
+    <div className="flex gap-3">
+      <SkeletonField width="30%" />
+      <SkeletonField width="40%" />
+      <SkeletonField width="30%" />
+    </div>
+    <SkeletonField />
+    <SkeletonField />
+  </div>
+);
+
+export const AddPaperModal: React.FC<AddPaperModalProps> = ({
+  open,
+  onClose,
+  onSave,
+}) => {
+  const [activeTab, setActiveTab] = useState<AddPaperTab>("url");
+  const [form, setForm] = useState<CreatePaperInput>({ ...EMPTY_FORM });
+  const [authorsText, setAuthorsText] = useState("");
+  const [tagsText, setTagsText] = useState("");
+  const [fetching, setFetching] = useState(false);
+  const [fetched, setFetched] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // URL / DOI 入力用
+  const [urlInput, setUrlInput] = useState("");
+  const [doiInput, setDoiInput] = useState("");
+
+  // PDFも一緒に保存チェック
+  const [downloadPdf, setDownloadPdf] = useState(false);
+
+  // ── フォームリセット ──
+  const resetForm = useCallback(() => {
+    setForm({ ...EMPTY_FORM });
+    setAuthorsText("");
+    setTagsText("");
+    setFetched(false);
+    setUrlInput("");
+    setDoiInput("");
+    setDownloadPdf(false);
+    setFetching(false);
+    setSaving(false);
+  }, []);
+
+  // ── タブ切替時にリセット ──
+  const handleTabChange = useCallback(
+    (tab: AddPaperTab) => {
+      setActiveTab(tab);
+      resetForm();
+    },
+    [resetForm]
+  );
+
+  // ── モーダルを閉じるときにリセット ──
+  const handleClose = useCallback(() => {
+    resetForm();
+    onClose();
+  }, [resetForm, onClose]);
+
+  // ── メタデータを取得してフォームに反映する共通関数 ──
+  const applyMetadata = useCallback(
+    (data: Partial<CreatePaperInput>) => {
+      const updated: CreatePaperInput = {
+        ...EMPTY_FORM,
+        ...data,
+      };
+      setForm(updated);
+      setAuthorsText((data.authors ?? []).join(", "));
+      setTagsText((data.tags ?? []).join(", "));
+      setFetched(true);
+    },
+    []
+  );
+
+  // ── URLからメタデータ取得 ──
+  const handleFetchFromUrl = useCallback(async () => {
+    if (!urlInput.trim()) {
+      toast.warning("URLを入力してください");
+      return;
+    }
+    setFetching(true);
+    setFetched(false);
+    try {
+      const data = await invoke<Partial<CreatePaperInput>>(
+        "fetch_metadata_from_url",
+        { url: urlInput.trim() }
+      );
+      applyMetadata({ ...data, url: urlInput.trim() });
+      toast.success("メタデータを取得しました");
+    } catch (e) {
+      toast.error(`メタデータの取得に失敗しました: ${String(e)}`);
+    } finally {
+      setFetching(false);
+    }
+  }, [urlInput, applyMetadata]);
+
+  // ── DOIからメタデータ取得 ──
+  const handleFetchFromDoi = useCallback(async () => {
+    if (!doiInput.trim()) {
+      toast.warning("DOIを入力してください");
+      return;
+    }
+    setFetching(true);
+    setFetched(false);
+    try {
+      const data = await invoke<Partial<CreatePaperInput>>(
+        "fetch_metadata_by_doi",
+        { doi: doiInput.trim() }
+      );
+      applyMetadata({ ...data, doi: doiInput.trim() });
+      toast.success("メタデータを取得しました");
+    } catch (e) {
+      toast.error(`メタデータの取得に失敗しました: ${String(e)}`);
+    } finally {
+      setFetching(false);
+    }
+  }, [doiInput, applyMetadata]);
+
+  // ── フォームフィールド更新 ──
+  const updateField = useCallback(
+    <K extends keyof CreatePaperInput>(
+      key: K,
+      value: CreatePaperInput[K]
+    ) => {
+      setForm((prev) => ({ ...prev, [key]: value }));
+    },
+    []
+  );
+
+  // ── 著者テキスト → 配列変換 ──
+  const handleAuthorsChange = useCallback((text: string) => {
+    setAuthorsText(text);
+    const authors = text
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s !== "");
+    setForm((prev) => ({ ...prev, authors }));
+  }, []);
+
+  // ── タグテキスト → 配列変換 ──
+  const handleTagsChange = useCallback((text: string) => {
+    setTagsText(text);
+    const tags = text
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s !== "");
+    setForm((prev) => ({ ...prev, tags }));
+  }, []);
+
+  // ── 保存 ──
+  const handleSave = useCallback(async () => {
+    if (!form.title.trim()) {
+      toast.warning("タイトルは必須です");
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSave(form);
+      toast.success("論文を追加しました");
+      handleClose();
+    } catch (e) {
+      toast.error(`論文の追加に失敗しました: ${String(e)}`);
+    } finally {
+      setSaving(false);
+    }
+  }, [form, onSave, handleClose]);
+
+  // ── フォームフィールド群の描画 ──
+  const renderFormFields = () => (
+    <div className="flex flex-col gap-3">
+      {/* タイトル */}
+      <Input
+        label="タイトル *"
+        value={form.title}
+        onChange={(e) => updateField("title", e.target.value)}
+        placeholder="論文のタイトル"
+        fullWidth
+      />
+
+      {/* 著者（カンマ区切り） */}
+      <Input
+        label="著者（カンマ区切り）"
+        value={authorsText}
+        onChange={(e) => handleAuthorsChange(e.target.value)}
+        placeholder="著者1, 著者2, 著者3"
+        fullWidth
+      />
+
+      {/* 年 + ジャーナル */}
+      <div className="flex gap-3">
+        <div style={{ width: "100px" }}>
+          <Input
+            label="出版年"
+            type="number"
+            value={form.year !== null && form.year !== undefined ? String(form.year) : ""}
+            onChange={(e) => {
+              const val = e.target.value;
+              updateField("year", val ? parseInt(val, 10) : null);
+            }}
+            placeholder="2024"
+            fullWidth
+          />
+        </div>
+        <div className="flex-1">
+          <Input
+            label="ジャーナル / 雑誌名"
+            value={form.journal ?? ""}
+            onChange={(e) =>
+              updateField("journal", e.target.value || null)
+            }
+            placeholder="雑誌名"
+            fullWidth
+          />
+        </div>
+      </div>
+
+      {/* 巻 + 号 + ページ */}
+      <div className="flex gap-3">
+        <div style={{ flex: 1 }}>
+          <Input
+            label="巻"
+            value={form.volume ?? ""}
+            onChange={(e) =>
+              updateField("volume", e.target.value || null)
+            }
+            placeholder="Vol."
+            fullWidth
+          />
+        </div>
+        <div style={{ flex: 1 }}>
+          <Input
+            label="号"
+            value={form.issue ?? ""}
+            onChange={(e) =>
+              updateField("issue", e.target.value || null)
+            }
+            placeholder="No."
+            fullWidth
+          />
+        </div>
+        <div style={{ flex: 1 }}>
+          <Input
+            label="ページ"
+            value={form.pages ?? ""}
+            onChange={(e) =>
+              updateField("pages", e.target.value || null)
+            }
+            placeholder="1-20"
+            fullWidth
+          />
+        </div>
+      </div>
+
+      {/* DOI + URL */}
+      <div className="flex gap-3">
+        <div className="flex-1">
+          <Input
+            label="DOI"
+            value={form.doi ?? ""}
+            onChange={(e) =>
+              updateField("doi", e.target.value || null)
+            }
+            placeholder="10.1234/xxxxx"
+            fullWidth
+          />
+        </div>
+        <div className="flex-1">
+          <Input
+            label="URL"
+            value={form.url ?? ""}
+            onChange={(e) =>
+              updateField("url", e.target.value || null)
+            }
+            placeholder="https://..."
+            fullWidth
+          />
+        </div>
+      </div>
+
+      {/* アブストラクト */}
+      <div className="flex flex-col gap-1">
+        <label
+          className="text-xs font-medium"
+          style={{ color: "var(--color-text-secondary)" }}
+        >
+          アブストラクト
+        </label>
+        <textarea
+          className="w-full text-sm selectable"
+          style={{
+            backgroundColor: "var(--color-bg-input)",
+            color: "var(--color-text-primary)",
+            border: "1px solid var(--color-border-primary)",
+            borderRadius: "var(--radius-input)",
+            padding: "var(--space-2) var(--space-3)",
+            fontSize: "var(--font-size-sm)",
+            fontFamily: "inherit",
+            resize: "vertical",
+            minHeight: "80px",
+            outline: "none",
+            transition: "border-color var(--transition-fast)",
+          }}
+          value={form.abstract ?? ""}
+          onChange={(e) =>
+            updateField("abstract", e.target.value || null)
+          }
+          placeholder="論文の概要..."
+          data-selectable="true"
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = "var(--color-border-focus)";
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = "var(--color-border-primary)";
+          }}
+        />
+      </div>
+
+      {/* タグ（カンマ区切り） */}
+      <Input
+        label="タグ（カンマ区切り）"
+        value={tagsText}
+        onChange={(e) => handleTagsChange(e.target.value)}
+        placeholder="認知科学, 心理学, メタ分析"
+        fullWidth
+      />
+    </div>
+  );
+
+  return (
+    <Modal
+      open={open}
+      onClose={handleClose}
+      title="論文を追加"
+      width="600px"
+      footer={
+        <>
+          <Button variant="ghost" onClick={handleClose} disabled={saving}>
+            キャンセル
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => void handleSave()}
+            loading={saving}
+            disabled={!form.title.trim()}
+          >
+            保存
+          </Button>
+        </>
+      }
+    >
+      {/* ── タブバー ── */}
+      <div
+        className="flex gap-0 mb-4 shrink-0"
+        style={{
+          borderBottom: "1px solid var(--color-border-secondary)",
+        }}
+      >
+        {TABS.map((tab) => (
+          <button
+            key={tab.key}
+            className="px-4 py-2 text-xs font-medium"
+            style={{
+              color:
+                activeTab === tab.key
+                  ? "var(--color-accent-primary)"
+                  : "var(--color-text-tertiary)",
+              borderBottom:
+                activeTab === tab.key
+                  ? "2px solid var(--color-accent-primary)"
+                  : "2px solid transparent",
+              transition: "all var(--transition-fast)",
+              marginBottom: "-1px",
+            }}
+            onClick={() => handleTabChange(tab.key)}
+            onMouseEnter={(e) => {
+              if (activeTab !== tab.key) {
+                e.currentTarget.style.color = "var(--color-text-secondary)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeTab !== tab.key) {
+                e.currentTarget.style.color = "var(--color-text-tertiary)";
+              }
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Tab 1: URLから追加 ── */}
+      {activeTab === "url" && (
+        <div className="flex flex-col gap-4">
+          {/* URL入力 + 取得ボタン */}
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <Input
+                label="論文のURL"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                placeholder="https://..."
+                fullWidth
+                icon={
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                  </svg>
+                }
+              />
+            </div>
+            <Button
+              variant="primary"
+              onClick={() => void handleFetchFromUrl()}
+              loading={fetching}
+              disabled={!urlInput.trim()}
+            >
+              取得
+            </Button>
+          </div>
+
+          {/* PDFダウンロードオプション */}
+          <label className="flex items-center gap-2 text-xs cursor-pointer">
+            <div
+              className="flex items-center justify-center"
+              style={{
+                width: "16px",
+                height: "16px",
+                borderRadius: "4px",
+                border: downloadPdf
+                  ? "none"
+                  : "1.5px solid var(--color-border-primary)",
+                backgroundColor: downloadPdf
+                  ? "var(--color-accent-primary)"
+                  : "transparent",
+                transition: "all var(--transition-fast)",
+              }}
+              onClick={() => setDownloadPdf((v) => !v)}
+            >
+              {downloadPdf && (
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+            </div>
+            <span style={{ color: "var(--color-text-secondary)" }}>
+              PDFも一緒に保存する
+            </span>
+          </label>
+
+          {/* メタデータプレビュー / スケルトン / フォーム */}
+          {fetching ? (
+            <SkeletonForm />
+          ) : fetched ? (
+            renderFormFields()
+          ) : (
+            <div
+              className="flex flex-col items-center justify-center py-8 gap-2"
+              style={{ color: "var(--color-text-disabled)" }}
+            >
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <p className="text-xs">URLを入力して「取得」をクリックしてください</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Tab 2: DOIから追加 ── */}
+      {activeTab === "doi" && (
+        <div className="flex flex-col gap-4">
+          {/* DOI入力 + 取得ボタン */}
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <Input
+                label="DOI"
+                value={doiInput}
+                onChange={(e) => setDoiInput(e.target.value)}
+                placeholder="10.1234/xxxxx"
+                fullWidth
+                icon={
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                  </svg>
+                }
+              />
+            </div>
+            <Button
+              variant="primary"
+              onClick={() => void handleFetchFromDoi()}
+              loading={fetching}
+              disabled={!doiInput.trim()}
+            >
+              取得
+            </Button>
+          </div>
+
+          {/* メタデータプレビュー / スケルトン / フォーム */}
+          {fetching ? (
+            <SkeletonForm />
+          ) : fetched ? (
+            renderFormFields()
+          ) : (
+            <div
+              className="flex flex-col items-center justify-center py-8 gap-2"
+              style={{ color: "var(--color-text-disabled)" }}
+            >
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <p className="text-xs">DOIを入力して「取得」をクリックしてください</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Tab 3: 手動入力 ── */}
+      {activeTab === "manual" && renderFormFields()}
+    </Modal>
+  );
+};

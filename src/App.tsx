@@ -1,12 +1,13 @@
 // src/App.tsx
 // Stellar — メインアプリケーションコンポーネント
-// レイアウト構成: Titlebar + Sidebar + MainPane + ContextPanel
+// レイアウト構成: Titlebar + Sidebar + MainPane + ToastContainer
 
 import type React from "react";
 import { useEffect } from "react";
 import { Titlebar } from "./components/layout/Titlebar";
 import { Sidebar } from "./components/layout/Sidebar";
 import { MainPane } from "./components/layout/MainPane";
+import { ToastContainer } from "./components/ui/Toast";
 import { useThemeStore } from "./stores/useThemeStore";
 import { useUIStore } from "./stores/useUIStore";
 
@@ -45,6 +46,9 @@ const App: React.FC = () => {
           <MainPane />
         </main>
       </div>
+
+      {/* トースト通知コンテナ */}
+      <ToastContainer />
     </div>
   );
 };

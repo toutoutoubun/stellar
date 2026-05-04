@@ -1,10 +1,11 @@
 // src/components/layout/MainPane.tsx
 // Stellar — メインペイン
 // サイドバーの選択に応じてコンテンツ領域を切り替える
-// 空状態 / 論文 / ノート / グラフ / 検索 のルーティング
+// ライブラリ / 論文（PDFリーダー） / ノート / グラフ / 検索 のルーティング
 
 import type React from "react";
 import { useUIStore } from "../../stores/useUIStore";
+import { LibraryView } from "../library/LibraryView";
 
 /** 空状態のウェルカム画面 */
 const EmptyState: React.FC = () => (
@@ -77,9 +78,16 @@ const EmptyState: React.FC = () => (
 
 export const MainPane: React.FC = () => {
   const mainPaneContent = useUIStore((s) => s.mainPaneContent);
+  const sidebarView = useUIStore((s) => s.sidebarView);
 
-  // コンテンツタイプに応じた描画
+  // サイドバーが「文献」の場合はライブラリビューを表示
+  // mainPaneContent が empty でもライブラリを表示する
   const renderContent = () => {
+    // サイドバーが「文献」ビューの場合、常にライブラリビューを表示
+    if (sidebarView === "library" && mainPaneContent.type === "empty") {
+      return <LibraryView />;
+    }
+
     switch (mainPaneContent.type) {
       case "paper":
         return (
