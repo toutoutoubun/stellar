@@ -94,6 +94,8 @@ pub fn run() {
             commands::links::get_graph_data,
             commands::search::full_text_search,
             commands::search::get_link_suggestions,
+            commands::metadata::fetch_metadata_by_doi,
+            commands::metadata::fetch_metadata_from_url,
         ])
         .run(tauri::generate_context!())
         .expect("Stellar の起動に失敗しました");

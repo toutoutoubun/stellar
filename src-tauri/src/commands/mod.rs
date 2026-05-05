@@ -4,6 +4,7 @@
 
 pub mod highlights;
 pub mod links;
+pub mod metadata;
 pub mod notes;
 pub mod papers;
 pub mod search;
