@@ -16,11 +16,11 @@ use tauri::AppHandle;
 /// 同一ペアの順方向（A→B）・逆方向（B→A）の両方をチェックし、
 /// 既に存在する場合はエラーを返す。自己リンクも防止する。
 #[tauri::command]
-pub async fn create_link(app: AppHandle, dto: CreateLinkDto) -> Result<LinkResponse, String> {
+pub async fn create_link(app: AppHandle, input: CreateLinkDto) -> Result<LinkResponse, String> {
     let pool = get_pool(&app);
 
     // 自己リンクの防止
-    if dto.source_type == dto.target_type && dto.source_id == dto.target_id {
+    if input.source_type == input.target_type && input.source_id == input.target_id {
         return Err("自分自身へのリンクは作成できません".to_string());
     }
 
@@ -30,14 +30,14 @@ pub async fn create_link(app: AppHandle, dto: CreateLinkDto) -> Result<LinkRespo
          WHERE (source_type = ? AND source_id = ? AND target_type = ? AND target_id = ?)
             OR (source_type = ? AND source_id = ? AND target_type = ? AND target_id = ?)",
     )
-    .bind(&dto.source_type)
-    .bind(&dto.source_id)
-    .bind(&dto.target_type)
-    .bind(&dto.target_id)
-    .bind(&dto.target_type)
-    .bind(&dto.target_id)
-    .bind(&dto.source_type)
-    .bind(&dto.source_id)
+    .bind(&input.source_type)
+    .bind(&input.source_id)
+    .bind(&input.target_type)
+    .bind(&input.target_id)
+    .bind(&input.target_type)
+    .bind(&input.target_id)
+    .bind(&input.source_type)
+    .bind(&input.source_id)
     .fetch_optional(pool.as_ref())
     .await
     .map_err(|e| format!("リンクの重複チェックに失敗: {}", e))?;
@@ -53,11 +53,11 @@ pub async fn create_link(app: AppHandle, dto: CreateLinkDto) -> Result<LinkRespo
         "INSERT INTO links (id, source_type, source_id, target_type, target_id, context, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
-    .bind(&dto.source_type)
-    .bind(&dto.source_id)
-    .bind(&dto.target_type)
-    .bind(&dto.target_id)
-    .bind(&dto.context)
+    .bind(&input.source_type)
+    .bind(&input.source_id)
+    .bind(&input.target_type)
+    .bind(&input.target_id)
+    .bind(&input.context)
     .bind(&now)
     .execute(pool.as_ref())
     .await
@@ -65,11 +65,11 @@ pub async fn create_link(app: AppHandle, dto: CreateLinkDto) -> Result<LinkRespo
 
     Ok(LinkResponse {
         id,
-        source_type: dto.source_type,
-        source_id: dto.source_id,
-        target_type: dto.target_type,
-        target_id: dto.target_id,
-        context: dto.context,
+        source_type: input.source_type,
+        source_id: input.source_id,
+        target_type: input.target_type,
+        target_id: input.target_id,
+        context: input.context,
         created_at: now,
     })
 }

@@ -37,22 +37,22 @@ pub async fn get_highlights(
 #[tauri::command]
 pub async fn create_highlight(
     app: AppHandle,
-    dto: CreateHighlightDto,
+    input: CreateHighlightDto,
 ) -> Result<HighlightResponse, String> {
     let pool = get_pool(&app);
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
-    let rect_json = serde_json::to_string(&dto.rect).map_err(|e| e.to_string())?;
+    let rect_json = serde_json::to_string(&input.rect).map_err(|e| e.to_string())?;
 
     sqlx::query(
         "INSERT INTO highlights (id, paper_id, text, comment, color, page, rect, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
-    .bind(&dto.paper_id)
-    .bind(&dto.text)
-    .bind(&dto.comment)
-    .bind(&dto.color)
-    .bind(dto.page)
+    .bind(&input.paper_id)
+    .bind(&input.text)
+    .bind(&input.comment)
+    .bind(&input.color)
+    .bind(input.page)
     .bind(&rect_json)
     .bind(&now)
     .execute(pool.as_ref())
@@ -61,12 +61,12 @@ pub async fn create_highlight(
 
     Ok(HighlightResponse {
         id,
-        paper_id: dto.paper_id,
-        text: dto.text,
-        comment: dto.comment,
-        color: dto.color,
-        page: dto.page,
-        rect: dto.rect,
+        paper_id: input.paper_id,
+        text: input.text,
+        comment: input.comment,
+        color: input.color,
+        page: input.page,
+        rect: input.rect,
         created_at: now,
     })
 }

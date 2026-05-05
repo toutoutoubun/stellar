@@ -152,19 +152,19 @@ pub async fn get_note(app: AppHandle, id: String) -> Result<NoteDetail, String> 
 // ────────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub async fn create_note(app: AppHandle, dto: CreateNoteDto) -> Result<NoteResponse, String> {
+pub async fn create_note(app: AppHandle, input: CreateNoteDto) -> Result<NoteResponse, String> {
     let pool = get_pool(&app);
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
-    let tags_json = serde_json::to_string(&dto.tags).map_err(|e| e.to_string())?;
+    let tags_json = serde_json::to_string(&input.tags).map_err(|e| e.to_string())?;
 
     sqlx::query(
         "INSERT INTO notes (id, title, content, paper_id, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
-    .bind(&dto.title)
-    .bind(&dto.content)
-    .bind(&dto.paper_id)
+    .bind(&input.title)
+    .bind(&input.content)
+    .bind(&input.paper_id)
     .bind(&tags_json)
     .bind(&now)
     .bind(&now)
@@ -174,10 +174,10 @@ pub async fn create_note(app: AppHandle, dto: CreateNoteDto) -> Result<NoteRespo
 
     Ok(NoteResponse {
         id,
-        title: dto.title,
-        content: dto.content,
-        paper_id: dto.paper_id,
-        tags: dto.tags,
+        title: input.title,
+        content: input.content,
+        paper_id: input.paper_id,
+        tags: input.tags,
         created_at: now.clone(),
         updated_at: now,
     })
@@ -191,7 +191,7 @@ pub async fn create_note(app: AppHandle, dto: CreateNoteDto) -> Result<NoteRespo
 pub async fn update_note(
     app: AppHandle,
     id: String,
-    dto: UpdateNoteDto,
+    input: UpdateNoteDto,
 ) -> Result<NoteResponse, String> {
     let pool = get_pool(&app);
     let now = chrono::Utc::now().to_rfc3339();
@@ -206,14 +206,14 @@ pub async fn update_note(
 
     let current = parse_note_sqlx(&row)?;
 
-    let title = dto.title.unwrap_or(current.title);
-    let content = dto.content.unwrap_or(current.content);
+    let title = input.title.unwrap_or(current.title);
+    let content = input.content.unwrap_or(current.content);
     // paper_id は二重 Option: Some(Some(x))=変更, Some(None)=解除, None=変更なし
-    let paper_id = match dto.paper_id {
+    let paper_id = match input.paper_id {
         Some(new_val) => new_val,
         None => current.paper_id,
     };
-    let tags = dto.tags.unwrap_or(current.tags);
+    let tags = input.tags.unwrap_or(current.tags);
     let tags_json = serde_json::to_string(&tags).map_err(|e| e.to_string())?;
 
     sqlx::query(

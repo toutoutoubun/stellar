@@ -4,13 +4,45 @@
 // ライブラリ / 論文（PDFリーダー） / ノート / グラフ / 検索 のルーティング
 
 import type React from "react";
+import { Suspense, lazy } from "react";
 import { useUIStore } from "../../stores/useUIStore";
 import { LibraryView } from "../library/LibraryView";
-import { ReaderView } from "../reader/ReaderView";
 import { NoteEditor } from "../notes/NoteEditor";
 import { NoteList } from "../notes/NoteList";
-import { GraphView } from "../graph/GraphView";
 import { SettingsView } from "../settings/SettingsView";
+
+// 重いコンポーネントは React.lazy で遅延読み込み
+// GraphView: react-force-graph-2d + d3-force 依存
+// ReaderView: pdfjs-dist 依存
+const GraphView = lazy(() =>
+  import("../graph/GraphView").then((m) => ({ default: m.GraphView }))
+);
+const ReaderView = lazy(() =>
+  import("../reader/ReaderView").then((m) => ({ default: m.ReaderView }))
+);
+
+/** 遅延コンポーネント用ローディング表示 */
+const LazyFallback: React.FC = () => (
+  <div
+    className="flex items-center justify-center h-full"
+    style={{ color: "var(--color-text-tertiary)" }}
+  >
+    <div className="flex flex-col items-center gap-3">
+      <svg
+        width="32"
+        height="32"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        style={{ animation: "spin 1s linear infinite" }}
+      >
+        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+      </svg>
+      <span className="text-sm">読み込み中…</span>
+    </div>
+  </div>
+);
 
 /** 空状態のウェルカム画面 */
 const EmptyState: React.FC = () => (
@@ -142,11 +174,19 @@ export const MainPane: React.FC = () => {
 
     switch (mainPaneContent.type) {
       case "paper":
-        return <ReaderView paperId={mainPaneContent.paperId} />;
+        return (
+          <Suspense fallback={<LazyFallback />}>
+            <ReaderView paperId={mainPaneContent.paperId} />
+          </Suspense>
+        );
       case "note":
         return <NoteEditor noteId={mainPaneContent.noteId} />;
       case "graph":
-        return <GraphView />;
+        return (
+          <Suspense fallback={<LazyFallback />}>
+            <GraphView />
+          </Suspense>
+        );
       case "search":
         return (
           <div

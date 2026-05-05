@@ -163,28 +163,28 @@ pub async fn get_paper(app: AppHandle, id: String) -> Result<PaperWithLinks, Str
 // ────────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub async fn create_paper(app: AppHandle, dto: CreatePaperDto) -> Result<PaperResponse, String> {
+pub async fn create_paper(app: AppHandle, input: CreatePaperDto) -> Result<PaperResponse, String> {
     let pool = get_pool(&app);
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
-    let authors_json = serde_json::to_string(&dto.authors).map_err(|e| e.to_string())?;
-    let tags_json = serde_json::to_string(&dto.tags).map_err(|e| e.to_string())?;
+    let authors_json = serde_json::to_string(&input.authors).map_err(|e| e.to_string())?;
+    let tags_json = serde_json::to_string(&input.tags).map_err(|e| e.to_string())?;
 
     sqlx::query(
         "INSERT INTO papers (id, title, authors, year, journal, volume, issue, pages, doi, url, abstract, pdf_path, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
-    .bind(&dto.title)
+    .bind(&input.title)
     .bind(&authors_json)
-    .bind(dto.year)
-    .bind(&dto.journal)
-    .bind(&dto.volume)
-    .bind(&dto.issue)
-    .bind(&dto.pages)
-    .bind(&dto.doi)
-    .bind(&dto.url)
-    .bind(&dto.r#abstract)
-    .bind(&dto.pdf_path)
+    .bind(input.year)
+    .bind(&input.journal)
+    .bind(&input.volume)
+    .bind(&input.issue)
+    .bind(&input.pages)
+    .bind(&input.doi)
+    .bind(&input.url)
+    .bind(&input.r#abstract)
+    .bind(&input.pdf_path)
     .bind(&tags_json)
     .bind(&now)
     .bind(&now)
@@ -194,18 +194,18 @@ pub async fn create_paper(app: AppHandle, dto: CreatePaperDto) -> Result<PaperRe
 
     Ok(PaperResponse {
         id,
-        title: dto.title,
-        authors: dto.authors,
-        year: dto.year,
-        journal: dto.journal,
-        volume: dto.volume,
-        issue: dto.issue,
-        pages: dto.pages,
-        doi: dto.doi,
-        url: dto.url,
-        r#abstract: dto.r#abstract,
-        pdf_path: dto.pdf_path,
-        tags: dto.tags,
+        title: input.title,
+        authors: input.authors,
+        year: input.year,
+        journal: input.journal,
+        volume: input.volume,
+        issue: input.issue,
+        pages: input.pages,
+        doi: input.doi,
+        url: input.url,
+        r#abstract: input.r#abstract,
+        pdf_path: input.pdf_path,
+        tags: input.tags,
         created_at: now.clone(),
         updated_at: now,
     })
@@ -219,7 +219,7 @@ pub async fn create_paper(app: AppHandle, dto: CreatePaperDto) -> Result<PaperRe
 pub async fn update_paper(
     app: AppHandle,
     id: String,
-    dto: UpdatePaperDto,
+    input: UpdatePaperDto,
 ) -> Result<PaperResponse, String> {
     let pool = get_pool(&app);
     let now = chrono::Utc::now().to_rfc3339();
@@ -235,18 +235,18 @@ pub async fn update_paper(
     let current = parse_paper_sqlx(&row)?;
 
     // DTO の Some フィールドのみ更新、None なら既存値を維持
-    let title = dto.title.unwrap_or(current.title);
-    let authors = dto.authors.unwrap_or(current.authors);
-    let year = dto.year.or(current.year);
-    let journal = dto.journal.or(current.journal);
-    let volume = dto.volume.or(current.volume);
-    let issue = dto.issue.or(current.issue);
-    let pages = dto.pages.or(current.pages);
-    let doi = dto.doi.or(current.doi);
-    let url = dto.url.or(current.url);
-    let r#abstract = dto.r#abstract.or(current.r#abstract);
-    let pdf_path = dto.pdf_path.or(current.pdf_path);
-    let tags = dto.tags.unwrap_or(current.tags);
+    let title = input.title.unwrap_or(current.title);
+    let authors = input.authors.unwrap_or(current.authors);
+    let year = input.year.or(current.year);
+    let journal = input.journal.or(current.journal);
+    let volume = input.volume.or(current.volume);
+    let issue = input.issue.or(current.issue);
+    let pages = input.pages.or(current.pages);
+    let doi = input.doi.or(current.doi);
+    let url = input.url.or(current.url);
+    let r#abstract = input.r#abstract.or(current.r#abstract);
+    let pdf_path = input.pdf_path.or(current.pdf_path);
+    let tags = input.tags.unwrap_or(current.tags);
 
     let authors_json = serde_json::to_string(&authors).map_err(|e| e.to_string())?;
     let tags_json = serde_json::to_string(&tags).map_err(|e| e.to_string())?;
