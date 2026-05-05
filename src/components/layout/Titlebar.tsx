@@ -5,25 +5,28 @@
 
 import type React from "react";
 import { useCallback } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useUIStore } from "../../stores/useUIStore";
 import { ThemeToggleButton } from "./ThemeToggleButton";
 
 export const Titlebar: React.FC = () => {
   const toggleSearchModal = useUIStore((s) => s.toggleSearchModal);
-  const appWindow = getCurrentWindow();
 
-  const handleMinimize = useCallback(() => {
-    void appWindow.minimize();
-  }, [appWindow]);
+  // getCurrentWindow() は window.__TAURI_INTERNALS__ にアクセスするため、
+  // レンダー中ではなくイベントハンドラ内で遅延呼び出しする
+  const handleMinimize = useCallback(async () => {
+    const { getCurrentWindow } = await import("@tauri-apps/api/window");
+    void getCurrentWindow().minimize();
+  }, []);
 
-  const handleMaximize = useCallback(() => {
-    void appWindow.toggleMaximize();
-  }, [appWindow]);
+  const handleMaximize = useCallback(async () => {
+    const { getCurrentWindow } = await import("@tauri-apps/api/window");
+    void getCurrentWindow().toggleMaximize();
+  }, []);
 
-  const handleClose = useCallback(() => {
-    void appWindow.close();
-  }, [appWindow]);
+  const handleClose = useCallback(async () => {
+    const { getCurrentWindow } = await import("@tauri-apps/api/window");
+    void getCurrentWindow().close();
+  }, []);
 
   return (
     <header
