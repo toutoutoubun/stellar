@@ -3,23 +3,11 @@
 // Markdown ノートの作成・取得・更新・削除を管理する
 // ページネーション・NoteDetail（バックリンク+アウトライン）・ハイライトからの自動生成を提供
 
-use crate::db::models::{
-    extract_outlines, parse_link_with_source, parse_note_row, val_i64, val_opt_str, val_str,
-    CreateNoteDto, LinkWithSource, NoteDetail, NoteResponse, PaginatedResult, UpdateNoteDto,
-};
-use serde_json::Value;
-use tauri::{AppHandle, Manager};
-use tauri_plugin_sql::{DbInstances, DbPool};
-
-/// DB 接続プールを取得するヘルパー
-async fn get_db(app: &AppHandle) -> Result<std::sync::Arc<DbPool>, String> {
-    let db_instances = app.state::<DbInstances>();
-    let instances = db_instances.0.read().await;
-    instances
-        .get("sqlite:stellar.db")
-        .cloned()
-        .ok_or_else(|| "データベース接続が見つかりません".to_string())
-}
+use crate::db::models::*;
+use crate::db::get_pool;
+use crate::commands::links::fetch_backlinks_for;
+use sqlx::Row;
+use tauri::AppHandle;
 
 // ────────────────────────────────────────────────────────────
 // get_notes — ノート一覧取得（ページネーション + フィルタ対応）
@@ -38,21 +26,18 @@ pub async fn get_notes(
     paper_id: Option<String>,
     tag: Option<String>,
 ) -> Result<PaginatedResult<NoteResponse>, String> {
-    let db = get_db(&app).await?;
+    let pool = get_pool(&app);
     let page = page.unwrap_or(1).max(1);
     let limit = limit.unwrap_or(20).clamp(1, 100);
     let offset = (page - 1) * limit;
 
     let mut conditions: Vec<String> = Vec::new();
-    let mut params: Vec<Value> = Vec::new();
 
-    if let Some(ref pid) = paper_id {
+    if paper_id.is_some() {
         conditions.push("paper_id = ?".to_string());
-        params.push(Value::String(pid.clone()));
     }
-    if let Some(ref tag_name) = tag {
+    if tag.is_some() {
         conditions.push("tags LIKE ?".to_string());
-        params.push(Value::String(format!("%\"{}\"%", tag_name)));
     }
 
     let where_clause = if conditions.is_empty() {
@@ -63,32 +48,43 @@ pub async fn get_notes(
 
     // 総件数
     let count_sql = format!("SELECT COUNT(*) as cnt FROM notes {}", where_clause);
-    let count_rows: Vec<Value> = db
-        .select(&count_sql, params.clone())
+    let mut count_query = sqlx::query(&count_sql);
+    if let Some(ref pid) = paper_id {
+        count_query = count_query.bind(pid);
+    }
+    if let Some(ref tag_name) = tag {
+        count_query = count_query.bind(format!("%\"{}\"%", tag_name));
+    }
+
+    let count_row = count_query
+        .fetch_one(pool.as_ref())
         .await
         .map_err(|e| format!("ノート件数の取得に失敗: {}", e))?;
-
-    let total = count_rows
-        .first()
-        .and_then(|r| val_i64(r, "cnt"))
-        .unwrap_or(0) as u32;
+    let total: i64 = count_row.try_get("cnt").unwrap_or(0);
+    let total = total as u32;
 
     // ページネーション付きで取得
     let select_sql = format!(
         "SELECT * FROM notes {} ORDER BY updated_at DESC LIMIT ? OFFSET ?",
         where_clause
     );
-    params.push(Value::Number(limit.into()));
-    params.push(Value::Number(offset.into()));
+    let mut select_query = sqlx::query(&select_sql);
+    if let Some(ref pid) = paper_id {
+        select_query = select_query.bind(pid);
+    }
+    if let Some(ref tag_name) = tag {
+        select_query = select_query.bind(format!("%\"{}\"%", tag_name));
+    }
+    select_query = select_query.bind(limit as i64).bind(offset as i64);
 
-    let rows: Vec<Value> = db
-        .select(&select_sql, params)
+    let rows = select_query
+        .fetch_all(pool.as_ref())
         .await
         .map_err(|e| format!("ノート一覧の取得に失敗: {}", e))?;
 
     let items = rows
         .iter()
-        .map(parse_note_row)
+        .map(parse_note_sqlx)
         .collect::<Result<Vec<_>, _>>()?;
 
     let total_pages = if total == 0 {
@@ -112,43 +108,33 @@ pub async fn get_notes(
 
 #[tauri::command]
 pub async fn get_note(app: AppHandle, id: String) -> Result<NoteDetail, String> {
-    let db = get_db(&app).await?;
+    let pool = get_pool(&app);
 
     // ノート本体を取得
-    let rows: Vec<Value> = db
-        .select(
-            "SELECT * FROM notes WHERE id = ?",
-            vec![Value::String(id.clone())],
-        )
+    let row = sqlx::query("SELECT * FROM notes WHERE id = ?")
+        .bind(&id)
+        .fetch_optional(pool.as_ref())
         .await
-        .map_err(|e| format!("ノートの取得に失敗: {}", e))?;
+        .map_err(|e| format!("ノートの取得に失敗: {}", e))?
+        .ok_or_else(|| format!("ノートが見つかりません: {}", id))?;
 
-    let note = rows
-        .first()
-        .ok_or_else(|| format!("ノートが見つかりません: {}", id))
-        .and_then(parse_note_row)?;
+    let note = parse_note_sqlx(&row)?;
 
     // バックリンク
-    let backlinks = fetch_backlinks_for(&db, "note", &id).await?;
+    let backlinks = fetch_backlinks_for(pool.as_ref(), "note", &id).await?;
 
     // Markdown コンテンツからアウトライン（見出し一覧）を抽出
     let outlines = extract_outlines(&note.content);
 
     // 紐づき論文のタイトルを取得
     let paper_title = if let Some(ref pid) = note.paper_id {
-        let paper_rows: Vec<Value> = db
-            .select(
-                "SELECT title FROM papers WHERE id = ?",
-                vec![Value::String(pid.clone())],
-            )
+        let paper_row = sqlx::query("SELECT title FROM papers WHERE id = ?")
+            .bind(pid)
+            .fetch_optional(pool.as_ref())
             .await
             .map_err(|e| format!("論文タイトルの取得に失敗: {}", e))?;
 
-        paper_rows
-            .first()
-            .and_then(|r| r.get("title"))
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string())
+        paper_row.and_then(|r| r.try_get::<String, _>("title").ok())
     } else {
         None
     };
@@ -167,23 +153,22 @@ pub async fn get_note(app: AppHandle, id: String) -> Result<NoteDetail, String> 
 
 #[tauri::command]
 pub async fn create_note(app: AppHandle, dto: CreateNoteDto) -> Result<NoteResponse, String> {
-    let db = get_db(&app).await?;
+    let pool = get_pool(&app);
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
     let tags_json = serde_json::to_string(&dto.tags).map_err(|e| e.to_string())?;
 
-    db.execute(
+    sqlx::query(
         "INSERT INTO notes (id, title, content, paper_id, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        vec![
-            Value::String(id.clone()),
-            Value::String(dto.title.clone()),
-            Value::String(dto.content.clone()),
-            dto.paper_id.clone().map_or(Value::Null, Value::String),
-            Value::String(tags_json),
-            Value::String(now.clone()),
-            Value::String(now.clone()),
-        ],
     )
+    .bind(&id)
+    .bind(&dto.title)
+    .bind(&dto.content)
+    .bind(&dto.paper_id)
+    .bind(&tags_json)
+    .bind(&now)
+    .bind(&now)
+    .execute(pool.as_ref())
     .await
     .map_err(|e| format!("ノートの作成に失敗: {}", e))?;
 
@@ -208,22 +193,18 @@ pub async fn update_note(
     id: String,
     dto: UpdateNoteDto,
 ) -> Result<NoteResponse, String> {
-    let db = get_db(&app).await?;
+    let pool = get_pool(&app);
     let now = chrono::Utc::now().to_rfc3339();
 
     // 現在のノートデータを取得
-    let rows: Vec<Value> = db
-        .select(
-            "SELECT * FROM notes WHERE id = ?",
-            vec![Value::String(id.clone())],
-        )
+    let row = sqlx::query("SELECT * FROM notes WHERE id = ?")
+        .bind(&id)
+        .fetch_optional(pool.as_ref())
         .await
-        .map_err(|e| format!("ノートの取得に失敗: {}", e))?;
+        .map_err(|e| format!("ノートの取得に失敗: {}", e))?
+        .ok_or_else(|| format!("ノートが見つかりません: {}", id))?;
 
-    let current = rows
-        .first()
-        .ok_or_else(|| format!("ノートが見つかりません: {}", id))
-        .and_then(parse_note_row)?;
+    let current = parse_note_sqlx(&row)?;
 
     let title = dto.title.unwrap_or(current.title);
     let content = dto.content.unwrap_or(current.content);
@@ -235,17 +216,16 @@ pub async fn update_note(
     let tags = dto.tags.unwrap_or(current.tags);
     let tags_json = serde_json::to_string(&tags).map_err(|e| e.to_string())?;
 
-    db.execute(
+    sqlx::query(
         "UPDATE notes SET title=?, content=?, paper_id=?, tags=?, updated_at=? WHERE id=?",
-        vec![
-            Value::String(title.clone()),
-            Value::String(content.clone()),
-            paper_id.clone().map_or(Value::Null, Value::String),
-            Value::String(tags_json),
-            Value::String(now.clone()),
-            Value::String(id.clone()),
-        ],
     )
+    .bind(&title)
+    .bind(&content)
+    .bind(&paper_id)
+    .bind(&tags_json)
+    .bind(&now)
+    .bind(&id)
+    .execute(pool.as_ref())
     .await
     .map_err(|e| format!("ノートの更新に失敗: {}", e))?;
 
@@ -266,18 +246,22 @@ pub async fn update_note(
 
 #[tauri::command]
 pub async fn delete_note(app: AppHandle, id: String) -> Result<(), String> {
-    let db = get_db(&app).await?;
+    let pool = get_pool(&app);
 
     // リンクテーブルから手動削除
-    db.execute(
+    sqlx::query(
         "DELETE FROM links WHERE (source_type = 'note' AND source_id = ?) OR (target_type = 'note' AND target_id = ?)",
-        vec![Value::String(id.clone()), Value::String(id.clone())],
     )
+    .bind(&id)
+    .bind(&id)
+    .execute(pool.as_ref())
     .await
     .map_err(|e| format!("関連リンクの削除に失敗: {}", e))?;
 
     // ノートを削除（FTS5 はトリガーで自動削除）
-    db.execute("DELETE FROM notes WHERE id = ?", vec![Value::String(id)])
+    sqlx::query("DELETE FROM notes WHERE id = ?")
+        .bind(&id)
+        .execute(pool.as_ref())
         .await
         .map_err(|e| format!("ノートの削除に失敗: {}", e))?;
 
@@ -290,44 +274,29 @@ pub async fn delete_note(app: AppHandle, id: String) -> Result<(), String> {
 
 /// 指定されたハイライトのテキスト・コメントを Markdown テンプレートに変換し、
 /// 新規ノートとして保存する。
-///
-/// 生成される Markdown フォーマット:
-/// ```markdown
-/// ## ハイライト from [論文タイトル]
-///
-/// > [ハイライトテキスト] (p.[ページ番号])
-///
-/// [コメント]
-///
-/// ---
-/// ```
 #[tauri::command]
 pub async fn create_note_from_highlights(
     app: AppHandle,
     paper_id: String,
     highlight_ids: Vec<String>,
 ) -> Result<NoteResponse, String> {
-    let db = get_db(&app).await?;
+    let pool = get_pool(&app);
 
     if highlight_ids.is_empty() {
         return Err("ハイライトが指定されていません".to_string());
     }
 
     // 論文タイトルを取得
-    let paper_rows: Vec<Value> = db
-        .select(
-            "SELECT title FROM papers WHERE id = ?",
-            vec![Value::String(paper_id.clone())],
-        )
+    let paper_row = sqlx::query("SELECT title FROM papers WHERE id = ?")
+        .bind(&paper_id)
+        .fetch_optional(pool.as_ref())
         .await
-        .map_err(|e| format!("論文の取得に失敗: {}", e))?;
+        .map_err(|e| format!("論文の取得に失敗: {}", e))?
+        .ok_or_else(|| format!("論文が見つかりません: {}", paper_id))?;
 
-    let paper_title = paper_rows
-        .first()
-        .and_then(|r| r.get("title"))
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| format!("論文が見つかりません: {}", paper_id))?
-        .to_string();
+    let paper_title: String = paper_row
+        .try_get("title")
+        .map_err(|e| format!("論文タイトルの取得に失敗: {}", e))?;
 
     // 指定ハイライトを取得（IN 句を動的構築）
     let placeholders: Vec<String> = highlight_ids.iter().map(|_| "?".to_string()).collect();
@@ -337,14 +306,14 @@ pub async fn create_note_from_highlights(
         in_clause
     );
 
-    let mut params: Vec<Value> = highlight_ids
-        .iter()
-        .map(|hid| Value::String(hid.clone()))
-        .collect();
-    params.push(Value::String(paper_id.clone()));
+    let mut query = sqlx::query(&sql);
+    for hid in &highlight_ids {
+        query = query.bind(hid);
+    }
+    query = query.bind(&paper_id);
 
-    let highlight_rows: Vec<Value> = db
-        .select(&sql, params)
+    let highlight_rows = query
+        .fetch_all(pool.as_ref())
         .await
         .map_err(|e| format!("ハイライトの取得に失敗: {}", e))?;
 
@@ -356,18 +325,16 @@ pub async fn create_note_from_highlights(
     let mut markdown = format!("## ハイライト from {}\n\n", paper_title);
 
     for row in &highlight_rows {
-        let text = row.get("text").and_then(|v| v.as_str()).unwrap_or("");
-        let page = row.get("page").and_then(|v| v.as_i64()).unwrap_or(0);
-        let comment = row
-            .get("comment")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string();
+        let text: String = row.try_get("text").unwrap_or_default();
+        let page: i32 = row.try_get("page").unwrap_or(0);
+        let comment: Option<String> = row.try_get("comment").unwrap_or(None);
 
         markdown.push_str(&format!("> {} (p.{})\n\n", text, page));
 
-        if !comment.is_empty() {
-            markdown.push_str(&format!("{}\n\n", comment));
+        if let Some(ref c) = comment {
+            if !c.is_empty() {
+                markdown.push_str(&format!("{}\n\n", c));
+            }
         }
 
         markdown.push_str("---\n\n");
@@ -378,18 +345,17 @@ pub async fn create_note_from_highlights(
     let now = chrono::Utc::now().to_rfc3339();
     let note_title = format!("{} — ハイライトノート", paper_title);
 
-    db.execute(
+    sqlx::query(
         "INSERT INTO notes (id, title, content, paper_id, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        vec![
-            Value::String(note_id.clone()),
-            Value::String(note_title.clone()),
-            Value::String(markdown.clone()),
-            Value::String(paper_id.clone()),
-            Value::String("[]".to_string()),
-            Value::String(now.clone()),
-            Value::String(now.clone()),
-        ],
     )
+    .bind(&note_id)
+    .bind(&note_title)
+    .bind(&markdown)
+    .bind(&paper_id)
+    .bind("[]")
+    .bind(&now)
+    .bind(&now)
+    .execute(pool.as_ref())
     .await
     .map_err(|e| format!("ノートの作成に失敗: {}", e))?;
 
@@ -402,48 +368,6 @@ pub async fn create_note_from_highlights(
         created_at: now.clone(),
         updated_at: now,
     })
-}
-
-// ────────────────────────────────────────────────────────────
-// ヘルパー関数
-// ────────────────────────────────────────────────────────────
-
-/// 指定アイテムに対するバックリンク（source_title / target_title 付き）を取得する
-async fn fetch_backlinks_for(
-    db: &DbPool,
-    item_type: &str,
-    item_id: &str,
-) -> Result<Vec<LinkWithSource>, String> {
-    let rows: Vec<Value> = db
-        .select(
-            "SELECT l.*,
-                COALESCE(
-                    (SELECT title FROM papers WHERE id = l.source_id AND l.source_type = 'paper'),
-                    (SELECT title FROM notes  WHERE id = l.source_id AND l.source_type = 'note'),
-                    ''
-                ) AS source_title,
-                COALESCE(
-                    (SELECT title FROM papers WHERE id = l.target_id AND l.target_type = 'paper'),
-                    (SELECT title FROM notes  WHERE id = l.target_id AND l.target_type = 'note'),
-                    ''
-                ) AS target_title
-             FROM links l
-             WHERE (l.source_type = ? AND l.source_id = ?)
-                OR (l.target_type = ? AND l.target_id = ?)
-             ORDER BY l.created_at DESC",
-            vec![
-                Value::String(item_type.to_string()),
-                Value::String(item_id.to_string()),
-                Value::String(item_type.to_string()),
-                Value::String(item_id.to_string()),
-            ],
-        )
-        .await
-        .map_err(|e| format!("バックリンクの取得に失敗: {}", e))?;
-
-    rows.iter()
-        .map(parse_link_with_source)
-        .collect::<Result<Vec<_>, _>>()
 }
 
 // ────────────────────────────────────────────────────────────

@@ -1,5 +1,116 @@
 // src-tauri/src/db/mod.rs
 // Stellar — データベースモジュール
-// マイグレーションとモデル定義を管理する
+// sqlx::SqlitePool を自前管理し、Tauri Managed State として共有する
 
 pub mod models;
+
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::{Row, SqlitePool};
+use std::str::FromStr;
+use std::sync::Arc;
+use tauri::{AppHandle, Manager};
+
+/// Tauri Managed State として登録する DB プール
+pub struct AppDb(pub Arc<SqlitePool>);
+
+/// AppHandle から SqlitePool への参照を取得するヘルパー
+pub fn get_pool(app: &AppHandle) -> Arc<SqlitePool> {
+    app.state::<AppDb>().0.clone()
+}
+
+/// アプリケーション初期化時に SqlitePool を作成する
+pub async fn init_db(app: &AppHandle) -> Result<SqlitePool, Box<dyn std::error::Error>> {
+    let app_path = app.path().app_config_dir()?;
+    std::fs::create_dir_all(&app_path)?;
+
+    let db_path = app_path.join("stellar.db");
+    let db_url = format!("sqlite:{}?mode=rwc", db_path.display());
+
+    let options = SqliteConnectOptions::from_str(&db_url)?
+        .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
+        .foreign_keys(true);
+
+    let pool = SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect_with(options)
+        .await?;
+
+    // マイグレーション実行
+    run_migrations(&pool).await?;
+
+    Ok(pool)
+}
+
+/// SQL マイグレーションを実行する
+async fn run_migrations(pool: &SqlitePool) -> Result<(), Box<dyn std::error::Error>> {
+    // マイグレーション管理テーブル
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS _stellar_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)",
+    )
+    .execute(pool)
+    .await?;
+
+    let row = sqlx::query(
+        "SELECT COUNT(*) as cnt FROM _stellar_migrations WHERE version = 1",
+    )
+    .fetch_one(pool)
+    .await?;
+    let cnt: i64 = row.get("cnt");
+    let applied = cnt > 0;
+
+    if !applied {
+        let migration_sql = include_str!("migrations/V001__initial.sql");
+
+        for statement in split_sql_statements(migration_sql) {
+            let trimmed = statement.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+            sqlx::query(trimmed).execute(pool).await?;
+        }
+
+        sqlx::query(
+            "INSERT INTO _stellar_migrations (version, applied_at) VALUES (1, datetime('now'))",
+        )
+        .execute(pool)
+        .await?;
+
+        log::info!("マイグレーション V001 を適用しました");
+    }
+
+    Ok(())
+}
+
+/// セミコロンで SQL 文を分割するヘルパー
+/// トリガー内の BEGIN...END ブロックを正しく扱う
+fn split_sql_statements(sql: &str) -> Vec<String> {
+    let mut statements = Vec::new();
+    let mut current = String::new();
+    let mut in_begin_block = false;
+
+    for line in sql.lines() {
+        let trimmed = line.trim().to_uppercase();
+
+        if trimmed.starts_with("BEGIN") {
+            in_begin_block = true;
+        }
+
+        current.push_str(line);
+        current.push('\n');
+
+        if trimmed.ends_with("END;") {
+            in_begin_block = false;
+            statements.push(current.clone());
+            current.clear();
+        } else if !in_begin_block && trimmed.ends_with(';') {
+            statements.push(current.clone());
+            current.clear();
+        }
+    }
+
+    if !current.trim().is_empty() {
+        statements.push(current);
+    }
+
+    statements
+}
