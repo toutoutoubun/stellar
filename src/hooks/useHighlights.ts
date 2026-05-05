@@ -71,7 +71,7 @@ export function useHighlights(paperId: string): UseHighlightsReturn {
   const fetchHighlights = useCallback(async () => {
     setIsLoading(true);
     try {
-      const result = await invoke<Highlight[]>("get_highlights_by_paper", {
+      const result = await invoke<Highlight[]>("get_highlights", {
         paperId,
       });
       // createdAt 昇順でソート
@@ -180,7 +180,7 @@ export function useHighlights(paperId: string): UseHighlightsReturn {
         try {
           await invoke("update_highlight_comment", {
             id: highlightId,
-            comment: comment || null,
+            comment: comment || "",
           });
         } catch (err) {
           const message =

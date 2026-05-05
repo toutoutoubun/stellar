@@ -4,7 +4,6 @@
 
 import type React from "react";
 import { useState, useCallback, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { useThemeStore, THEMES } from "../../stores/useThemeStore";
 import { ThemePreviewCard } from "./ThemePreviewCard";
 import type {
@@ -145,10 +144,9 @@ export const SettingsView: React.FC = () => {
   useEffect(() => {
     if (activeTab === "data") {
       setIsLoadingData(true);
-      invoke<DataSummary>("get_data_summary")
-        .then((summary) => setDataSummary(summary))
-        .catch(() => {
-          // バックエンド未実装の場合はデフォルト表示
+      // TODO: get_data_summary コマンド未実装 — デフォルト値を設定
+      Promise.resolve()
+        .then(() => {
           setDataSummary({
             paperCount: 0,
             noteCount: 0,
@@ -179,10 +177,8 @@ export const SettingsView: React.FC = () => {
       const { open } = await import("@tauri-apps/plugin-dialog");
       const selected = await open({ directory: true, multiple: false });
       if (selected) {
-        await invoke("change_data_path", { newPath: selected });
-        // リフレッシュ
-        const summary = await invoke<DataSummary>("get_data_summary");
-        setDataSummary(summary);
+        // TODO: change_data_path コマンド未実装
+        console.warn("change_data_path は未実装です", selected);
       }
     } catch {
       // キャンセルまたはエラー
@@ -193,7 +189,8 @@ export const SettingsView: React.FC = () => {
   const handleExport = useCallback(async () => {
     setIsExporting(true);
     try {
-      await invoke("export_data");
+      // TODO: export_data コマンド未実装
+      console.warn("export_data は未実装です");
     } catch {
       // エラー時は何もしない
     } finally {
@@ -205,7 +202,8 @@ export const SettingsView: React.FC = () => {
   const handleBackup = useCallback(async () => {
     setIsBackingUp(true);
     try {
-      await invoke("create_backup");
+      // TODO: create_backup コマンド未実装
+      console.warn("create_backup は未実装です");
     } catch {
       // エラー時は何もしない
     } finally {

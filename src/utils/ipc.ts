@@ -15,7 +15,6 @@ import type {
   UpdateHighlightInput,
   Link,
   CreateLinkInput,
-  SearchResult,
   DataSummary,
   LinkSuggestion,
 } from "../types";
@@ -54,8 +53,8 @@ export async function invoke<T>(
 
 /** 論文 API */
 export const papersApi = {
-  /** 全論文を取得 */
-  list: () => invoke<Paper[]>("list_papers"),
+  /** 全論文を取得（ページネーション付き） */
+  list: () => invoke<{ items: Paper[]; totalPages: number; totalItems: number }>("get_papers", { limit: 1000 }).then(r => r.items),
 
   /** 論文を1件取得 */
   get: (id: string) => invoke<Paper>("get_paper", { id }),
@@ -72,18 +71,22 @@ export const papersApi = {
   delete: (id: string) => invoke<void>("delete_paper", { id }),
 
   /** PDF を添付 */
-  attachPdf: (id: string, filePath: string) =>
-    invoke<Paper>("attach_pdf", { id, filePath }),
+  attachPdf: (id: string, pdfPath: string) =>
+    invoke<Paper>("attach_pdf", { id, pdfPath }),
 
-  /** DOI / URL からメタデータを取得 */
-  fetchMetadata: (query: string) =>
-    invoke<Partial<Paper>>("fetch_paper_metadata", { query }),
+  /** DOI からメタデータを取得 */
+  fetchMetadataByDoi: (doi: string) =>
+    invoke<Partial<Paper>>("fetch_metadata_by_doi", { doi }),
+
+  /** URL からメタデータを取得 */
+  fetchMetadataFromUrl: (url: string) =>
+    invoke<Partial<Paper>>("fetch_metadata_from_url", { url }),
 };
 
 /** ノート API */
 export const notesApi = {
-  /** 全ノートを取得 */
-  list: () => invoke<Note[]>("list_notes"),
+  /** 全ノートを取得（ページネーション付き） */
+  list: () => invoke<{ items: Note[]; totalPages: number; totalItems: number }>("get_notes", { limit: 1000 }).then(r => r.items),
 
   /** ノートを1件取得 */
   get: (id: string) => invoke<Note>("get_note", { id }),
@@ -104,18 +107,15 @@ export const notesApi = {
 export const highlightsApi = {
   /** 論文のハイライト一覧を取得 */
   listByPaper: (paperId: string) =>
-    invoke<Highlight[]>("list_highlights", { paperId }),
-
-  /** ハイライトを1件取得 */
-  get: (id: string) => invoke<Highlight>("get_highlight", { id }),
+    invoke<Highlight[]>("get_highlights", { paperId }),
 
   /** ハイライトを作成 */
   create: (input: CreateHighlightInput) =>
     invoke<Highlight>("create_highlight", { input }),
 
-  /** ハイライトを更新 */
+  /** ハイライトコメントを更新 */
   update: (id: string, input: UpdateHighlightInput) =>
-    invoke<Highlight>("update_highlight", { id, input }),
+    invoke<Highlight>("update_highlight_comment", { id, comment: input.comment ?? "" }),
 
   /** ハイライトを削除 */
   delete: (id: string) => invoke<void>("delete_highlight", { id }),
@@ -123,12 +123,9 @@ export const highlightsApi = {
 
 /** リンク API */
 export const linksApi = {
-  /** 全リンクを取得 */
-  list: () => invoke<Link[]>("list_links"),
-
-  /** 特定ノードに接続されたリンクを取得 */
-  listByNode: (nodeType: string, nodeId: string) =>
-    invoke<Link[]>("list_links_by_node", { nodeType, nodeId }),
+  /** 特定ノードに接続されたバックリンクを取得 */
+  listByNode: (itemType: string, itemId: string) =>
+    invoke<Link[]>("get_backlinks", { itemType, itemId }),
 
   /** リンクを作成 */
   create: (input: CreateLinkInput) =>
@@ -139,34 +136,40 @@ export const linksApi = {
 
   /** WikiLink オートコンプリート候補を取得 */
   suggest: (query: string) =>
-    invoke<LinkSuggestion[]>("suggest_links", { query }),
+    invoke<LinkSuggestion[]>("get_link_suggestions", { query }),
 };
+
+/** バックエンドの検索結果型 */
+interface BackendSearchResults {
+  papers: { id: string; itemType: string; title: string; snippet: string; score: number }[];
+  notes: { id: string; itemType: string; title: string; snippet: string; score: number }[];
+  highlights: { id: string; itemType: string; title: string; snippet: string; score: number }[];
+}
 
 /** 検索 API */
 export const searchApi = {
   /** 全文検索 */
   search: (query: string) =>
-    invoke<SearchResult[]>("search", { query }),
+    invoke<BackendSearchResults>("full_text_search", { query }),
 
   /** インクリメンタル検索（デバウンス済みのクエリを想定） */
   quickSearch: (query: string) =>
-    invoke<SearchResult[]>("quick_search", { query }),
+    invoke<BackendSearchResults>("full_text_search", { query }),
 };
 
-/** データ管理 API */
+/** データ管理 API（未実装 — 将来のバックエンドコマンド追加後に有効化） */
 export const dataApi = {
   /** データサマリーを取得 */
-  getSummary: () => invoke<DataSummary>("get_data_summary"),
+  getSummary: () => Promise.resolve({} as DataSummary),
 
   /** データパスを変更 */
-  changePath: (newPath: string) =>
-    invoke<void>("change_data_path", { newPath }),
+  changePath: (_newPath: string) => Promise.resolve(),
 
   /** データをエクスポート（JSON + PDF ZIP） */
-  export: () => invoke<string>("export_data"),
+  export: () => Promise.resolve(""),
 
   /** バックアップを作成 (stellar_backup_YYYYMMDD.zip) */
-  createBackup: () => invoke<string>("create_backup"),
+  createBackup: () => Promise.resolve(""),
 };
 
 /** すべての API をまとめたオブジェクト */

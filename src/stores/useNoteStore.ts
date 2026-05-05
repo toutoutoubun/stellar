@@ -76,7 +76,8 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   fetchNotes: async () => {
     set({ loading: true, error: null });
     try {
-      const notes = await invoke<Note[]>("get_all_notes");
+      const result = await invoke<{ items: Note[]; totalPages: number; totalItems: number }>("get_notes", { limit: 1000 });
+      const notes = result.items;
       set({ notes, loading: false });
     } catch (e) {
       set({ error: String(e), loading: false });
@@ -85,7 +86,8 @@ export const useNoteStore = create<NoteState>((set, get) => ({
 
   fetchNotesByPaper: async (paperId) => {
     try {
-      const notes = await invoke<Note[]>("get_notes_by_paper", { paperId });
+      const result = await invoke<{ items: Note[]; totalPages: number; totalItems: number }>("get_notes", { paperId, limit: 1000 });
+      const notes = result.items;
       return notes;
     } catch (e) {
       set({ error: String(e) });

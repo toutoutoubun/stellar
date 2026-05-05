@@ -9,7 +9,6 @@ import type {
   SearchTab,
   SearchResultItem,
   GroupedSearchResults,
-  SearchResult,
   RecentItem,
 } from "../types";
 
@@ -68,16 +67,34 @@ function flattenResults(
 /**
  * Rustの SearchResult を SearchResultItem に変換
  */
-function toSearchResultItem(sr: SearchResult): SearchResultItem {
+/** バックエンドの SearchHit 型 */
+interface SearchHit {
+  id: string;
+  itemType: string;
+  title: string;
+  snippet: string;
+  score: number;
+}
+
+/** バックエンドの SearchResults 型（full_text_search の戻り値） */
+interface BackendSearchResults {
+  papers: SearchHit[];
+  notes: SearchHit[];
+  highlights: SearchHit[];
+}
+
+function hitToItem(hit: SearchHit): SearchResultItem {
+  const itemType = hit.itemType as SearchResultItem["itemType"];
   return {
-    id: sr.id,
-    itemType: sr.contentType,
-    title: sr.title,
-    snippet: sr.snippet,
+    id: hit.id,
+    itemType,
+    title: hit.title,
+    snippet: hit.snippet,
     meta: "",
-    rank: sr.rank,
-    ...(sr.contentType === "paper" ? {} : { noteId: sr.id }),
-    ...(sr.contentType === "paper" ? { paperId: sr.id } : {}),
+    rank: hit.score,
+    ...(itemType === "paper" ? { paperId: hit.id } : {}),
+    ...(itemType === "note" ? { noteId: hit.id } : {}),
+    ...(itemType === "highlight" ? { paperId: hit.id } : {}),
   };
 }
 
@@ -151,17 +168,21 @@ export function useSearch(): UseSearchReturn {
     const timer = setTimeout(async () => {
       try {
         // Rustバックエンドの full_text_search を呼び出す
-        const data = await invoke<SearchResult[]>("full_text_search", {
+        const data = await invoke<BackendSearchResults>("full_text_search", {
           query,
-          contentTypes:
-            activeTab === "all" ? null : [activeTab === "highlight" ? "highlight" : activeTab],
+          itemTypes:
+            activeTab === "all" ? null : [activeTab],
           limit: 30,
         });
 
         // このリクエストが最新か確認（古い結果を破棄）
         if (requestId !== abortRef.current) return;
 
-        const items = data.map(toSearchResultItem);
+        const items = [
+          ...data.papers.map(hitToItem),
+          ...data.notes.map(hitToItem),
+          ...data.highlights.map(hitToItem),
+        ];
         setResults(groupResults(items));
         setSelectedIndex(0);
       } catch {
