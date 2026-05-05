@@ -6,7 +6,6 @@
 
 import type React from "react";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { confirm } from "@tauri-apps/plugin-dialog";
 import type { NodeType } from "../../types";
 import { useNoteStore } from "../../stores/useNoteStore";
 import { useUIStore } from "../../stores/useUIStore";
@@ -131,6 +130,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
   /** ノート削除 */
   const handleDelete = useCallback(async () => {
     if (!activeNote) return;
+    const { confirm } = await import("@tauri-apps/plugin-dialog");
     const ok = await confirm(
       `「${activeNote.title}」を削除しますか？この操作は取り消せません。`,
       { title: "ノートの削除", kind: "warning" },

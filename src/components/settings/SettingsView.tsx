@@ -5,7 +5,6 @@
 import type React from "react";
 import { useState, useCallback, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
 import { useThemeStore, THEMES } from "../../stores/useThemeStore";
 import { ThemePreviewCard } from "./ThemePreviewCard";
 import type {
@@ -177,6 +176,7 @@ export const SettingsView: React.FC = () => {
   // データパス変更
   const handleChangeDataPath = useCallback(async () => {
     try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
       const selected = await open({ directory: true, multiple: false });
       if (selected) {
         await invoke("change_data_path", { newPath: selected });

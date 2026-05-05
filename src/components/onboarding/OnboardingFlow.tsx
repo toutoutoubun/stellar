@@ -6,7 +6,6 @@
 
 import type React from "react";
 import { useState, useCallback, useEffect } from "react";
-import { open } from "@tauri-apps/plugin-dialog";
 import { useThemeStore, THEMES } from "../../stores/useThemeStore";
 import { ThemePreviewCard } from "../settings/ThemePreviewCard";
 import type { Theme } from "../../types";
@@ -105,6 +104,7 @@ const StorageStep: React.FC<{
 
   const handleChooseFolder = useCallback(async () => {
     try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
       const selected = await open({ directory: true, multiple: false });
       if (selected) {
         setDataPath(typeof selected === "string" ? selected : String(selected));
