@@ -4,7 +4,6 @@
 // 全画面エラー UI を表示。「再起動」ボタンで Tauri relaunch() を呼ぶ。
 
 import React from "react";
-import { relaunch } from "@tauri-apps/plugin-process";
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -40,7 +39,9 @@ export class ErrorBoundary extends React.Component<
   }
 
   handleRestart = (): void => {
-    void relaunch();
+    import("@tauri-apps/plugin-process")
+      .then(({ relaunch }) => relaunch())
+      .catch(() => window.location.reload());
   };
 
   handleDismiss = (): void => {
