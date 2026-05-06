@@ -4,7 +4,7 @@
 // テーマは CSS 変数と連動
 
 import type React from "react";
-import { useCallback, useEffect, useRef, useMemo } from "react";
+import { useCallback, useEffect, useRef, useMemo, useState } from "react";
 import { EditorView, keymap, ViewUpdate } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
@@ -38,6 +38,7 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import type { LinkSuggestion, NodeType } from "../../types";
 import { wikiLinkCompletionSource } from "./WikiLinkAutoComplete";
+import { MermaidDiagramModal } from "./MermaidDiagramModal";
 
 // ============================================================
 // Stellar テーマ（CSS変数連動）
@@ -534,7 +535,30 @@ export const StellarEditor: React.FC<StellarEditorProps> = ({
     input.click();
   }, [handleImageInsert]);
 
+  // Mermaid ダイアグラムモーダルの状態
+  const [mermaidModalOpen, setMermaidModalOpen] = useState(false);
+
+  /** Mermaid コードブロックをエディタに挿入 */
+  const handleMermaidInsert = useCallback((mermaidCodeBlock: string) => {
+    const view = viewRef.current;
+    if (!view) return;
+    const cursor = view.state.selection.main.head;
+    const line = view.state.doc.lineAt(cursor);
+    const prefix = line.text.trim() === "" ? "" : "\n\n";
+    const insert = `${prefix}${mermaidCodeBlock}\n`;
+    view.dispatch({
+      changes: { from: cursor, insert },
+      selection: { anchor: cursor + insert.length },
+    });
+  }, []);
+
   return (
+    <>
+    <MermaidDiagramModal
+      open={mermaidModalOpen}
+      onClose={() => setMermaidModalOpen(false)}
+      onInsert={handleMermaidInsert}
+    />
     <div className="flex flex-col flex-1 overflow-hidden" style={{ minHeight: 0 }}>
       {/* 画像挿入ツールバー */}
       <div
@@ -572,6 +596,49 @@ export const StellarEditor: React.FC<StellarEditorProps> = ({
           </svg>
           画像を挿入
         </button>
+
+        {/* セパレーター */}
+        <div
+          style={{
+            width: "1px",
+            height: "14px",
+            backgroundColor: "var(--color-border-secondary)",
+            margin: "0 2px",
+          }}
+        />
+
+        {/* ダイアグラム挿入ボタン */}
+        <button
+          type="button"
+          onClick={() => setMermaidModalOpen(true)}
+          className="flex items-center gap-1.5 text-xs"
+          style={{
+            color: "var(--color-text-tertiary)",
+            padding: "3px 8px",
+            borderRadius: "5px",
+            transition: "all 150ms ease-out",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+            e.currentTarget.style.color = "var(--color-text-secondary)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent";
+            e.currentTarget.style.color = "var(--color-text-tertiary)";
+          }}
+          title="ダイアグラムを挿入（Mermaid）"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="5" rx="1" />
+            <rect x="14" y="3" width="7" height="5" rx="1" />
+            <rect x="8" y="16" width="8" height="5" rx="1" />
+            <line x1="6.5" y1="8" x2="6.5" y2="13" />
+            <line x1="17.5" y1="8" x2="17.5" y2="13" />
+            <line x1="6.5" y1="13" x2="17.5" y2="13" />
+            <line x1="12" y1="13" x2="12" y2="16" />
+          </svg>
+          ダイアグラム
+        </button>
       </div>
 
       {/* エディタ領域（ドラッグ&ドロップ対応） */}
@@ -604,5 +671,6 @@ export const StellarEditor: React.FC<StellarEditorProps> = ({
         }}
       />
     </div>
+    </>
   );
 };

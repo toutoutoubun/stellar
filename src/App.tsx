@@ -18,6 +18,7 @@ import {
   OnboardingFlow,
   isOnboarded,
 } from "./components/onboarding/OnboardingFlow";
+import { TutorialOverlay, isTutorialSeen } from "./components/ui/TutorialOverlay";
 import { useThemeStore } from "./stores/useThemeStore";
 import { useUIStore } from "./stores/useUIStore";
 import type { TransitionDirection } from "./stores/useUIStore";
@@ -98,6 +99,18 @@ const AppContent: React.FC = () => {
   const clearTransition = useUIStore((s) => s.clearTransition);
   const mainPaneContent = useUIStore((s) => s.mainPaneContent);
 
+  // チュートリアルオーバーレイの状態
+  // 初回オンボーディング完了後、まだチュートリアルを見ていなければ自動表示
+  const [tutorialOpen, setTutorialOpen] = useState(() => !isTutorialSeen());
+
+  const handleOpenTutorial = useCallback(() => {
+    setTutorialOpen(true);
+  }, []);
+
+  const handleCloseTutorial = useCallback(() => {
+    setTutorialOpen(false);
+  }, []);
+
   // Tauri イベントリスナー
   useTauriEvents();
 
@@ -145,7 +158,7 @@ const AppContent: React.FC = () => {
       style={{ backgroundColor: "var(--color-bg-primary)" }}
     >
       {/* カスタムタイトルバー */}
-      <Titlebar />
+      <Titlebar onOpenTutorial={handleOpenTutorial} />
 
       {/* メインコンテンツ領域 */}
       <div className="flex flex-1 overflow-hidden">
@@ -177,6 +190,9 @@ const AppContent: React.FC = () => {
 
       {/* トースト通知コンテナ */}
       <ToastContainer />
+
+      {/* チュートリアルオーバーレイ */}
+      <TutorialOverlay open={tutorialOpen} onClose={handleCloseTutorial} />
     </div>
   );
 };

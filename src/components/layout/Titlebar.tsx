@@ -7,8 +7,13 @@ import type React from "react";
 import { useCallback } from "react";
 import { useUIStore } from "../../stores/useUIStore";
 import { ThemeToggleButton } from "./ThemeToggleButton";
+import { HelpButton } from "../ui/TutorialOverlay";
 
-export const Titlebar: React.FC = () => {
+interface TitlebarProps {
+  onOpenTutorial?: () => void;
+}
+
+export const Titlebar: React.FC<TitlebarProps> = ({ onOpenTutorial }) => {
   const toggleSearchModal = useUIStore((s) => s.toggleSearchModal);
 
   // getCurrentWindow() は window.__TAURI_INTERNALS__ にアクセスするため、
@@ -115,6 +120,9 @@ export const Titlebar: React.FC = () => {
 
       {/* 右側: テーマ切替 & ウィンドウ操作ボタン */}
       <div className="flex items-center">
+        {/* ヘルプボタン */}
+        {onOpenTutorial && <HelpButton onClick={onOpenTutorial} />}
+
         {/* テーマ切替ボタン */}
         <ThemeToggleButton />
 

@@ -159,70 +159,58 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
     // 将来的に ref でスクロール関数を公開する拡張が可能。
   }, []);
 
-  /** ノート書き出し処理 */
-  const handleExport = useCallback(
-    async (format: "markdown" | "plaintext" | "html") => {
-      if (!activeNote) return;
-      setMenuOpen(false);
+  /** Markdown → HTML 変換ヘルパー（HTML/PDF/DOCX 共用） */
+  const markdownToHtml = useCallback(
+    (md: string, title: string) => {
+      const htmlBody = md
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        // コードブロック（```mermaid 含む）
+        .replace(/```(\w*)\n([\s\S]*?)```/g, (_match, lang: string, code: string) => {
+          if (lang === "mermaid") {
+            return `<pre class="mermaid">${code.trim()}</pre>`;
+          }
+          return `<pre><code class="language-${lang}">${code.trim()}</code></pre>`;
+        })
+        .replace(/^### (.+)$/gm, "<h3>$1</h3>")
+        .replace(/^## (.+)$/gm, "<h2>$1</h2>")
+        .replace(/^# (.+)$/gm, "<h1>$1</h1>")
+        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+        .replace(/\*(.+?)\*/g, "<em>$1</em>")
+        .replace(/~~(.+?)~~/g, "<del>$1</del>")
+        .replace(/`(.+?)`/g, "<code>$1</code>")
+        .replace(/==(.+?)==/g, "<mark>$1</mark>")
+        .replace(/\[\[(.+?)\]\]/g, '<span class="wikilink">$1</span>')
+        .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />')
+        .replace(/\[([^\]]*)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+        .replace(/@cite\{([^}]+)\}/g, '<span class="citation">[$1]</span>')
+        .replace(/\n\n/g, "</p>\n<p>")
+        .replace(/\n/g, "<br/>\n");
 
-      const title = activeNote.title || "無題のノート";
-      let content: string;
-      let fileName: string;
-      let mimeType: string;
-
-      switch (format) {
-        case "markdown":
-          content = editorContent;
-          fileName = `${title}.md`;
-          mimeType = "text/markdown";
-          break;
-        case "plaintext": {
-          // Markdown 記法を除去
-          content = editorContent
-            .replace(/^#{1,6}\s+/gm, "")      // 見出し
-            .replace(/\*\*(.+?)\*\*/g, "$1")    // 太字
-            .replace(/\*(.+?)\*/g, "$1")        // 斜体
-            .replace(/~~(.+?)~~/g, "$1")        // 打消し
-            .replace(/`(.+?)`/g, "$1")          // インラインコード
-            .replace(/\[\[(.+?)\]\]/g, "$1")    // WikiLink
-            .replace(/!?\[([^\]]*)\]\([^)]+\)/g, "$1") // リンク/画像
-            .replace(/==(.+?)==/g, "$1")        // ハイライト
-            .replace(/@cite\{([^}]+)\}/g, "[$1]"); // 引用
-          fileName = `${title}.txt`;
-          mimeType = "text/plain";
-          break;
-        }
-        case "html": {
-          // 簡易 Markdown → HTML 変換
-          const htmlBody = editorContent
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/^### (.+)$/gm, "<h3>$1</h3>")
-            .replace(/^## (.+)$/gm, "<h2>$1</h2>")
-            .replace(/^# (.+)$/gm, "<h1>$1</h1>")
-            .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-            .replace(/\*(.+?)\*/g, "<em>$1</em>")
-            .replace(/~~(.+?)~~/g, "<del>$1</del>")
-            .replace(/`(.+?)`/g, "<code>$1</code>")
-            .replace(/==(.+?)==/g, "<mark>$1</mark>")
-            .replace(/\[\[(.+?)\]\]/g, "<span class=\"wikilink\">$1</span>")
-            .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />')
-            .replace(/\[([^\]]*)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-            .replace(/\n\n/g, "</p>\n<p>")
-            .replace(/\n/g, "<br/>\n");
-          content = `<!DOCTYPE html>
+      return `<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <title>${title}</title>
   <style>
-    body { font-family: system-ui, -apple-system, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; line-height: 1.8; color: #1a1a1a; }
-    h1, h2, h3 { margin-top: 1.5em; }
-    code { background: #f0f0f0; padding: 2px 4px; border-radius: 3px; font-size: 0.9em; }
-    mark { background: rgba(255,235,59,0.35); padding: 1px 2px; border-radius: 2px; }
-    .wikilink { color: #6366f1; text-decoration: underline dotted; }
+    body { font-family: system-ui, -apple-system, 'Hiragino Kaku Gothic ProN', sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; line-height: 1.8; color: #1a1a1a; }
+    h1 { font-size: 1.6em; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.3em; }
+    h2 { font-size: 1.35em; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.2em; }
+    h3 { font-size: 1.15em; }
+    h1, h2, h3 { margin-top: 1.5em; margin-bottom: 0.5em; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 0.88em; font-family: 'SF Mono', 'Fira Code', monospace; }
+    pre { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; overflow-x: auto; }
+    pre code { background: none; padding: 0; }
+    mark { background: rgba(255,235,59,0.35); padding: 1px 3px; border-radius: 3px; }
+    .wikilink { color: #6366f1; text-decoration: underline dotted; text-underline-offset: 3px; }
+    .citation { color: #6366f1; font-weight: 500; }
     img { max-width: 100%; height: auto; border-radius: 6px; margin: 1em 0; }
+    blockquote { border-left: 3px solid #d1d5db; margin: 1em 0; padding-left: 1em; color: #6b7280; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+    th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
+    th { background: #f9fafb; font-weight: 600; }
+    @media print { body { max-width: 100%; margin: 0; padding: 0; } }
   </style>
 </head>
 <body>
@@ -230,35 +218,195 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
   <p>${htmlBody}</p>
 </body>
 </html>`;
-          fileName = `${title}.html`;
-          mimeType = "text/html";
+    },
+    [],
+  );
+
+  /** ノート書き出し処理 */
+  const handleExport = useCallback(
+    async (format: "markdown" | "plaintext" | "html" | "pdf" | "docx") => {
+      if (!activeNote) return;
+      setMenuOpen(false);
+
+      const title = activeNote.title || "無題のノート";
+
+      switch (format) {
+        case "markdown": {
+          const content = editorContent;
+          const fileName = `${title}.md`;
+          try {
+            const { save } = await import("@tauri-apps/plugin-dialog");
+            const filePath = await save({
+              defaultPath: fileName,
+              filters: [{ name: "Markdown", extensions: ["md"] }],
+            });
+            if (filePath) {
+              const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+              await writeTextFile(filePath, content);
+              toast.success(`${fileName} を保存しました`);
+            }
+          } catch {
+            toast.error("書き出しに失敗しました");
+          }
+          break;
+        }
+
+        case "plaintext": {
+          const content = editorContent
+            .replace(/^#{1,6}\s+/gm, "")
+            .replace(/\*\*(.+?)\*\*/g, "$1")
+            .replace(/\*(.+?)\*/g, "$1")
+            .replace(/~~(.+?)~~/g, "$1")
+            .replace(/`(.+?)`/g, "$1")
+            .replace(/\[\[(.+?)\]\]/g, "$1")
+            .replace(/!?\[([^\]]*)\]\([^)]+\)/g, "$1")
+            .replace(/==(.+?)==/g, "$1")
+            .replace(/@cite\{([^}]+)\}/g, "[$1]")
+            .replace(/```[\s\S]*?```/g, ""); // コードブロック除去
+          const fileName = `${title}.txt`;
+          try {
+            const { save } = await import("@tauri-apps/plugin-dialog");
+            const filePath = await save({
+              defaultPath: fileName,
+              filters: [{ name: "テキスト", extensions: ["txt"] }],
+            });
+            if (filePath) {
+              const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+              await writeTextFile(filePath, content);
+              toast.success(`${fileName} を保存しました`);
+            }
+          } catch {
+            toast.error("書き出しに失敗しました");
+          }
+          break;
+        }
+
+        case "html": {
+          const content = markdownToHtml(editorContent, title);
+          const fileName = `${title}.html`;
+          try {
+            const { save } = await import("@tauri-apps/plugin-dialog");
+            const filePath = await save({
+              defaultPath: fileName,
+              filters: [{ name: "HTML", extensions: ["html", "htm"] }],
+            });
+            if (filePath) {
+              const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+              await writeTextFile(filePath, content);
+              toast.success(`${fileName} を保存しました`);
+            }
+          } catch {
+            toast.error("書き出しに失敗しました");
+          }
+          break;
+        }
+
+        case "pdf": {
+          // PDF エクスポート: Rust バックエンドの export_note_pdf コマンドを使用
+          // フォールバック: HTML を経由してブラウザ印刷 API で PDF 出力
+          const fileName = `${title}.pdf`;
+          try {
+            // まず Tauri コマンドを試行
+            const { save } = await import("@tauri-apps/plugin-dialog");
+            const filePath = await save({
+              defaultPath: fileName,
+              filters: [{ name: "PDF", extensions: ["pdf"] }],
+            });
+            if (!filePath) break;
+
+            try {
+              const { invoke } = await import("@tauri-apps/api/core");
+              const htmlContent = markdownToHtml(editorContent, title);
+              await invoke("export_note_pdf", {
+                html: htmlContent,
+                outputPath: filePath,
+              });
+              toast.success(`${fileName} を保存しました`);
+            } catch {
+              // Tauri コマンド未実装時のフォールバック:
+              // HTML をファイルとして書き出し、ユーザーにブラウザ印刷を案内
+              const htmlContent = markdownToHtml(editorContent, title);
+              const htmlPath = filePath.replace(/\.pdf$/i, ".html");
+              const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+              await writeTextFile(htmlPath, htmlContent);
+              toast.info(
+                "PDF 変換コマンドが未実装のため、HTML ファイルとして保存しました。ブラウザで開いて「印刷 → PDF に保存」をご利用ください。"
+              );
+            }
+          } catch {
+            toast.error("PDF 書き出しに失敗しました");
+          }
+          break;
+        }
+
+        case "docx": {
+          // DOCX エクスポート: Rust バックエンドの export_note_docx コマンドを使用
+          // フォールバック: HTML 形式の .doc ファイル（Word 互換）を生成
+          const fileName = `${title}.docx`;
+          try {
+            const { save } = await import("@tauri-apps/plugin-dialog");
+            const filePath = await save({
+              defaultPath: fileName,
+              filters: [
+                { name: "Word 文書", extensions: ["docx"] },
+                { name: "Word 互換 HTML", extensions: ["doc"] },
+              ],
+            });
+            if (!filePath) break;
+
+            try {
+              const { invoke } = await import("@tauri-apps/api/core");
+              const htmlContent = markdownToHtml(editorContent, title);
+              await invoke("export_note_docx", {
+                html: htmlContent,
+                outputPath: filePath,
+              });
+              toast.success(`${fileName} を保存しました`);
+            } catch {
+              // Tauri コマンド未実装時のフォールバック:
+              // Word 互換 HTML (.doc) を生成 — Word で正常に開ける
+              const wordHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
+  <style>
+    body { font-family: 'Yu Gothic', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif; font-size: 10.5pt; line-height: 1.8; color: #1a1a1a; }
+    h1 { font-size: 18pt; font-weight: bold; margin-top: 24pt; margin-bottom: 6pt; border-bottom: 1pt solid #d1d5db; padding-bottom: 4pt; }
+    h2 { font-size: 14pt; font-weight: bold; margin-top: 18pt; margin-bottom: 4pt; }
+    h3 { font-size: 12pt; font-weight: bold; margin-top: 14pt; margin-bottom: 4pt; }
+    code { font-family: 'Courier New', monospace; font-size: 9pt; background-color: #f3f4f6; padding: 1pt 3pt; }
+    pre { font-family: 'Courier New', monospace; font-size: 9pt; background-color: #f9fafb; border: 1pt solid #e5e7eb; padding: 8pt; white-space: pre-wrap; }
+    mark { background-color: #fff59d; }
+    .wikilink { color: #6366f1; text-decoration: underline; }
+    .citation { color: #6366f1; font-weight: bold; }
+    img { max-width: 100%; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1pt solid #d1d5db; padding: 4pt 8pt; }
+    th { background-color: #f9fafb; font-weight: bold; }
+  </style>
+</head>
+<body>
+  ${markdownToHtml(editorContent, title)
+    .replace(/<!DOCTYPE html>[\s\S]*?<body>/, "")
+    .replace(/<\/body>[\s\S]*<\/html>/, "")}
+</body>
+</html>`;
+              const docPath = filePath.replace(/\.docx$/i, ".doc");
+              const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+              await writeTextFile(docPath, wordHtml);
+              toast.success(
+                `${title}.doc を保存しました（Word 互換 HTML 形式）`
+              );
+            }
+          } catch {
+            toast.error("DOCX 書き出しに失敗しました");
+          }
           break;
         }
       }
-
-      try {
-        // Tauri のダイアログで保存先を選択
-        const { save } = await import("@tauri-apps/plugin-dialog");
-        const filePath = await save({
-          defaultPath: fileName,
-          filters: [
-            format === "markdown"
-              ? { name: "Markdown", extensions: ["md"] }
-              : format === "html"
-                ? { name: "HTML", extensions: ["html", "htm"] }
-                : { name: "テキスト", extensions: ["txt"] },
-          ],
-        });
-        if (filePath) {
-          const { writeTextFile } = await import("@tauri-apps/plugin-fs");
-          await writeTextFile(filePath, content);
-          toast.success(`${fileName} を保存しました`);
-        }
-      } catch {
-        toast.error("書き出しに失敗しました");
-      }
     },
-    [activeNote, editorContent],
+    [activeNote, editorContent, markdownToHtml],
   );
 
   /** キーボードショートカット */
@@ -641,6 +789,55 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
                   <polyline points="8 6 2 12 8 18" />
                 </svg>
                 HTML (.html)
+              </button>
+
+              {/* PDF 書き出し */}
+              <button
+                type="button"
+                className="flex items-center gap-2 w-full text-left text-xs px-3 py-2"
+                style={{
+                  color: "var(--color-text-secondary)",
+                  borderRadius: "6px",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--color-bg-tertiary)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
+                onClick={() => void handleExport("pdf")}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <path d="M10 12h4" />
+                  <path d="M10 16h4" />
+                </svg>
+                PDF (.pdf)
+              </button>
+
+              {/* DOCX 書き出し */}
+              <button
+                type="button"
+                className="flex items-center gap-2 w-full text-left text-xs px-3 py-2"
+                style={{
+                  color: "var(--color-text-secondary)",
+                  borderRadius: "6px",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--color-bg-tertiary)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
+                onClick={() => void handleExport("docx")}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <path d="M9 15l2 2 4-4" />
+                </svg>
+                Word (.docx)
               </button>
 
               {/* セパレーター */}
