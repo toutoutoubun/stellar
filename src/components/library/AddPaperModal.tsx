@@ -13,10 +13,11 @@ import { toast } from "../ui/Toast";
 import { invoke } from "@tauri-apps/api/core";
 
 /** タブの種別 */
-type AddPaperTab = "url" | "doi" | "manual";
+type AddPaperTab = "pdf" | "url" | "doi" | "manual";
 
 /** タブ定義 */
 const TABS: { key: AddPaperTab; label: string }[] = [
+  { key: "pdf", label: "PDFから追加" },
   { key: "url", label: "URLから追加" },
   { key: "doi", label: "DOIから追加" },
   { key: "manual", label: "手動入力" },
@@ -76,7 +77,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
   onClose,
   onSave,
 }) => {
-  const [activeTab, setActiveTab] = useState<AddPaperTab>("url");
+  const [activeTab, setActiveTab] = useState<AddPaperTab>("pdf");
   const [form, setForm] = useState<CreatePaperInput>({ ...EMPTY_FORM });
   const [authorsText, setAuthorsText] = useState("");
   const [tagsText, setTagsText] = useState("");
@@ -91,6 +92,10 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
   // PDFも一緒に保存チェック
   const [downloadPdf, setDownloadPdf] = useState(false);
 
+  // PDFファイルパス（PDFタブ用）
+  const [pdfFilePath, setPdfFilePath] = useState<string | null>(null);
+  const [pdfFileName, setPdfFileName] = useState<string | null>(null);
+
   // ── フォームリセット ──
   const resetForm = useCallback(() => {
     setForm({ ...EMPTY_FORM });
@@ -102,6 +107,8 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
     setDownloadPdf(false);
     setFetching(false);
     setSaving(false);
+    setPdfFilePath(null);
+    setPdfFileName(null);
   }, []);
 
   // ── タブ切替時にリセット ──
@@ -209,15 +216,58 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
     setForm((prev) => ({ ...prev, tags }));
   }, []);
 
+  // ── PDFファイル選択（Tauriダイアログ） ──
+  const handlePickPdf = useCallback(async () => {
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const selected = await open({
+        multiple: false,
+        filters: [{ name: "PDF", extensions: ["pdf"] }],
+      });
+      if (selected && typeof selected === "string") {
+        setPdfFilePath(selected);
+        // ファイル名を抽出
+        const name = selected.split(/[\\/]/).pop() ?? selected;
+        setPdfFileName(name);
+
+        // Rust側でPDFメタデータ抽出を試みる
+        setFetching(true);
+        setFetched(false);
+        try {
+          const data = await invoke<Partial<CreatePaperInput>>(
+            "extract_metadata_from_pdf",
+            { pdfPath: selected }
+          );
+          applyMetadata({ ...data, pdfPath: selected });
+          toast.success("PDFからメタデータを抽出しました");
+        } catch {
+          // メタデータ抽出が失敗してもファイルパスは保持
+          const titleFromFile = name.replace(/\.pdf$/i, "").replace(/[_-]/g, " ");
+          applyMetadata({ title: titleFromFile, pdfPath: selected });
+          toast.info("PDFのメタデータ抽出に失敗しました。手動で入力してください。");
+        } finally {
+          setFetching(false);
+        }
+      }
+    } catch {
+      // ダイアログがキャンセルされた場合
+    }
+  }, [applyMetadata]);
+
   // ── 保存 ──
   const handleSave = useCallback(async () => {
     if (!form.title.trim()) {
       toast.warning("タイトルは必須です");
       return;
     }
+    // PDFタブでpdfPathが未設定の場合、選択済みパスを反映
+    const finalForm = { ...form };
+    if (activeTab === "pdf" && pdfFilePath && !finalForm.pdfPath) {
+      finalForm.pdfPath = pdfFilePath;
+    }
     setSaving(true);
     try {
-      await onSave(form);
+      await onSave(finalForm);
       toast.success("論文を追加しました");
       handleClose();
     } catch (e) {
@@ -225,7 +275,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
     } finally {
       setSaving(false);
     }
-  }, [form, onSave, handleClose]);
+  }, [form, activeTab, pdfFilePath, onSave, handleClose]);
 
   // ── フォームフィールド群の描画 ──
   const renderFormFields = () => (
@@ -449,6 +499,120 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
           </button>
         ))}
       </div>
+
+      {/* ── Tab 0: PDFから追加 ── */}
+      {activeTab === "pdf" && (
+        <div className="flex flex-col gap-4">
+          {/* PDFファイル選択エリア */}
+          {!pdfFilePath ? (
+            <button
+              type="button"
+              onClick={() => void handlePickPdf()}
+              className="flex flex-col items-center justify-center gap-3 py-10"
+              style={{
+                border: "2px dashed var(--color-border-primary)",
+                borderRadius: "var(--radius-card)",
+                color: "var(--color-text-tertiary)",
+                backgroundColor: "var(--color-bg-tertiary)",
+                cursor: "pointer",
+                transition: "all var(--transition-fast)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "var(--color-accent-primary)";
+                e.currentTarget.style.color = "var(--color-accent-primary)";
+                e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "var(--color-border-primary)";
+                e.currentTarget.style.color = "var(--color-text-tertiary)";
+                e.currentTarget.style.backgroundColor = "var(--color-bg-tertiary)";
+              }}
+            >
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="18" x2="12" y2="12" />
+                <line x1="9" y1="15" x2="15" y2="15" />
+              </svg>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-sm font-medium">PDFファイルを選択</span>
+                <span className="text-xs" style={{ color: "var(--color-text-disabled)" }}>
+                  クリックしてPDFを選択してください
+                </span>
+              </div>
+            </button>
+          ) : (
+            <div
+              className="flex items-center gap-3 px-4 py-3"
+              style={{
+                backgroundColor: "var(--color-bg-tertiary)",
+                borderRadius: "var(--radius-input)",
+                border: "1px solid var(--color-border-secondary)",
+              }}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--color-accent-primary)", flexShrink: 0 }}>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+              </svg>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate" style={{ color: "var(--color-text-primary)" }}>
+                  {pdfFileName}
+                </p>
+                <p className="text-xs truncate" style={{ color: "var(--color-text-tertiary)" }}>
+                  {pdfFilePath}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setPdfFilePath(null);
+                  setPdfFileName(null);
+                  setFetched(false);
+                  setForm({ ...EMPTY_FORM });
+                  setAuthorsText("");
+                  setTagsText("");
+                }}
+                className="flex items-center justify-center shrink-0"
+                style={{
+                  width: "24px",
+                  height: "24px",
+                  borderRadius: "6px",
+                  color: "var(--color-text-tertiary)",
+                  transition: "all var(--transition-fast)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+                  e.currentTarget.style.color = "var(--color-text-primary)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                  e.currentTarget.style.color = "var(--color-text-tertiary)";
+                }}
+                title="ファイルを変更"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+          )}
+
+          {/* メタデータプレビュー / スケルトン / フォーム */}
+          {fetching ? (
+            <SkeletonForm />
+          ) : fetched ? (
+            renderFormFields()
+          ) : !pdfFilePath ? (
+            <div
+              className="flex flex-col items-center justify-center py-4 gap-2"
+              style={{ color: "var(--color-text-disabled)" }}
+            >
+              <p className="text-xs">メタデータはPDFから自動抽出されます</p>
+            </div>
+          ) : null}
+        </div>
+      )}
 
       {/* ── Tab 1: URLから追加 ── */}
       {activeTab === "url" && (

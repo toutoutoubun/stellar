@@ -18,6 +18,7 @@ interface PaperDetailPanelProps {
   onClose: () => void;
   onOpenPdf: (paperId: string) => void;
   onDelete: (paperId: string) => void;
+  onAttachPdf?: (paperId: string) => void;
 }
 
 /** セクションの折りたたみ可能なヘッダー */
@@ -78,6 +79,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
   onClose,
   onOpenPdf,
   onDelete,
+  onAttachPdf,
 }) => {
   // ── 引用コピーのドロップダウン ──
   const [showCitationDropdown, setShowCitationDropdown] = useState(false);
@@ -318,8 +320,8 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
         )}
 
         {/* アクションボタン群 */}
-        <div className="flex items-center gap-2 mb-3">
-          {paper.pdfPath && (
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          {paper.pdfPath ? (
             <Button
               variant="primary"
               size="sm"
@@ -332,6 +334,22 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
               onClick={() => onOpenPdf(paper.id)}
             >
               PDFを開く
+            </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="12" y1="18" x2="12" y2="12" />
+                  <line x1="9" y1="15" x2="15" y2="15" />
+                </svg>
+              }
+              onClick={() => onAttachPdf?.(paper.id)}
+            >
+              PDFを添付
             </Button>
           )}
 

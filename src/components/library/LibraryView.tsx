@@ -60,6 +60,7 @@ export const LibraryView: React.FC = () => {
   const toggleCheckedPaper = useLibraryStore((s) => s.toggleCheckedPaper);
   const deletePaper = useLibraryStore((s) => s.deletePaper);
   const createPaper = useLibraryStore((s) => s.createPaper);
+  const attachPdf = useLibraryStore((s) => s.attachPdf);
   const setFilterTag = useLibraryStore((s) => s.setFilterTag);
   const setFilterYear = useLibraryStore((s) => s.setFilterYear);
   const setFilterHasPdf = useLibraryStore((s) => s.setFilterHasPdf);
@@ -169,6 +170,37 @@ export const LibraryView: React.FC = () => {
   const handleEditPaper = useCallback((_id: string) => {
     toast.info("編集機能は今後実装予定です");
   }, []);
+
+  // ── PDF添付（ファイルダイアログ→バックエンド保存） ──
+  const handleAttachPdf = useCallback(
+    async (paperId: string) => {
+      try {
+        const { open } = await import("@tauri-apps/plugin-dialog");
+        const selected = await open({
+          multiple: false,
+          filters: [{ name: "PDF", extensions: ["pdf"] }],
+        });
+        if (selected && typeof selected === "string") {
+          // Rust側でPDFをアプリデータにコピーしてパスを保存
+          try {
+            const { invoke } = await import("@tauri-apps/api/core");
+            const savedPath = await invoke<string>("import_pdf", {
+              paperId,
+              sourcePath: selected,
+            });
+            await attachPdf(paperId, savedPath);
+          } catch {
+            // import_pdfが未実装の場合は元パスで保存
+            await attachPdf(paperId, selected);
+          }
+          toast.success("PDFを添付しました");
+        }
+      } catch (e) {
+        toast.error(`PDFの添付に失敗しました: ${String(e)}`);
+      }
+    },
+    [attachPdf]
+  );
 
   // ── アクティブフィルターのバッジ表示 ──
   const hasActiveFilters =
@@ -750,6 +782,7 @@ export const LibraryView: React.FC = () => {
                   onDoubleClick={handleOpenPdfReader}
                   onDelete={(id) => void handleDeletePaper(id)}
                   onEdit={handleEditPaper}
+                  onAttachPdf={(id) => void handleAttachPdf(id)}
                 />
               ))}
             </div>
@@ -805,6 +838,7 @@ export const LibraryView: React.FC = () => {
           onClose={() => selectPaper(null)}
           onOpenPdf={handleOpenPdfReader}
           onDelete={(id) => void handleDeletePaper(id)}
+          onAttachPdf={(id) => void handleAttachPdf(id)}
         />
       )}
 

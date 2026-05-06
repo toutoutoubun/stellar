@@ -61,6 +61,8 @@ interface LibraryState {
   deletePaper: (id: string) => Promise<void>;
   /** 論文を楽観的にUI追加する（バックエンド保存前） */
   addPaperOptimistic: (paper: Paper) => void;
+  /** 既存の論文にPDFを添付する */
+  attachPdf: (id: string, pdfPath: string) => Promise<Paper>;
   /** 論文を選択する */
   selectPaper: (id: string | null) => void;
   /** チェック済み論文IDをトグルする */
@@ -157,6 +159,17 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   addPaperOptimistic: (paper) => {
     set((state) => ({ papers: [paper, ...state.papers] }));
+  },
+
+  attachPdf: async (id, pdfPath) => {
+    const paper = await invoke<Paper>("update_paper", {
+      id,
+      input: { pdfPath },
+    });
+    set((state) => ({
+      papers: state.papers.map((p) => (p.id === id ? paper : p)),
+    }));
+    return paper;
   },
 
   // ────────────────────────────────────────────

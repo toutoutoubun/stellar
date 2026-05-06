@@ -20,6 +20,7 @@ interface PaperCardProps {
   onDoubleClick: (id: string) => void;
   onDelete: (id: string) => void;
   onEdit: (id: string) => void;
+  onAttachPdf?: (id: string) => void;
 }
 
 /** カスタム props 比較: paper.id, selected, animationDelay のみ比較 */
@@ -33,7 +34,8 @@ function arePropsEqual(prev: PaperCardProps, next: PaperCardProps): boolean {
     prev.onSelect === next.onSelect &&
     prev.onDoubleClick === next.onDoubleClick &&
     prev.onDelete === next.onDelete &&
-    prev.onEdit === next.onEdit
+    prev.onEdit === next.onEdit &&
+    prev.onAttachPdf === next.onAttachPdf
   );
 }
 
@@ -158,6 +160,7 @@ const PaperCardInner: React.FC<PaperCardProps> = ({
   onDoubleClick,
   onDelete,
   onEdit,
+  onAttachPdf,
 }) => {
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -376,7 +379,9 @@ const PaperCardInner: React.FC<PaperCardProps> = ({
             }}
             onClick={(e) => {
               e.stopPropagation();
-              toast.info("PDF添付機能は今後実装予定です");
+              if (onAttachPdf) {
+                onAttachPdf(paper.id);
+              }
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.opacity = "1";
