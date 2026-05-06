@@ -232,7 +232,7 @@ export const THEME_LABELS: Record<Theme, string> = {
 // ============================================================
 
 /** サイドバーのナビゲーションビュー */
-export type SidebarView = 'library' | 'notes' | 'graph' | 'search' | 'settings';
+export type SidebarView = 'library' | 'notes' | 'graph' | 'qualitative' | 'search' | 'settings';
 
 /** メインペインに表示するコンテンツ種別 */
 export type MainPaneContent =
@@ -240,6 +240,7 @@ export type MainPaneContent =
   | { type: 'paper'; paperId: string }
   | { type: 'note'; noteId: string }
   | { type: 'graph' }
+  | { type: 'qualitative' }
   | { type: 'search' }
   | { type: 'settings' };
 
@@ -442,3 +443,395 @@ export type AsyncState<T> = {
 
 /** Tauri invoke コマンドのエラー型 */
 export type InvokeError = string;
+
+// ============================================================
+// 質的分析（Qualitative Analysis）— Rust バックエンドと完全一致
+// ============================================================
+
+/** 質的分析プロジェクト */
+export interface QualProject {
+  id: string;
+  name: string;
+  description: string | null;
+  methodType: string;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+export interface CreateQualProjectInput {
+  name: string;
+  description?: string | null;
+  methodType?: string;
+}
+
+export interface UpdateQualProjectInput {
+  name?: string;
+  description?: string | null;
+  methodType?: string;
+}
+
+/** コード（質的コーディング） */
+export interface QualCode {
+  id: string;
+  projectId: string;
+  parentId: string | null;
+  name: string;
+  description: string | null;
+  color: string;
+  codeType: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+/** コードツリーノード */
+export interface CodeNode extends QualCode {
+  children: CodeNode[];
+  assignmentCount: number;
+}
+
+export interface CreateQualCodeInput {
+  projectId: string;
+  parentId?: string | null;
+  name: string;
+  description?: string | null;
+  color?: string;
+  codeType?: string;
+  sortOrder?: number;
+}
+
+export interface UpdateQualCodeInput {
+  name?: string;
+  description?: string | null;
+  color?: string;
+  codeType?: string;
+  parentId?: string | null;
+  sortOrder?: number;
+}
+
+/** ハイライト + コンテキスト（コード別取得用） */
+export interface HighlightWithContext {
+  id: string;
+  paperId: string;
+  text: string;
+  comment: string | null;
+  color: string;
+  page: number;
+  paperTitle: string;
+  createdAt: string;
+}
+
+/** コーディングマトリクス */
+export interface CodingMatrixRow {
+  codeId: string;
+  codeName: string;
+  codeColor: string;
+}
+
+export interface CodingMatrixCol {
+  paperId: string;
+  paperTitle: string;
+}
+
+export interface CodingMatrix {
+  rows: CodingMatrixRow[];
+  cols: CodingMatrixCol[];
+  /** キー: "codeId:paperId" → 割り当て数 */
+  cells: Record<string, number>;
+}
+
+/** ICR インポート用コーディング */
+export interface ImportedCoding {
+  highlightId: string;
+  codeIds: string[];
+}
+
+/** ICR 不一致アイテム */
+export interface DisagreementItem {
+  highlightId: string;
+  mainCodes: string[];
+  importedCodes: string[];
+}
+
+/** ICR 計算結果 */
+export interface IcrResult {
+  cohenKappa: number;
+  percentAgreement: number;
+  totalSegments: number;
+  agreements: number;
+  disagreements: DisagreementItem[];
+}
+
+/** 史料批判シート */
+export interface SourceCritique {
+  id: string;
+  paperId: string;
+  authorInfo: string | null;
+  creationDate: string | null;
+  isDateEstimated: boolean;
+  location: string | null;
+  sourceType: string | null;
+  authenticity: string | null;
+  archiveInfo: string | null;
+  intent: string | null;
+  audience: string | null;
+  biasLevel: string | null;
+  biasReason: string | null;
+  consistency: string | null;
+  reliabilityScore: number;
+  researcherNotes: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+export interface SourceCritiqueInput {
+  paperId: string;
+  authorInfo?: string | null;
+  creationDate?: string | null;
+  isDateEstimated?: boolean;
+  location?: string | null;
+  sourceType?: string | null;
+  authenticity?: string | null;
+  archiveInfo?: string | null;
+  intent?: string | null;
+  audience?: string | null;
+  biasLevel?: string | null;
+  biasReason?: string | null;
+  consistency?: string | null;
+  reliabilityScore?: number;
+  researcherNotes?: string | null;
+}
+
+/** タイムラインイベント */
+export interface TimelineEvent {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string | null;
+  eventDate: string;
+  dateType: string;
+  eventType: string;
+  importance: number;
+  lane: string | null;
+  paperId: string | null;
+  highlightId: string | null;
+  createdAt: string;
+}
+
+export interface CreateTimelineEventInput {
+  projectId: string;
+  title: string;
+  description?: string | null;
+  eventDate: string;
+  dateType?: string;
+  eventType?: string;
+  importance?: number;
+  lane?: string | null;
+  paperId?: string | null;
+  highlightId?: string | null;
+}
+
+/** アクター */
+export interface Actor {
+  id: string;
+  projectId: string;
+  name: string;
+  actorType: string;
+  position: string;
+  influence: number;
+  level: string;
+  description: string | null;
+  xPosition: number | null;
+  yPosition: number | null;
+  createdAt: string;
+}
+
+export interface CreateActorInput {
+  projectId: string;
+  name: string;
+  actorType?: string;
+  position?: string;
+  influence?: number;
+  level?: string;
+  description?: string | null;
+  xPosition?: number | null;
+  yPosition?: number | null;
+}
+
+/** アクター関係 */
+export interface ActorRelation {
+  id: string;
+  actorFrom: string;
+  actorTo: string;
+  relationType: string;
+  startYear: number | null;
+  endYear: number | null;
+  description: string | null;
+  paperId: string | null;
+  createdAt: string;
+}
+
+export interface CreateActorRelationInput {
+  actorFrom: string;
+  actorTo: string;
+  relationType: string;
+  startYear?: number | null;
+  endYear?: number | null;
+  description?: string | null;
+  paperId?: string | null;
+}
+
+/** アクターマップデータ */
+export interface ActorMapData {
+  actors: Actor[];
+  relations: ActorRelation[];
+}
+
+/** プロセストレーシング仮説 */
+export interface PtHypothesis {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string | null;
+  isMain: boolean;
+  sortOrder: number;
+  createdAt: string;
+}
+
+/** プロセストレーシング証拠 */
+export interface PtEvidence {
+  id: string;
+  hypothesisId: string;
+  description: string;
+  testType: 'hoop' | 'smoking_gun' | 'straw' | 'doubly_decisive';
+  result: 'pass' | 'fail' | 'partial' | 'pending';
+  paperId: string | null;
+  highlightId: string | null;
+  createdAt: string;
+}
+
+export interface CreatePtHypothesisInput {
+  projectId: string;
+  title: string;
+  description?: string | null;
+  isMain?: boolean;
+  sortOrder?: number;
+}
+
+export interface CreatePtEvidenceInput {
+  hypothesisId: string;
+  description: string;
+  testType: string;
+  result?: string;
+  paperId?: string | null;
+  highlightId?: string | null;
+}
+
+/** 仮説 + 証拠リスト */
+export interface HypothesisWithEvidences extends PtHypothesis {
+  evidences: PtEvidence[];
+}
+
+/** PTデータ */
+export interface PtData {
+  hypotheses: HypothesisWithEvidences[];
+}
+
+/** PTサマリー */
+export interface PtSummary {
+  hoopPassRate: number;
+  hasSmokingGun: boolean;
+  overallVerdict: string;
+}
+
+/** 比較デザイン */
+export interface ComparativeDesign {
+  id: string;
+  projectId: string;
+  designType: string;
+  title: string;
+  createdAt: string;
+}
+
+/** 比較ケース */
+export interface ComparativeCase {
+  id: string;
+  designId: string;
+  name: string;
+  sortOrder: number;
+}
+
+/** 比較変数 */
+export interface ComparativeVariable {
+  id: string;
+  designId: string;
+  name: string;
+  varType: string;
+  sortOrder: number;
+}
+
+/** 比較セル */
+export interface ComparativeCell {
+  id: string;
+  caseId: string;
+  variableId: string;
+  value: string | null;
+  paperId: string | null;
+}
+
+/** 比較デザインフル */
+export interface ComparativeDesignFull extends ComparativeDesign {
+  cases: ComparativeCase[];
+  variables: ComparativeVariable[];
+  cells: ComparativeCell[];
+}
+
+export interface CreateComparativeDesignInput {
+  projectId: string;
+  title: string;
+  designType?: string;
+}
+
+/** フレーム（Entman のフレーミング分析） */
+export interface Frame {
+  id: string;
+  projectId: string;
+  name: string;
+  problemDefinition: string | null;
+  causalInterpretation: string | null;
+  moralEvaluation: string | null;
+  treatmentRecommendation: string | null;
+  color: string;
+  createdAt: string;
+}
+
+export interface CreateFrameInput {
+  projectId: string;
+  name: string;
+  problemDefinition?: string | null;
+  causalInterpretation?: string | null;
+  moralEvaluation?: string | null;
+  treatmentRecommendation?: string | null;
+  color?: string;
+}
+
+/** フレーミングマトリクス */
+export interface FramingMatrix {
+  frames: Frame[];
+  papers: CodingMatrixCol[];
+  counts: Record<string, number>;
+}
+
+/** 質的分析ビューのタブ */
+export type QualitativeTab =
+  | 'dashboard'
+  | 'codebook'
+  | 'matrix'
+  | 'icr'
+  | 'source-critique'
+  | 'timeline'
+  | 'actor-map'
+  | 'process-tracing'
+  | 'comparative'
+  | 'framing'
+  | 'report';

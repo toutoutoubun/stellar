@@ -50,32 +50,39 @@ async fn run_migrations(pool: &SqlitePool) -> Result<(), Box<dyn std::error::Err
     .execute(pool)
     .await?;
 
-    let row = sqlx::query(
-        "SELECT COUNT(*) as cnt FROM _stellar_migrations WHERE version = 1",
-    )
-    .fetch_one(pool)
-    .await?;
-    let cnt: i64 = row.get("cnt");
-    let applied = cnt > 0;
+    // マイグレーション定義
+    let migrations: Vec<(i64, &str, &str)> = vec![
+        (1, "V001__initial", include_str!("migrations/V001__initial.sql")),
+        (2, "V002__qualitative", include_str!("migrations/V002__qualitative.sql")),
+    ];
 
-    if !applied {
-        let migration_sql = include_str!("migrations/V001__initial.sql");
-
-        for statement in split_sql_statements(migration_sql) {
-            let trimmed = statement.trim();
-            if trimmed.is_empty() {
-                continue;
-            }
-            sqlx::query(trimmed).execute(pool).await?;
-        }
-
-        sqlx::query(
-            "INSERT INTO _stellar_migrations (version, applied_at) VALUES (1, datetime('now'))",
+    for (version, name, sql) in &migrations {
+        let row = sqlx::query(
+            "SELECT COUNT(*) as cnt FROM _stellar_migrations WHERE version = ?",
         )
-        .execute(pool)
+        .bind(version)
+        .fetch_one(pool)
         .await?;
+        let cnt: i64 = row.get("cnt");
 
-        log::info!("マイグレーション V001 を適用しました");
+        if cnt == 0 {
+            for statement in split_sql_statements(sql) {
+                let trimmed = statement.trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+                sqlx::query(trimmed).execute(pool).await?;
+            }
+
+            sqlx::query(
+                "INSERT INTO _stellar_migrations (version, applied_at) VALUES (?, datetime('now'))",
+            )
+            .bind(version)
+            .execute(pool)
+            .await?;
+
+            log::info!("マイグレーション {} を適用しました", name);
+        }
     }
 
     Ok(())

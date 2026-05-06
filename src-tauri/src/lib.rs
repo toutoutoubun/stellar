@@ -14,12 +14,20 @@ use tauri_plugin_sql::{Migration, MigrationKind};
 
 /// tauri-plugin-sql 用マイグレーション定義（フロントエンド JS からの DB アクセス用）
 fn get_migrations() -> Vec<Migration> {
-    vec![Migration {
-        version: 1,
-        description: "初期スキーマ — papers / notes / highlights / links / FTS5(trigram)",
-        sql: include_str!("db/migrations/V001__initial.sql"),
-        kind: MigrationKind::Up,
-    }]
+    vec![
+        Migration {
+            version: 1,
+            description: "初期スキーマ — papers / notes / highlights / links / FTS5(trigram)",
+            sql: include_str!("db/migrations/V001__initial.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 2,
+            description: "質的研究モジュール — CAQDAS + 歴史・政治研究ツール",
+            sql: include_str!("db/migrations/V002__qualitative.sql"),
+            kind: MigrationKind::Up,
+        },
+    ]
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -96,6 +104,68 @@ pub fn run() {
             commands::search::get_link_suggestions,
             commands::metadata::fetch_metadata_by_doi,
             commands::metadata::fetch_metadata_from_url,
+            // 質的分析コマンド — プロジェクト管理
+            commands::qualitative::create_project,
+            commands::qualitative::get_projects,
+            commands::qualitative::update_project,
+            commands::qualitative::delete_project,
+            // 質的分析コマンド — コーディング
+            commands::qualitative::get_code_tree,
+            commands::qualitative::create_code,
+            commands::qualitative::update_code,
+            commands::qualitative::delete_code,
+            commands::qualitative::assign_code_to_highlight,
+            commands::qualitative::remove_code_from_highlight,
+            commands::qualitative::get_highlights_by_code,
+            // 質的分析コマンド — マトリクス・ICR
+            commands::qualitative::get_coding_matrix,
+            commands::qualitative::calculate_icr,
+            // 質的分析コマンド — 史料批判
+            commands::qualitative::get_source_critique,
+            commands::qualitative::upsert_source_critique,
+            // 質的分析コマンド — タイムライン
+            commands::qualitative::get_timeline_events,
+            commands::qualitative::create_timeline_event,
+            commands::qualitative::update_timeline_event,
+            commands::qualitative::delete_timeline_event,
+            commands::qualitative::get_timeline_lanes,
+            // 質的分析コマンド — アクターマップ
+            commands::qualitative::get_actor_map,
+            commands::qualitative::create_actor,
+            commands::qualitative::update_actor,
+            commands::qualitative::delete_actor,
+            commands::qualitative::create_actor_relation,
+            commands::qualitative::delete_actor_relation,
+            // 質的分析コマンド — プロセス・トレーシング
+            commands::qualitative::get_pt_data,
+            commands::qualitative::create_pt_hypothesis,
+            commands::qualitative::add_pt_evidence,
+            commands::qualitative::update_pt_evidence_result,
+            commands::qualitative::get_pt_summary,
+            // 質的分析コマンド — 比較ケース設計
+            commands::qualitative::get_comparative_design,
+            commands::qualitative::create_comparative_design,
+            commands::qualitative::add_comparative_case,
+            commands::qualitative::add_comparative_variable,
+            commands::qualitative::upsert_comparative_cell,
+            commands::qualitative::export_qca_csv,
+            // 質的分析コマンド — フレーミング分析
+            commands::qualitative::get_frames,
+            commands::qualitative::create_frame,
+            commands::qualitative::assign_frame_to_highlight,
+            commands::qualitative::get_framing_matrix,
+            // 質的分析コマンド — 追加 CRUD
+            commands::qualitative::delete_pt_hypothesis,
+            commands::qualitative::delete_pt_evidence,
+            commands::qualitative::delete_comparative_case,
+            commands::qualitative::delete_comparative_variable,
+            commands::qualitative::delete_frame,
+            commands::qualitative::remove_frame_from_highlight,
+            commands::qualitative::get_highlight_frames,
+            commands::qualitative::get_source_critiques_by_project,
+            commands::qualitative::delete_source_critique,
+            // 質的分析コマンド — レポート生成
+            commands::qualitative::generate_analysis_report,
         ])
         .run(tauri::generate_context!())
         .expect("Stellar の起動に失敗しました");
