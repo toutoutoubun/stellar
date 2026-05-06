@@ -305,12 +305,12 @@ const PaperCardInner: React.FC<PaperCardProps> = ({
 
         {/* ── カード本体情報 ── */}
         <div
-          className="flex flex-col gap-1 flex-1"
+          className="flex flex-col gap-1.5 flex-1"
           style={{ padding: "var(--space-3) var(--space-4) var(--space-4)" }}
         >
           {/* タイトル（2行で truncate） */}
           <h3
-            className="font-medium text-sm leading-snug"
+            className="font-semibold text-sm leading-snug"
             style={{
               color: "var(--color-text-primary)",
               display: "-webkit-box",
@@ -327,26 +327,28 @@ const PaperCardInner: React.FC<PaperCardProps> = ({
           {/* 著者（1行） */}
           <p
             className="text-xs truncate"
-            style={{ color: "var(--color-text-secondary)" }}
+            style={{ color: "var(--color-text-secondary)", lineHeight: "1.4" }}
             title={paper.authors.join(", ")}
           >
             {formatAuthorsShort(paper.authors)}
           </p>
 
-          {/* 年 + ジャーナル名 */}
+          {/* 年 + ジャーナル名（ドット区切り） */}
           <p
             className="text-xs truncate"
-            style={{ color: "var(--color-text-tertiary)" }}
+            style={{ color: "var(--color-text-tertiary)", lineHeight: "1.4" }}
           >
-            {paper.year !== null ? `${paper.year}` : "年不明"}
-            {paper.journal && ` · ${paper.journal}`}
+            {paper.year !== null ? `${paper.year}` : ""}
+            {paper.year !== null && paper.journal ? " \u00B7 " : ""}
+            {paper.journal ?? ""}
+            {!paper.year && !paper.journal && "\u2014"}
           </p>
 
           {/* タグバッジ */}
           {paper.tags.length > 0 && (
             <div
               className="flex flex-wrap items-center gap-1"
-              style={{ marginTop: "var(--space-1)" }}
+              style={{ marginTop: "2px" }}
             >
               {visibleTags.map((tag) => (
                 <Badge key={tag}>{tag}</Badge>

@@ -133,89 +133,126 @@ export const Sidebar: React.FC = () => {
       }}
     >
       {/* ナビゲーションアイテム */}
-      <nav className="flex flex-col gap-1 p-2 flex-1">
+      <nav className="flex flex-col gap-0.5 p-2 flex-1">
         {/* 上部: メインナビ */}
-        {NAV_ITEMS.filter((item) => !item.bottom).map((item) => (
-          <button
-            key={item.view}
-            onClick={() => handleNavClick(item.view)}
-            className={clsx(
-              "flex items-center gap-3 px-3 py-2 text-sm font-medium",
-              "transition-all"
-            )}
-            style={{
-              borderRadius: "var(--radius-button)",
-              color:
-                sidebarView === item.view
+        {NAV_ITEMS.filter((item) => !item.bottom).map((item) => {
+          const isActive = sidebarView === item.view;
+          return (
+            <button
+              key={item.view}
+              onClick={() => handleNavClick(item.view)}
+              className={clsx(
+                "flex items-center gap-3 text-sm font-medium",
+                "transition-all relative"
+              )}
+              style={{
+                borderRadius: "var(--radius-button)",
+                padding: sidebarCollapsed ? "10px" : "9px 12px",
+                color: isActive
                   ? "var(--color-accent-primary)"
                   : "var(--color-text-secondary)",
-              backgroundColor:
-                sidebarView === item.view
+                backgroundColor: isActive
                   ? "var(--color-bg-hover)"
                   : "transparent",
-              justifyContent: sidebarCollapsed ? "center" : "flex-start",
-              transition: "all var(--transition-fast)",
-            }}
-            onMouseEnter={(e) => {
-              if (sidebarView !== item.view) {
-                e.currentTarget.style.backgroundColor =
-                  "var(--color-bg-hover)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (sidebarView !== item.view) {
-                e.currentTarget.style.backgroundColor = "transparent";
-              }
-            }}
-            title={sidebarCollapsed ? item.label : undefined}
-          >
-            <span className="shrink-0">{item.icon}</span>
-            {!sidebarCollapsed && <span>{item.label}</span>}
-          </button>
-        ))}
+                justifyContent: sidebarCollapsed ? "center" : "flex-start",
+                transition: "all var(--transition-fast)",
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.backgroundColor =
+                    "var(--color-bg-hover)";
+                  e.currentTarget.style.color = "var(--color-text-primary)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                  e.currentTarget.style.color = "var(--color-text-secondary)";
+                }
+              }}
+              title={sidebarCollapsed ? item.label : undefined}
+            >
+              {/* アクティブインジケーター */}
+              {isActive && !sidebarCollapsed && (
+                <span
+                  style={{
+                    position: "absolute",
+                    left: "0",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    width: "3px",
+                    height: "18px",
+                    borderRadius: "0 3px 3px 0",
+                    backgroundColor: "var(--color-accent-primary)",
+                  }}
+                />
+              )}
+              <span className="shrink-0" style={{ opacity: isActive ? 1 : 0.7 }}>{item.icon}</span>
+              {!sidebarCollapsed && <span>{item.label}</span>}
+            </button>
+          );
+        })}
 
         {/* スペーサー */}
         <div className="flex-1" />
 
         {/* 下部: 設定ナビ */}
-        {NAV_ITEMS.filter((item) => item.bottom).map((item) => (
-          <button
-            key={item.view}
-            onClick={() => handleNavClick(item.view)}
-            className={clsx(
-              "flex items-center gap-3 px-3 py-2 text-sm font-medium",
-              "transition-all"
-            )}
-            style={{
-              borderRadius: "var(--radius-button)",
-              color:
-                sidebarView === item.view
+        {NAV_ITEMS.filter((item) => item.bottom).map((item) => {
+          const isActive = sidebarView === item.view;
+          return (
+            <button
+              key={item.view}
+              onClick={() => handleNavClick(item.view)}
+              className={clsx(
+                "flex items-center gap-3 text-sm font-medium",
+                "transition-all relative"
+              )}
+              style={{
+                borderRadius: "var(--radius-button)",
+                padding: sidebarCollapsed ? "10px" : "9px 12px",
+                color: isActive
                   ? "var(--color-accent-primary)"
                   : "var(--color-text-secondary)",
-              backgroundColor:
-                sidebarView === item.view
+                backgroundColor: isActive
                   ? "var(--color-bg-hover)"
                   : "transparent",
-              justifyContent: sidebarCollapsed ? "center" : "flex-start",
-              transition: "all var(--transition-fast)",
-            }}
-            onMouseEnter={(e) => {
-              if (sidebarView !== item.view) {
-                e.currentTarget.style.backgroundColor =
-                  "var(--color-bg-hover)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (sidebarView !== item.view) {
-                e.currentTarget.style.backgroundColor = "transparent";
-              }
-            }}
-            title={sidebarCollapsed ? item.label : undefined}
-          >
-            <span className="shrink-0">{item.icon}</span>
-            {!sidebarCollapsed && <span>{item.label}</span>}
-          </button>
-        ))}
+                justifyContent: sidebarCollapsed ? "center" : "flex-start",
+                transition: "all var(--transition-fast)",
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.backgroundColor =
+                    "var(--color-bg-hover)";
+                  e.currentTarget.style.color = "var(--color-text-primary)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                  e.currentTarget.style.color = "var(--color-text-secondary)";
+                }
+              }}
+              title={sidebarCollapsed ? item.label : undefined}
+            >
+              {isActive && !sidebarCollapsed && (
+                <span
+                  style={{
+                    position: "absolute",
+                    left: "0",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    width: "3px",
+                    height: "18px",
+                    borderRadius: "0 3px 3px 0",
+                    backgroundColor: "var(--color-accent-primary)",
+                  }}
+                />
+              )}
+              <span className="shrink-0" style={{ opacity: isActive ? 1 : 0.7 }}>{item.icon}</span>
+              {!sidebarCollapsed && <span>{item.label}</span>}
+            </button>
+          );
+        })}
       </nav>
 
       {/* 下部: 折りたたみトグル */}

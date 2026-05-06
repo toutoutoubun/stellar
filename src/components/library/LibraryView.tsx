@@ -191,22 +191,28 @@ export const LibraryView: React.FC = () => {
             borderBottom: "1px solid var(--color-border-secondary)",
           }}
         >
-          {/* 上段: タイトル + 追加ボタン */}
+          {/* 上段: タイトル + カウント + 追加ボタン */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <div className="flex items-baseline gap-3">
               <h1
                 className="text-lg font-bold"
                 style={{ color: "var(--color-text-primary)" }}
               >
                 ライブラリ
               </h1>
-              <span
-                className="text-xs"
-                style={{ color: "var(--color-text-tertiary)" }}
-              >
-                {filteredPapers.length}件
-                {hasActiveFilters && ` / ${papers.length}件中`}
-              </span>
+              {papers.length > 0 && (
+                <span
+                  className="text-xs"
+                  style={{
+                    color: "var(--color-text-tertiary)",
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  {hasActiveFilters
+                    ? `${filteredPapers.length} / ${papers.length}件`
+                    : `${papers.length}件`}
+                </span>
+              )}
             </div>
             <Button
               variant="primary"

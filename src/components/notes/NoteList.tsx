@@ -1,6 +1,6 @@
 // src/components/notes/NoteList.tsx
 // Stellar — ノート一覧サイドパネル
-// 検索バー、ノートリスト（タイトル・更新日・タグ・文字数プレビュー）、新規作成ボタン
+// 検索バー、ノートリスト（タイトル・更新日・タグ・プレビュー）、新規作成ボタン
 
 import type React from "react";
 import { useState, useCallback, useEffect, useMemo } from "react";
@@ -23,16 +23,22 @@ function formatRelativeDate(isoStr: string): string {
   if (diffMin < 60) return `${String(diffMin)}分前`;
   if (diffHour < 24) return `${String(diffHour)}時間前`;
   if (diffDay < 7) return `${String(diffDay)}日前`;
+  if (diffDay < 30) return `${String(diffDay)}日前`;
 
-  // 7日以上前は日付表示
-  return `${String(date.getMonth() + 1)}/${String(date.getDate())}`;
+  // 30日以上前は年月日表示
+  const y = date.getFullYear();
+  const currentYear = now.getFullYear();
+  if (y === currentYear) {
+    return `${String(date.getMonth() + 1)}/${String(date.getDate())}`;
+  }
+  return `${String(y)}/${String(date.getMonth() + 1)}/${String(date.getDate())}`;
 }
 
-/** ソートキーの日本語ラベル */
+/** ソートキーの日本語ラベルとアイコン */
 const SORT_KEY_LABELS: Record<NoteSortKey, string> = {
-  title: "タイトル",
-  createdAt: "作成日",
   updatedAt: "更新日",
+  createdAt: "作成日",
+  title: "タイトル",
 };
 
 export const NoteList: React.FC = () => {
@@ -112,25 +118,36 @@ export const NoteList: React.FC = () => {
       <header
         className="flex items-center justify-between px-4 shrink-0"
         style={{
-          height: "44px",
+          height: "48px",
           borderBottom: "1px solid var(--color-border-primary)",
         }}
       >
-        <h2
-          className="text-sm font-semibold"
-          style={{ color: "var(--color-text-primary)" }}
-        >
-          ノート
-        </h2>
+        <div className="flex items-center gap-2">
+          <h2
+            className="text-sm font-semibold"
+            style={{ color: "var(--color-text-primary)" }}
+          >
+            ノート
+          </h2>
+          <span
+            className="text-xs"
+            style={{
+              color: "var(--color-text-tertiary)",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {notes.length > 0 ? `${notes.length}` : ""}
+          </span>
+        </div>
         <button
           type="button"
           onClick={() => void handleCreateNote()}
-          className="flex items-center gap-1.5 text-xs"
+          className="flex items-center justify-center"
           style={{
             color: "var(--color-accent-primary)",
-            padding: "4px 10px",
+            width: "28px",
+            height: "28px",
             borderRadius: "8px",
-            border: "1px solid var(--color-accent-primary)",
             backgroundColor: "transparent",
             transition: "background-color 150ms ease-out",
           }}
@@ -143,8 +160,8 @@ export const NoteList: React.FC = () => {
           title="新しいノートを作成（Ctrl+N）"
         >
           <svg
-            width="12"
-            height="12"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -155,7 +172,6 @@ export const NoteList: React.FC = () => {
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
-          新規
         </button>
       </header>
 
@@ -234,15 +250,9 @@ export const NoteList: React.FC = () => {
 
       {/* ソートコントロール */}
       <div
-        className="flex items-center gap-2 px-3 py-1.5 shrink-0"
+        className="flex items-center gap-1 px-3 py-1.5 shrink-0"
         style={{ borderBottom: "1px solid var(--color-border-secondary)" }}
       >
-        <span
-          className="text-xs"
-          style={{ color: "var(--color-text-tertiary)" }}
-        >
-          並べ替え:
-        </span>
         {(Object.keys(SORT_KEY_LABELS) as NoteSortKey[]).map((key) => (
           <button
             key={key}
@@ -255,25 +265,31 @@ export const NoteList: React.FC = () => {
                   ? "var(--color-accent-primary)"
                   : "var(--color-text-tertiary)",
               fontWeight: sortKey === key ? 600 : 400,
-              padding: "2px 6px",
-              borderRadius: "4px",
-              transition: "color 150ms ease-out",
+              padding: "3px 8px",
+              borderRadius: "6px",
+              backgroundColor:
+                sortKey === key
+                  ? "var(--color-bg-hover)"
+                  : "transparent",
+              transition: "all 150ms ease-out",
             }}
           >
             {SORT_KEY_LABELS[key]}
             {sortKey === key && (
-              <span className="ml-0.5">
+              <span className="ml-0.5" style={{ fontSize: "10px" }}>
                 {sortDirection === "asc" ? "↑" : "↓"}
               </span>
             )}
           </button>
         ))}
-        <span
-          className="text-xs ml-auto"
-          style={{ color: "var(--color-text-tertiary)" }}
-        >
-          {filteredNotes.length}件
-        </span>
+        {filterQuery.trim() && (
+          <span
+            className="text-xs ml-auto"
+            style={{ color: "var(--color-text-tertiary)" }}
+          >
+            {filteredNotes.length}件
+          </span>
+        )}
       </div>
 
       {/* ノートリスト */}
@@ -360,26 +376,33 @@ const NoteListItem: React.FC<{
   isSelected: boolean;
   onClick: () => void;
 }> = ({ note, isSelected, onClick }) => {
-  /** コンテンツプレビュー（最初の80文字） */
+  /** コンテンツプレビュー（最初の60文字、Markdown記法を除去） */
   const preview = useMemo(() => {
-    const text = note.content.replace(/[#*>\-\[\]`~=]/g, "").trim();
-    return text.slice(0, 80) || "（空のノート）";
+    const text = note.content
+      .replace(/^#{1,6}\s+/gm, "") // 見出し
+      .replace(/[\*_~`>\-\[\]]/g, "") // 装飾
+      .replace(/\n+/g, " ")          // 改行をスペースに
+      .trim();
+    return text.slice(0, 60) || "";
   }, [note.content]);
+
+  const charCount = note.content.length;
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex flex-col gap-1 w-full text-left p-3"
+      className="flex flex-col w-full text-left"
       style={{
-        borderRadius: "8px",
+        padding: "10px 12px",
+        borderRadius: "10px",
         backgroundColor: isSelected
           ? "var(--color-bg-hover)"
           : "transparent",
         borderLeft: isSelected
           ? "3px solid var(--color-accent-primary)"
           : "3px solid transparent",
-        transition: "background-color 150ms ease-out",
+        transition: "all 150ms ease-out",
       }}
       onMouseEnter={(e) => {
         if (!isSelected) {
@@ -392,50 +415,63 @@ const NoteListItem: React.FC<{
         }
       }}
     >
-      {/* タイトル */}
-      <span
-        className="text-sm font-medium truncate"
-        style={{ color: "var(--color-text-primary)" }}
-      >
-        {note.title || "無題のノート"}
-      </span>
-
-      {/* プレビュー */}
-      <span
-        className="text-xs truncate"
-        style={{
-          color: "var(--color-text-tertiary)",
-          lineHeight: "1.4",
-        }}
-      >
-        {preview}
-      </span>
-
-      {/* メタ情報: 更新日 + 文字数 + タグ */}
-      <div className="flex items-center gap-2 mt-0.5">
+      {/* タイトル行 */}
+      <div className="flex items-center gap-2 mb-1">
         <span
-          className="text-xs"
-          style={{ color: "var(--color-text-tertiary)", fontSize: "10px" }}
+          className="text-sm font-medium truncate flex-1"
+          style={{ color: "var(--color-text-primary)" }}
+        >
+          {note.title || "無題のノート"}
+        </span>
+      </div>
+
+      {/* プレビューテキスト（空ノートでは非表示） */}
+      {preview && (
+        <span
+          className="text-xs truncate block mb-1.5"
+          style={{
+            color: "var(--color-text-tertiary)",
+            lineHeight: "1.5",
+          }}
+        >
+          {preview}
+        </span>
+      )}
+
+      {/* メタ情報行: 更新日 · 文字数 + タグ */}
+      <div className="flex items-center gap-1.5">
+        <span
+          className="text-xs shrink-0"
+          style={{ color: "var(--color-text-disabled)", fontSize: "10px" }}
         >
           {formatRelativeDate(note.updatedAt)}
         </span>
-        <span
-          className="text-xs"
-          style={{ color: "var(--color-text-tertiary)", fontSize: "10px" }}
-        >
-          {note.content.length.toLocaleString()}文字
-        </span>
+        {charCount > 0 && (
+          <>
+            <span
+              style={{ color: "var(--color-text-disabled)", fontSize: "10px" }}
+            >
+              ·
+            </span>
+            <span
+              className="text-xs shrink-0"
+              style={{ color: "var(--color-text-disabled)", fontSize: "10px" }}
+            >
+              {charCount.toLocaleString()}字
+            </span>
+          </>
+        )}
         {note.tags.length > 0 && (
           <div className="flex items-center gap-1 ml-auto overflow-hidden">
             {note.tags.slice(0, 2).map((tag) => (
-              <Badge key={tag} style={{ fontSize: "9px", padding: "0 4px" }}>
+              <Badge key={tag} style={{ fontSize: "9px", padding: "1px 5px" }}>
                 {tag}
               </Badge>
             ))}
             {note.tags.length > 2 && (
               <span
                 className="text-xs"
-                style={{ color: "var(--color-text-tertiary)", fontSize: "9px" }}
+                style={{ color: "var(--color-text-disabled)", fontSize: "9px" }}
               >
                 +{note.tags.length - 2}
               </span>
