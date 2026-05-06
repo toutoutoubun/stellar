@@ -9,6 +9,9 @@ import { AnalysisWizard } from "./AnalysisWizard";
 import { DescriptiveResult } from "./results/DescriptiveResult";
 import { InferentialResult } from "./results/InferentialResult";
 import { SurveyResult } from "./results/SurveyResult";
+import { TextAnalysisView } from "./results/TextAnalysisView";
+import { NetworkAnalysisView } from "./results/NetworkAnalysisView";
+import { ReportBuilder } from "./ReportBuilder";
 import type { Analysis } from "../../types";
 
 // ── 分析カテゴリ定義 ──
@@ -126,6 +129,7 @@ export const AnalysisHubView: React.FC = () => {
 
   const [selectedAnalysisId, setSelectedAnalysisId] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   // グループ化された分析一覧
@@ -227,8 +231,14 @@ export const AnalysisHubView: React.FC = () => {
     if (type === "survey") {
       return <SurveyResult analysis={selectedAnalysis} variables={variables} dataRows={dataRows} />;
     }
+    if (type === "text") {
+      return <TextAnalysisView analysis={selectedAnalysis} variables={variables} dataRows={dataRows} />;
+    }
+    if (type === "network") {
+      return <NetworkAnalysisView analysis={selectedAnalysis} variables={variables} dataRows={dataRows} />;
+    }
 
-    // ネットワーク・テキストはJSON表示にフォールバック
+    // その他はJSON表示にフォールバック
     return (
       <div className="p-6 overflow-auto h-full">
         <div
@@ -298,8 +308,8 @@ export const AnalysisHubView: React.FC = () => {
           </span>
         </div>
 
-        {/* 新規分析ボタン */}
-        <div className="shrink-0 px-3 py-2">
+        {/* 新規分析 & レポート作成ボタン */}
+        <div className="shrink-0 px-3 py-2 flex flex-col gap-1.5">
           <button
             onClick={() => setWizardOpen(true)}
             disabled={!selectedDataset}
@@ -329,9 +339,43 @@ export const AnalysisHubView: React.FC = () => {
             </svg>
             新しい分析
           </button>
+          <button
+            onClick={() => setReportOpen(true)}
+            disabled={!selectedDataset || analyses.length === 0}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium"
+            style={{
+              color: selectedDataset && analyses.length > 0 ? "var(--color-accent-secondary)" : "var(--color-text-disabled)",
+              backgroundColor: selectedDataset && analyses.length > 0
+                ? "color-mix(in srgb, var(--color-accent-secondary) 10%, transparent)"
+                : "var(--color-bg-hover)",
+              border: `1px solid ${selectedDataset && analyses.length > 0 ? "var(--color-accent-secondary)" : "var(--color-border-primary)"}`,
+              borderRadius: "var(--radius-md)",
+              cursor: selectedDataset && analyses.length > 0 ? "pointer" : "not-allowed",
+              transition: "all var(--transition-fast)",
+              opacity: selectedDataset && analyses.length > 0 ? 1 : 0.5,
+            }}
+            onMouseEnter={(e) => {
+              if (selectedDataset && analyses.length > 0) {
+                e.currentTarget.style.backgroundColor = "color-mix(in srgb, var(--color-accent-secondary) 18%, transparent)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (selectedDataset && analyses.length > 0) {
+                e.currentTarget.style.backgroundColor = "color-mix(in srgb, var(--color-accent-secondary) 10%, transparent)";
+              }
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+            </svg>
+            レポート作成
+          </button>
         </div>
 
-        {/* 分析グループ一覧 */}
+        {/* 分析グループ一覧 */
         <div className="flex-1 overflow-y-auto px-2 pb-4 scrollable-area">
           {ANALYSIS_GROUPS.map((group) => {
             const items = groupedAnalyses.get(group.key) ?? [];
@@ -511,6 +555,11 @@ export const AnalysisHubView: React.FC = () => {
             setSelectedAnalysisId(analysisId);
           }}
         />
+      )}
+
+      {/* ── レポートビルダーモーダル ── */}
+      {reportOpen && (
+        <ReportBuilder onClose={() => setReportOpen(false)} />
       )}
     </div>
   );
