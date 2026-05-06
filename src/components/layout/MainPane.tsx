@@ -186,7 +186,10 @@ export const MainPane: React.FC = () => {
         return (
           <GraphErrorBoundary>
             <Suspense fallback={<LazyFallback />}>
-              <GraphView />
+              <GraphView
+                openNote={(noteId) => useUIStore.getState().openNote(noteId)}
+                openPaper={(paperId) => useUIStore.getState().openPaper(paperId)}
+              />
             </Suspense>
           </GraphErrorBoundary>
         );

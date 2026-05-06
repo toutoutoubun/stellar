@@ -60,6 +60,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          // ── node_modules のチャンク分割 ──
           // 細かくチャンク分割してピークメモリを抑制
           // 循環参照を避けるため、相互依存パッケージは同一チャンクにまとめる
           if (id.includes("node_modules/react-dom") || id.includes("node_modules/react/") || id.includes("node_modules/scheduler")) return "vendor-react";

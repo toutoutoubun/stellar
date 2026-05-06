@@ -5,7 +5,34 @@
 import type React from "react";
 import { useState, useEffect, useRef } from "react";
 import type { GraphNodeExtended } from "../../types";
-import { Badge } from "../ui/Badge";
+
+/**
+ * ローカル Badge コンポーネント。
+ * ── ../ui/Badge からの import を避けるためにここでインライン定義。
+ * 理由: Badge は index チャンクに配置され、GraphView チャンクからの
+ * 静的 import が循環依存（index →(lazy) GraphView →(static) index）を
+ * 形成し、Safari WKWebView でクラッシュを引き起こすため。
+ */
+const LocalBadge: React.FC<{
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+}> = ({ children, style }) => (
+  <span
+    className="inline-flex items-center text-xs font-medium select-none"
+    style={{
+      backgroundColor: "var(--color-tag-bg)",
+      color: "var(--color-tag-text)",
+      border: "1px solid var(--color-tag-border)",
+      borderRadius: "var(--radius-tag)",
+      padding: "2px 8px",
+      lineHeight: "1.4",
+      whiteSpace: "nowrap",
+      ...style,
+    }}
+  >
+    <span>{children}</span>
+  </span>
+);
 
 interface NodeDetailPopupProps {
   /** 表示対象ノード（nullで非表示） */
@@ -134,12 +161,12 @@ export const NodeDetailPopup: React.FC<NodeDetailPopupProps> = ({
         {visibleNode.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-2">
             {visibleNode.tags.slice(0, 4).map((tag) => (
-              <Badge
+              <LocalBadge
                 key={tag}
                 style={{ fontSize: "9px", padding: "0 5px", lineHeight: "16px" }}
               >
                 {tag}
-              </Badge>
+              </LocalBadge>
             ))}
             {visibleNode.tags.length > 4 && (
               <span

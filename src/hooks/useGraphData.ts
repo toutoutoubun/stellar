@@ -14,7 +14,20 @@ import type {
   GraphNodeExtended,
   GraphFilters,
 } from "../types";
-import { DEFAULT_GRAPH_FILTERS } from "../types";
+/**
+ * GraphFilters のデフォルト値。
+ * types/index.ts からの値 import を避けるためにここでインライン定義。
+ * ── 理由: GraphView チャンクは React.lazy で遅延ロードされるが、
+ * types/index.ts の値エクスポートは index チャンクに配置される。
+ * GraphView →(static) index →(lazy) GraphView の循環依存が
+ * Safari WKWebView でモジュール評価順序の問題を引き起こすため。
+ */
+const DEFAULT_GRAPH_FILTERS: GraphFilters = {
+  showNotes: true,
+  showPapers: true,
+  selectedTags: [],
+  minLinkCount: 0,
+};
 
 /** フック戻り値の型 */
 interface UseGraphDataReturn {
