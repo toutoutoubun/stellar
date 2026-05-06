@@ -66,39 +66,13 @@ export default defineConfig({
     rollupOptions: {
       // 巨大依存をexternalにしてバンドルから除外 → OOM回避
       // kuromoji: 18MB辞書, pdfjs-dist: PDF.js (Tauri時はローカルで読み込む)
-      external: ["kuromoji", "pdfjs-dist", "docx"],
+      external: ["kuromoji", "pdfjs-dist", "docx", "marked"],
       output: {
         manualChunks(id) {
-          // ── node_modules のチャンク分割 ──
+          // ── node_modules のチャンク分割（低メモリ環境向けに簡素化）──
           if (id.includes("node_modules/react-dom") || id.includes("node_modules/react/") || id.includes("node_modules/scheduler")) return "vendor-react";
           if (id.includes("node_modules/@codemirror/") || id.includes("node_modules/@uiw/") || id.includes("node_modules/@lezer/")) return "vendor-codemirror";
-          if (id.includes("node_modules/pdfjs-dist") || id.includes("node_modules/react-pdf-highlighter")) return "vendor-pdf";
-          if (
-            id.includes("node_modules/react-force-graph") ||
-            id.includes("node_modules/force-graph") ||
-            id.includes("node_modules/d3") ||
-            id.includes("node_modules/kapsule") ||
-            id.includes("node_modules/react-kapsule") ||
-            id.includes("node_modules/accessor-fn") ||
-            id.includes("node_modules/canvas-color-tracker") ||
-            id.includes("node_modules/index-array-by") ||
-            id.includes("node_modules/float-tooltip") ||
-            id.includes("node_modules/lodash-es") ||
-            id.includes("node_modules/bezier-js") ||
-            id.includes("node_modules/@tweenjs/") ||
-            id.includes("node_modules/d3-force-3d") ||
-            id.includes("node_modules/internmap") ||
-            id.includes("node_modules/robust-predicates") ||
-            id.includes("node_modules/delaunator")
-          ) return "vendor-graph";
-          if (id.includes("node_modules/graphology")) return "vendor-graphology";
-          if (id.includes("node_modules/docx") || id.includes("node_modules/jszip")) return "vendor-docx";
-          if (id.includes("node_modules/marked")) return "vendor-marked";
-          if (id.includes("node_modules/@dnd-kit/")) return "vendor-dndkit";
           if (id.includes("node_modules/@tauri-apps/")) return "vendor-tauri";
-          if (id.includes("node_modules/zustand")) return "vendor-zustand";
-          if (id.includes("node_modules/@tanstack/")) return "vendor-tanstack";
-          if (id.includes("node_modules/file-saver")) return "vendor-docx";
           if (id.includes("node_modules/")) return "vendor-misc";
           return undefined;
         },
