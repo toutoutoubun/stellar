@@ -121,6 +121,8 @@ const BacklinksSection: React.FC<{
                   border: "1px solid var(--color-border-secondary)",
                   backgroundColor: "var(--color-bg-primary)",
                   transition: "background-color 150ms ease-out",
+                  minWidth: 0,
+                  overflow: "hidden",
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor =
@@ -131,25 +133,29 @@ const BacklinksSection: React.FC<{
                     "var(--color-bg-primary)";
                 }}
               >
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
                   <IconItemType
                     itemType={bl.sourceType as "paper" | "note"}
                     size={12}
                     style={{ flexShrink: 0 }}
                   />
                   <span
-                    className="text-xs font-medium truncate"
-                    style={{ color: "var(--color-text-primary)" }}
+                    className="text-xs font-medium"
+                    style={{ color: "var(--color-text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}
                   >
                     {bl.sourceTitle}
                   </span>
                 </div>
                 {bl.context && (
                   <span
-                    className="text-xs truncate"
+                    className="text-xs"
                     style={{
                       color: "var(--color-text-tertiary)",
                       paddingLeft: "18px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      display: "block",
                     }}
                   >
                     {bl.context}
@@ -238,12 +244,17 @@ const OutlineSection: React.FC<{
                 key={`${h.line}-${String(idx)}`}
                 type="button"
                 onClick={() => onHeadingClick(h.line)}
-                className="text-left text-xs py-1 truncate"
+                className="text-left text-xs py-1"
                 style={{
                   paddingLeft: `${(h.level - 1) * 12 + 4}px`,
                   color: "var(--color-text-secondary)",
                   borderRadius: "4px",
                   transition: "color 150ms ease-out",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  display: "block",
+                  width: "100%",
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = "var(--color-accent-primary)";
@@ -468,6 +479,7 @@ export const NoteContextPanel: React.FC<NoteContextPanelProps> = ({
         borderLeft: "1px solid var(--color-border-primary)",
         backgroundColor: "var(--color-bg-secondary)",
         padding: "16px",
+        overflow: "hidden auto",
       }}
     >
       <div className="flex flex-col gap-5">

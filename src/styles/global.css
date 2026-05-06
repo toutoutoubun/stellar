@@ -451,6 +451,12 @@ pre {
   min-width: 0;
 }
 
+/* flex コンテナ内の truncate が効くように */
+.flex > .truncate,
+.flex > [class*="truncate"] {
+  min-width: 0;
+}
+
 /* コンポーネント内テキストのはみ出し防止 */
 .overflow-clamp {
   overflow: hidden;

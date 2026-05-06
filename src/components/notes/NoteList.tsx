@@ -416,10 +416,10 @@ const NoteListItem: React.FC<{
       }}
     >
       {/* タイトル行 */}
-      <div className="flex items-center gap-2 mb-1">
+      <div className="flex items-center gap-2 mb-1" style={{ minWidth: 0 }}>
         <span
-          className="text-sm font-medium truncate flex-1"
-          style={{ color: "var(--color-text-primary)" }}
+          className="text-sm font-medium truncate"
+          style={{ color: "var(--color-text-primary)", minWidth: 0, display: "block" }}
         >
           {note.title || "無題のノート"}
         </span>
@@ -428,10 +428,14 @@ const NoteListItem: React.FC<{
       {/* プレビューテキスト（空ノートでは非表示） */}
       {preview && (
         <span
-          className="text-xs truncate block mb-1.5"
+          className="text-xs block mb-1.5"
           style={{
             color: "var(--color-text-tertiary)",
             lineHeight: "1.5",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            minWidth: 0,
           }}
         >
           {preview}
@@ -439,7 +443,7 @@ const NoteListItem: React.FC<{
       )}
 
       {/* メタ情報行: 更新日 · 文字数 + タグ */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
         <span
           className="text-xs shrink-0"
           style={{ color: "var(--color-text-disabled)", fontSize: "10px" }}

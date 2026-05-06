@@ -112,12 +112,15 @@ export const FocusMode: React.FC<FocusModeProps> = ({
           pointerEvents: toolbarVisible ? "auto" : "none",
         }}
       >
-        <div className="flex items-center gap-3" data-tauri-drag-region>
+        <div className="flex items-center gap-3" style={{ minWidth: 0, flex: 1 }} data-tauri-drag-region>
           <span
-            className="text-sm font-medium truncate"
+            className="text-sm font-medium"
             style={{
               color: "var(--color-text-primary)",
               maxWidth: "300px",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}
             data-tauri-drag-region
           >

@@ -5,7 +5,7 @@
 // 下部ステータスバー: 文字数 + 最終保存時刻
 
 import type React from "react";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import type { NodeType } from "../../types";
 import { useNoteStore } from "../../stores/useNoteStore";
 import { useUIStore } from "../../stores/useUIStore";
@@ -13,6 +13,9 @@ import { StellarEditor } from "./StellarEditor";
 import { NoteContextPanel } from "./NoteContextPanel";
 import { FocusMode } from "./FocusMode";
 import { toast } from "../ui/Toast";
+import { countWords, estimateReadingTime } from "../../lib/exportMarkdown";
+import { exportMarkdownFile, exportPlainText, exportPdf, exportHtmlBlob, downloadBlob } from "../../lib/exportPdf";
+import { generateDocx } from "../../lib/exportDocx";
 
 interface NoteEditorProps {
   /** 表示するノートのID */
@@ -130,10 +133,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
   /** ノート削除 */
   const handleDelete = useCallback(async () => {
     if (!activeNote) return;
-    const { confirm } = await import("@tauri-apps/plugin-dialog");
-    const ok = await confirm(
+    const ok = window.confirm(
       `「${activeNote.title}」を削除しますか？この操作は取り消せません。`,
-      { title: "ノートの削除", kind: "warning" },
     );
     if (ok) {
       try {
@@ -159,70 +160,11 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
     // 将来的に ref でスクロール関数を公開する拡張が可能。
   }, []);
 
-  /** Markdown → HTML 変換ヘルパー（HTML/PDF/DOCX 共用） */
-  const markdownToHtml = useCallback(
-    (md: string, title: string) => {
-      const htmlBody = md
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        // コードブロック（```mermaid 含む）
-        .replace(/```(\w*)\n([\s\S]*?)```/g, (_match, lang: string, code: string) => {
-          if (lang === "mermaid") {
-            return `<pre class="mermaid">${code.trim()}</pre>`;
-          }
-          return `<pre><code class="language-${lang}">${code.trim()}</code></pre>`;
-        })
-        .replace(/^### (.+)$/gm, "<h3>$1</h3>")
-        .replace(/^## (.+)$/gm, "<h2>$1</h2>")
-        .replace(/^# (.+)$/gm, "<h1>$1</h1>")
-        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-        .replace(/\*(.+?)\*/g, "<em>$1</em>")
-        .replace(/~~(.+?)~~/g, "<del>$1</del>")
-        .replace(/`(.+?)`/g, "<code>$1</code>")
-        .replace(/==(.+?)==/g, "<mark>$1</mark>")
-        .replace(/\[\[(.+?)\]\]/g, '<span class="wikilink">$1</span>')
-        .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />')
-        .replace(/\[([^\]]*)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-        .replace(/@cite\{([^}]+)\}/g, '<span class="citation">[$1]</span>')
-        .replace(/\n\n/g, "</p>\n<p>")
-        .replace(/\n/g, "<br/>\n");
+  /** 単語数・読了時間（メモ化） */
+  const wordCount = useMemo(() => countWords(editorContent), [editorContent]);
+  const readingTime = useMemo(() => estimateReadingTime(editorContent), [editorContent]);
 
-      return `<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <title>${title}</title>
-  <style>
-    body { font-family: system-ui, -apple-system, 'Hiragino Kaku Gothic ProN', sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; line-height: 1.8; color: #1a1a1a; }
-    h1 { font-size: 1.6em; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.3em; }
-    h2 { font-size: 1.35em; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.2em; }
-    h3 { font-size: 1.15em; }
-    h1, h2, h3 { margin-top: 1.5em; margin-bottom: 0.5em; }
-    code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 0.88em; font-family: 'SF Mono', 'Fira Code', monospace; }
-    pre { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; overflow-x: auto; }
-    pre code { background: none; padding: 0; }
-    mark { background: rgba(255,235,59,0.35); padding: 1px 3px; border-radius: 3px; }
-    .wikilink { color: #6366f1; text-decoration: underline dotted; text-underline-offset: 3px; }
-    .citation { color: #6366f1; font-weight: 500; }
-    img { max-width: 100%; height: auto; border-radius: 6px; margin: 1em 0; }
-    blockquote { border-left: 3px solid #d1d5db; margin: 1em 0; padding-left: 1em; color: #6b7280; }
-    table { border-collapse: collapse; width: 100%; margin: 1em 0; }
-    th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
-    th { background: #f9fafb; font-weight: 600; }
-    @media print { body { max-width: 100%; margin: 0; padding: 0; } }
-  </style>
-</head>
-<body>
-  <h1>${title}</h1>
-  <p>${htmlBody}</p>
-</body>
-</html>`;
-    },
-    [],
-  );
-
-  /** ノート書き出し処理 */
+  /** ノート書き出し処理（ブラウザネイティブ — Tauri 不要） */
   const handleExport = useCallback(
     async (format: "markdown" | "plaintext" | "html" | "pdf" | "docx") => {
       if (!activeNote) return;
@@ -230,183 +172,43 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
 
       const title = activeNote.title || "無題のノート";
 
-      switch (format) {
-        case "markdown": {
-          const content = editorContent;
-          const fileName = `${title}.md`;
-          try {
-            const { save } = await import("@tauri-apps/plugin-dialog");
-            const filePath = await save({
-              defaultPath: fileName,
-              filters: [{ name: "Markdown", extensions: ["md"] }],
-            });
-            if (filePath) {
-              const { writeTextFile } = await import("@tauri-apps/plugin-fs");
-              await writeTextFile(filePath, content);
-              toast.success(`${fileName} を保存しました`);
-            }
-          } catch {
-            toast.error("書き出しに失敗しました");
+      try {
+        switch (format) {
+          case "markdown":
+            exportMarkdownFile(editorContent, title);
+            toast.success(`${title}.md をダウンロードしました`);
+            break;
+
+          case "plaintext":
+            exportPlainText(editorContent, title);
+            toast.success(`${title}.txt をダウンロードしました`);
+            break;
+
+          case "html": {
+            const blob = exportHtmlBlob(editorContent, title);
+            downloadBlob(blob, `${title}.html`);
+            toast.success(`${title}.html をダウンロードしました`);
+            break;
           }
-          break;
-        }
 
-        case "plaintext": {
-          const content = editorContent
-            .replace(/^#{1,6}\s+/gm, "")
-            .replace(/\*\*(.+?)\*\*/g, "$1")
-            .replace(/\*(.+?)\*/g, "$1")
-            .replace(/~~(.+?)~~/g, "$1")
-            .replace(/`(.+?)`/g, "$1")
-            .replace(/\[\[(.+?)\]\]/g, "$1")
-            .replace(/!?\[([^\]]*)\]\([^)]+\)/g, "$1")
-            .replace(/==(.+?)==/g, "$1")
-            .replace(/@cite\{([^}]+)\}/g, "[$1]")
-            .replace(/```[\s\S]*?```/g, ""); // コードブロック除去
-          const fileName = `${title}.txt`;
-          try {
-            const { save } = await import("@tauri-apps/plugin-dialog");
-            const filePath = await save({
-              defaultPath: fileName,
-              filters: [{ name: "テキスト", extensions: ["txt"] }],
-            });
-            if (filePath) {
-              const { writeTextFile } = await import("@tauri-apps/plugin-fs");
-              await writeTextFile(filePath, content);
-              toast.success(`${fileName} を保存しました`);
-            }
-          } catch {
-            toast.error("書き出しに失敗しました");
+          case "pdf":
+            exportPdf(editorContent, title);
+            toast.info("印刷ダイアログで『PDF に保存』を選択してください");
+            break;
+
+          case "docx": {
+            const blob = await generateDocx(editorContent, title);
+            downloadBlob(blob, `${title}.docx`);
+            toast.success(`${title}.docx をダウンロードしました`);
+            break;
           }
-          break;
         }
-
-        case "html": {
-          const content = markdownToHtml(editorContent, title);
-          const fileName = `${title}.html`;
-          try {
-            const { save } = await import("@tauri-apps/plugin-dialog");
-            const filePath = await save({
-              defaultPath: fileName,
-              filters: [{ name: "HTML", extensions: ["html", "htm"] }],
-            });
-            if (filePath) {
-              const { writeTextFile } = await import("@tauri-apps/plugin-fs");
-              await writeTextFile(filePath, content);
-              toast.success(`${fileName} を保存しました`);
-            }
-          } catch {
-            toast.error("書き出しに失敗しました");
-          }
-          break;
-        }
-
-        case "pdf": {
-          // PDF エクスポート: Rust バックエンドの export_note_pdf コマンドを使用
-          // フォールバック: HTML を経由してブラウザ印刷 API で PDF 出力
-          const fileName = `${title}.pdf`;
-          try {
-            // まず Tauri コマンドを試行
-            const { save } = await import("@tauri-apps/plugin-dialog");
-            const filePath = await save({
-              defaultPath: fileName,
-              filters: [{ name: "PDF", extensions: ["pdf"] }],
-            });
-            if (!filePath) break;
-
-            try {
-              const { invoke } = await import("../../lib/tauriShim");
-              const htmlContent = markdownToHtml(editorContent, title);
-              await invoke("export_note_pdf", {
-                html: htmlContent,
-                outputPath: filePath,
-              });
-              toast.success(`${fileName} を保存しました`);
-            } catch {
-              // Tauri コマンド未実装時のフォールバック:
-              // HTML をファイルとして書き出し、ユーザーにブラウザ印刷を案内
-              const htmlContent = markdownToHtml(editorContent, title);
-              const htmlPath = filePath.replace(/\.pdf$/i, ".html");
-              const { writeTextFile } = await import("@tauri-apps/plugin-fs");
-              await writeTextFile(htmlPath, htmlContent);
-              toast.info(
-                "PDF 変換コマンドが未実装のため、HTML ファイルとして保存しました。ブラウザで開いて「印刷 → PDF に保存」をご利用ください。"
-              );
-            }
-          } catch {
-            toast.error("PDF 書き出しに失敗しました");
-          }
-          break;
-        }
-
-        case "docx": {
-          // DOCX エクスポート: Rust バックエンドの export_note_docx コマンドを使用
-          // フォールバック: HTML 形式の .doc ファイル（Word 互換）を生成
-          const fileName = `${title}.docx`;
-          try {
-            const { save } = await import("@tauri-apps/plugin-dialog");
-            const filePath = await save({
-              defaultPath: fileName,
-              filters: [
-                { name: "Word 文書", extensions: ["docx"] },
-                { name: "Word 互換 HTML", extensions: ["doc"] },
-              ],
-            });
-            if (!filePath) break;
-
-            try {
-              const { invoke } = await import("../../lib/tauriShim");
-              const htmlContent = markdownToHtml(editorContent, title);
-              await invoke("export_note_docx", {
-                html: htmlContent,
-                outputPath: filePath,
-              });
-              toast.success(`${fileName} を保存しました`);
-            } catch {
-              // Tauri コマンド未実装時のフォールバック:
-              // Word 互換 HTML (.doc) を生成 — Word で正常に開ける
-              const wordHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
-  <style>
-    body { font-family: 'Yu Gothic', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif; font-size: 10.5pt; line-height: 1.8; color: #1a1a1a; }
-    h1 { font-size: 18pt; font-weight: bold; margin-top: 24pt; margin-bottom: 6pt; border-bottom: 1pt solid #d1d5db; padding-bottom: 4pt; }
-    h2 { font-size: 14pt; font-weight: bold; margin-top: 18pt; margin-bottom: 4pt; }
-    h3 { font-size: 12pt; font-weight: bold; margin-top: 14pt; margin-bottom: 4pt; }
-    code { font-family: 'Courier New', monospace; font-size: 9pt; background-color: #f3f4f6; padding: 1pt 3pt; }
-    pre { font-family: 'Courier New', monospace; font-size: 9pt; background-color: #f9fafb; border: 1pt solid #e5e7eb; padding: 8pt; white-space: pre-wrap; }
-    mark { background-color: #fff59d; }
-    .wikilink { color: #6366f1; text-decoration: underline; }
-    .citation { color: #6366f1; font-weight: bold; }
-    img { max-width: 100%; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1pt solid #d1d5db; padding: 4pt 8pt; }
-    th { background-color: #f9fafb; font-weight: bold; }
-  </style>
-</head>
-<body>
-  ${markdownToHtml(editorContent, title)
-    .replace(/<!DOCTYPE html>[\s\S]*?<body>/, "")
-    .replace(/<\/body>[\s\S]*<\/html>/, "")}
-</body>
-</html>`;
-              const docPath = filePath.replace(/\.docx$/i, ".doc");
-              const { writeTextFile } = await import("@tauri-apps/plugin-fs");
-              await writeTextFile(docPath, wordHtml);
-              toast.success(
-                `${title}.doc を保存しました（Word 互換 HTML 形式）`
-              );
-            }
-          } catch {
-            toast.error("DOCX 書き出しに失敗しました");
-          }
-          break;
-        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "書き出しに失敗しました";
+        toast.error(msg);
       }
     },
-    [activeNote, editorContent, markdownToHtml],
+    [activeNote, editorContent],
   );
 
   /** キーボードショートカット */
@@ -898,12 +700,26 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
               borderTop: "1px solid var(--color-border-primary)",
             }}
           >
-            <span
-              className="text-xs"
-              style={{ color: "var(--color-text-tertiary)" }}
-            >
-              {charCount.toLocaleString()}文字
-            </span>
+            <div className="flex items-center gap-3">
+              <span
+                className="text-xs"
+                style={{ color: "var(--color-text-tertiary)" }}
+              >
+                {charCount.toLocaleString()}文字
+              </span>
+              <span
+                className="text-xs"
+                style={{ color: "var(--color-text-tertiary)" }}
+              >
+                {wordCount.toLocaleString()}語
+              </span>
+              <span
+                className="text-xs"
+                style={{ color: "var(--color-text-tertiary)" }}
+              >
+                約{readingTime}分
+              </span>
+            </div>
             <span
               className="text-xs"
               style={{
