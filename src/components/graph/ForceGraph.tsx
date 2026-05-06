@@ -2,6 +2,11 @@
 // Stellar — react-force-graph-2d ラッパーコンポーネント
 // カスタムノード描画（円 / 六角形）・カスタムエッジ描画（Bezier + 矢印）
 // Force シミュレーション設定・ノードドラッグ・ズーム・パン
+//
+// 【Safari WKWebView 対策】
+// react-force-graph-2d を動的 import し、ロード失敗時にフォールバック UI を表示。
+// d3-force / d3-color 等の依存が Safari WKWebView (Tauri) のモジュール評価で
+// クラッシュする問題に対する防御策。
 
 import type React from "react";
 import {
@@ -11,14 +16,43 @@ import {
   useState,
   useMemo,
 } from "react";
-// 【重要】static import に変更 — 動的 import("react-force-graph-2d") を使うと
-// Vite が __vitePreload ヘルパーでラップし、vendor-codemirror チャンク（1.6MB）
-// への依存が発生して Safari WKWebView (Tauri) でクラッシュする。
-// static import にすれば GraphView チャンクに vendor-graph が含まれ、
-// React.lazy による遅延読み込みで十分。
-import ForceGraph2D from "react-force-graph-2d";
 import type { ForceGraphMethods } from "react-force-graph-2d";
 import type { GraphNodeExtended, GraphLink } from "../../types";
+
+// ============================================================
+// ForceGraph2D の動的ロード
+// ============================================================
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ForceGraph2DComponent = any;
+
+let _cachedForceGraph2D: ForceGraph2DComponent | null = null;
+let _loadError: Error | null = null;
+let _loadPromise: Promise<ForceGraph2DComponent> | null = null;
+
+/**
+ * react-force-graph-2d を動的にロードし、結果をキャッシュする。
+ * Safari WKWebView でモジュール評価がクラッシュする場合、
+ * エラーを捕捉してフォールバック UI を表示する。
+ */
+function loadForceGraph2D(): Promise<ForceGraph2DComponent> {
+  if (_cachedForceGraph2D) return Promise.resolve(_cachedForceGraph2D);
+  if (_loadError) return Promise.reject(_loadError);
+  if (_loadPromise) return _loadPromise;
+
+  _loadPromise = import("react-force-graph-2d")
+    .then((mod) => {
+      _cachedForceGraph2D = mod.default || mod;
+      return _cachedForceGraph2D;
+    })
+    .catch((err) => {
+      _loadError = err instanceof Error ? err : new Error(String(err));
+      console.error("[ForceGraph] react-force-graph-2d ロード失敗:", _loadError);
+      throw _loadError;
+    });
+
+  return _loadPromise;
+}
 
 // ============================================================
 // Props
@@ -101,7 +135,41 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const lastClickRef = useRef<{ nodeId: string; time: number } | null>(null);
 
+  // 動的ロード状態
+  const [ForceGraph2D, setForceGraph2D] = useState<ForceGraph2DComponent | null>(
+    () => _cachedForceGraph2D, // 既にキャッシュされていれば即利用
+  );
+  const [loadErr, setLoadErr] = useState<Error | null>(() => _loadError);
+  const [retryCount, setRetryCount] = useState(0);
 
+  // 動的 import 実行
+  useEffect(() => {
+    if (ForceGraph2D) return; // 既にロード済み
+    if (_loadError && retryCount === 0) return; // 前回エラーでリトライなし
+
+    // リトライ時はキャッシュをクリア
+    if (retryCount > 0) {
+      _cachedForceGraph2D = null;
+      _loadError = null;
+      _loadPromise = null;
+    }
+
+    let cancelled = false;
+    loadForceGraph2D()
+      .then((comp) => {
+        if (!cancelled) {
+          setForceGraph2D(() => comp);
+          setLoadErr(null);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setLoadErr(err instanceof Error ? err : new Error(String(err)));
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, [ForceGraph2D, retryCount]);
 
   /** 選択ノードに接続しているノードIDセット */
   const connectedNodeIds = useMemo(() => {
@@ -135,28 +203,36 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
     const fg = graphRef.current;
     if (!fg) return;
 
-    const charge = fg.d3Force("charge");
-    if (charge && typeof charge === "object" && "strength" in charge) {
-      (charge as { strength: (v: number) => void }).strength(-150);
-    }
+    try {
+      const charge = fg.d3Force("charge");
+      if (charge && typeof charge === "object" && "strength" in charge) {
+        (charge as { strength: (v: number) => void }).strength(-150);
+      }
 
-    const link = fg.d3Force("link");
-    if (link && typeof link === "object" && "distance" in link) {
-      (link as { distance: (v: number) => void }).distance(80);
+      const link = fg.d3Force("link");
+      if (link && typeof link === "object" && "distance" in link) {
+        (link as { distance: (v: number) => void }).distance(80);
+      }
+    } catch (e) {
+      console.error("[ForceGraph] d3Force 設定エラー:", e);
     }
 
     // 初回レンダリング後にフィット表示
     setTimeout(() => {
-      fg.zoomToFit(400, 60);
+      try {
+        fg.zoomToFit(400, 60);
+      } catch (e) {
+        console.error("[ForceGraph] zoomToFit エラー:", e);
+      }
     }, 500);
-  }, [nodes.length]);
+  }, [nodes.length, ForceGraph2D]);
 
   /** graphRef を親に公開 */
   useEffect(() => {
     if (graphRef.current && onGraphReady) {
       onGraphReady(graphRef.current);
     }
-  }, [onGraphReady]);
+  }, [onGraphReady, ForceGraph2D]);
 
   /** カスタムノード描画 */
   const nodeCanvasObject = useCallback(
@@ -401,6 +477,83 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
     [onNodeDoubleClick],
   );
 
+  // ── ロード中 / エラー時のフォールバック ──
+
+  if (loadErr) {
+    return (
+      <div
+        className="flex items-center justify-center"
+        style={{
+          width,
+          height,
+          color: "var(--color-text-tertiary)",
+          backgroundColor: "var(--color-bg-primary)",
+        }}
+      >
+        <div className="flex flex-col items-center gap-3">
+          <svg
+            width="36" height="36" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="1.5"
+            style={{ color: "var(--color-accent-danger)", opacity: 0.6 }}
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <p className="text-xs" style={{ maxWidth: 280, textAlign: "center" }}>
+            グラフエンジンの初期化に失敗しました
+          </p>
+          <p
+            className="text-xs"
+            style={{ color: "var(--color-text-tertiary)", maxWidth: 320, textAlign: "center", fontSize: 10 }}
+          >
+            {loadErr.message}
+          </p>
+          <button
+            type="button"
+            onClick={() => setRetryCount((c) => c + 1)}
+            className="text-xs"
+            style={{
+              color: "var(--color-accent-primary)",
+              padding: "6px 16px",
+              borderRadius: "8px",
+              border: "1px solid var(--color-accent-primary)",
+              cursor: "pointer",
+              background: "transparent",
+            }}
+          >
+            再試行
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!ForceGraph2D) {
+    return (
+      <div
+        className="flex items-center justify-center"
+        style={{
+          width,
+          height,
+          color: "var(--color-text-tertiary)",
+          backgroundColor: "var(--color-bg-primary)",
+        }}
+      >
+        <div className="flex flex-col items-center gap-3">
+          <svg
+            width="28" height="28" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2"
+            style={{ animation: "spin 1s linear infinite" }}
+          >
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+          </svg>
+          <span className="text-xs">グラフエンジンを読み込み中…</span>
+        </div>
+      </div>
+    );
+  }
+
   const bgColor = getCSSVar("--color-bg-primary") || "#ffffff";
 
   return (
@@ -419,7 +572,7 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
         linkCanvasObject={linkCanvasObject}
         linkCanvasObjectMode={() => "replace"}
         // インタラクション
-        onNodeClick={(node) => {
+        onNodeClick={(node: GraphNodeExtended) => {
           const now = Date.now();
           const n = node as GraphNodeExtended;
           const last = lastClickRef.current;
@@ -432,8 +585,8 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
             onNodeClick(n);
           }
         }}
-        onNodeHover={(node) => handleNodeHover(node as GraphNodeExtended | null)}
-        onNodeDragEnd={(node) => handleNodeDragEnd(node as GraphNodeExtended)}
+        onNodeHover={(node: GraphNodeExtended | null) => handleNodeHover(node as GraphNodeExtended | null)}
+        onNodeDragEnd={(node: GraphNodeExtended) => handleNodeDragEnd(node as GraphNodeExtended)}
         onBackgroundClick={onBackgroundClick}
         enableNodeDrag
         enableZoomInteraction

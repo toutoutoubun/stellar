@@ -61,23 +61,31 @@ interface UseGraphDataReturn {
 
 /**
  * リンク数カウント用の型。
- * Map の代わりに Record を使用 — esbuild が `new Map()` → `new Map`（括弧省略）に
- * minify し、Safari WKWebView / Tauri の WebKit で
- * "undefined is not an object (evaluating 'new Map')" が発生する問題を回避するため。
+ * Map の代わりに Record を使用 — Safari WKWebView / Tauri の WebKit で
+ * new Map / Object.create(null) がクラッシュする問題を回避するため、
+ * プレーンオブジェクトリテラル {} のみを使用する。
  */
 type LinkCountRecord = Record<string, number>;
 
-/** 空の LinkCountRecord */
-const EMPTY_LINK_COUNTS: LinkCountRecord = Object.freeze({}) as LinkCountRecord;
+/** 空の LinkCountRecord（プレーンオブジェクト — Object.freeze を避ける） */
+const EMPTY_LINK_COUNTS: LinkCountRecord = {} as LinkCountRecord;
 
 /** ノードごとのリンク数をカウント */
 function countLinks(links: GraphLink[]): LinkCountRecord {
-  const counts: LinkCountRecord = Object.create(null) as LinkCountRecord;
-  for (const link of links) {
-    const src = typeof link.source === "string" ? link.source : (link.source as GraphNode).id;
-    const tgt = typeof link.target === "string" ? link.target : (link.target as GraphNode).id;
-    counts[src] = (counts[src] ?? 0) + 1;
-    counts[tgt] = (counts[tgt] ?? 0) + 1;
+  // Object.create(null) を避け、プレーンオブジェクトリテラルを使用
+  // Safari WKWebView で "undefined is not an object" が発生する問題を回避
+  const counts: LinkCountRecord = {} as LinkCountRecord;
+  try {
+    for (let i = 0; i < links.length; i++) {
+      const link = links[i];
+      if (!link) continue;
+      const src = typeof link.source === "string" ? link.source : (link.source as GraphNode).id;
+      const tgt = typeof link.target === "string" ? link.target : (link.target as GraphNode).id;
+      counts[src] = (counts[src] ?? 0) + 1;
+      counts[tgt] = (counts[tgt] ?? 0) + 1;
+    }
+  } catch (e) {
+    console.error("[useGraphData] countLinks error:", e);
   }
   return counts;
 }

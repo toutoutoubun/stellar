@@ -1,6 +1,6 @@
 // src/components/graph/GraphErrorBoundary.tsx
 // Stellar — GraphView 専用 Error Boundary
-// Safari WKWebView (Tauri) で vendor-graph チャンクのモジュール評価が
+// Safari WKWebView (Tauri) で react-force-graph-2d / d3 の評価が
 // クラッシュした場合にアプリ全体のフリーズを防ぎ、
 // フォールバック UI を表示してリトライを可能にする
 
@@ -14,28 +14,45 @@ interface Props {
 interface State {
   hasError: boolean;
   errorMessage: string | null;
+  errorStack: string | null;
+  componentStack: string | null;
 }
 
 export class GraphErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, errorMessage: null };
+    this.state = {
+      hasError: false,
+      errorMessage: null,
+      errorStack: null,
+      componentStack: null,
+    };
   }
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return {
       hasError: true,
       errorMessage: error?.message ?? String(error),
+      errorStack: error?.stack ?? null,
     };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("[GraphErrorBoundary] グラフビューでエラーが発生:", error);
+    console.error("[GraphErrorBoundary] エラースタック:", error?.stack);
     console.error("[GraphErrorBoundary] コンポーネントスタック:", errorInfo.componentStack);
+    this.setState({
+      componentStack: errorInfo.componentStack ?? null,
+    });
   }
 
   handleRetry = () => {
-    this.setState({ hasError: false, errorMessage: null });
+    this.setState({
+      hasError: false,
+      errorMessage: null,
+      errorStack: null,
+      componentStack: null,
+    });
   };
 
   render() {
@@ -100,6 +117,18 @@ export class GraphErrorBoundary extends Component<Props, State> {
                     }}
                   >
                     {this.state.errorMessage}
+                    {this.state.errorStack && (
+                      <>
+                        {"\n\n--- Stack ---\n"}
+                        {this.state.errorStack}
+                      </>
+                    )}
+                    {this.state.componentStack && (
+                      <>
+                        {"\n\n--- Component ---\n"}
+                        {this.state.componentStack}
+                      </>
+                    )}
                   </pre>
                 </details>
               )}
