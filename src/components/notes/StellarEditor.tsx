@@ -235,7 +235,21 @@ class CitationWidget extends WidgetType {
   toDOM(): HTMLElement {
     const span = document.createElement("span");
     span.className = "cm-citation-badge";
-    span.textContent = `📄 ${this.citeKey}`;
+    // SVG アイコン（論文）をインラインで挿入
+    const iconSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    iconSvg.setAttribute("width", "11");
+    iconSvg.setAttribute("height", "11");
+    iconSvg.setAttribute("viewBox", "0 0 24 24");
+    iconSvg.setAttribute("fill", "none");
+    iconSvg.setAttribute("stroke", "currentColor");
+    iconSvg.setAttribute("stroke-width", "2");
+    iconSvg.setAttribute("stroke-linecap", "round");
+    iconSvg.setAttribute("stroke-linejoin", "round");
+    iconSvg.style.verticalAlign = "middle";
+    iconSvg.style.marginRight = "3px";
+    iconSvg.innerHTML = '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>';
+    span.appendChild(iconSvg);
+    span.appendChild(document.createTextNode(` ${this.citeKey}`));
     span.title = `引用: ${this.citeKey}`;
     return span;
   }
@@ -460,16 +474,135 @@ export const StellarEditor: React.FC<StellarEditorProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteId]);
 
+  /** 画像ファイルをエディタに挿入する処理 */
+  const handleImageInsert = useCallback(async (files: FileList | File[]) => {
+    const view = viewRef.current;
+    if (!view) return;
+
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith("image/")) continue;
+      try {
+        // Tauri 経由で画像をアプリデータに保存
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        const savedPath = await invoke<string>("save_note_attachment", {
+          noteId,
+          fileName: file.name,
+          data: Array.from(bytes),
+        });
+        // Markdown 画像記法を挿入
+        const imgMarkdown = `![${file.name}](${savedPath})`;
+        const cursor = view.state.selection.main.head;
+        // 現在行の先頭かどうかを判定して前後に改行を追加
+        const line = view.state.doc.lineAt(cursor);
+        const prefix = line.text.trim() === "" ? "" : "\n";
+        const insert = `${prefix}${imgMarkdown}\n`;
+        view.dispatch({
+          changes: { from: cursor, insert },
+          selection: { anchor: cursor + insert.length },
+        });
+      } catch {
+        // save_note_attachment が未実装の場合、Base64 インラインで挿入
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result as string;
+          const imgMarkdown = `![${file.name}](${dataUrl})`;
+          const cursor = view.state.selection.main.head;
+          const docLine = view.state.doc.lineAt(cursor);
+          const prefix = docLine.text.trim() === "" ? "" : "\n";
+          const insert = `${prefix}${imgMarkdown}\n`;
+          view.dispatch({
+            changes: { from: cursor, insert },
+            selection: { anchor: cursor + insert.length },
+          });
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  }, [noteId]);
+
+  /** ファイル選択ダイアログから画像を挿入 */
+  const handleImageButtonClick = useCallback(() => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.multiple = true;
+    input.onchange = () => {
+      if (input.files && input.files.length > 0) {
+        void handleImageInsert(input.files);
+      }
+    };
+    input.click();
+  }, [handleImageInsert]);
+
   return (
-    <div
-      ref={editorRef}
-      className="flex-1 overflow-auto"
-      style={{
-        backgroundColor: "var(--color-bg-primary)",
-        color: "var(--color-text-primary)",
-        padding: "0 24px",
-        minHeight: 0,
-      }}
-    />
+    <div className="flex flex-col flex-1 overflow-hidden" style={{ minHeight: 0 }}>
+      {/* 画像挿入ツールバー */}
+      <div
+        className="flex items-center gap-1 px-6 shrink-0"
+        style={{
+          height: "32px",
+          borderBottom: "1px solid var(--color-border-secondary)",
+          backgroundColor: "var(--color-bg-secondary)",
+        }}
+      >
+        <button
+          type="button"
+          onClick={handleImageButtonClick}
+          className="flex items-center gap-1.5 text-xs"
+          style={{
+            color: "var(--color-text-tertiary)",
+            padding: "3px 8px",
+            borderRadius: "5px",
+            transition: "all 150ms ease-out",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+            e.currentTarget.style.color = "var(--color-text-secondary)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent";
+            e.currentTarget.style.color = "var(--color-text-tertiary)";
+          }}
+          title="画像を挿入"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <polyline points="21 15 16 10 5 21" />
+          </svg>
+          画像を挿入
+        </button>
+      </div>
+
+      {/* エディタ領域（ドラッグ&ドロップ対応） */}
+      <div
+        ref={editorRef}
+        className="flex-1 overflow-auto"
+        style={{
+          backgroundColor: "var(--color-bg-primary)",
+          color: "var(--color-text-primary)",
+          padding: "0 24px",
+          minHeight: 0,
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.currentTarget.style.outline = "2px dashed var(--color-accent-primary)";
+          e.currentTarget.style.outlineOffset = "-4px";
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          e.currentTarget.style.outline = "none";
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.currentTarget.style.outline = "none";
+          if (e.dataTransfer.files.length > 0) {
+            void handleImageInsert(e.dataTransfer.files);
+          }
+        }}
+      />
+    </div>
   );
 };

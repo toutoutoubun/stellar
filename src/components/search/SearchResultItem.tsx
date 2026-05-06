@@ -6,6 +6,7 @@ import type React from "react";
 import { useRef, useEffect } from "react";
 import type { SearchResultItem as SearchResultItemType } from "../../types";
 import { parseSnippet } from "../../utils/highlight";
+import { IconPaper, IconNote, IconHighlightDot, highlightColorToHex } from "../ui/Icons";
 
 interface SearchResultItemProps {
   /** 検索結果アイテム */
@@ -19,22 +20,11 @@ interface SearchResultItemProps {
 }
 
 /** アイテム種別に応じたアイコンを返す */
-function getItemIcon(item: SearchResultItemType): string {
-  if (item.itemType === "paper") return "📄";
-  if (item.itemType === "note") return "📝";
-  // ハイライトは色に応じたアイコン
-  switch (item.highlightColor) {
-    case "yellow":
-      return "🟡";
-    case "blue":
-      return "🔵";
-    case "green":
-      return "🟢";
-    case "pink":
-      return "🩷";
-    default:
-      return "🟡";
-  }
+function getItemIcon(item: SearchResultItemType): React.ReactNode {
+  if (item.itemType === "paper") return <IconPaper size={14} />;
+  if (item.itemType === "note") return <IconNote size={14} />;
+  // ハイライトは色に応じたSVGドット
+  return <IconHighlightDot size={14} color={highlightColorToHex(item.highlightColor)} />;
 }
 
 export const SearchResultCard: React.FC<SearchResultItemProps> = ({

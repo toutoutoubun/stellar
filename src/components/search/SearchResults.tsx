@@ -13,6 +13,7 @@ import type {
   RecentItem,
 } from "../../types";
 import { SearchResultCard } from "./SearchResultItem";
+import { IconItemType } from "../ui/Icons";
 
 interface SearchResultsProps {
   /** 検索クエリ */
@@ -116,9 +117,11 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                     e.currentTarget.style.backgroundColor = "transparent";
                   }}
                 >
-                  <span style={{ fontSize: "13px" }}>
-                    {item.itemType === "paper" ? "📄" : "📝"}
-                  </span>
+                  <IconItemType
+                    itemType={item.itemType as "paper" | "note"}
+                    size={14}
+                    style={{ flexShrink: 0 }}
+                  />
                   <span
                     className="text-sm truncate flex-1"
                     style={{ color: "var(--color-text-primary)" }}

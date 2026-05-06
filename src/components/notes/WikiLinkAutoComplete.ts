@@ -50,7 +50,7 @@ export function wikiLinkCompletionSource(
           type: s.type === "paper" ? "class" : "text",
           // 補完確定時に [[タイトル]] を挿入（[[ は既に入力済み、]] を付加）
           apply: `${s.title}]]`,
-          info: s.type === "paper" ? "📄 論文" : "📝 ノート",
+          info: s.type === "paper" ? "[ ] 論文" : "[=] ノート",
           boost: s.type === "note" ? 1 : 0,
         })),
         filter: true,

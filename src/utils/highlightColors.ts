@@ -18,8 +18,10 @@ export interface HighlightColorConfig {
   textColor: string;
   /** ボーダーカラー */
   borderColor: string;
-  /** アイコン絵文字 */
+  /** アイコンラベル（色名） */
   icon: string;
+  /** アイコン色コード（SVG用） */
+  iconColor: string;
   /** ショートカットキー（1〜4） */
   shortcutKey: string;
 }
@@ -33,7 +35,8 @@ export const HIGHLIGHT_COLORS: Record<HighlightColor, HighlightColorConfig> = {
     bgSolid: "rgba(255, 235, 59, 0.5)",
     textColor: "#f57f17",
     borderColor: "#fdd835",
-    icon: "🟡",
+    icon: "●",
+    iconColor: "#EAB308",
     shortcutKey: "1",
   },
   blue: {
@@ -43,7 +46,8 @@ export const HIGHLIGHT_COLORS: Record<HighlightColor, HighlightColorConfig> = {
     bgSolid: "rgba(66, 165, 245, 0.5)",
     textColor: "#1565c0",
     borderColor: "#42a5f5",
-    icon: "🔵",
+    icon: "●",
+    iconColor: "#3B82F6",
     shortcutKey: "2",
   },
   green: {
@@ -53,7 +57,8 @@ export const HIGHLIGHT_COLORS: Record<HighlightColor, HighlightColorConfig> = {
     bgSolid: "rgba(102, 187, 106, 0.5)",
     textColor: "#2e7d32",
     borderColor: "#66bb6a",
-    icon: "🟢",
+    icon: "●",
+    iconColor: "#22C55E",
     shortcutKey: "3",
   },
   pink: {
@@ -63,7 +68,8 @@ export const HIGHLIGHT_COLORS: Record<HighlightColor, HighlightColorConfig> = {
     bgSolid: "rgba(240, 98, 146, 0.5)",
     textColor: "#c2185b",
     borderColor: "#f06292",
-    icon: "🩷",
+    icon: "●",
+    iconColor: "#EC4899",
     shortcutKey: "4",
   },
 };

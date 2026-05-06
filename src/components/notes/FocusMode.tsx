@@ -97,8 +97,9 @@ export const FocusMode: React.FC<FocusModeProps> = ({
         zIndex: 9999,
       }}
     >
-      {/* フェードインツールバー */}
+      {/* フェードインツールバー — ドラッグ可能 */}
       <header
+        data-tauri-drag-region
         className="fixed top-0 left-0 right-0 flex items-center justify-between px-6"
         style={{
           height: "44px",
@@ -111,13 +112,14 @@ export const FocusMode: React.FC<FocusModeProps> = ({
           pointerEvents: toolbarVisible ? "auto" : "none",
         }}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3" data-tauri-drag-region>
           <span
             className="text-sm font-medium truncate"
             style={{
               color: "var(--color-text-primary)",
               maxWidth: "300px",
             }}
+            data-tauri-drag-region
           >
             {noteTitle || "無題のノート"}
           </span>
@@ -167,6 +169,99 @@ export const FocusMode: React.FC<FocusModeProps> = ({
               ESC
             </kbd>
             終了
+          </button>
+
+          {/* セパレーター */}
+          <div
+            className="w-px h-4"
+            style={{ backgroundColor: "var(--color-border-secondary)" }}
+          />
+
+          {/* ウィンドウ操作: 最小化 */}
+          <button
+            type="button"
+            onClick={async () => {
+              const { getCurrentWindow } = await import("@tauri-apps/api/window");
+              void getCurrentWindow().minimize();
+            }}
+            className="flex items-center justify-center"
+            style={{
+              width: "28px",
+              height: "28px",
+              borderRadius: "6px",
+              color: "var(--color-text-secondary)",
+              transition: "all 150ms ease-out",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
+            title="最小化"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12">
+              <rect x="2" y="5.5" width="8" height="1" fill="currentColor" rx="0.5" />
+            </svg>
+          </button>
+
+          {/* ウィンドウ操作: 最大化 */}
+          <button
+            type="button"
+            onClick={async () => {
+              const { getCurrentWindow } = await import("@tauri-apps/api/window");
+              void getCurrentWindow().toggleMaximize();
+            }}
+            className="flex items-center justify-center"
+            style={{
+              width: "28px",
+              height: "28px",
+              borderRadius: "6px",
+              color: "var(--color-text-secondary)",
+              transition: "all 150ms ease-out",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
+            title="最大化"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12">
+              <rect x="2" y="2" width="8" height="8" fill="none" stroke="currentColor" strokeWidth="1" rx="1" />
+            </svg>
+          </button>
+
+          {/* ウィンドウ操作: 閉じる */}
+          <button
+            type="button"
+            onClick={async () => {
+              const { getCurrentWindow } = await import("@tauri-apps/api/window");
+              void getCurrentWindow().close();
+            }}
+            className="flex items-center justify-center"
+            style={{
+              width: "28px",
+              height: "28px",
+              borderRadius: "6px",
+              color: "var(--color-text-secondary)",
+              transition: "all 150ms ease-out",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-accent-danger)";
+              e.currentTarget.style.color = "var(--color-text-inverse)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.color = "var(--color-text-secondary)";
+            }}
+            title="閉じる"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12">
+              <line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+              <line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+            </svg>
           </button>
         </div>
       </header>

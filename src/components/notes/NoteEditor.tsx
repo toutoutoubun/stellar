@@ -159,6 +159,108 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
     // 将来的に ref でスクロール関数を公開する拡張が可能。
   }, []);
 
+  /** ノート書き出し処理 */
+  const handleExport = useCallback(
+    async (format: "markdown" | "plaintext" | "html") => {
+      if (!activeNote) return;
+      setMenuOpen(false);
+
+      const title = activeNote.title || "無題のノート";
+      let content: string;
+      let fileName: string;
+      let mimeType: string;
+
+      switch (format) {
+        case "markdown":
+          content = editorContent;
+          fileName = `${title}.md`;
+          mimeType = "text/markdown";
+          break;
+        case "plaintext": {
+          // Markdown 記法を除去
+          content = editorContent
+            .replace(/^#{1,6}\s+/gm, "")      // 見出し
+            .replace(/\*\*(.+?)\*\*/g, "$1")    // 太字
+            .replace(/\*(.+?)\*/g, "$1")        // 斜体
+            .replace(/~~(.+?)~~/g, "$1")        // 打消し
+            .replace(/`(.+?)`/g, "$1")          // インラインコード
+            .replace(/\[\[(.+?)\]\]/g, "$1")    // WikiLink
+            .replace(/!?\[([^\]]*)\]\([^)]+\)/g, "$1") // リンク/画像
+            .replace(/==(.+?)==/g, "$1")        // ハイライト
+            .replace(/@cite\{([^}]+)\}/g, "[$1]"); // 引用
+          fileName = `${title}.txt`;
+          mimeType = "text/plain";
+          break;
+        }
+        case "html": {
+          // 簡易 Markdown → HTML 変換
+          const htmlBody = editorContent
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/^### (.+)$/gm, "<h3>$1</h3>")
+            .replace(/^## (.+)$/gm, "<h2>$1</h2>")
+            .replace(/^# (.+)$/gm, "<h1>$1</h1>")
+            .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+            .replace(/\*(.+?)\*/g, "<em>$1</em>")
+            .replace(/~~(.+?)~~/g, "<del>$1</del>")
+            .replace(/`(.+?)`/g, "<code>$1</code>")
+            .replace(/==(.+?)==/g, "<mark>$1</mark>")
+            .replace(/\[\[(.+?)\]\]/g, "<span class=\"wikilink\">$1</span>")
+            .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />')
+            .replace(/\[([^\]]*)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+            .replace(/\n\n/g, "</p>\n<p>")
+            .replace(/\n/g, "<br/>\n");
+          content = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>${title}</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; line-height: 1.8; color: #1a1a1a; }
+    h1, h2, h3 { margin-top: 1.5em; }
+    code { background: #f0f0f0; padding: 2px 4px; border-radius: 3px; font-size: 0.9em; }
+    mark { background: rgba(255,235,59,0.35); padding: 1px 2px; border-radius: 2px; }
+    .wikilink { color: #6366f1; text-decoration: underline dotted; }
+    img { max-width: 100%; height: auto; border-radius: 6px; margin: 1em 0; }
+  </style>
+</head>
+<body>
+  <h1>${title}</h1>
+  <p>${htmlBody}</p>
+</body>
+</html>`;
+          fileName = `${title}.html`;
+          mimeType = "text/html";
+          break;
+        }
+      }
+
+      try {
+        // Tauri のダイアログで保存先を選択
+        const { save } = await import("@tauri-apps/plugin-dialog");
+        const filePath = await save({
+          defaultPath: fileName,
+          filters: [
+            format === "markdown"
+              ? { name: "Markdown", extensions: ["md"] }
+              : format === "html"
+                ? { name: "HTML", extensions: ["html", "htm"] }
+                : { name: "テキスト", extensions: ["txt"] },
+          ],
+        });
+        if (filePath) {
+          const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+          await writeTextFile(filePath, content);
+          toast.success(`${fileName} を保存しました`);
+        }
+      } catch {
+        toast.error("書き出しに失敗しました");
+      }
+    },
+    [activeNote, editorContent],
+  );
+
   /** キーボードショートカット */
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -457,11 +559,97 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
                 border: "1px solid var(--color-border-primary)",
                 borderRadius: "10px",
                 boxShadow: "0 4px 24px rgba(0,0,0,0.12)",
-                minWidth: "160px",
+                minWidth: "200px",
                 padding: "4px",
                 zIndex: 50,
               }}
             >
+              {/* 書き出しセクション */}
+              <div
+                className="text-xs font-semibold uppercase tracking-wider px-3 py-1.5"
+                style={{ color: "var(--color-text-tertiary)", fontSize: "10px" }}
+              >
+                書き出し
+              </div>
+
+              {/* Markdown 書き出し */}
+              <button
+                type="button"
+                className="flex items-center gap-2 w-full text-left text-xs px-3 py-2"
+                style={{
+                  color: "var(--color-text-secondary)",
+                  borderRadius: "6px",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--color-bg-tertiary)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
+                onClick={() => void handleExport("markdown")}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+                Markdown (.md)
+              </button>
+
+              {/* プレーンテキスト書き出し */}
+              <button
+                type="button"
+                className="flex items-center gap-2 w-full text-left text-xs px-3 py-2"
+                style={{
+                  color: "var(--color-text-secondary)",
+                  borderRadius: "6px",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--color-bg-tertiary)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
+                onClick={() => void handleExport("plaintext")}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="17" y1="10" x2="3" y2="10" />
+                  <line x1="21" y1="6" x2="3" y2="6" />
+                  <line x1="21" y1="14" x2="3" y2="14" />
+                  <line x1="17" y1="18" x2="3" y2="18" />
+                </svg>
+                プレーンテキスト (.txt)
+              </button>
+
+              {/* HTML 書き出し */}
+              <button
+                type="button"
+                className="flex items-center gap-2 w-full text-left text-xs px-3 py-2"
+                style={{
+                  color: "var(--color-text-secondary)",
+                  borderRadius: "6px",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--color-bg-tertiary)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
+                onClick={() => void handleExport("html")}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="16 18 22 12 16 6" />
+                  <polyline points="8 6 2 12 8 18" />
+                </svg>
+                HTML (.html)
+              </button>
+
+              {/* セパレーター */}
+              <div
+                className="my-1"
+                style={{ height: "1px", backgroundColor: "var(--color-border-secondary)" }}
+              />
+
+              {/* 削除 */}
               <button
                 type="button"
                 className="flex items-center gap-2 w-full text-left text-xs px-3 py-2"

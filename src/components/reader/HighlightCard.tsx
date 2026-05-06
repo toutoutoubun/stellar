@@ -181,7 +181,7 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
               className="text-xs"
               style={{ color: "var(--color-text-tertiary)" }}
             >
-              {colorConfig.icon} {colorConfig.label}
+              <span style={{ color: colorConfig.iconColor }}>{colorConfig.icon}</span> {colorConfig.label}
             </span>
           </div>
 

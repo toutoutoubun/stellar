@@ -9,6 +9,7 @@ import type { Note, BacklinkItem, OutlineHeading, NodeType } from "../../types";
 import { useNoteStore } from "../../stores/useNoteStore";
 import { Badge } from "../ui/Badge";
 import { toast } from "../ui/Toast";
+import { IconItemType } from "../ui/Icons";
 
 interface NoteContextPanelProps {
   /** 現在のノート */
@@ -131,9 +132,11 @@ const BacklinksSection: React.FC<{
                 }}
               >
                 <div className="flex items-center gap-1.5">
-                  <span style={{ fontSize: "10px" }}>
-                    {bl.sourceType === "paper" ? "📄" : "📝"}
-                  </span>
+                  <IconItemType
+                    itemType={bl.sourceType as "paper" | "note"}
+                    size={12}
+                    style={{ flexShrink: 0 }}
+                  />
                   <span
                     className="text-xs font-medium truncate"
                     style={{ color: "var(--color-text-primary)" }}
