@@ -38,8 +38,8 @@ logs/
 # TypeScript build info
 *.tsbuildinfo
 
-# Lockfile (npm統一 — pnpmは使わない)
-pnpm-lock.yaml
+# Lockfile (pnpm統一)
+package-lock.json
 
 # Backup files
 *.backup
