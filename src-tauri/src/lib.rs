@@ -5,6 +5,7 @@
 
 mod commands;
 mod db;
+mod models;
 mod utils;
 
 use db::AppDb;
@@ -25,6 +26,12 @@ fn get_migrations() -> Vec<Migration> {
             version: 2,
             description: "質的研究モジュール — CAQDAS + 歴史・政治研究ツール",
             sql: include_str!("db/migrations/V002__qualitative.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 3,
+            description: "量的研究モジュール — Quantitative Lab",
+            sql: include_str!("db/migrations/V003__quantitative.sql"),
             kind: MigrationKind::Up,
         },
     ]
@@ -166,6 +173,35 @@ pub fn run() {
             commands::qualitative::delete_source_critique,
             // 質的分析コマンド — レポート生成
             commands::qualitative::generate_analysis_report,
+            // 量的分析コマンド — データセット CRUD
+            commands::quantitative::create_dataset,
+            commands::quantitative::get_datasets,
+            commands::quantitative::get_dataset,
+            commands::quantitative::update_dataset,
+            commands::quantitative::delete_dataset,
+            // 量的分析コマンド — 変数 CRUD
+            commands::quantitative::create_variable,
+            commands::quantitative::get_variables,
+            commands::quantitative::update_variable,
+            commands::quantitative::delete_variable,
+            commands::quantitative::auto_detect_variable_types,
+            // 量的分析コマンド — データ行 CRUD
+            commands::quantitative::insert_data_rows,
+            commands::quantitative::get_data_rows,
+            commands::quantitative::delete_data_rows,
+            // 量的分析コマンド — CSV インポート
+            commands::quantitative::import_csv,
+            // 量的分析コマンド — 分析 CRUD
+            commands::quantitative::save_analysis,
+            commands::quantitative::get_analyses,
+            commands::quantitative::get_analysis,
+            commands::quantitative::delete_analysis,
+            // 量的分析コマンド — トークン頻度
+            commands::quantitative::save_token_frequencies,
+            commands::quantitative::get_token_frequencies,
+            // 量的分析コマンド — QDA 統合
+            commands::quantitative::create_dataset_from_codes,
+            commands::quantitative::create_dataset_from_highlights,
         ])
         .run(tauri::generate_context!())
         .expect("Stellar の起動に失敗しました");

@@ -375,29 +375,29 @@ impl From<MetadataError> for String {
 // ============================================================
 
 /// sqlx::SqliteRow から String を取得（NULL なら空文字列）
-fn col_str(row: &sqlx::sqlite::SqliteRow, key: &str) -> String {
+pub(crate) fn col_str(row: &sqlx::sqlite::SqliteRow, key: &str) -> String {
     row.try_get::<String, _>(key).unwrap_or_default()
 }
 
 /// sqlx::SqliteRow から Option<String> を取得
-fn col_opt_str(row: &sqlx::sqlite::SqliteRow, key: &str) -> Option<String> {
+pub(crate) fn col_opt_str(row: &sqlx::sqlite::SqliteRow, key: &str) -> Option<String> {
     row.try_get::<Option<String>, _>(key)
         .unwrap_or(None)
         .filter(|s| !s.is_empty())
 }
 
 /// sqlx::SqliteRow から Option<i32> を取得
-fn col_opt_i32(row: &sqlx::sqlite::SqliteRow, key: &str) -> Option<i32> {
+pub(crate) fn col_opt_i32(row: &sqlx::sqlite::SqliteRow, key: &str) -> Option<i32> {
     row.try_get::<Option<i32>, _>(key).unwrap_or(None)
 }
 
 /// sqlx::SqliteRow から i64 を取得（NULL なら 0）
-fn col_i64(row: &sqlx::sqlite::SqliteRow, key: &str) -> i64 {
+pub(crate) fn col_i64(row: &sqlx::sqlite::SqliteRow, key: &str) -> i64 {
     row.try_get::<i64, _>(key).unwrap_or(0)
 }
 
 /// sqlx::SqliteRow から i32 を取得（NULL なら 0）
-fn col_i32(row: &sqlx::sqlite::SqliteRow, key: &str) -> i32 {
+pub(crate) fn col_i32(row: &sqlx::sqlite::SqliteRow, key: &str) -> i32 {
     row.try_get::<i32, _>(key).unwrap_or(0)
 }
 

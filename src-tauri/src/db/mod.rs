@@ -54,6 +54,7 @@ async fn run_migrations(pool: &SqlitePool) -> Result<(), Box<dyn std::error::Err
     let migrations: Vec<(i64, &str, &str)> = vec![
         (1, "V001__initial", include_str!("migrations/V001__initial.sql")),
         (2, "V002__qualitative", include_str!("migrations/V002__qualitative.sql")),
+        (3, "V003__quantitative", include_str!("migrations/V003__quantitative.sql")),
     ];
 
     for (version, name, sql) in &migrations {
