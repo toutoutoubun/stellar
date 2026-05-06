@@ -82,19 +82,39 @@ export const Sidebar: React.FC = () => {
 
   const openSettings = useUIStore((s) => s.openSettings);
 
+  const setMainPaneContent = useUIStore((s) => s.setMainPaneContent);
+
   const handleNavClick = useCallback(
     (view: SidebarView) => {
-      setSidebarView(view);
       // グラフビューの場合はメインペインも切り替え
       if (view === "graph") {
         openGraph();
+        return;
       }
       // 設定ビューの場合はメインペインも切り替え
       if (view === "settings") {
         openSettings();
+        return;
+      }
+      // 文献・ノートの場合: sidebarView を変更し、
+      // mainPaneContent がそのビューと無関係な場合はリセット
+      setSidebarView(view);
+      // 文献ビュー → paper 以外の mainPaneContent はリセット
+      // ノートビュー → note 以外の mainPaneContent はリセット
+      if (view === "library") {
+        // paper 表示中ならそのまま、それ以外は空に
+        const current = useUIStore.getState().mainPaneContent;
+        if (current.type !== "paper" && current.type !== "empty") {
+          setMainPaneContent({ type: "empty" });
+        }
+      } else if (view === "notes") {
+        const current = useUIStore.getState().mainPaneContent;
+        if (current.type !== "note" && current.type !== "empty") {
+          setMainPaneContent({ type: "empty" });
+        }
       }
     },
-    [setSidebarView, openGraph, openSettings]
+    [setSidebarView, openGraph, openSettings, setMainPaneContent]
   );
 
   return (

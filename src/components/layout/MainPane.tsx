@@ -121,8 +121,17 @@ export const MainPane: React.FC = () => {
 
   // サイドバーが「文献」または「ノート」の場合、空状態でも対応ビューを表示
   const renderContent = () => {
-    // サイドバーが「文献」ビューの場合、常にライブラリビューを表示
-    if (sidebarView === "library" && mainPaneContent.type === "empty") {
+    // サイドバーが「文献」ビューの場合:
+    // - paper を開いている場合はそのまま ReaderView
+    // - それ以外（empty / graph / settings 等）は LibraryView を表示
+    if (sidebarView === "library") {
+      if (mainPaneContent.type === "paper") {
+        return (
+          <Suspense fallback={<LazyFallback />}>
+            <ReaderView paperId={mainPaneContent.paperId} />
+          </Suspense>
+        );
+      }
       return <LibraryView />;
     }
 
