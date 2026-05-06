@@ -71,6 +71,17 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
+    view: "quantitative",
+    label: "量的分析",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10" />
+        <line x1="12" y1="20" x2="12" y2="4" />
+        <line x1="6" y1="20" x2="6" y2="14" />
+      </svg>
+    ),
+  },
+  {
     view: "settings",
     label: "設定",
     bottom: true,
@@ -92,6 +103,7 @@ export const Sidebar: React.FC = () => {
 
   const openSettings = useUIStore((s) => s.openSettings);
   const openQualitative = useUIStore((s) => s.openQualitative);
+  const openQuantitative = useUIStore((s) => s.openQuantitative);
 
   const setMainPaneContent = useUIStore((s) => s.setMainPaneContent);
 
@@ -112,6 +124,11 @@ export const Sidebar: React.FC = () => {
         openQualitative();
         return;
       }
+      // 量的分析ビューの場合はメインペインも切り替え
+      if (view === "quantitative") {
+        openQuantitative();
+        return;
+      }
       // 文献・ノートの場合: sidebarView を変更し、
       // mainPaneContent がそのビューと無関係な場合はリセット
       setSidebarView(view);
@@ -130,7 +147,7 @@ export const Sidebar: React.FC = () => {
         }
       }
     },
-    [setSidebarView, openGraph, openSettings, openQualitative, setMainPaneContent]
+    [setSidebarView, openGraph, openSettings, openQualitative, openQuantitative, setMainPaneContent]
   );
 
   return (

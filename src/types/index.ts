@@ -232,7 +232,7 @@ export const THEME_LABELS: Record<Theme, string> = {
 // ============================================================
 
 /** サイドバーのナビゲーションビュー */
-export type SidebarView = 'library' | 'notes' | 'graph' | 'qualitative' | 'search' | 'settings';
+export type SidebarView = 'library' | 'notes' | 'graph' | 'qualitative' | 'quantitative' | 'search' | 'settings';
 
 /** メインペインに表示するコンテンツ種別 */
 export type MainPaneContent =
@@ -241,6 +241,7 @@ export type MainPaneContent =
   | { type: 'note'; noteId: string }
   | { type: 'graph' }
   | { type: 'qualitative' }
+  | { type: 'quantitative' }
   | { type: 'search' }
   | { type: 'settings' };
 
@@ -835,3 +836,81 @@ export type QualitativeTab =
   | 'comparative'
   | 'framing'
   | 'report';
+
+// ============================================================
+// 量的分析（Quantitative Analysis）— Data Studio
+// ============================================================
+
+/** データセットのソースタイプ */
+export type DatasetSourceType = 'csv' | 'manual' | 'codes' | 'highlights';
+
+/** データセット */
+export interface Dataset {
+  id: string;
+  name: string;
+  description: string | null;
+  sourceType: DatasetSourceType;
+  rowCount: number;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+/** 変数タイプ */
+export type VariableType = 'scale' | 'nominal' | 'ordinal' | 'text' | 'date';
+
+/** リッカートラベル */
+export interface LikertLabel {
+  value: number;
+  label: string;
+}
+
+/** 変数定義 */
+export interface Variable {
+  id: string;
+  datasetId: string;
+  columnIndex: number;
+  name: string;
+  label: string | null;
+  variableType: VariableType;
+  missingCount: number;
+  min: number | null;
+  max: number | null;
+  mean: number | null;
+  dateFormat: string | null;
+  likertLabels: LikertLabel[] | null;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+/** データ行（1行分のレコード） */
+export interface DataRow {
+  id: string;
+  datasetId: string;
+  rowIndex: number;
+  /** カラム名 → 値のマッピング */
+  values: Record<string, string | number | null>;
+}
+
+/** 分析結果 */
+export interface Analysis {
+  id: string;
+  datasetId: string;
+  name: string;
+  analysisType: string;
+  config: Record<string, unknown>;
+  result: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+/** 分析保存時の入力型 */
+export interface SaveAnalysisInput {
+  datasetId: string;
+  name: string;
+  analysisType: string;
+  config: Record<string, unknown>;
+  result?: Record<string, unknown> | null;
+}
+
+/** Data Studio のタブ */
+export type DataStudioTab = 'import' | 'variables' | 'preview';

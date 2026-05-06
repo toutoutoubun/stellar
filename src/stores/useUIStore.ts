@@ -54,6 +54,8 @@ interface UIState {
   openSettings: () => void;
   /** 質的分析ビューを開く（履歴に追加） */
   openQualitative: () => void;
+  /** 量的分析ビューを開く（履歴に追加） */
+  openQuantitative: () => void;
 
   /** ナビゲーション: 戻る */
   goBack: () => void;
@@ -187,6 +189,21 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({
       mainPaneContent: { type: "qualitative" },
       sidebarView: "qualitative",
+      navigationHistory: history,
+      navigationForward: [],
+      transitionDirection: "forward",
+    });
+  },
+
+  openQuantitative: () => {
+    const state = get();
+    const history = [
+      ...state.navigationHistory,
+      makeEntry(state),
+    ].slice(-MAX_HISTORY);
+    set({
+      mainPaneContent: { type: "quantitative" },
+      sidebarView: "quantitative",
       navigationHistory: history,
       navigationForward: [],
       transitionDirection: "forward",
