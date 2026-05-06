@@ -183,7 +183,7 @@ export const LibraryView: React.FC = () => {
         if (selected && typeof selected === "string") {
           // Rust側でPDFをアプリデータにコピーしてパスを保存
           try {
-            const { invoke } = await import("@tauri-apps/api/core");
+            const { invoke } = await import("../../lib/tauriShim");
             const savedPath = await invoke<string>("import_pdf", {
               paperId,
               sourcePath: selected,

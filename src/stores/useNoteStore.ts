@@ -11,7 +11,7 @@ import type {
   SortDirection,
   AutoSaveStatus,
 } from "../types";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../lib/tauriShim";
 
 /** ノートストアの状態型 */
 interface NoteState {

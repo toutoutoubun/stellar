@@ -3,7 +3,7 @@
 // 左パネル折りたたみ対応 / ミニマルUI / カスタムアイコン
 
 import React, { useState, useEffect, useCallback } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../../lib/tauriShim";
 import type { CodeNode, HighlightWithContext } from "../../types";
 import { CodeTreeNode } from "./CodeTreeNode";
 import { HelpTooltip } from "./HelpTooltip";

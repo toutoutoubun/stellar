@@ -40,7 +40,7 @@ export const DivergingStackedBar: React.FC<DivergingStackedBarProps> = memo(func
   width: fixedWidth,
   rowHeight = 36,
   className,
-}) => {
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 

@@ -88,7 +88,7 @@ export const BoxPlot: React.FC<BoxPlotProps> = memo(function BoxPlot({
   width: fixedWidth,
   height: fixedHeight = 220,
   className,
-}) => {
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 

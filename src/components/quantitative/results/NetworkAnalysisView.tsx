@@ -421,7 +421,6 @@ const RightPanel: React.FC<{ network: NetworkAnalysisResult }> = memo(({ network
 
   const handleRowClick = useCallback((nodeId: string) => {
     // Find graph container and call highlight
-    const el = document.querySelector("[class*='flex-1'][class*='flex'][class*='flex-col']");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const container = document.querySelector("[class*='relative']") as any;
     if (container?.__highlightNode) {

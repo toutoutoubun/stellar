@@ -11,7 +11,7 @@ import type {
   SortDirection,
   LibraryViewMode,
 } from "../types";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../lib/tauriShim";
 
 /** ライブラリストアの状態型 */
 interface LibraryState {

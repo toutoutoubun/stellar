@@ -40,7 +40,7 @@ export const Histogram: React.FC<HistogramProps> = memo(function Histogram({
   width: fixedWidth,
   height: fixedHeight = 220,
   className,
-}) => {
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 

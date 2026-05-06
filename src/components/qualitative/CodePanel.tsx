@@ -3,7 +3,7 @@
 // ミニマルUI / カスタムアイコン
 
 import React, { useState, useEffect, useCallback } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../../lib/tauriShim";
 import type { Highlight, QualProject, CodeNode } from "../../types";
 import { CodeTreeNode } from "./CodeTreeNode";
 import { IconPlus, IconAssignCode, IconRemoveCode, IconCodebook } from "./icons/QualIcons";

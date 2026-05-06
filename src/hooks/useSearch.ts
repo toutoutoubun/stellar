@@ -4,7 +4,7 @@
 // invoke('full_text_search') でRustバックエンドに問い合わせる
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../lib/tauriShim";
 import type {
   SearchTab,
   SearchResultItem,

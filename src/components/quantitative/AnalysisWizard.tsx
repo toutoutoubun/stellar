@@ -290,7 +290,8 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
     setIsRunning(true);
 
     try {
-      let result: unknown = null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let result: any = null;
       let analysisType = method as string;
 
       const selectedVariables = selectedVarIds
@@ -484,7 +485,7 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
         const textResults: unknown[] = [];
         for (const v of selectedVariables) {
           const vals = getStringValues(v.name);
-          textResults.push(await analyzeTextVariable(vals, v.id, v.name));
+          textResults.push(await analyzeTextVariable(vals, v.id));
         }
         result = { textResults };
         analysisType = "text";
@@ -497,11 +498,11 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
         for (const v of selectedVariables) {
           if (v.variableType === "text") {
             const vals = getStringValues(v.name);
-            const textResult = await analyzeTextVariable(vals, v.id, v.name);
+            const textResult = await analyzeTextVariable(vals, v.id);
             networkResults.push(textResult.cooccurrenceNetwork);
           } else {
             const vals = getStringValues(v.name);
-            networkResults.push(buildCooccurrenceNetwork(vals, v.name));
+            networkResults.push(buildCooccurrenceNetwork(vals.map(s => s.split(/\s+/)), 2));
           }
         }
         result = { networkResults };

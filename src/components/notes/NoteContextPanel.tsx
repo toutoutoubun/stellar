@@ -4,7 +4,7 @@
 
 import type React from "react";
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../../lib/tauriShim";
 import type { Note, BacklinkItem, OutlineHeading, NodeType } from "../../types";
 import { useNoteStore } from "../../stores/useNoteStore";
 import { Badge } from "../ui/Badge";

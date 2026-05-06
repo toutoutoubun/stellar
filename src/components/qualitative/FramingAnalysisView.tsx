@@ -3,7 +3,7 @@
 // 折りたたみパネル / ミニマルUI / カスタムアイコン / ヘルプ付き
 
 import React, { useState, useEffect, useCallback } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../../lib/tauriShim";
 import type { Frame, FramingMatrix, CreateFrameInput } from "../../types";
 import { HelpTooltip } from "./HelpTooltip";
 import {

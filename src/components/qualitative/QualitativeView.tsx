@@ -3,7 +3,7 @@
 // サイドバー・タブバー折りたたみ対応 / ミニマルUI / カスタムSVGアイコン
 
 import React, { useState, useEffect, useCallback } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../../lib/tauriShim";
 import type {
   QualProject,
   CreateQualProjectInput,

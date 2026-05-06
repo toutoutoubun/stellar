@@ -3,7 +3,7 @@
 // プロジェクト選択・タブ管理・コードツリーなどの状態管理
 
 import { create } from "zustand";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../lib/tauriShim";
 import type {
   QualProject,
   QualCode,

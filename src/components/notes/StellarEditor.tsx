@@ -35,7 +35,7 @@ import {
   WidgetType,
   MatchDecorator,
 } from "@codemirror/view";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../../lib/tauriShim";
 import type { LinkSuggestion, NodeType } from "../../types";
 import { wikiLinkCompletionSource } from "./WikiLinkAutoComplete";
 import { MermaidDiagramModal } from "./MermaidDiagramModal";

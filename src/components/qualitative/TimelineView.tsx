@@ -3,7 +3,7 @@
 // ミニマルUI / カスタムアイコン / ヘルプ付き
 
 import React, { useState, useEffect, useCallback } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../../lib/tauriShim";
 import type { TimelineEvent, CreateTimelineEventInput } from "../../types";
 import { HelpTooltip } from "./HelpTooltip";
 import { IconPlus, IconDelete, IconClose, IconFilter, IconApproximate, IconTimeline } from "./icons/QualIcons";

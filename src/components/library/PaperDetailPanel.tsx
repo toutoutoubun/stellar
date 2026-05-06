@@ -11,7 +11,7 @@ import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { copyCitationToClipboard } from "../../utils/citation";
 import { toast } from "../ui/Toast";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../../lib/tauriShim";
 
 interface PaperDetailPanelProps {
   paper: Paper;

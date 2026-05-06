@@ -4,7 +4,7 @@
 // Tauri invoke() で Rust バックエンドと通信
 
 import { create } from "zustand";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../lib/tauriShim";
 import type {
   Dataset,
   Variable,

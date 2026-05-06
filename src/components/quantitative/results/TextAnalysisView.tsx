@@ -676,7 +676,7 @@ const StatsTab: React.FC<{
   activeResult: TextAnalysisResult;
   dataRows: DataRow[];
   variables: Variable[];
-}> = memo(({ results, activeResult, dataRows, variables }) => {
+}> = memo(({ activeResult, dataRows, variables }) => {
   const chartRef = useRef<HTMLDivElement>(null);
 
   // Compute per-doc token counts for bar chart
@@ -791,7 +791,4 @@ const StatsTab: React.FC<{
   );
 });
 
-// helper
-function getComputedStyleValue(name: string): string {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
+

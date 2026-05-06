@@ -31,7 +31,7 @@ export const CorrelationHeatmap: React.FC<CorrelationHeatmapProps> = memo(functi
   cellSize: fixedCellSize,
   width: fixedWidth,
   className,
-}) => {
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 

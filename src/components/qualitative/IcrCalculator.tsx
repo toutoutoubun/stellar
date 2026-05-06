@@ -3,7 +3,7 @@
 // ミニマルUI / カスタムアイコン / ヘルプ付き
 
 import React, { useState, useCallback } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../../lib/tauriShim";
 import type { IcrResult, ImportedCoding } from "../../types";
 import { HelpTooltip } from "./HelpTooltip";
 import { IconIcr } from "./icons/QualIcons";

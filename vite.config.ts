@@ -19,6 +19,12 @@ export default defineConfig({
     },
   },
 
+  // kuromoji (18MB CJS辞書) は Vite の依存最適化から除外
+  // dev server でも build でもバンドルに含めない
+  optimizeDeps: {
+    exclude: ["kuromoji"],
+  },
+
   // Tauri はセキュリティ上の理由で固定ポートを推奨
   server: {
     port: 1420,
@@ -49,25 +55,24 @@ export default defineConfig({
     modulePreload: false,
     // Tauri はセキュリティコンテキストで ES2021+ をサポート
     target: "es2021",
-    // 低メモリ環境では minify を軽量に
-    minify: !process.env.TAURI_DEBUG ? "esbuild" : false,
+    // 低メモリ環境では minify を無効化（OOM 防止）
+    minify: false,
     // ソースマップはデバッグ時のみ
-    sourcemap: !!process.env.TAURI_DEBUG,
+    sourcemap: false,
     chunkSizeWarningLimit: 2000,
     // CSS コード分割を無効化（メモリ節約）
     cssCodeSplit: false,
     // チャンク分割でビルド時メモリ使用量を削減
     rollupOptions: {
+      // 巨大依存をexternalにしてバンドルから除外 → OOM回避
+      // kuromoji: 18MB辞書, pdfjs-dist: PDF.js (Tauri時はローカルで読み込む)
+      external: ["kuromoji", "pdfjs-dist"],
       output: {
         manualChunks(id) {
           // ── node_modules のチャンク分割 ──
-          // 細かくチャンク分割してピークメモリを抑制
-          // 循環参照を避けるため、相互依存パッケージは同一チャンクにまとめる
           if (id.includes("node_modules/react-dom") || id.includes("node_modules/react/") || id.includes("node_modules/scheduler")) return "vendor-react";
           if (id.includes("node_modules/@codemirror/") || id.includes("node_modules/@uiw/") || id.includes("node_modules/@lezer/")) return "vendor-codemirror";
           if (id.includes("node_modules/pdfjs-dist") || id.includes("node_modules/react-pdf-highlighter")) return "vendor-pdf";
-          // prop-types は vendor-misc 側の react-pdf-highlighter も使うため
-          // vendor-graph に入れると循環依存が発生する → vendor-misc に落とす
           if (
             id.includes("node_modules/react-force-graph") ||
             id.includes("node_modules/force-graph") ||
@@ -86,6 +91,8 @@ export default defineConfig({
             id.includes("node_modules/robust-predicates") ||
             id.includes("node_modules/delaunator")
           ) return "vendor-graph";
+          if (id.includes("node_modules/graphology")) return "vendor-graphology";
+          if (id.includes("node_modules/@dnd-kit/")) return "vendor-dndkit";
           if (id.includes("node_modules/@tauri-apps/")) return "vendor-tauri";
           if (id.includes("node_modules/zustand")) return "vendor-zustand";
           if (id.includes("node_modules/@tanstack/")) return "vendor-tanstack";
@@ -93,11 +100,10 @@ export default defineConfig({
           return undefined;
         },
       },
-      // Rollup のキャッシュ無効化（メモリ節約）
       cache: false,
-      // 循環チャンク警告を抑制（graph 系サブ依存の相互参照は実行時無害）
       onwarn(warning, warn) {
         if (warning.code === 'CIRCULAR_DEPENDENCY') return;
+        if (warning.code === 'MISSING_GLOBAL_NAME') return;
         warn(warning);
       },
     },

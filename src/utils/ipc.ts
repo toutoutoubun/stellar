@@ -2,7 +2,7 @@
 // Stellar — 型安全な Tauri IPC ラッパー
 // invoke<T> ヘルパーと、papers / notes / highlights / links / search の API オブジェクト
 
-import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { invoke as tauriInvoke } from "../lib/tauriShim";
 import type {
   Paper,
   CreatePaperInput,

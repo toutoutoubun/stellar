@@ -315,7 +315,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
             if (!filePath) break;
 
             try {
-              const { invoke } = await import("@tauri-apps/api/core");
+              const { invoke } = await import("../../lib/tauriShim");
               const htmlContent = markdownToHtml(editorContent, title);
               await invoke("export_note_pdf", {
                 html: htmlContent,
@@ -355,7 +355,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
             if (!filePath) break;
 
             try {
-              const { invoke } = await import("@tauri-apps/api/core");
+              const { invoke } = await import("../../lib/tauriShim");
               const htmlContent = markdownToHtml(editorContent, title);
               await invoke("export_note_docx", {
                 html: htmlContent,

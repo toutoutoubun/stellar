@@ -46,3 +46,4 @@ package-lock.json
 *.bak
 *.tar.gz
 *.zip
+core

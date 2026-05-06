@@ -3,7 +3,7 @@
 // Tauri バックエンドとの CRUD 通信、楽観的更新、debounce コメント保存を提供
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../lib/tauriShim";
 import type {
   Highlight,
   HighlightColor,

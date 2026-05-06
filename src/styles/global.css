@@ -183,10 +183,12 @@ samp,
 
 body {
   /* 日本語の禁則処理: 行頭禁則・行末禁則を適用 */
-  word-break: keep-all;
-  overflow-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: anywhere;
   /* 追加の禁則処理（句読点のぶら下げ等） */
   hanging-punctuation: allow-end;
+  /* line-break で句読点等の禁則を日本語ルールに */
+  line-break: strict;
 }
 
 /* 長いURL・コードパス等はワードブレークを許可 */
@@ -437,9 +439,23 @@ pre {
 }
 
 /* スクロール可能領域 */
-.scrollable {
+.scrollable,
+.scrollable-area {
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+/* flex 子要素のテキストはみ出し防止 */
+.flex > .flex-1,
+.flex > [class*="flex-1"] {
+  min-width: 0;
+}
+
+/* コンポーネント内テキストのはみ出し防止 */
+.overflow-clamp {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 /* 視覚的に非表示だがスクリーンリーダーには読み上げさせる */

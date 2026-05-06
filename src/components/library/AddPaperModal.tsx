@@ -10,7 +10,7 @@ import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { toast } from "../ui/Toast";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../../lib/tauriShim";
 
 /** タブの種別 */
 type AddPaperTab = "pdf" | "url" | "doi" | "manual";

@@ -8,6 +8,7 @@ import { useCallback } from "react";
 import { useUIStore } from "../../stores/useUIStore";
 import { ThemeToggleButton } from "./ThemeToggleButton";
 import { HelpButton } from "../ui/TutorialOverlay";
+import { getCurrentWindow } from "../../lib/tauriShim";
 
 interface TitlebarProps {
   onOpenTutorial?: () => void;
@@ -16,21 +17,21 @@ interface TitlebarProps {
 export const Titlebar: React.FC<TitlebarProps> = ({ onOpenTutorial }) => {
   const toggleSearchModal = useUIStore((s) => s.toggleSearchModal);
 
-  // getCurrentWindow() は window.__TAURI_INTERNALS__ にアクセスするため、
-  // レンダー中ではなくイベントハンドラ内で遅延呼び出しする
+  // getCurrentWindow() は tauriShim 経由で安全に呼び出す
+  // 非 Tauri 環境では noop
   const handleMinimize = useCallback(async () => {
-    const { getCurrentWindow } = await import("@tauri-apps/api/window");
-    void getCurrentWindow().minimize();
+    const win = await getCurrentWindow();
+    void win.minimize();
   }, []);
 
   const handleMaximize = useCallback(async () => {
-    const { getCurrentWindow } = await import("@tauri-apps/api/window");
-    void getCurrentWindow().toggleMaximize();
+    const win = await getCurrentWindow();
+    void win.toggleMaximize();
   }, []);
 
   const handleClose = useCallback(async () => {
-    const { getCurrentWindow } = await import("@tauri-apps/api/window");
-    void getCurrentWindow().close();
+    const win = await getCurrentWindow();
+    void win.close();
   }, []);
 
   return (

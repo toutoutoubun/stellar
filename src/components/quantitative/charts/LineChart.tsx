@@ -55,7 +55,7 @@ export const LineChart: React.FC<LineChartProps> = memo(function LineChart({
   width: fixedWidth,
   height: fixedHeight = 260,
   className,
-}) => {
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 

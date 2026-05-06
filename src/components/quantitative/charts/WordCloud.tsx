@@ -140,7 +140,7 @@ export const WordCloud: React.FC<WordCloudProps> = memo(function WordCloud({
   width: fixedWidth,
   height: fixedHeight = 320,
   className,
-}) => {
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 

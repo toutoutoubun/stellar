@@ -50,7 +50,7 @@ export const BarChart: React.FC<BarChartProps> = memo(function BarChart({
   width: fixedWidth,
   height: fixedHeight,
   className,
-}) => {
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 

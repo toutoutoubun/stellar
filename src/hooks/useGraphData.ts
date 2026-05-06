@@ -6,7 +6,7 @@
 // 高頻度のフィルタ変更（スライダー操作等）でもフレーム落ちを防ぐ
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../lib/tauriShim";
 import type {
   GraphData,
   GraphNode,

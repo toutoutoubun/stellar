@@ -8,7 +8,6 @@ import React, {
   useState,
   useCallback,
   useMemo,
-  useRef,
   memo,
 } from "react";
 import {
@@ -32,7 +31,8 @@ import { useQuantitativeStore } from "../../stores/useQuantitativeStore";
 import { useNoteStore } from "../../stores/useNoteStore";
 import { toast } from "../ui/Toast";
 import type { Analysis } from "../../types";
-import { downloadPNG } from "../../lib/utils/exportChart";
+// exportChart utilities available if needed
+// import { downloadPNG } from "../../lib/utils/exportChart";
 
 // ── Citation styles ──
 type CitationStyle = "apa" | "mla" | "chicago" | "wabun";

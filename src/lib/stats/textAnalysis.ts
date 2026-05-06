@@ -32,9 +32,11 @@ let _tokenizer: KuromojiTokenizer | null = null;
 async function getTokenizer(): Promise<KuromojiTokenizer> {
   if (_tokenizer) return _tokenizer;
 
-  // kuromoji is CJS — dynamic import works in Vite bundler mode
+  // kuromoji is CJS — use variable to prevent Vite static analysis from
+  // detecting and pre-bundling the 18 MB dictionary module.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const kuromoji = (await import("kuromoji")) as any;
+  const modName = "kuromoji";
+  const kuromoji = (await import(/* @vite-ignore */ modName)) as any;
   const kuromojiMod = kuromoji.default ?? kuromoji;
 
   return new Promise<KuromojiTokenizer>((resolve, reject) => {

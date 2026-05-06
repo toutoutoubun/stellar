@@ -181,8 +181,8 @@ export const FocusMode: React.FC<FocusModeProps> = ({
           <button
             type="button"
             onClick={async () => {
-              const { getCurrentWindow } = await import("@tauri-apps/api/window");
-              void getCurrentWindow().minimize();
+              const { getCurrentWindow } = await import("../../lib/tauriShim");
+              void (await getCurrentWindow()).minimize();
             }}
             className="flex items-center justify-center"
             style={{
@@ -209,8 +209,8 @@ export const FocusMode: React.FC<FocusModeProps> = ({
           <button
             type="button"
             onClick={async () => {
-              const { getCurrentWindow } = await import("@tauri-apps/api/window");
-              void getCurrentWindow().toggleMaximize();
+              const { getCurrentWindow } = await import("../../lib/tauriShim");
+              void (await getCurrentWindow()).toggleMaximize();
             }}
             className="flex items-center justify-center"
             style={{
@@ -237,8 +237,8 @@ export const FocusMode: React.FC<FocusModeProps> = ({
           <button
             type="button"
             onClick={async () => {
-              const { getCurrentWindow } = await import("@tauri-apps/api/window");
-              void getCurrentWindow().close();
+              const { getCurrentWindow } = await import("../../lib/tauriShim");
+              void (await getCurrentWindow()).close();
             }}
             className="flex items-center justify-center"
             style={{

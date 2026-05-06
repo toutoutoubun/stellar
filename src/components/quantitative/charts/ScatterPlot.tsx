@@ -55,7 +55,7 @@ export const ScatterPlot: React.FC<ScatterPlotProps> = memo(function ScatterPlot
   width: fixedWidth,
   height: fixedHeight = 280,
   className,
-}) => {
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 

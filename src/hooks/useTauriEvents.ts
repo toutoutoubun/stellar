@@ -3,7 +3,7 @@
 // paper-import-request イベントを監視し、トースト通知 + 楽観的追加を行う
 
 import { useEffect } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { listen } from "../lib/tauriShim";
 import type { Paper } from "../types";
 import { useUIStore } from "../stores/useUIStore";
 import { toast } from "../components/ui/Toast";

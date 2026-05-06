@@ -173,7 +173,7 @@ export const AnalysisHubView: React.FC = () => {
         });
         if (selectedAnalysisId === id) setSelectedAnalysisId(null);
 
-        const { invoke } = await import("@tauri-apps/api/core");
+        const { invoke } = await import("../../lib/tauriShim");
         await invoke("delete_analysis", { id });
       } catch {
         // ロールバック
@@ -375,7 +375,7 @@ export const AnalysisHubView: React.FC = () => {
           </button>
         </div>
 
-        {/* 分析グループ一覧 */
+        {/* 分析グループ一覧 */}
         <div className="flex-1 overflow-y-auto px-2 pb-4 scrollable-area">
           {ANALYSIS_GROUPS.map((group) => {
             const items = groupedAnalyses.get(group.key) ?? [];

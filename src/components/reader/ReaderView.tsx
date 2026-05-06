@@ -6,8 +6,8 @@
 
 import type React from "react";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { convertFileSrc } from "@tauri-apps/api/core";
+
+import { invoke, convertFileSrc } from "../../lib/tauriShim";
 
 import type { Paper, Highlight, HighlightColor, HighlightRect } from "../../types";
 import { useHighlights } from "../../hooks/useHighlights";
