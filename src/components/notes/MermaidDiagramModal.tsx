@@ -202,34 +202,46 @@ const MERMAID_TEMPLATES: MermaidTemplate[] = [
 ];
 
 // ============================================================
-// Mermaid レンダリング（動的 import で mermaid ライブラリを読み込み）
+// Mermaid レンダリング（CDN ESM 動的 import — バンドル非依存）
 // ============================================================
 
-/** Mermaid を CDN から動的にロードする */
-async function loadMermaid(): Promise<typeof import("mermaid")["default"]> {
-  // @ts-expect-error — CDN からの動的ロード
-  if (window.__mermaid) return window.__mermaid;
+// mermaid の型を inline で宣言（npm パッケージ不要）
+interface MermaidAPI {
+  initialize: (config: Record<string, unknown>) => void;
+  render: (
+    id: string,
+    text: string,
+  ) => Promise<{ svg: string; bindFunctions?: (el: Element) => void }>;
+}
 
-  return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js";
-    script.async = true;
-    script.onload = () => {
-      // @ts-expect-error — CDN グローバル
-      const mermaid = window.mermaid;
-      mermaid.initialize({
-        startOnLoad: false,
-        theme: "default",
-        securityLevel: "loose",
-        fontFamily: "system-ui, -apple-system, sans-serif",
-      });
-      // @ts-expect-error — キャッシュ
-      window.__mermaid = mermaid;
-      resolve(mermaid);
-    };
-    script.onerror = () => reject(new Error("Mermaid の読み込みに失敗しました"));
-    document.head.appendChild(script);
-  });
+// バージョン固定でセキュリティ・再現性を担保
+const MERMAID_CDN_URL =
+  "https://cdn.jsdelivr.net/npm/mermaid@10.9.3/dist/mermaid.esm.min.mjs";
+
+let mermaidInstance: MermaidAPI | null = null;
+
+/** Mermaid を CDN から ESM dynamic import でロード（キャッシュ付き） */
+async function loadMermaid(): Promise<MermaidAPI> {
+  if (mermaidInstance) return mermaidInstance;
+
+  try {
+    const mod = await import(/* @vite-ignore */ MERMAID_CDN_URL);
+    const m = (mod.default ?? mod) as MermaidAPI;
+
+    m.initialize({
+      startOnLoad: false,
+      theme: "neutral",
+      securityLevel: "strict",
+      fontFamily: "system-ui, -apple-system, 'Hiragino Kaku Gothic ProN', sans-serif",
+    });
+
+    mermaidInstance = m;
+    return m;
+  } catch {
+    throw new Error(
+      "Mermaid の読み込みに失敗しました。インターネット接続を確認してください。",
+    );
+  }
 }
 
 // ============================================================

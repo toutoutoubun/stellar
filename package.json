@@ -38,7 +38,6 @@
     "graphology-metrics": "^2.4.0",
     "graphology-types": "^0.24.8",
     "kuromoji": "^0.1.2",
-    "mermaid": "^11.14.0",
     "pdfjs-dist": "4.4.168",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
