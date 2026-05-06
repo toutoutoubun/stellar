@@ -1,180 +1,106 @@
 // src/components/qualitative/FramingAnalysisView.tsx
-// フレーミング分析 — Entman のフレーム定義とハイライトへの割り当て
-// Rust backend: get_frames(project_id), create_frame(input: CreateFrameDto),
-// assign_frame_to_highlight, remove_frame_from_highlight, delete_frame,
-// get_highlight_frames(project_id)
+// フレーミング分析 — Entman のフレーム定義 + フレーム×論文マトリクス
 
-import type React from "react";
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { Frame, Highlight, Paper, CreateFrameInput } from "../../types";
-import { toast } from "../ui/Toast";
-
-interface HighlightFrameRow {
-  id: string;
-  highlightId: string;
-  frameId: string;
-  assignedAt: string;
-}
-
-interface FrameWithCount extends Frame {
-  highlightCount: number;
-}
+import type { Frame, FramingMatrix, CreateFrameInput } from "../../types";
 
 interface FramingAnalysisViewProps {
   projectId: string;
 }
 
-export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({ projectId }) => {
-  const [frames, setFrames] = useState<FrameWithCount[]>([]);
-  const [highlightFrames, setHighlightFrames] = useState<HighlightFrameRow[]>([]);
-  const [highlights, setHighlights] = useState<Highlight[]>([]);
-  const [papers, setPapers] = useState<Paper[]>([]);
-  const [loading, setLoading] = useState(false);
+export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({
+  projectId,
+}) => {
+  const [frames, setFrames] = useState<Frame[]>([]);
+  const [matrix, setMatrix] = useState<FramingMatrix | null>(null);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [selectedFrame, setSelectedFrame] = useState<string | null>(null);
+  const [selectedFrame, setSelectedFrame] = useState<Frame | null>(null);
 
-  // フォーム — Entman フレーム要素
-  const [form, setForm] = useState({
-    name: "",
-    problemDefinition: "",
-    causalInterpretation: "",
-    moralEvaluation: "",
-    treatmentRecommendation: "",
-    color: "#8B5CF6",
-  });
+  // フォーム状態
+  const [name, setName] = useState("");
+  const [color, setColor] = useState("#8B5CF6");
+  const [problemDefinition, setProblemDefinition] = useState("");
+  const [causalInterpretation, setCausalInterpretation] = useState("");
+  const [moralEvaluation, setMoralEvaluation] = useState("");
+  const [treatmentRecommendation, setTreatmentRecommendation] = useState("");
 
   const loadData = useCallback(async () => {
-    if (!projectId) return;
     setLoading(true);
     try {
-      const [fr, hf, p] = await Promise.all([
+      const [frameList, matrixData] = await Promise.all([
         invoke<Frame[]>("get_frames", { projectId }),
-        invoke<HighlightFrameRow[]>("get_highlight_frames", { projectId }),
-        invoke<Paper[]>("get_papers"),
+        invoke<FramingMatrix>("get_framing_matrix", { projectId }),
       ]);
-
-      // 各フレームのハイライト数をカウント
-      const framesWithCount: FrameWithCount[] = fr.map((f) => ({
-        ...f,
-        highlightCount: hf.filter((h) => h.frameId === f.id).length,
-      }));
-      setFrames(framesWithCount);
-      setHighlightFrames(hf);
-      setPapers(p);
-
-      // 全ハイライトを読み込み
-      const allHighlights: Highlight[] = [];
-      for (const paper of p) {
-        try {
-          const hl = await invoke<Highlight[]>("get_highlights", { paperId: paper.id });
-          allHighlights.push(...hl);
-        } catch {
-          // skip
-        }
-      }
-      setHighlights(allHighlights);
-    } catch (e) {
-      console.error("Failed to load framing data:", e);
+      setFrames(frameList);
+      setMatrix(matrixData);
+    } catch (err) {
+      console.error("フレーミング取得エラー:", err);
     } finally {
       setLoading(false);
     }
   }, [projectId]);
 
   useEffect(() => {
-    loadData();
+    void loadData();
   }, [loadData]);
 
   const handleCreateFrame = useCallback(async () => {
-    if (!projectId || !form.name.trim()) {
-      toast.error("フレーム名を入力してください");
-      return;
-    }
+    if (!name.trim()) return;
     try {
       const input: CreateFrameInput = {
         projectId,
-        name: form.name.trim(),
-        problemDefinition: form.problemDefinition || null,
-        causalInterpretation: form.causalInterpretation || null,
-        moralEvaluation: form.moralEvaluation || null,
-        treatmentRecommendation: form.treatmentRecommendation || null,
-        color: form.color,
+        name: name.trim(),
+        color,
+        problemDefinition: problemDefinition.trim() || undefined,
+        causalInterpretation: causalInterpretation.trim() || undefined,
+        moralEvaluation: moralEvaluation.trim() || undefined,
+        treatmentRecommendation: treatmentRecommendation.trim() || undefined,
       };
       await invoke("create_frame", { input });
-      setForm({ name: "", problemDefinition: "", causalInterpretation: "", moralEvaluation: "", treatmentRecommendation: "", color: "#8B5CF6" });
+      setName("");
+      setProblemDefinition("");
+      setCausalInterpretation("");
+      setMoralEvaluation("");
+      setTreatmentRecommendation("");
       setShowForm(false);
-      toast.success("フレームを作成しました");
-      await loadData();
-    } catch (e) {
-      toast.error("作成に失敗しました");
+      void loadData();
+    } catch (err) {
+      console.error("フレーム作成エラー:", err);
     }
-  }, [projectId, form, loadData]);
+  }, [
+    name,
+    color,
+    problemDefinition,
+    causalInterpretation,
+    moralEvaluation,
+    treatmentRecommendation,
+    projectId,
+    loadData,
+  ]);
 
-  const handleDeleteFrame = async (id: string) => {
-    if (!confirm("このフレームを削除しますか？")) return;
-    try {
-      await invoke("delete_frame", { id });
-      if (selectedFrame === id) setSelectedFrame(null);
-      toast.success("削除しました");
-      await loadData();
-    } catch (e) {
-      toast.error("削除に失敗しました");
-    }
-  };
-
-  const handleAssignFrame = useCallback(
-    async (highlightId: string, frameId: string) => {
+  const handleDeleteFrame = useCallback(
+    async (id: string) => {
+      if (!confirm("このフレームを削除しますか？")) return;
       try {
-        await invoke("assign_frame_to_highlight", { highlightId, frameId });
-        toast.success("フレームを割り当てました");
-        await loadData();
-      } catch (e) {
-        toast.error("割り当てに失敗しました");
+        await invoke("delete_frame", { id });
+        if (selectedFrame?.id === id) setSelectedFrame(null);
+        void loadData();
+      } catch (err) {
+        console.error("フレーム削除エラー:", err);
       }
     },
-    [loadData],
+    [selectedFrame, loadData]
   );
-
-  const handleRemoveFrame = useCallback(
-    async (highlightId: string, frameId: string) => {
-      try {
-        await invoke("remove_frame_from_highlight", { highlightId, frameId });
-        await loadData();
-      } catch (e) {
-        toast.error("解除に失敗しました");
-      }
-    },
-    [loadData],
-  );
-
-  const isAssigned = (highlightId: string, frameId: string) =>
-    highlightFrames.some((hf) => hf.highlightId === highlightId && hf.frameId === frameId);
-
-  const getFrameHighlights = (frameId: string) => {
-    const assignedIds = highlightFrames
-      .filter((hf) => hf.frameId === frameId)
-      .map((hf) => hf.highlightId);
-    return highlights.filter((h) => assignedIds.includes(h.id));
-  };
-
-  const getPaperTitle = (paperId: string) =>
-    papers.find((p) => p.id === paperId)?.title ?? paperId;
-
-  const inputStyle: React.CSSProperties = {
-    backgroundColor: "var(--color-bg-tertiary)",
-    color: "var(--color-text-primary)",
-    border: "1px solid var(--color-border-secondary)",
-    borderRadius: "6px",
-    padding: "6px 10px",
-    outline: "none",
-    width: "100%",
-    fontSize: "13px",
-  };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full" style={{ color: "var(--color-text-tertiary)" }}>
-        <p className="text-sm">読み込み中…</p>
+      <div
+        className="flex items-center justify-center h-full"
+        style={{ color: "var(--color-text-tertiary)" }}
+      >
+        <span className="text-sm">読み込み中…</span>
       </div>
     );
   }
@@ -183,275 +109,436 @@ export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({ projec
     <div className="flex h-full overflow-hidden">
       {/* 左: フレーム一覧 */}
       <div
-        className="flex flex-col h-full overflow-hidden"
+        className="flex flex-col shrink-0 h-full"
         style={{
           width: "300px",
           borderRight: "1px solid var(--color-border-primary)",
         }}
       >
-        <div
-          className="p-3 flex items-center justify-between"
-          style={{ borderBottom: "1px solid var(--color-border-secondary)" }}
+        <header
+          className="flex items-center justify-between px-3 shrink-0"
+          style={{
+            height: "40px",
+            borderBottom: "1px solid var(--color-border-primary)",
+          }}
         >
-          <span className="text-sm font-semibold" style={{ color: "var(--color-text-primary)" }}>
-            フレーム
+          <span
+            className="text-xs font-semibold"
+            style={{ color: "var(--color-text-tertiary)" }}
+          >
+            フレーム ({frames.length})
           </span>
           <button
+            type="button"
             onClick={() => setShowForm(!showForm)}
             className="text-xs"
-            style={{ color: "var(--color-accent-primary)", background: "none", border: "none", cursor: "pointer" }}
+            style={{
+              color: "var(--color-accent-primary)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+            }}
           >
-            {showForm ? "閉じる" : "+ 追加"}
+            + 追加
           </button>
-        </div>
-
-        {showForm && (
-          <div className="p-3 flex flex-col gap-2" style={{ borderBottom: "1px solid var(--color-border-secondary)" }}>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              style={inputStyle}
-              placeholder="フレーム名 *"
-              onKeyDown={(e) => e.key === "Enter" && handleCreateFrame()}
-            />
-            <textarea
-              value={form.problemDefinition}
-              onChange={(e) => setForm({ ...form, problemDefinition: e.target.value })}
-              style={{ ...inputStyle, minHeight: "40px", resize: "vertical" }}
-              placeholder="問題定義"
-            />
-            <textarea
-              value={form.causalInterpretation}
-              onChange={(e) => setForm({ ...form, causalInterpretation: e.target.value })}
-              style={{ ...inputStyle, minHeight: "40px", resize: "vertical" }}
-              placeholder="因果解釈"
-            />
-            <textarea
-              value={form.moralEvaluation}
-              onChange={(e) => setForm({ ...form, moralEvaluation: e.target.value })}
-              style={{ ...inputStyle, minHeight: "40px", resize: "vertical" }}
-              placeholder="道徳評価"
-            />
-            <textarea
-              value={form.treatmentRecommendation}
-              onChange={(e) => setForm({ ...form, treatmentRecommendation: e.target.value })}
-              style={{ ...inputStyle, minHeight: "40px", resize: "vertical" }}
-              placeholder="処方"
-            />
-            <div className="flex gap-2 items-center">
-              <input type="color" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} style={{ width: "30px", height: "30px", border: "none", cursor: "pointer" }} />
-              <button onClick={handleCreateFrame} className="text-xs py-1 flex-1" style={{ backgroundColor: "var(--color-accent-primary)", color: "white", borderRadius: "6px", border: "none", cursor: "pointer" }}>
-                作成
-              </button>
-            </div>
-          </div>
-        )}
+        </header>
 
         <div className="flex-1 overflow-y-auto p-2">
-          {frames.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center" style={{ color: "var(--color-text-tertiary)" }}>
-              <p className="text-xs">フレームを作成して分析を始めましょう</p>
+          {showForm && (
+            <div
+              className="mb-3 p-3"
+              style={{
+                backgroundColor: "var(--color-bg-tertiary)",
+                borderRadius: "8px",
+              }}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <input
+                  type="color"
+                  value={color}
+                  onChange={(e) => setColor(e.target.value)}
+                  style={{
+                    width: "24px",
+                    height: "24px",
+                    border: "none",
+                    padding: 0,
+                    cursor: "pointer",
+                  }}
+                />
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="フレーム名"
+                  className="flex-1 text-xs px-2 py-1"
+                  style={{
+                    backgroundColor: "var(--color-bg-primary)",
+                    color: "var(--color-text-primary)",
+                    border: "1px solid var(--color-border-primary)",
+                    borderRadius: "4px",
+                    outline: "none",
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void handleCreateFrame();
+                  }}
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5 mb-2">
+                <textarea
+                  value={problemDefinition}
+                  onChange={(e) => setProblemDefinition(e.target.value)}
+                  placeholder="問題定義"
+                  rows={2}
+                  className="w-full text-xs px-2 py-1"
+                  style={{
+                    backgroundColor: "var(--color-bg-primary)",
+                    color: "var(--color-text-primary)",
+                    border: "1px solid var(--color-border-primary)",
+                    borderRadius: "4px",
+                    outline: "none",
+                    resize: "vertical",
+                  }}
+                />
+                <textarea
+                  value={causalInterpretation}
+                  onChange={(e) => setCausalInterpretation(e.target.value)}
+                  placeholder="因果解釈"
+                  rows={2}
+                  className="w-full text-xs px-2 py-1"
+                  style={{
+                    backgroundColor: "var(--color-bg-primary)",
+                    color: "var(--color-text-primary)",
+                    border: "1px solid var(--color-border-primary)",
+                    borderRadius: "4px",
+                    outline: "none",
+                    resize: "vertical",
+                  }}
+                />
+                <textarea
+                  value={moralEvaluation}
+                  onChange={(e) => setMoralEvaluation(e.target.value)}
+                  placeholder="道徳的評価"
+                  rows={2}
+                  className="w-full text-xs px-2 py-1"
+                  style={{
+                    backgroundColor: "var(--color-bg-primary)",
+                    color: "var(--color-text-primary)",
+                    border: "1px solid var(--color-border-primary)",
+                    borderRadius: "4px",
+                    outline: "none",
+                    resize: "vertical",
+                  }}
+                />
+                <textarea
+                  value={treatmentRecommendation}
+                  onChange={(e) => setTreatmentRecommendation(e.target.value)}
+                  placeholder="処方提案"
+                  rows={2}
+                  className="w-full text-xs px-2 py-1"
+                  style={{
+                    backgroundColor: "var(--color-bg-primary)",
+                    color: "var(--color-text-primary)",
+                    border: "1px solid var(--color-border-primary)",
+                    borderRadius: "4px",
+                    outline: "none",
+                    resize: "vertical",
+                  }}
+                />
+              </div>
+
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => void handleCreateFrame()}
+                  className="flex-1 text-xs py-1"
+                  style={{
+                    backgroundColor: "var(--color-accent-primary)",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                >
+                  作成
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowForm(false)}
+                  className="text-xs px-2 py-1"
+                  style={{
+                    background: "transparent",
+                    color: "var(--color-text-tertiary)",
+                    border: "1px solid var(--color-border-secondary)",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                >
+                  ×
+                </button>
+              </div>
             </div>
-          ) : (
-            frames.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setSelectedFrame(f.id === selectedFrame ? null : f.id)}
-                className="w-full text-left px-3 py-2 mb-1 group"
-                style={{
-                  borderRadius: "6px",
-                  backgroundColor:
-                    selectedFrame === f.id
-                      ? "rgba(99,102,241,0.1)"
-                      : "transparent",
-                  transition: "background-color 0.15s",
-                  border: "none",
-                  cursor: "pointer",
-                }}
-                onMouseEnter={(e) => {
-                  if (selectedFrame !== f.id) e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
-                }}
-                onMouseLeave={(e) => {
-                  if (selectedFrame !== f.id) e.currentTarget.style.backgroundColor = "transparent";
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: f.color, display: "inline-block" }} />
-                    <span className="text-xs font-medium" style={{ color: "var(--color-text-primary)" }}>
-                      {f.name}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-                      {f.highlightCount}
-                    </span>
-                    <span
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteFrame(f.id);
-                      }}
-                      className="opacity-0 group-hover:opacity-100"
-                      style={{ color: "#ef4444", fontSize: "11px", transition: "opacity 0.15s", cursor: "pointer" }}
-                    >
-                      ×
-                    </span>
-                  </div>
-                </div>
-                {f.problemDefinition && (
-                  <p className="text-xs mt-0.5 truncate" style={{ color: "var(--color-text-tertiary)" }}>
-                    {f.problemDefinition}
-                  </p>
-                )}
-              </button>
-            ))
+          )}
+
+          {frames.map((frame) => (
+            <div
+              key={frame.id}
+              onClick={() => setSelectedFrame(frame)}
+              className="p-2 mb-1 group"
+              style={{
+                backgroundColor:
+                  selectedFrame?.id === frame.id
+                    ? "var(--color-bg-hover)"
+                    : "var(--color-bg-secondary)",
+                borderRadius: "6px",
+                border: `1px solid ${
+                  selectedFrame?.id === frame.id
+                    ? frame.color
+                    : "var(--color-border-secondary)"
+                }`,
+                cursor: "pointer",
+                borderLeft: `3px solid ${frame.color}`,
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <span
+                  className="text-xs font-medium"
+                  style={{ color: "var(--color-text-primary)" }}
+                >
+                  {frame.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void handleDeleteFrame(frame.id);
+                  }}
+                  className="text-xs opacity-0 group-hover:opacity-100"
+                  style={{
+                    color: "var(--color-text-tertiary)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {frames.length === 0 && !showForm && (
+            <div
+              className="text-center py-8 text-xs"
+              style={{ color: "var(--color-text-tertiary)" }}
+            >
+              フレームなし
+            </div>
           )}
         </div>
       </div>
 
-      {/* 右: 選択フレームの詳細 + ハイライト割り当て */}
+      {/* 右: フレーム詳細 + マトリクス */}
       <div className="flex-1 overflow-y-auto p-4">
         {selectedFrame ? (
           <div>
-            {(() => {
-              const frame = frames.find((f) => f.id === selectedFrame);
-              if (!frame) return null;
+            <h3
+              className="text-sm font-semibold mb-4"
+              style={{ color: "var(--color-text-primary)" }}
+            >
+              <span
+                style={{
+                  display: "inline-block",
+                  width: "12px",
+                  height: "12px",
+                  borderRadius: "50%",
+                  backgroundColor: selectedFrame.color,
+                  marginRight: "8px",
+                }}
+              />
+              {selectedFrame.name}
+            </h3>
 
-              const assignedHighlights = getFrameHighlights(selectedFrame);
-              const unassignedHighlights = highlights.filter(
-                (h) => !isAssigned(h.id, selectedFrame),
-              );
-
-              return (
-                <>
-                  <div className="mb-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span style={{ width: "12px", height: "12px", borderRadius: "50%", backgroundColor: frame.color, display: "inline-block" }} />
-                      <h3 className="text-base font-semibold" style={{ color: "var(--color-text-primary)" }}>
-                        {frame.name}
-                      </h3>
-                    </div>
-                    <div className="flex flex-col gap-1 mt-2">
-                      {frame.problemDefinition && (
-                        <p className="text-xs" style={{ color: "var(--color-text-secondary)" }}>
-                          <strong>問題定義:</strong> {frame.problemDefinition}
-                        </p>
-                      )}
-                      {frame.causalInterpretation && (
-                        <p className="text-xs" style={{ color: "var(--color-text-secondary)" }}>
-                          <strong>因果解釈:</strong> {frame.causalInterpretation}
-                        </p>
-                      )}
-                      {frame.moralEvaluation && (
-                        <p className="text-xs" style={{ color: "var(--color-text-secondary)" }}>
-                          <strong>道徳評価:</strong> {frame.moralEvaluation}
-                        </p>
-                      )}
-                      {frame.treatmentRecommendation && (
-                        <p className="text-xs" style={{ color: "var(--color-text-secondary)" }}>
-                          <strong>処方:</strong> {frame.treatmentRecommendation}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 割り当て済みハイライト */}
-                  <div className="mb-6">
-                    <h4 className="text-xs font-medium mb-2" style={{ color: "var(--color-text-secondary)" }}>
-                      割り当て済み ({assignedHighlights.length})
-                    </h4>
-                    {assignedHighlights.length === 0 ? (
-                      <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-                        まだハイライトが割り当てられていません
-                      </p>
-                    ) : (
-                      <div className="flex flex-col gap-2">
-                        {assignedHighlights.map((h) => (
-                          <div
-                            key={h.id}
-                            className="p-2 flex items-start gap-2"
-                            style={{
-                              backgroundColor: "var(--color-bg-secondary)",
-                              border: "1px solid var(--color-border-secondary)",
-                              borderRadius: "6px",
-                            }}
-                          >
-                            <div className="flex-1">
-                              <p className="text-xs" style={{ color: "var(--color-text-primary)", lineHeight: "1.4" }}>
-                                &ldquo;{h.text.length > 200 ? h.text.slice(0, 200) + "…" : h.text}&rdquo;
-                              </p>
-                              <p className="text-xs mt-1" style={{ color: "var(--color-text-tertiary)" }}>
-                                {getPaperTitle(h.paperId)} — p.{h.page}
-                              </p>
-                            </div>
-                            <button
-                              onClick={() => handleRemoveFrame(h.id, selectedFrame)}
-                              className="text-xs shrink-0"
-                              style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer" }}
-                            >
-                              解除
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 未割り当てハイライト */}
-                  {unassignedHighlights.length > 0 && (
-                    <div>
-                      <h4 className="text-xs font-medium mb-2" style={{ color: "var(--color-text-secondary)" }}>
-                        未割り当てハイライト ({unassignedHighlights.length})
-                      </h4>
-                      <div className="flex flex-col gap-1">
-                        {unassignedHighlights.slice(0, 50).map((h) => (
-                          <div
-                            key={h.id}
-                            className="p-2 flex items-start gap-2 cursor-pointer"
-                            style={{
-                              borderRadius: "4px",
-                              transition: "background-color 0.15s",
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = "transparent";
-                            }}
-                            onClick={() => handleAssignFrame(h.id, selectedFrame)}
-                          >
-                            <span style={{ color: "var(--color-accent-primary)", marginTop: "2px", flexShrink: 0, fontSize: "12px" }}>+</span>
-                            <div className="flex-1">
-                              <p className="text-xs" style={{ color: "var(--color-text-primary)", lineHeight: "1.4" }}>
-                                &ldquo;{h.text.length > 120 ? h.text.slice(0, 120) + "…" : h.text}&rdquo;
-                              </p>
-                              <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-                                {getPaperTitle(h.paperId)} — p.{h.page}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
-              );
-            })()}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <DetailCard
+                label="問題定義"
+                value={selectedFrame.problemDefinition}
+              />
+              <DetailCard
+                label="因果解釈"
+                value={selectedFrame.causalInterpretation}
+              />
+              <DetailCard
+                label="道徳的評価"
+                value={selectedFrame.moralEvaluation}
+              />
+              <DetailCard
+                label="処方提案"
+                value={selectedFrame.treatmentRecommendation}
+              />
+            </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full" style={{ color: "var(--color-text-tertiary)" }}>
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" style={{ opacity: 0.4 }}>
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-              <line x1="3" y1="9" x2="21" y2="9" />
-              <line x1="9" y1="21" x2="9" y2="9" />
-            </svg>
-            <p className="text-sm mt-2">フレームを選択すると詳細が表示されます</p>
+          <div
+            className="flex flex-col items-center justify-center py-12 gap-3"
+            style={{ color: "var(--color-text-tertiary)" }}
+          >
+            <span className="text-sm">
+              左からフレームを選択してください
+            </span>
           </div>
         )}
+
+        {/* フレーミングマトリクス */}
+        {matrix &&
+          matrix.frames.length > 0 &&
+          matrix.papers.length > 0 && (
+            <div className="mt-6">
+              <h4
+                className="text-sm font-semibold mb-3"
+                style={{ color: "var(--color-text-primary)" }}
+              >
+                フレーミングマトリクス
+              </h4>
+              <div className="overflow-auto">
+                <table
+                  style={{
+                    borderCollapse: "collapse",
+                    fontSize: "12px",
+                    minWidth: "100%",
+                  }}
+                >
+                  <thead>
+                    <tr>
+                      <th
+                        style={{
+                          padding: "8px 12px",
+                          textAlign: "left",
+                          borderBottom:
+                            "2px solid var(--color-border-primary)",
+                          color: "var(--color-text-tertiary)",
+                          fontWeight: 600,
+                        }}
+                      >
+                        フレーム
+                      </th>
+                      {matrix.papers.map((p) => (
+                        <th
+                          key={p.paperId}
+                          style={{
+                            padding: "8px 12px",
+                            textAlign: "center",
+                            borderBottom:
+                              "2px solid var(--color-border-primary)",
+                            color: "var(--color-text-tertiary)",
+                            fontWeight: 600,
+                            maxWidth: "120px",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                          title={p.paperTitle}
+                        >
+                          {p.paperTitle.length > 15
+                            ? p.paperTitle.slice(0, 15) + "…"
+                            : p.paperTitle}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {matrix.frames.map((frame) => (
+                      <tr key={frame.id}>
+                        <td
+                          style={{
+                            padding: "6px 12px",
+                            borderBottom:
+                              "1px solid var(--color-border-secondary)",
+                            color: "var(--color-text-primary)",
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span
+                              style={{
+                                width: "8px",
+                                height: "8px",
+                                borderRadius: "50%",
+                                backgroundColor: frame.color,
+                                display: "inline-block",
+                                flexShrink: 0,
+                              }}
+                            />
+                            {frame.name}
+                          </div>
+                        </td>
+                        {matrix.papers.map((p) => {
+                          const key = `${frame.id}:${p.paperId}`;
+                          const count = matrix.counts[key] ?? 0;
+                          return (
+                            <td
+                              key={p.paperId}
+                              style={{
+                                padding: "6px 12px",
+                                textAlign: "center",
+                                borderBottom:
+                                  "1px solid var(--color-border-secondary)",
+                                color:
+                                  count > 0
+                                    ? "var(--color-text-primary)"
+                                    : "var(--color-text-tertiary)",
+                                backgroundColor:
+                                  count > 0
+                                    ? `${frame.color}20`
+                                    : "transparent",
+                                fontWeight: count > 0 ? 600 : 400,
+                              }}
+                            >
+                              {count || "–"}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
       </div>
     </div>
   );
 };
 
-export default FramingAnalysisView;
+/** フレーム詳細カード */
+const DetailCard: React.FC<{ label: string; value: string | null }> = ({
+  label,
+  value,
+}) => (
+  <div
+    className="p-3"
+    style={{
+      backgroundColor: "var(--color-bg-secondary)",
+      borderRadius: "8px",
+      border: "1px solid var(--color-border-secondary)",
+    }}
+  >
+    <div
+      className="text-xs font-semibold mb-1"
+      style={{ color: "var(--color-text-tertiary)" }}
+    >
+      {label}
+    </div>
+    <p
+      className="text-xs"
+      style={{
+        color: value
+          ? "var(--color-text-primary)"
+          : "var(--color-text-tertiary)",
+        lineHeight: "1.5",
+      }}
+    >
+      {value || "未設定"}
+    </p>
+  </div>
+);

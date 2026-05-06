@@ -1,420 +1,462 @@
 // src/components/qualitative/QualitativeView.tsx
 // 質的分析メインビュー — プロジェクトナビゲーション + タブ切り替え
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import React, { useState, useEffect, useCallback } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import type {
   QualProject,
   CreateQualProjectInput,
-  UpdateQualProjectInput,
   QualitativeTab,
-} from '../../types';
-import CodebookView from './CodebookView';
-import CodingMatrixView from './CodingMatrixView';
-import IcrCalculator from './IcrCalculator';
-import SourceCritiqueForm from './SourceCritiqueForm';
-import TimelineView from './TimelineView';
-import ActorMapView from './ActorMapView';
-import ProcessTracingView from './ProcessTracingView';
-import ComparativeDesignView from './ComparativeDesignView';
-import FramingAnalysisView from './FramingAnalysisView';
-import AnalysisReport from './AnalysisReport';
+} from "../../types";
 
+// 子コンポーネント（遅延読み込みなし — Tauri WKWebView 安全策）
+import { CodebookView } from "./CodebookView";
+import { CodingMatrixView } from "./CodingMatrixView";
+import { IcrCalculator } from "./IcrCalculator";
+import { SourceCritiqueForm } from "./SourceCritiqueForm";
+import { TimelineView } from "./TimelineView";
+import { ActorMapView } from "./ActorMapView";
+import { ProcessTracingView } from "./ProcessTracingView";
+import { ComparativeDesignView } from "./ComparativeDesignView";
+import { FramingAnalysisView } from "./FramingAnalysisView";
+import { AnalysisReport } from "./AnalysisReport";
+
+/** タブ定義 */
 const TABS: { key: QualitativeTab; label: string; icon: string }[] = [
-  { key: 'dashboard', label: 'ダッシュボード', icon: '📊' },
-  { key: 'codebook', label: 'コードブック', icon: '📋' },
-  { key: 'matrix', label: 'マトリクス', icon: '📈' },
-  { key: 'icr', label: 'ICR', icon: '🤝' },
-  { key: 'source-critique', label: '史料批判', icon: '🔍' },
-  { key: 'timeline', label: 'タイムライン', icon: '📅' },
-  { key: 'actor-map', label: 'アクターマップ', icon: '🌐' },
-  { key: 'process-tracing', label: 'PT', icon: '🔬' },
-  { key: 'comparative', label: '比較', icon: '⚖️' },
-  { key: 'framing', label: 'フレーミング', icon: '🖼️' },
-  { key: 'report', label: 'レポート', icon: '📄' },
-];
-
-const METHOD_TYPES = [
-  { value: 'thematic', label: 'テーマ分析' },
-  { value: 'grounded', label: 'グラウンデッド・セオリー' },
-  { value: 'content', label: '内容分析' },
-  { value: 'discourse', label: 'ディスコース分析' },
-  { value: 'narrative', label: 'ナラティブ分析' },
-  { value: 'historical', label: '歴史分析' },
-  { value: 'comparative', label: '比較政治分析' },
-  { value: 'mixed', label: '混合手法' },
+  { key: "dashboard", label: "概要", icon: "📊" },
+  { key: "codebook", label: "コードブック", icon: "🏷️" },
+  { key: "matrix", label: "マトリクス", icon: "📋" },
+  { key: "icr", label: "ICR", icon: "🤝" },
+  { key: "source-critique", label: "史料批判", icon: "📜" },
+  { key: "timeline", label: "タイムライン", icon: "📅" },
+  { key: "actor-map", label: "アクターマップ", icon: "🗺️" },
+  { key: "process-tracing", label: "プロセストレーシング", icon: "🔍" },
+  { key: "comparative", label: "比較デザイン", icon: "⚖️" },
+  { key: "framing", label: "フレーミング", icon: "🖼️" },
+  { key: "report", label: "レポート", icon: "📝" },
 ];
 
 const QualitativeView: React.FC = () => {
   const [projects, setProjects] = useState<QualProject[]>([]);
-  const [selectedProject, setSelectedProject] = useState<QualProject | null>(null);
-  const [activeTab, setActiveTab] = useState<QualitativeTab>('dashboard');
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<QualitativeTab>("dashboard");
   const [loading, setLoading] = useState(true);
-  const [showProjectForm, setShowProjectForm] = useState(false);
-  const [editingProject, setEditingProject] = useState(false);
+  const [showNewProject, setShowNewProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [newProjectMethod, setNewProjectMethod] = useState("thematic");
 
-  const [newProject, setNewProject] = useState<CreateQualProjectInput>({
-    name: '',
-    description: '',
-    methodType: 'thematic',
-  });
-
-  // プロジェクト一覧取得
   const loadProjects = useCallback(async () => {
-    setLoading(true);
     try {
-      const data = await invoke<QualProject[]>('get_projects');
-      setProjects(data);
-      // 前回選択されたプロジェクトを復元
-      if (selectedProject) {
-        const updated = data.find((p) => p.id === selectedProject.id);
-        if (updated) setSelectedProject(updated);
-      } else if (data.length > 0) {
-        setSelectedProject(data[0]);
+      const result = await invoke<QualProject[]>("get_projects");
+      setProjects(result);
+      if (result.length > 0 && !selectedProjectId) {
+        setSelectedProjectId(result[0].id);
       }
-    } catch (e) {
-      console.error('プロジェクト一覧取得に失敗:', e);
+    } catch (err) {
+      console.error("プロジェクト取得エラー:", err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedProjectId]);
 
   useEffect(() => {
-    loadProjects();
+    void loadProjects();
   }, [loadProjects]);
 
-  // プロジェクト作成
-  const handleCreateProject = async () => {
-    if (!newProject.name.trim()) return;
+  const handleCreateProject = useCallback(async () => {
+    if (!newProjectName.trim()) return;
     try {
-      const created = await invoke<QualProject>('create_project', { input: newProject });
-      setNewProject({ name: '', description: '', methodType: 'thematic' });
-      setShowProjectForm(false);
-      setSelectedProject(created);
-      loadProjects();
-    } catch (e) {
-      console.error('プロジェクト作成に失敗:', e);
+      const input: CreateQualProjectInput = {
+        name: newProjectName.trim(),
+        methodType: newProjectMethod,
+      };
+      const created = await invoke<QualProject>("create_project", { input });
+      setProjects((prev) => [created, ...prev]);
+      setSelectedProjectId(created.id);
+      setNewProjectName("");
+      setShowNewProject(false);
+    } catch (err) {
+      console.error("プロジェクト作成エラー:", err);
     }
-  };
+  }, [newProjectName, newProjectMethod]);
 
-  // プロジェクト更新
-  const handleUpdateProject = async (input: UpdateQualProjectInput) => {
-    if (!selectedProject) return;
-    try {
-      const updated = await invoke<QualProject>('update_project', {
-        id: selectedProject.id,
-        input,
-      });
-      setSelectedProject(updated);
-      setEditingProject(false);
-      loadProjects();
-    } catch (e) {
-      console.error('プロジェクト更新に失敗:', e);
-    }
-  };
+  const handleDeleteProject = useCallback(
+    async (id: string) => {
+      if (!confirm("このプロジェクトを削除しますか？")) return;
+      try {
+        await invoke("delete_project", { id });
+        setProjects((prev) => prev.filter((p) => p.id !== id));
+        if (selectedProjectId === id) {
+          setSelectedProjectId(projects.find((p) => p.id !== id)?.id ?? null);
+        }
+      } catch (err) {
+        console.error("プロジェクト削除エラー:", err);
+      }
+    },
+    [selectedProjectId, projects]
+  );
 
-  // プロジェクト削除
-  const handleDeleteProject = async () => {
-    if (!selectedProject) return;
-    if (!confirm(`プロジェクト「${selectedProject.name}」を削除しますか？\nすべての分析データが失われます。`))
-      return;
-    try {
-      await invoke('delete_project', { id: selectedProject.id });
-      setSelectedProject(null);
-      loadProjects();
-    } catch (e) {
-      console.error('プロジェクト削除に失敗:', e);
-    }
-  };
+  const selectedProject = projects.find((p) => p.id === selectedProjectId) ?? null;
 
-  // タブコンテンツのレンダリング
   const renderTabContent = () => {
-    if (!selectedProject) {
+    if (!selectedProjectId) {
       return (
-        <div className="qual-empty-state">
-          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" className="mx-auto mb-4 opacity-20">
-            <rect x="8" y="8" width="48" height="48" rx="8" stroke="currentColor" strokeWidth="2" />
-            <path d="M24 28h16M24 36h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          <h3 className="text-base font-semibold mb-2">質的分析</h3>
-          <p className="text-sm text-secondary">
-            プロジェクトを選択または作成して分析を開始してください。
-          </p>
+        <div
+          className="flex flex-col items-center justify-center h-full gap-4"
+          style={{ color: "var(--color-text-tertiary)" }}
+        >
+          <span className="text-lg">プロジェクトを選択または作成してください</span>
         </div>
       );
     }
 
     switch (activeTab) {
-      case 'dashboard':
-        return renderDashboard();
-      case 'codebook':
-        return <CodebookView projectId={selectedProject.id} />;
-      case 'matrix':
-        return <CodingMatrixView projectId={selectedProject.id} />;
-      case 'icr':
-        return <IcrCalculator projectId={selectedProject.id} />;
-      case 'source-critique':
-        return <SourceCritiqueForm projectId={selectedProject.id} />;
-      case 'timeline':
-        return <TimelineView projectId={selectedProject.id} />;
-      case 'actor-map':
-        return <ActorMapView projectId={selectedProject.id} />;
-      case 'process-tracing':
-        return <ProcessTracingView projectId={selectedProject.id} />;
-      case 'comparative':
-        return <ComparativeDesignView projectId={selectedProject.id} />;
-      case 'framing':
-        return <FramingAnalysisView projectId={selectedProject.id} />;
-      case 'report':
-        return <AnalysisReport projectId={selectedProject.id} />;
+      case "codebook":
+        return <CodebookView projectId={selectedProjectId} />;
+      case "matrix":
+        return <CodingMatrixView projectId={selectedProjectId} />;
+      case "icr":
+        return <IcrCalculator projectId={selectedProjectId} />;
+      case "source-critique":
+        return <SourceCritiqueForm projectId={selectedProjectId} />;
+      case "timeline":
+        return <TimelineView projectId={selectedProjectId} />;
+      case "actor-map":
+        return <ActorMapView projectId={selectedProjectId} />;
+      case "process-tracing":
+        return <ProcessTracingView projectId={selectedProjectId} />;
+      case "comparative":
+        return <ComparativeDesignView projectId={selectedProjectId} />;
+      case "framing":
+        return <FramingAnalysisView projectId={selectedProjectId} />;
+      case "report":
+        return <AnalysisReport projectId={selectedProjectId} />;
+      case "dashboard":
       default:
-        return null;
-    }
-  };
-
-  // ダッシュボード
-  const renderDashboard = () => {
-    if (!selectedProject) return null;
-    return (
-      <div className="qual-dashboard">
-        <div className="qual-dashboard-header">
-          {editingProject ? (
-            <div className="qual-edit-form">
-              <input
-                className="input-field text-lg font-bold"
-                value={selectedProject.name}
-                onChange={(e) =>
-                  setSelectedProject({ ...selectedProject, name: e.target.value })
-                }
-              />
-              <textarea
-                className="input-field text-sm mt-2"
-                rows={2}
-                value={selectedProject.description ?? ''}
-                onChange={(e) =>
-                  setSelectedProject({
-                    ...selectedProject,
-                    description: e.target.value || null,
-                  })
-                }
-                placeholder="プロジェクト説明..."
-              />
-              <select
-                className="input-field text-sm mt-2"
-                value={selectedProject.methodType}
-                onChange={(e) =>
-                  setSelectedProject({
-                    ...selectedProject,
-                    methodType: e.target.value,
-                  })
-                }
+        return (
+          <div style={{ padding: "24px" }}>
+            <h2
+              className="text-xl font-bold mb-4"
+              style={{ color: "var(--color-text-primary)" }}
+            >
+              {selectedProject?.name ?? "プロジェクト"}
+            </h2>
+            <div
+              className="grid grid-cols-2 gap-4"
+              style={{ maxWidth: "600px" }}
+            >
+              <div
+                className="p-4"
+                style={{
+                  backgroundColor: "var(--color-bg-secondary)",
+                  borderRadius: "var(--radius-card, 12px)",
+                  border: "1px solid var(--color-border-primary)",
+                }}
               >
-                {METHOD_TYPES.map((mt) => (
-                  <option key={mt.value} value={mt.value}>
-                    {mt.label}
-                  </option>
-                ))}
-              </select>
-              <div className="flex gap-2 mt-2">
-                <button
-                  className="btn-primary text-xs"
-                  onClick={() =>
-                    handleUpdateProject({
-                      name: selectedProject.name,
-                      description: selectedProject.description,
-                      methodType: selectedProject.methodType,
-                    })
-                  }
+                <div
+                  className="text-xs mb-1"
+                  style={{ color: "var(--color-text-tertiary)" }}
                 >
-                  保存
-                </button>
-                <button
-                  className="btn-ghost text-xs"
-                  onClick={() => {
-                    setEditingProject(false);
-                    loadProjects();
-                  }}
+                  手法
+                </div>
+                <div
+                  className="text-sm font-medium"
+                  style={{ color: "var(--color-text-primary)" }}
                 >
-                  キャンセル
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div>
-                <h2 className="text-lg font-bold">{selectedProject.name}</h2>
-                {selectedProject.description && (
-                  <p className="text-sm text-secondary mt-1">
-                    {selectedProject.description}
-                  </p>
-                )}
-                <div className="flex gap-3 mt-2 text-xs text-secondary">
-                  <span>
-                    手法:{' '}
-                    {METHOD_TYPES.find((m) => m.value === selectedProject.methodType)?.label ??
-                      selectedProject.methodType}
-                  </span>
-                  <span>作成: {selectedProject.createdAt?.slice(0, 10)}</span>
+                  {selectedProject?.methodType ?? "-"}
                 </div>
               </div>
-              <div className="flex gap-2">
-                <button
-                  className="btn-ghost text-xs"
-                  onClick={() => setEditingProject(true)}
-                >
-                  編集
-                </button>
-                <button
-                  className="btn-ghost text-xs text-red-500"
-                  onClick={handleDeleteProject}
-                >
-                  削除
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* クイックナビゲーション */}
-        <div className="qual-quick-nav">
-          <h3 className="text-sm font-semibold mb-3">分析ツール</h3>
-          <div className="qual-nav-grid">
-            {TABS.filter((t) => t.key !== 'dashboard').map((tab) => (
-              <button
-                key={tab.key}
-                className="qual-nav-card"
-                onClick={() => setActiveTab(tab.key)}
+              <div
+                className="p-4"
+                style={{
+                  backgroundColor: "var(--color-bg-secondary)",
+                  borderRadius: "var(--radius-card, 12px)",
+                  border: "1px solid var(--color-border-primary)",
+                }}
               >
-                <span className="qual-nav-icon">{tab.icon}</span>
-                <span className="qual-nav-label">{tab.label}</span>
-              </button>
-            ))}
+                <div
+                  className="text-xs mb-1"
+                  style={{ color: "var(--color-text-tertiary)" }}
+                >
+                  作成日
+                </div>
+                <div
+                  className="text-sm font-medium"
+                  style={{ color: "var(--color-text-primary)" }}
+                >
+                  {selectedProject
+                    ? new Date(selectedProject.createdAt).toLocaleDateString("ja-JP")
+                    : "-"}
+                </div>
+              </div>
+            </div>
+            <p
+              className="mt-4 text-sm"
+              style={{ color: "var(--color-text-secondary)" }}
+            >
+              {selectedProject?.description ?? "説明なし"}
+            </p>
+            <div className="mt-6">
+              <h3
+                className="text-sm font-semibold mb-3"
+                style={{ color: "var(--color-text-primary)" }}
+              >
+                クイックアクション
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {TABS.filter((t) => t.key !== "dashboard").map((t) => (
+                  <button
+                    key={t.key}
+                    type="button"
+                    onClick={() => setActiveTab(t.key)}
+                    className="text-xs px-3 py-1.5"
+                    style={{
+                      backgroundColor: "var(--color-bg-tertiary)",
+                      color: "var(--color-text-secondary)",
+                      borderRadius: "999px",
+                      border: "1px solid var(--color-border-secondary)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {t.icon} {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    );
+        );
+    }
   };
 
   if (loading) {
     return (
-      <div className="qualitative-view">
-        <div className="qual-loading">質的分析モジュールを読み込み中...</div>
+      <div
+        className="flex items-center justify-center h-full"
+        style={{ color: "var(--color-text-tertiary)" }}
+      >
+        <span className="text-sm">読み込み中…</span>
       </div>
     );
   }
 
   return (
-    <div className="qualitative-view">
-      {/* サイドバー: プロジェクト一覧 */}
-      <aside className="qual-sidebar">
-        <div className="qual-sidebar-header">
-          <h2 className="text-sm font-bold">プロジェクト</h2>
-          <button
-            className="btn-ghost text-xs"
-            onClick={() => setShowProjectForm(!showProjectForm)}
-            title="新規プロジェクト"
+    <div className="flex h-full overflow-hidden">
+      {/* 左: プロジェクト一覧 */}
+      <aside
+        className="flex flex-col h-full shrink-0"
+        style={{
+          width: "220px",
+          borderRight: "1px solid var(--color-border-primary)",
+          backgroundColor: "var(--color-bg-secondary)",
+        }}
+      >
+        <header
+          className="flex items-center justify-between px-3 shrink-0"
+          style={{
+            height: "44px",
+            borderBottom: "1px solid var(--color-border-primary)",
+          }}
+        >
+          <span
+            className="text-xs font-semibold"
+            style={{ color: "var(--color-text-tertiary)" }}
           >
-            <svg width="14" height="14" viewBox="0 0 14 14">
-              <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
+            プロジェクト
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowNewProject(true)}
+            className="text-xs"
+            style={{
+              color: "var(--color-accent-primary)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            + 新規
           </button>
-        </div>
+        </header>
 
-        {/* 新規プロジェクトフォーム */}
-        {showProjectForm && (
-          <div className="qual-project-form">
-            <input
-              className="input-field text-xs"
-              placeholder="プロジェクト名..."
-              value={newProject.name}
-              onChange={(e) =>
-                setNewProject({ ...newProject, name: e.target.value })
-              }
-              onKeyDown={(e) => e.key === 'Enter' && handleCreateProject()}
-              autoFocus
-            />
-            <select
-              className="input-field text-xs mt-1"
-              value={newProject.methodType}
-              onChange={(e) =>
-                setNewProject({ ...newProject, methodType: e.target.value })
-              }
+        <div className="flex-1 overflow-y-auto p-2">
+          {showNewProject && (
+            <div
+              className="mb-2 p-2"
+              style={{
+                backgroundColor: "var(--color-bg-tertiary)",
+                borderRadius: "8px",
+              }}
             >
-              {METHOD_TYPES.map((mt) => (
-                <option key={mt.value} value={mt.value}>
-                  {mt.label}
-                </option>
-              ))}
-            </select>
-            <div className="flex gap-1 mt-1">
-              <button
-                className="btn-primary text-xs flex-1"
-                onClick={handleCreateProject}
-                disabled={!newProject.name.trim()}
+              <input
+                type="text"
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+                placeholder="プロジェクト名"
+                className="w-full text-xs mb-1 px-2 py-1"
+                style={{
+                  backgroundColor: "var(--color-bg-primary)",
+                  color: "var(--color-text-primary)",
+                  border: "1px solid var(--color-border-primary)",
+                  borderRadius: "4px",
+                  outline: "none",
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void handleCreateProject();
+                  if (e.key === "Escape") setShowNewProject(false);
+                }}
+                autoFocus
+              />
+              <select
+                value={newProjectMethod}
+                onChange={(e) => setNewProjectMethod(e.target.value)}
+                className="w-full text-xs mb-1 px-2 py-1"
+                style={{
+                  backgroundColor: "var(--color-bg-primary)",
+                  color: "var(--color-text-primary)",
+                  border: "1px solid var(--color-border-primary)",
+                  borderRadius: "4px",
+                }}
               >
-                作成
-              </button>
+                <option value="thematic">テーマ分析</option>
+                <option value="grounded">グラウンデッド・セオリー</option>
+                <option value="content">内容分析</option>
+                <option value="historical">歴史的分析</option>
+                <option value="comparative">比較政治分析</option>
+              </select>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => void handleCreateProject()}
+                  className="flex-1 text-xs py-1"
+                  style={{
+                    backgroundColor: "var(--color-accent-primary)",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                >
+                  作成
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowNewProject(false)}
+                  className="text-xs px-2 py-1"
+                  style={{
+                    backgroundColor: "transparent",
+                    color: "var(--color-text-tertiary)",
+                    border: "1px solid var(--color-border-secondary)",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          )}
+
+          {projects.map((p) => (
+            <div
+              key={p.id}
+              className="flex items-center justify-between group"
+              style={{
+                padding: "6px 8px",
+                borderRadius: "6px",
+                cursor: "pointer",
+                backgroundColor:
+                  selectedProjectId === p.id
+                    ? "var(--color-bg-hover)"
+                    : "transparent",
+                color:
+                  selectedProjectId === p.id
+                    ? "var(--color-accent-primary)"
+                    : "var(--color-text-secondary)",
+                transition: "all 100ms ease-out",
+              }}
+              onClick={() => {
+                setSelectedProjectId(p.id);
+                setActiveTab("dashboard");
+              }}
+            >
+              <span className="text-xs truncate flex-1">{p.name}</span>
               <button
-                className="btn-ghost text-xs"
-                onClick={() => setShowProjectForm(false)}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void handleDeleteProject(p.id);
+                }}
+                className="text-xs opacity-0 group-hover:opacity-100"
+                style={{
+                  color: "var(--color-text-tertiary)",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "0 4px",
+                }}
               >
                 ×
               </button>
             </div>
-          </div>
-        )}
+          ))}
 
-        {/* プロジェクトリスト */}
-        <div className="qual-project-list">
-          {projects.length === 0 ? (
-            <p className="text-xs text-secondary p-3">
-              プロジェクトがありません
-            </p>
-          ) : (
-            projects.map((project) => (
-              <button
-                key={project.id}
-                className={`qual-project-item ${
-                  selectedProject?.id === project.id ? 'selected' : ''
-                }`}
-                onClick={() => {
-                  setSelectedProject(project);
-                  setActiveTab('dashboard');
-                }}
-              >
-                <span className="qual-project-name">{project.name}</span>
-                <span className="qual-project-method">
-                  {METHOD_TYPES.find((m) => m.value === project.methodType)?.label ??
-                    project.methodType}
-                </span>
-              </button>
-            ))
+          {projects.length === 0 && !showNewProject && (
+            <div
+              className="text-center py-8 text-xs"
+              style={{ color: "var(--color-text-tertiary)" }}
+            >
+              プロジェクトなし
+            </div>
           )}
         </div>
       </aside>
 
-      {/* メインコンテンツ */}
-      <main className="qual-main">
+      {/* 中央: タブバー + コンテンツ */}
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* タブバー */}
-        {selectedProject && (
-          <nav className="qual-tab-bar">
-            {TABS.map((tab) => (
-              <button
-                key={tab.key}
-                className={`qual-tab ${activeTab === tab.key ? 'active' : ''}`}
-                onClick={() => setActiveTab(tab.key)}
-                title={tab.label}
-              >
-                <span className="qual-tab-icon">{tab.icon}</span>
-                <span className="qual-tab-label">{tab.label}</span>
-              </button>
-            ))}
-          </nav>
-        )}
+        <nav
+          className="flex items-center gap-0 shrink-0 overflow-x-auto"
+          style={{
+            height: "40px",
+            borderBottom: "1px solid var(--color-border-primary)",
+            backgroundColor: "var(--color-bg-secondary)",
+          }}
+        >
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setActiveTab(t.key)}
+              className="text-xs px-3 h-full whitespace-nowrap"
+              style={{
+                color:
+                  activeTab === t.key
+                    ? "var(--color-accent-primary)"
+                    : "var(--color-text-tertiary)",
+                borderBottom:
+                  activeTab === t.key
+                    ? "2px solid var(--color-accent-primary)"
+                    : "2px solid transparent",
+                background: "none",
+                border: "none",
+                borderBottomStyle: "solid",
+                borderBottomWidth: "2px",
+                borderBottomColor:
+                  activeTab === t.key
+                    ? "var(--color-accent-primary)"
+                    : "transparent",
+                cursor: "pointer",
+                transition: "all 100ms ease-out",
+              }}
+            >
+              {t.icon} {t.label}
+            </button>
+          ))}
+        </nav>
 
         {/* タブコンテンツ */}
-        <div className="qual-content">{renderTabContent()}</div>
-      </main>
+        <div className="flex-1 overflow-y-auto">{renderTabContent()}</div>
+      </div>
     </div>
   );
 };

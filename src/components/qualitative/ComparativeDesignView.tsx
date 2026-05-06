@@ -1,412 +1,605 @@
 // src/components/qualitative/ComparativeDesignView.tsx
-// 比較デザイン — ケース×変数マトリックス + QCA CSV エクスポート
-// CSV format: "case,変数A,変数B,変数C,結果Y" → "日本,1,0,1,1"
-// Rust backend: get_comparative_design(project_id) → Vec<ComparativeDesignFull>
-// add_comparative_case(design_id, name, sort_order)
-// add_comparative_variable(design_id, name, var_type, sort_order)
-// upsert_comparative_cell(case_id, variable_id, value, paper_id)
-// export_qca_csv(design_id) → String
+// 比較ケースデザイン — MSSD/MDSD + 変数×ケースマトリクス + QCA CSV エクスポート
 
-import type React from "react";
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type {
   ComparativeDesignFull,
-  ComparativeCase,
-  ComparativeVariable,
-  ComparativeCell,
   CreateComparativeDesignInput,
 } from "../../types";
-import { toast } from "../ui/Toast";
 
 interface ComparativeDesignViewProps {
   projectId: string;
 }
 
-export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({ projectId }) => {
-  const [designs, setDesigns] = useState<ComparativeDesignFull[]>([]);
-  const [activeDesignId, setActiveDesignId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [showDesignForm, setShowDesignForm] = useState(false);
+const DESIGN_TYPES = [
+  { value: "MSSD", label: "MSSD（最類似事例法）" },
+  { value: "MDSD", label: "MDSD（最相違事例法）" },
+  { value: "QCA", label: "QCA（質的比較分析）" },
+  { value: "other", label: "その他" },
+];
 
-  // フォーム
-  const [designForm, setDesignForm] = useState({
-    title: "",
-    designType: "MSSD" as string,
-  });
+export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
+  projectId,
+}) => {
+  const [design, setDesign] = useState<ComparativeDesignFull | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDesignType, setNewDesignType] = useState("MSSD");
+  const [newCaseName, setNewCaseName] = useState("");
+  const [newVarName, setNewVarName] = useState("");
+  const [newVarType, setNewVarType] = useState("independent");
+  const [csvOutput, setCsvOutput] = useState<string | null>(null);
 
-  // ローカル cell 状態（楽観的更新用）
-  const [localCells, setLocalCells] = useState<ComparativeCell[]>([]);
-
-  const loadDesigns = useCallback(async () => {
-    if (!projectId) return;
+  const loadDesign = useCallback(async () => {
     setLoading(true);
     try {
-      const d = await invoke<ComparativeDesignFull[]>("get_comparative_design", {
-        projectId,
-      });
-      setDesigns(d);
-      if (d.length > 0 && !activeDesignId) {
-        setActiveDesignId(d[0].id);
-      }
-    } catch (e) {
-      console.error("Failed to load designs:", e);
+      const result = await invoke<ComparativeDesignFull | null>(
+        "get_comparative_design",
+        { projectId }
+      );
+      setDesign(result);
+    } catch (err) {
+      console.error("比較デザイン取得エラー:", err);
     } finally {
       setLoading(false);
     }
-  }, [projectId, activeDesignId]);
+  }, [projectId]);
 
   useEffect(() => {
-    loadDesigns();
-  }, [loadDesigns]);
-
-  // アクティブデザインが変わったらローカルセルを更新
-  const activeDesign = designs.find((d) => d.id === activeDesignId);
-  useEffect(() => {
-    setLocalCells(activeDesign?.cells ?? []);
-  }, [activeDesign]);
-
-  const getCellValue = (caseId: string, varId: string): string => {
-    return localCells.find((c) => c.caseId === caseId && c.variableId === varId)?.value ?? "";
-  };
-
-  const handleCellChange = useCallback(async (caseId: string, varId: string, value: string) => {
-    // 楽観的にローカル更新
-    setLocalCells((prev) => {
-      const existing = prev.find((c) => c.caseId === caseId && c.variableId === varId);
-      if (existing) {
-        return prev.map((c) =>
-          c.caseId === caseId && c.variableId === varId ? { ...c, value } : c,
-        );
-      }
-      return [...prev, { id: "", caseId, variableId: varId, value, paperId: null }];
-    });
-    try {
-      await invoke("upsert_comparative_cell", {
-        caseId,
-        variableId: varId,
-        value,
-        paperId: null as string | null,
-      });
-    } catch (e) {
-      toast.error("セルの更新に失敗しました");
-    }
-  }, []);
+    void loadDesign();
+  }, [loadDesign]);
 
   const handleCreateDesign = useCallback(async () => {
-    if (!projectId || !designForm.title.trim()) {
-      toast.error("デザイン名を入力してください");
-      return;
-    }
+    if (!newTitle.trim()) return;
     try {
       const input: CreateComparativeDesignInput = {
         projectId,
-        title: designForm.title.trim(),
-        designType: designForm.designType,
+        title: newTitle.trim(),
+        designType: newDesignType,
       };
       await invoke("create_comparative_design", { input });
-      setDesignForm({ title: "", designType: "MSSD" });
-      setShowDesignForm(false);
-      toast.success("デザインを作成しました");
-      await loadDesigns();
-    } catch (e) {
-      toast.error("作成に失敗しました");
+      setNewTitle("");
+      setShowCreateForm(false);
+      void loadDesign();
+    } catch (err) {
+      console.error("デザイン作成エラー:", err);
     }
-  }, [projectId, designForm, loadDesigns]);
+  }, [newTitle, newDesignType, projectId, loadDesign]);
 
   const handleAddCase = useCallback(async () => {
-    if (!activeDesignId) return;
-    const name = prompt("ケース名を入力:");
-    if (!name?.trim()) return;
+    if (!design || !newCaseName.trim()) return;
     try {
       await invoke("add_comparative_case", {
-        designId: activeDesignId,
-        name: name.trim(),
-        sortOrder: activeDesign?.cases.length ?? 0,
+        designId: design.id,
+        name: newCaseName.trim(),
       });
-      toast.success("ケースを追加しました");
-      await loadDesigns();
-    } catch (e) {
-      toast.error("追加に失敗しました");
+      setNewCaseName("");
+      void loadDesign();
+    } catch (err) {
+      console.error("ケース追加エラー:", err);
     }
-  }, [activeDesignId, activeDesign, loadDesigns]);
+  }, [design, newCaseName, loadDesign]);
 
   const handleAddVariable = useCallback(async () => {
-    if (!activeDesignId) return;
-    const name = prompt("変数名を入力:");
-    if (!name?.trim()) return;
-    const isOutcome = confirm("この変数は結果変数ですか？");
+    if (!design || !newVarName.trim()) return;
     try {
       await invoke("add_comparative_variable", {
-        designId: activeDesignId,
-        name: name.trim(),
-        varType: isOutcome ? "dependent" : "independent",
-        sortOrder: activeDesign?.variables.length ?? 0,
+        designId: design.id,
+        name: newVarName.trim(),
+        varType: newVarType,
       });
-      toast.success("変数を追加しました");
-      await loadDesigns();
-    } catch (e) {
-      toast.error("追加に失敗しました");
+      setNewVarName("");
+      void loadDesign();
+    } catch (err) {
+      console.error("変数追加エラー:", err);
     }
-  }, [activeDesignId, activeDesign, loadDesigns]);
+  }, [design, newVarName, newVarType, loadDesign]);
 
-  const handleDeleteCase = async (id: string) => {
-    if (!confirm("このケースを削除しますか？")) return;
-    try {
-      await invoke("delete_comparative_case", { id });
-      await loadDesigns();
-    } catch (e) {
-      toast.error("削除に失敗しました");
-    }
-  };
+  const handleDeleteCase = useCallback(
+    async (id: string) => {
+      if (!confirm("このケースを削除しますか？")) return;
+      try {
+        await invoke("delete_comparative_case", { id });
+        void loadDesign();
+      } catch (err) {
+        console.error("ケース削除エラー:", err);
+      }
+    },
+    [loadDesign]
+  );
 
-  const handleDeleteVariable = async (id: string) => {
-    if (!confirm("この変数を削除しますか？")) return;
-    try {
-      await invoke("delete_comparative_variable", { id });
-      await loadDesigns();
-    } catch (e) {
-      toast.error("削除に失敗しました");
-    }
-  };
+  const handleDeleteVariable = useCallback(
+    async (id: string) => {
+      if (!confirm("この変数を削除しますか？")) return;
+      try {
+        await invoke("delete_comparative_variable", { id });
+        void loadDesign();
+      } catch (err) {
+        console.error("変数削除エラー:", err);
+      }
+    },
+    [loadDesign]
+  );
 
-  /** QCA CSV エクスポート — Rust backend から CSV 文字列を取得してダウンロード */
+  const handleCellChange = useCallback(
+    async (caseId: string, variableId: string, value: string) => {
+      try {
+        await invoke("upsert_comparative_cell", {
+          caseId,
+          variableId,
+          value: value || null,
+          paperId: null,
+        });
+        void loadDesign();
+      } catch (err) {
+        console.error("セル更新エラー:", err);
+      }
+    },
+    [loadDesign]
+  );
+
   const handleExportCsv = useCallback(async () => {
-    if (!activeDesignId) return;
+    if (!design) return;
     try {
-      const csv = await invoke<string>("export_qca_csv", { designId: activeDesignId });
-      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "qca_export.csv";
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success("CSVをエクスポートしました");
-    } catch (e) {
-      toast.error("エクスポートに失敗しました: " + String(e));
+      const csv = await invoke<string>("export_qca_csv", {
+        designId: design.id,
+      });
+      setCsvOutput(csv);
+    } catch (err) {
+      console.error("CSVエクスポートエラー:", err);
     }
-  }, [activeDesignId]);
+  }, [design]);
 
-  const inputStyle: React.CSSProperties = {
-    backgroundColor: "var(--color-bg-tertiary)",
-    color: "var(--color-text-primary)",
-    border: "1px solid var(--color-border-secondary)",
-    borderRadius: "6px",
-    padding: "6px 10px",
-    outline: "none",
-    width: "100%",
-    fontSize: "13px",
+  const handleCopyCsv = useCallback(() => {
+    if (csvOutput) {
+      void navigator.clipboard.writeText(csvOutput);
+    }
+  }, [csvOutput]);
+
+  const getCellValue = (caseId: string, variableId: string): string => {
+    if (!design) return "";
+    const cell = design.cells.find(
+      (c) => c.caseId === caseId && c.variableId === variableId
+    );
+    return cell?.value ?? "";
   };
 
-  const designTypeLabels: Record<string, string> = {
-    MSSD: "最類似事例デザイン",
-    MDSD: "最相違事例デザイン",
-    custom: "カスタム",
-  };
+  if (loading) {
+    return (
+      <div
+        className="flex items-center justify-center h-full"
+        style={{ color: "var(--color-text-tertiary)" }}
+      >
+        <span className="text-sm">読み込み中…</span>
+      </div>
+    );
+  }
 
-  const cases = activeDesign?.cases ?? [];
-  const variables = activeDesign?.variables ?? [];
-
-  return (
-    <div className="h-full overflow-y-auto p-4">
-      <div className="max-w-4xl mx-auto">
-        {/* ヘッダー */}
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-base font-semibold" style={{ color: "var(--color-text-primary)" }}>
-              比較分析デザイン
-            </h3>
-            <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-              ケース×変数マトリックスで比較分析。QCA用CSVエクスポート対応
-            </p>
-          </div>
-          <div className="flex gap-2">
-            {activeDesignId && cases.length > 0 && variables.length > 0 && (
-              <button
-                onClick={handleExportCsv}
-                className="text-xs px-3 py-1.5 flex items-center gap-1"
-                style={{
-                  backgroundColor: "var(--color-bg-hover)",
-                  color: "var(--color-text-secondary)",
-                  borderRadius: "6px",
-                  border: "1px solid var(--color-border-secondary)",
-                  cursor: "pointer",
-                }}
-              >
-                CSV エクスポート
-              </button>
-            )}
-            <button
-              onClick={() => setShowDesignForm(!showDesignForm)}
-              className="text-xs px-3 py-1.5 flex items-center gap-1"
-              style={{ backgroundColor: "var(--color-accent-primary)", color: "white", borderRadius: "6px", border: "none", cursor: "pointer" }}
+  // デザイン未作成
+  if (!design) {
+    return (
+      <div className="p-6">
+        {showCreateForm ? (
+          <div
+            className="p-4"
+            style={{
+              backgroundColor: "var(--color-bg-secondary)",
+              borderRadius: "10px",
+              border: "1px solid var(--color-border-primary)",
+              maxWidth: "400px",
+            }}
+          >
+            <h3
+              className="text-sm font-semibold mb-3"
+              style={{ color: "var(--color-text-primary)" }}
             >
-              + デザイン作成
-            </button>
-          </div>
-        </div>
-
-        {/* デザイン作成フォーム */}
-        {showDesignForm && (
-          <div className="p-4 mb-4" style={{ backgroundColor: "var(--color-bg-secondary)", border: "1px solid var(--color-border-secondary)", borderRadius: "10px" }}>
-            <div className="flex flex-col gap-2">
-              <input type="text" value={designForm.title} onChange={(e) => setDesignForm({ ...designForm, title: e.target.value })} style={inputStyle} placeholder="デザイン名 *" />
-              <select value={designForm.designType} onChange={(e) => setDesignForm({ ...designForm, designType: e.target.value })} style={inputStyle}>
-                <option value="MSSD">最類似事例デザイン (MSSD)</option>
-                <option value="MDSD">最相違事例デザイン (MDSD)</option>
-                <option value="custom">カスタム</option>
-              </select>
-              <div className="flex gap-2 justify-end">
-                <button onClick={() => setShowDesignForm(false)} className="text-xs px-3 py-1.5" style={{ color: "var(--color-text-secondary)", border: "1px solid var(--color-border-secondary)", borderRadius: "6px", background: "none", cursor: "pointer" }}>キャンセル</button>
-                <button onClick={handleCreateDesign} className="text-xs px-4 py-1.5" style={{ backgroundColor: "var(--color-accent-primary)", color: "white", borderRadius: "6px", border: "none", cursor: "pointer" }}>作成</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* デザインタブ */}
-        {designs.length > 0 && (
-          <div className="flex gap-1 mb-4 flex-wrap">
-            {designs.map((d) => (
+              新しい比較デザイン
+            </h3>
+            <input
+              type="text"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              placeholder="デザインタイトル"
+              className="w-full text-xs px-2 py-1.5 mb-2"
+              style={{
+                backgroundColor: "var(--color-bg-primary)",
+                color: "var(--color-text-primary)",
+                border: "1px solid var(--color-border-primary)",
+                borderRadius: "6px",
+                outline: "none",
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void handleCreateDesign();
+              }}
+              autoFocus
+            />
+            <select
+              value={newDesignType}
+              onChange={(e) => setNewDesignType(e.target.value)}
+              className="w-full text-xs px-2 py-1.5 mb-3"
+              style={{
+                backgroundColor: "var(--color-bg-primary)",
+                color: "var(--color-text-primary)",
+                border: "1px solid var(--color-border-primary)",
+                borderRadius: "6px",
+              }}
+            >
+              {DESIGN_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+            <div className="flex gap-2">
               <button
-                key={d.id}
-                onClick={() => setActiveDesignId(d.id)}
+                type="button"
+                onClick={() => void handleCreateDesign()}
                 className="text-xs px-3 py-1.5"
                 style={{
-                  backgroundColor: activeDesignId === d.id ? "var(--color-accent-primary)" : "var(--color-bg-secondary)",
-                  color: activeDesignId === d.id ? "white" : "var(--color-text-secondary)",
+                  backgroundColor: "var(--color-accent-primary)",
+                  color: "#fff",
+                  border: "none",
                   borderRadius: "6px",
-                  border: "1px solid var(--color-border-secondary)",
                   cursor: "pointer",
                 }}
               >
-                {d.title}
-                <span className="ml-1 opacity-60">({designTypeLabels[d.designType] ?? d.designType})</span>
+                作成
               </button>
-            ))}
-          </div>
-        )}
-
-        {/* マトリックス */}
-        {activeDesignId && (
-          <>
-            <div className="flex gap-2 mb-3">
-              <button onClick={handleAddCase} className="text-xs px-3 py-1 flex items-center gap-1" style={{ backgroundColor: "var(--color-bg-hover)", color: "var(--color-text-secondary)", borderRadius: "6px", border: "1px solid var(--color-border-secondary)", cursor: "pointer" }}>
-                + ケース
-              </button>
-              <button onClick={handleAddVariable} className="text-xs px-3 py-1 flex items-center gap-1" style={{ backgroundColor: "var(--color-bg-hover)", color: "var(--color-text-secondary)", borderRadius: "6px", border: "1px solid var(--color-border-secondary)", cursor: "pointer" }}>
-                + 変数
+              <button
+                type="button"
+                onClick={() => setShowCreateForm(false)}
+                className="text-xs px-3 py-1.5"
+                style={{
+                  background: "transparent",
+                  color: "var(--color-text-secondary)",
+                  border: "1px solid var(--color-border-secondary)",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                }}
+              >
+                キャンセル
               </button>
             </div>
-
-            {cases.length > 0 && variables.length > 0 ? (
-              <div className="overflow-auto" style={{ border: "1px solid var(--color-border-secondary)", borderRadius: "8px" }}>
-                <table style={{ borderCollapse: "collapse", minWidth: "100%" }}>
-                  <thead>
-                    <tr>
-                      <th className="text-xs font-medium text-left" style={{ padding: "8px 12px", backgroundColor: "var(--color-bg-secondary)", color: "var(--color-text-secondary)", borderBottom: "1px solid var(--color-border-secondary)", borderRight: "1px solid var(--color-border-secondary)", minWidth: "120px" }}>
-                        case
-                      </th>
-                      {variables.map((v) => (
-                        <th
-                          key={v.id}
-                          className="text-xs font-medium text-center group"
-                          style={{
-                            padding: "8px 12px",
-                            backgroundColor: v.varType === "dependent" ? "rgba(99,102,241,0.08)" : "var(--color-bg-secondary)",
-                            color: "var(--color-text-secondary)",
-                            borderBottom: "1px solid var(--color-border-secondary)",
-                            borderRight: "1px solid var(--color-border-secondary)",
-                            minWidth: "80px",
-                          }}
-                        >
-                          <div className="flex items-center justify-center gap-1">
-                            <span>{v.name}</span>
-                            {v.varType === "dependent" && <span className="text-xs opacity-60">(Y)</span>}
-                            <button onClick={() => handleDeleteVariable(v.id)} className="opacity-0 group-hover:opacity-100" style={{ color: "#ef4444", fontSize: "10px", background: "none", border: "none", cursor: "pointer" }}>×</button>
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cases.map((c) => (
-                      <tr key={c.id} className="group">
-                        <td className="text-xs font-medium" style={{ padding: "4px 12px", backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", borderBottom: "1px solid var(--color-border-secondary)", borderRight: "1px solid var(--color-border-secondary)" }}>
-                          <div className="flex items-center justify-between">
-                            <span>{c.name}</span>
-                            <button onClick={() => handleDeleteCase(c.id)} className="opacity-0 group-hover:opacity-100" style={{ color: "#ef4444", fontSize: "10px", background: "none", border: "none", cursor: "pointer" }}>×</button>
-                          </div>
-                        </td>
-                        {variables.map((v) => (
-                          <td key={v.id} style={{ padding: "2px 4px", borderBottom: "1px solid var(--color-border-secondary)", borderRight: "1px solid var(--color-border-secondary)", backgroundColor: v.varType === "dependent" ? "rgba(99,102,241,0.04)" : "transparent" }}>
-                            <input
-                              type="text"
-                              value={getCellValue(c.id, v.id)}
-                              onChange={(e) => handleCellChange(c.id, v.id, e.target.value)}
-                              className="w-full text-xs text-center"
-                              style={{
-                                backgroundColor: "transparent",
-                                color: "var(--color-text-primary)",
-                                border: "none",
-                                outline: "none",
-                                padding: "4px",
-                              }}
-                              placeholder="—"
-                            />
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12" style={{ color: "var(--color-text-tertiary)" }}>
-                <p className="text-sm">ケースと変数を追加してマトリックスを構築しましょう</p>
-              </div>
-            )}
-
-            {/* CSV プレビュー */}
-            {cases.length > 0 && variables.length > 0 && (
-              <div className="mt-4">
-                <p className="text-xs font-medium mb-1" style={{ color: "var(--color-text-secondary)" }}>
-                  QCA CSV プレビュー
-                </p>
-                <pre
-                  className="text-xs p-3 overflow-x-auto"
-                  style={{
-                    backgroundColor: "var(--color-bg-tertiary)",
-                    color: "var(--color-text-secondary)",
-                    borderRadius: "6px",
-                    border: "1px solid var(--color-border-secondary)",
-                    fontFamily: "monospace",
-                    lineHeight: "1.5",
-                  }}
-                >
-                  {["case," + variables.map((v) => v.name).join(","),
-                    ...cases.map((c) =>
-                      c.name + "," + variables.map((v) => getCellValue(c.id, v.id) || "0").join(","),
-                    ),
-                  ].join("\n")}
-                </pre>
-              </div>
-            )}
-          </>
-        )}
-
-        {designs.length === 0 && !showDesignForm && (
-          <div className="flex flex-col items-center justify-center py-12" style={{ color: "var(--color-text-tertiary)" }}>
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" style={{ opacity: 0.4 }}>
-              <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
-            </svg>
-            <p className="text-sm mt-2">比較デザインを作成して事例比較を始めましょう</p>
+          </div>
+        ) : (
+          <div
+            className="flex flex-col items-center justify-center gap-4 py-12"
+            style={{ color: "var(--color-text-tertiary)" }}
+          >
+            <span className="text-sm">比較デザインがありません</span>
+            <button
+              type="button"
+              onClick={() => setShowCreateForm(true)}
+              className="text-sm px-4 py-2"
+              style={{
+                backgroundColor: "var(--color-accent-primary)",
+                color: "#fff",
+                border: "none",
+                borderRadius: "8px",
+                cursor: "pointer",
+              }}
+            >
+              + 比較デザインを作成
+            </button>
           </div>
         )}
       </div>
+    );
+  }
+
+  return (
+    <div className="p-4 h-full overflow-y-auto">
+      {/* ヘッダー */}
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3
+            className="text-sm font-semibold"
+            style={{ color: "var(--color-text-primary)" }}
+          >
+            {design.title}
+          </h3>
+          <span
+            className="text-xs"
+            style={{ color: "var(--color-text-tertiary)" }}
+          >
+            {DESIGN_TYPES.find((t) => t.value === design.designType)?.label ??
+              design.designType}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => void handleExportCsv()}
+          className="text-xs px-3 py-1"
+          style={{
+            backgroundColor: "var(--color-bg-tertiary)",
+            color: "var(--color-text-secondary)",
+            border: "1px solid var(--color-border-secondary)",
+            borderRadius: "6px",
+            cursor: "pointer",
+          }}
+        >
+          QCA CSV エクスポート
+        </button>
+      </div>
+
+      {/* ケース追加 + 変数追加 */}
+      <div className="flex gap-4 mb-4">
+        <div className="flex items-center gap-1">
+          <input
+            type="text"
+            value={newCaseName}
+            onChange={(e) => setNewCaseName(e.target.value)}
+            placeholder="ケース名"
+            className="text-xs px-2 py-1"
+            style={{
+              backgroundColor: "var(--color-bg-primary)",
+              color: "var(--color-text-primary)",
+              border: "1px solid var(--color-border-primary)",
+              borderRadius: "4px",
+              outline: "none",
+              width: "120px",
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void handleAddCase();
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => void handleAddCase()}
+            className="text-xs px-2 py-1"
+            style={{
+              backgroundColor: "var(--color-accent-primary)",
+              color: "#fff",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+            }}
+          >
+            + ケース
+          </button>
+        </div>
+        <div className="flex items-center gap-1">
+          <input
+            type="text"
+            value={newVarName}
+            onChange={(e) => setNewVarName(e.target.value)}
+            placeholder="変数名"
+            className="text-xs px-2 py-1"
+            style={{
+              backgroundColor: "var(--color-bg-primary)",
+              color: "var(--color-text-primary)",
+              border: "1px solid var(--color-border-primary)",
+              borderRadius: "4px",
+              outline: "none",
+              width: "120px",
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void handleAddVariable();
+            }}
+          />
+          <select
+            value={newVarType}
+            onChange={(e) => setNewVarType(e.target.value)}
+            className="text-xs px-1 py-1"
+            style={{
+              backgroundColor: "var(--color-bg-primary)",
+              color: "var(--color-text-primary)",
+              border: "1px solid var(--color-border-primary)",
+              borderRadius: "4px",
+            }}
+          >
+            <option value="independent">独立変数</option>
+            <option value="dependent">従属変数</option>
+            <option value="control">統制変数</option>
+            <option value="outcome">結果</option>
+          </select>
+          <button
+            type="button"
+            onClick={() => void handleAddVariable()}
+            className="text-xs px-2 py-1"
+            style={{
+              backgroundColor: "var(--color-accent-primary)",
+              color: "#fff",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+            }}
+          >
+            + 変数
+          </button>
+        </div>
+      </div>
+
+      {/* マトリクス */}
+      {design.cases.length > 0 && design.variables.length > 0 ? (
+        <div className="overflow-auto mb-6">
+          <table
+            style={{
+              borderCollapse: "collapse",
+              fontSize: "12px",
+              minWidth: "100%",
+            }}
+          >
+            <thead>
+              <tr>
+                <th
+                  style={{
+                    padding: "8px 12px",
+                    textAlign: "left",
+                    borderBottom: "2px solid var(--color-border-primary)",
+                    color: "var(--color-text-tertiary)",
+                    fontWeight: 600,
+                  }}
+                >
+                  ケース
+                </th>
+                {design.variables.map((v) => (
+                  <th
+                    key={v.id}
+                    style={{
+                      padding: "8px 12px",
+                      textAlign: "center",
+                      borderBottom: "2px solid var(--color-border-primary)",
+                      color: "var(--color-text-tertiary)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      <span>{v.name}</span>
+                      <span
+                        style={{ fontSize: "9px", opacity: 0.6 }}
+                      >
+                        ({v.varType === "dependent"
+                          ? "従属"
+                          : v.varType === "outcome"
+                          ? "結果"
+                          : v.varType === "control"
+                          ? "統制"
+                          : "独立"})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => void handleDeleteVariable(v.id)}
+                        style={{
+                          color: "var(--color-text-tertiary)",
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          fontSize: "10px",
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {design.cases.map((c) => (
+                <tr key={c.id}>
+                  <td
+                    style={{
+                      padding: "6px 12px",
+                      borderBottom:
+                        "1px solid var(--color-border-secondary)",
+                      color: "var(--color-text-primary)",
+                      fontWeight: 500,
+                    }}
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>{c.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => void handleDeleteCase(c.id)}
+                        style={{
+                          color: "var(--color-text-tertiary)",
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          fontSize: "10px",
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </td>
+                  {design.variables.map((v) => (
+                    <td
+                      key={v.id}
+                      style={{
+                        padding: "4px 8px",
+                        borderBottom:
+                          "1px solid var(--color-border-secondary)",
+                        textAlign: "center",
+                      }}
+                    >
+                      <input
+                        type="text"
+                        defaultValue={getCellValue(c.id, v.id)}
+                        onBlur={(e) =>
+                          void handleCellChange(c.id, v.id, e.target.value)
+                        }
+                        className="text-xs text-center w-full px-1 py-0.5"
+                        style={{
+                          backgroundColor: "var(--color-bg-primary)",
+                          color: "var(--color-text-primary)",
+                          border: "1px solid var(--color-border-secondary)",
+                          borderRadius: "4px",
+                          outline: "none",
+                          maxWidth: "100px",
+                        }}
+                        placeholder="—"
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div
+          className="text-center py-8 text-xs"
+          style={{ color: "var(--color-text-tertiary)" }}
+        >
+          {design.cases.length === 0 && design.variables.length === 0
+            ? "ケースと変数を追加してマトリクスを作成してください"
+            : design.cases.length === 0
+            ? "ケースを追加してください"
+            : "変数を追加してください"}
+        </div>
+      )}
+
+      {/* CSV出力 */}
+      {csvOutput && (
+        <div
+          className="p-4"
+          style={{
+            backgroundColor: "var(--color-bg-secondary)",
+            borderRadius: "10px",
+            border: "1px solid var(--color-border-primary)",
+          }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <h4
+              className="text-xs font-semibold"
+              style={{ color: "var(--color-text-primary)" }}
+            >
+              QCA CSV 出力
+            </h4>
+            <button
+              type="button"
+              onClick={handleCopyCsv}
+              className="text-xs px-2 py-0.5"
+              style={{
+                backgroundColor: "var(--color-accent-primary)",
+                color: "#fff",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
+            >
+              コピー
+            </button>
+          </div>
+          <pre
+            className="text-xs p-3 overflow-auto"
+            style={{
+              backgroundColor: "var(--color-bg-primary)",
+              color: "var(--color-text-primary)",
+              borderRadius: "6px",
+              fontFamily: "monospace",
+              whiteSpace: "pre-wrap",
+              maxHeight: "200px",
+            }}
+          >
+            {csvOutput}
+          </pre>
+        </div>
+      )}
     </div>
   );
 };
-
-export default ComparativeDesignView;

@@ -52,6 +52,8 @@ interface UIState {
   openGraph: () => void;
   /** 設定ビューを開く（履歴に追加） */
   openSettings: () => void;
+  /** 質的分析ビューを開く（履歴に追加） */
+  openQualitative: () => void;
 
   /** ナビゲーション: 戻る */
   goBack: () => void;
@@ -170,6 +172,21 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({
       mainPaneContent: { type: "settings" },
       sidebarView: "settings",
+      navigationHistory: history,
+      navigationForward: [],
+      transitionDirection: "forward",
+    });
+  },
+
+  openQualitative: () => {
+    const state = get();
+    const history = [
+      ...state.navigationHistory,
+      makeEntry(state),
+    ].slice(-MAX_HISTORY);
+    set({
+      mainPaneContent: { type: "qualitative" },
+      sidebarView: "qualitative",
       navigationHistory: history,
       navigationForward: [],
       transitionDirection: "forward",

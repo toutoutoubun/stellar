@@ -1,224 +1,220 @@
 // src/components/qualitative/CodePanel.tsx
-// PDFリーダーのタブとして統合されるコーディングパネル
-// 既存のハイライトパネルを壊さず、タブ切り替えで表示
+// PDFリーダー内コーディングパネル — ハイライトにコードを割り当て/解除
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import type {
-  CodeNode,
-  CreateQualCodeInput,
-  UpdateQualCodeInput,
-  QualProject,
-  Highlight,
-} from '../../types';
-import CodeTreeNode from './CodeTreeNode';
+import React, { useState, useEffect, useCallback } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import type { Highlight, QualProject, CodeNode } from "../../types";
+import { CodeTreeNode } from "./CodeTreeNode";
 
 interface CodePanelProps {
-  paperId: string;
   highlights: Highlight[];
-  selectedHighlightIds: string[];
-  currentProjectId: string | null;
+  selectedHighlightIds: Set<string>;
+  paperId?: string;
+  currentProjectId?: string;
+}
+
+/** ツリーをフラットに展開 */
+function flattenTree(nodes: CodeNode[]): CodeNode[] {
+  const result: CodeNode[] = [];
+  for (const n of nodes) {
+    result.push(n);
+    result.push(...flattenTree(n.children));
+  }
+  return result;
 }
 
 const CodePanel: React.FC<CodePanelProps> = ({
-  paperId,
   highlights,
   selectedHighlightIds,
+  paperId,
   currentProjectId,
 }) => {
   const [projects, setProjects] = useState<QualProject[]>([]);
-  const [projectId, setProjectId] = useState<string | null>(currentProjectId);
+  const [projectId, setProjectId] = useState<string>(currentProjectId ?? "");
   const [codeTree, setCodeTree] = useState<CodeNode[]>([]);
-  const [selectedCode, setSelectedCode] = useState<CodeNode | null>(null);
-  const [newCodeName, setNewCodeName] = useState('');
-  const [newCodeColor, setNewCodeColor] = useState('#6366F1');
+  const [selectedCodeId, setSelectedCodeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [highlightCodes, setHighlightCodes] = useState<Record<string, string[]>>({});
+  const [newCodeName, setNewCodeName] = useState("");
+  const [newCodeColor, setNewCodeColor] = useState("#6366F1");
+  /** highlight_id → Set<code_id> のマッピング */
+  const [highlightCodeMap, setHighlightCodeMap] = useState<
+    Record<string, Set<string>>
+  >({});
 
   // プロジェクト一覧取得
   useEffect(() => {
-    invoke<QualProject[]>('get_projects').then(setProjects).catch(console.error);
-  }, []);
-
-  useEffect(() => {
-    if (currentProjectId) setProjectId(currentProjectId);
-  }, [currentProjectId]);
+    const load = async () => {
+      try {
+        const result = await invoke<QualProject[]>("get_projects");
+        setProjects(result);
+        if (!projectId && result.length > 0) {
+          setProjectId(result[0].id);
+        }
+      } catch (err) {
+        console.error("プロジェクト取得エラー:", err);
+      }
+    };
+    void load();
+  }, [projectId]);
 
   // コードツリー取得
   const loadCodeTree = useCallback(async () => {
     if (!projectId) return;
     setLoading(true);
     try {
-      const tree = await invoke<CodeNode[]>('get_code_tree', { projectId });
+      const tree = await invoke<CodeNode[]>("get_code_tree", { projectId });
       setCodeTree(tree);
-    } catch (e) {
-      console.error('コードツリー取得に失敗:', e);
+    } catch (err) {
+      console.error("コードツリー取得エラー:", err);
     } finally {
       setLoading(false);
     }
   }, [projectId]);
 
   useEffect(() => {
-    loadCodeTree();
+    void loadCodeTree();
   }, [loadCodeTree]);
 
-  // ハイライト毎のコードを取得（簡易: コードツリーのassignmentCountで把握）
-  // 選択されたハイライトへのコード割り当て状態を管理
+  // ハイライト-コードマッピング取得
   const loadHighlightCodes = useCallback(async () => {
-    if (!projectId || selectedHighlightIds.length === 0) return;
-    // 各コードについてハイライト一覧を取得し、マッピング
-    const flatCodes = flattenTree(codeTree);
-    const mapping: Record<string, string[]> = {};
-    for (const hId of selectedHighlightIds) {
-      mapping[hId] = [];
-    }
-    for (const code of flatCodes) {
+    if (!projectId || codeTree.length === 0) return;
+    const flat = flattenTree(codeTree);
+    const map: Record<string, Set<string>> = {};
+    for (const code of flat) {
       try {
-        const hls = await invoke<{ id: string }[]>('get_highlights_by_code', { codeId: code.id });
-        for (const hl of hls) {
-          if (mapping[hl.id]) {
-            mapping[hl.id].push(code.id);
-          }
+        const hls = await invoke<Array<{ id: string }>>(
+          "get_highlights_by_code",
+          { codeId: code.id }
+        );
+        for (const h of hls) {
+          if (!map[h.id]) map[h.id] = new Set();
+          map[h.id].add(code.id);
         }
       } catch {
         // ignore
       }
     }
-    setHighlightCodes(mapping);
-  }, [projectId, selectedHighlightIds, codeTree]);
+    setHighlightCodeMap(map);
+  }, [projectId, codeTree]);
 
   useEffect(() => {
-    if (selectedHighlightIds.length > 0 && codeTree.length > 0) {
-      loadHighlightCodes();
-    }
-  }, [selectedHighlightIds, codeTree, loadHighlightCodes]);
+    void loadHighlightCodes();
+  }, [loadHighlightCodes]);
 
-  // コード作成
-  const handleCreateCode = async () => {
-    if (!projectId || !newCodeName.trim()) return;
-    const input: CreateQualCodeInput = {
-      projectId,
-      name: newCodeName.trim(),
-      color: newCodeColor,
-      parentId: selectedCode?.id ?? null,
-    };
+  const handleCreateCode = useCallback(async () => {
+    if (!newCodeName.trim() || !projectId) return;
     try {
-      await invoke('create_code', { input });
-      setNewCodeName('');
-      loadCodeTree();
-    } catch (e) {
-      console.error('コード作成に失敗:', e);
-    }
-  };
-
-  // コード更新
-  const handleUpdateCode = async (id: string, input: UpdateQualCodeInput) => {
-    try {
-      await invoke('update_code', { id, input });
-      loadCodeTree();
-    } catch (e) {
-      console.error('コード更新に失敗:', e);
-    }
-  };
-
-  // コード削除
-  const handleDeleteCode = async (id: string) => {
-    try {
-      await invoke('delete_code', { id });
-      if (selectedCode?.id === id) setSelectedCode(null);
-      loadCodeTree();
-    } catch (e) {
-      console.error('コード削除に失敗:', e);
-    }
-  };
-
-  // ドラッグ&ドロップでコード移動
-  const handleDrop = async (draggedId: string, newParentId: string | null) => {
-    try {
-      await invoke('update_code', {
-        id: draggedId,
-        input: { parentId: newParentId } as UpdateQualCodeInput,
+      await invoke("create_code", {
+        input: {
+          projectId,
+          name: newCodeName.trim(),
+          color: newCodeColor,
+        },
       });
-      loadCodeTree();
-    } catch (e) {
-      console.error('コード移動に失敗:', e);
+      setNewCodeName("");
+      void loadCodeTree();
+    } catch (err) {
+      console.error("コード作成エラー:", err);
     }
-  };
+  }, [newCodeName, newCodeColor, projectId, loadCodeTree]);
 
-  // ハイライトにコードを割り当て
-  const handleAssignCode = async (codeId: string) => {
-    for (const hId of selectedHighlightIds) {
+  const handleAssignCode = useCallback(
+    async (highlightId: string, codeId: string) => {
       try {
-        await invoke('assign_code_to_highlight', {
-          highlightId: hId,
-          codeId,
+        await invoke("assign_code_to_highlight", { highlightId, codeId });
+        setHighlightCodeMap((prev) => {
+          const next = { ...prev };
+          if (!next[highlightId]) next[highlightId] = new Set();
+          else next[highlightId] = new Set(next[highlightId]);
+          next[highlightId].add(codeId);
+          return next;
         });
-      } catch (e) {
-        console.error('コード割り当てに失敗:', e);
+      } catch (err) {
+        console.error("コード割り当てエラー:", err);
       }
-    }
-    loadCodeTree();
-    loadHighlightCodes();
-  };
+    },
+    []
+  );
 
-  // ハイライトからコードを解除
-  const handleRemoveCode = async (codeId: string) => {
-    for (const hId of selectedHighlightIds) {
+  const handleRemoveCode = useCallback(
+    async (highlightId: string, codeId: string) => {
       try {
-        await invoke('remove_code_from_highlight', {
-          highlightId: hId,
-          codeId,
+        await invoke("remove_code_from_highlight", { highlightId, codeId });
+        setHighlightCodeMap((prev) => {
+          const next = { ...prev };
+          if (next[highlightId]) {
+            next[highlightId] = new Set(next[highlightId]);
+            next[highlightId].delete(codeId);
+          }
+          return next;
         });
-      } catch (e) {
-        console.error('コード解除に失敗:', e);
+      } catch (err) {
+        console.error("コード割り当て解除エラー:", err);
       }
-    }
-    loadCodeTree();
-    loadHighlightCodes();
-  };
+    },
+    []
+  );
 
-  // ルートへのドロップ
-  const handleRootDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const draggedId = e.dataTransfer.getData('text/plain');
-    if (draggedId) {
-      handleDrop(draggedId, null);
-    }
-  };
+  const handleUpdateCode = useCallback(
+    async (id: string, name: string, color: string) => {
+      try {
+        await invoke("update_code", { id, input: { name, color } });
+        void loadCodeTree();
+      } catch (err) {
+        console.error("コード更新エラー:", err);
+      }
+    },
+    [loadCodeTree]
+  );
 
-  if (!projectId) {
-    return (
-      <div className="code-panel">
-        <div className="code-panel-empty">
-          <p className="text-secondary text-sm">
-            プロジェクトを選択してコーディングを開始してください
-          </p>
-          <select
-            className="input-field mt-2"
-            value=""
-            onChange={(e) => setProjectId(e.target.value || null)}
-          >
-            <option value="">プロジェクトを選択...</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-    );
-  }
+  const handleDeleteCode = useCallback(
+    async (id: string) => {
+      try {
+        await invoke("delete_code", { id });
+        void loadCodeTree();
+      } catch (err) {
+        console.error("コード削除エラー:", err);
+      }
+    },
+    [loadCodeTree]
+  );
+
+  const handleDrop = useCallback(
+    async (draggedId: string, newParentId: string | null) => {
+      try {
+        await invoke("update_code", {
+          id: draggedId,
+          input: { parentId: newParentId },
+        });
+        void loadCodeTree();
+      } catch (err) {
+        console.error("コード移動エラー:", err);
+      }
+    },
+    [loadCodeTree]
+  );
+
+  const flat = flattenTree(codeTree);
+  const selectedHighlights = highlights.filter((h) =>
+    selectedHighlightIds.has(h.id)
+  );
 
   return (
-    <div className="code-panel">
+    <div className="flex flex-col h-full" style={{ padding: "8px" }}>
       {/* プロジェクト選択 */}
-      <div className="code-panel-header">
+      <div className="mb-2">
         <select
-          className="input-field text-xs"
           value={projectId}
-          onChange={(e) => setProjectId(e.target.value || null)}
+          onChange={(e) => setProjectId(e.target.value)}
+          className="w-full text-xs px-2 py-1"
+          style={{
+            backgroundColor: "var(--color-bg-primary)",
+            color: "var(--color-text-primary)",
+            border: "1px solid var(--color-border-primary)",
+            borderRadius: "4px",
+          }}
         >
+          <option value="">プロジェクトを選択</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -227,89 +223,187 @@ const CodePanel: React.FC<CodePanelProps> = ({
         </select>
       </div>
 
-      {/* 選択中ハイライト情報 */}
-      {selectedHighlightIds.length > 0 && (
-        <div className="code-panel-selection">
-          <span className="text-xs text-secondary">
-            {selectedHighlightIds.length}件のハイライトを選択中
-          </span>
-          <div className="code-assign-buttons">
-            {flattenTree(codeTree).map((code) => {
-              const isAssigned = selectedHighlightIds.some(
-                (hId) => highlightCodes[hId]?.includes(code.id)
-              );
-              return (
-                <button
-                  key={code.id}
-                  className={`code-assign-btn ${isAssigned ? 'assigned' : ''}`}
-                  style={{ borderColor: code.color }}
-                  onClick={() =>
-                    isAssigned
-                      ? handleRemoveCode(code.id)
-                      : handleAssignCode(code.id)
-                  }
-                  title={isAssigned ? 'コード解除' : 'コード割り当て'}
-                >
-                  <span
-                    className="code-color-dot-sm"
-                    style={{ backgroundColor: code.color }}
-                  />
-                  <span className="text-xs">{code.name}</span>
-                  {isAssigned && <span className="text-xs ml-1">✓</span>}
-                </button>
-              );
-            })}
+      {/* 選択中ハイライトへのコード割り当て */}
+      {selectedHighlights.length > 0 && selectedCodeId && (
+        <div
+          className="mb-2 p-2"
+          style={{
+            backgroundColor: "var(--color-bg-tertiary)",
+            borderRadius: "6px",
+          }}
+        >
+          <div
+            className="text-xs mb-1"
+            style={{ color: "var(--color-text-tertiary)" }}
+          >
+            選択中: {selectedHighlights.length}件のハイライト
+          </div>
+          <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                for (const h of selectedHighlights) {
+                  void handleAssignCode(h.id, selectedCodeId);
+                }
+              }}
+              className="flex-1 text-xs py-1"
+              style={{
+                backgroundColor: "var(--color-accent-primary)",
+                color: "#fff",
+                border: "none",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
+            >
+              コード付与
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                for (const h of selectedHighlights) {
+                  void handleRemoveCode(h.id, selectedCodeId);
+                }
+              }}
+              className="flex-1 text-xs py-1"
+              style={{
+                backgroundColor: "transparent",
+                color: "var(--color-text-secondary)",
+                border: "1px solid var(--color-border-secondary)",
+                borderRadius: "4px",
+                cursor: "pointer",
+              }}
+            >
+              コード解除
+            </button>
           </div>
         </div>
       )}
 
-      {/* 新規コード作成 */}
-      <div className="code-panel-create">
-        <div className="flex gap-1 items-center">
-          <input
-            type="color"
-            value={newCodeColor}
-            onChange={(e) => setNewCodeColor(e.target.value)}
-            className="code-color-picker"
-            title="コードカラー"
-          />
-          <input
-            className="input-field text-xs flex-1"
-            placeholder="新規コード名..."
-            value={newCodeName}
-            onChange={(e) => setNewCodeName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleCreateCode()}
-          />
-          <button
-            className="btn-primary text-xs px-2 py-1"
-            onClick={handleCreateCode}
-            disabled={!newCodeName.trim()}
+      {/* ハイライト一覧とコード表示 */}
+      {highlights.length > 0 && (
+        <div
+          className="mb-2"
+          style={{
+            maxHeight: "120px",
+            overflowY: "auto",
+          }}
+        >
+          <div
+            className="text-xs mb-1"
+            style={{ color: "var(--color-text-tertiary)" }}
           >
-            追加
-          </button>
+            ハイライト ({highlights.length}件)
+          </div>
+          {highlights.slice(0, 20).map((h) => {
+            const codes = highlightCodeMap[h.id];
+            return (
+              <div
+                key={h.id}
+                className="flex items-start gap-1 py-1"
+                style={{
+                  borderBottom: "1px solid var(--color-border-secondary)",
+                }}
+              >
+                <span
+                  className="text-xs truncate flex-1"
+                  style={{ color: "var(--color-text-secondary)" }}
+                >
+                  {h.text.slice(0, 40)}…
+                </span>
+                {codes && codes.size > 0 && (
+                  <div className="flex gap-0.5 shrink-0">
+                    {Array.from(codes).map((cid) => {
+                      const code = flat.find((c) => c.id === cid);
+                      return code ? (
+                        <span
+                          key={cid}
+                          className="text-xs px-1"
+                          style={{
+                            backgroundColor: code.color + "20",
+                            color: code.color,
+                            borderRadius: "3px",
+                            fontSize: "9px",
+                          }}
+                        >
+                          {code.name}
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
-        {selectedCode && (
-          <span className="text-xs text-secondary mt-1 block">
-            親コード: {selectedCode.name}
-          </span>
-        )}
+      )}
+
+      {/* 新規コード作成 */}
+      <div
+        className="flex items-center gap-1 mb-2"
+        style={{ borderBottom: "1px solid var(--color-border-secondary)", paddingBottom: "8px" }}
+      >
+        <input
+          type="color"
+          value={newCodeColor}
+          onChange={(e) => setNewCodeColor(e.target.value)}
+          style={{ width: "20px", height: "20px", border: "none", padding: 0, cursor: "pointer" }}
+        />
+        <input
+          type="text"
+          value={newCodeName}
+          onChange={(e) => setNewCodeName(e.target.value)}
+          placeholder="新しいコード"
+          className="flex-1 text-xs px-1 py-0.5"
+          style={{
+            backgroundColor: "var(--color-bg-primary)",
+            color: "var(--color-text-primary)",
+            border: "1px solid var(--color-border-primary)",
+            borderRadius: "3px",
+            outline: "none",
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void handleCreateCode();
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => void handleCreateCode()}
+          className="text-xs px-1.5 py-0.5"
+          style={{
+            backgroundColor: "var(--color-accent-primary)",
+            color: "#fff",
+            border: "none",
+            borderRadius: "3px",
+            cursor: "pointer",
+          }}
+        >
+          +
+        </button>
       </div>
 
       {/* コードツリー */}
       <div
-        className="code-tree-container"
+        className="flex-1 overflow-y-auto"
         onDragOver={(e) => e.preventDefault()}
-        onDrop={handleRootDrop}
+        onDrop={(e) => {
+          e.preventDefault();
+          const draggedId = e.dataTransfer.getData("text/plain");
+          if (draggedId) void handleDrop(draggedId, null);
+        }}
       >
         {loading ? (
-          <div className="code-panel-loading">
-            <span className="text-xs text-secondary">読み込み中...</span>
+          <div
+            className="text-center py-4 text-xs"
+            style={{ color: "var(--color-text-tertiary)" }}
+          >
+            読み込み中…
           </div>
         ) : codeTree.length === 0 ? (
-          <div className="code-panel-empty">
-            <span className="text-xs text-secondary">
-              コードがありません。上のフォームから追加してください。
-            </span>
+          <div
+            className="text-center py-4 text-xs"
+            style={{ color: "var(--color-text-tertiary)" }}
+          >
+            コードなし
           </div>
         ) : (
           codeTree.map((node) => (
@@ -317,8 +411,8 @@ const CodePanel: React.FC<CodePanelProps> = ({
               key={node.id}
               node={node}
               depth={0}
-              selectedCodeId={selectedCode?.id ?? null}
-              onSelect={setSelectedCode}
+              selectedCodeId={selectedCodeId}
+              onSelect={setSelectedCodeId}
               onUpdate={handleUpdateCode}
               onDelete={handleDeleteCode}
               onDrop={handleDrop}
@@ -329,17 +423,5 @@ const CodePanel: React.FC<CodePanelProps> = ({
     </div>
   );
 };
-
-// ユーティリティ: ツリーをフラットに展開
-function flattenTree(nodes: CodeNode[]): CodeNode[] {
-  const result: CodeNode[] = [];
-  for (const node of nodes) {
-    result.push(node);
-    if (node.children) {
-      result.push(...flattenTree(node.children));
-    }
-  }
-  return result;
-}
 
 export default CodePanel;

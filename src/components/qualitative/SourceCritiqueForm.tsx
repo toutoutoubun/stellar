@@ -1,10 +1,9 @@
 // src/components/qualitative/SourceCritiqueForm.tsx
-// 史料批判シート — プロジェクトスコープで論文を選択し批判シートを管理
-// 折りたたみセクション + 星評価 + バイアストグル
+// 史料批判シート — 論文単位の史料評価フォーム
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import type { SourceCritique, SourceCritiqueInput, Paper } from '../../types';
+import React, { useState, useEffect, useCallback } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import type { SourceCritique, SourceCritiqueInput, Paper } from "../../types";
 
 interface SourceCritiqueFormProps {
   projectId: string;
@@ -13,465 +12,327 @@ interface SourceCritiqueFormProps {
 export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
   projectId,
 }) => {
-  const [papers, setPapers] = useState<Paper[]>([]);
   const [critiques, setCritiques] = useState<SourceCritique[]>([]);
+  const [papers, setPapers] = useState<Paper[]>([]);
   const [selectedPaperId, setSelectedPaperId] = useState<string | null>(null);
-  const [critique, setCritique] = useState<SourceCritique | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    basic: true,
-    content: false,
-    evaluation: false,
-    notes: false,
-  });
+
+  // フォーム状態
   const [form, setForm] = useState<SourceCritiqueInput>({
-    paperId: '',
-    authorInfo: '',
-    creationDate: '',
+    paperId: "",
+    authorInfo: "",
+    creationDate: "",
     isDateEstimated: false,
-    location: '',
-    sourceType: '',
-    authenticity: '',
-    archiveInfo: '',
-    intent: '',
-    audience: '',
-    biasLevel: '',
-    biasReason: '',
-    consistency: '',
+    location: "",
+    sourceType: "",
+    authenticity: "",
+    archiveInfo: "",
+    intent: "",
+    audience: "",
+    biasLevel: "",
+    biasReason: "",
+    consistency: "",
     reliabilityScore: 3,
-    researcherNotes: '',
+    researcherNotes: "",
   });
 
-  const resetForm = useCallback(() => {
-    setForm({
-      paperId: selectedPaperId ?? '',
-      authorInfo: '',
-      creationDate: '',
-      isDateEstimated: false,
-      location: '',
-      sourceType: '',
-      authenticity: '',
-      archiveInfo: '',
-      intent: '',
-      audience: '',
-      biasLevel: '',
-      biasReason: '',
-      consistency: '',
-      reliabilityScore: 3,
-      researcherNotes: '',
-    });
-    setCritique(null);
-  }, [selectedPaperId]);
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [paperList, critiqueList] = await Promise.all([
-        invoke<Paper[]>('get_papers'),
-        invoke<SourceCritique[]>('get_source_critiques_by_project', { projectId }),
-      ]);
-      setPapers(paperList);
-      setCritiques(critiqueList);
-    } catch (e) {
-      console.error('データ取得に失敗:', e);
-    } finally {
-      setLoading(false);
-    }
+  // 論文一覧と既存批判を取得
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [paperList, critiqueList] = await Promise.all([
+          invoke<Paper[]>("get_papers", { page: 1, perPage: 500, sortBy: "title", sortDir: "asc", search: "" }),
+          invoke<SourceCritique[]>("get_source_critiques_by_project", { projectId }),
+        ]);
+        setPapers(paperList);
+        setCritiques(critiqueList);
+      } catch (err) {
+        console.error("データ取得エラー:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void load();
   }, [projectId]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  // 論文選択時に既存の批判データを読み込む
+  const handleSelectPaper = useCallback(
+    async (paperId: string) => {
+      setSelectedPaperId(paperId);
+      try {
+        const existing = await invoke<SourceCritique | null>("get_source_critique", { paperId });
+        if (existing) {
+          setForm({
+            paperId,
+            authorInfo: existing.authorInfo ?? "",
+            creationDate: existing.creationDate ?? "",
+            isDateEstimated: existing.isDateEstimated,
+            location: existing.location ?? "",
+            sourceType: existing.sourceType ?? "",
+            authenticity: existing.authenticity ?? "",
+            archiveInfo: existing.archiveInfo ?? "",
+            intent: existing.intent ?? "",
+            audience: existing.audience ?? "",
+            biasLevel: existing.biasLevel ?? "",
+            biasReason: existing.biasReason ?? "",
+            consistency: existing.consistency ?? "",
+            reliabilityScore: existing.reliabilityScore,
+            researcherNotes: existing.researcherNotes ?? "",
+          });
+        } else {
+          setForm({
+            paperId,
+            authorInfo: "",
+            creationDate: "",
+            isDateEstimated: false,
+            location: "",
+            sourceType: "",
+            authenticity: "",
+            archiveInfo: "",
+            intent: "",
+            audience: "",
+            biasLevel: "",
+            biasReason: "",
+            consistency: "",
+            reliabilityScore: 3,
+            researcherNotes: "",
+          });
+        }
+      } catch (err) {
+        console.error("史料批判取得エラー:", err);
+      }
+    },
+    []
+  );
 
-  // 論文選択時に批判シートを読み込む
-  useEffect(() => {
-    if (!selectedPaperId) {
-      resetForm();
-      return;
-    }
-    const existing = critiques.find((c) => c.paperId === selectedPaperId);
-    if (existing) {
-      setCritique(existing);
-      setForm({
-        paperId: selectedPaperId,
-        authorInfo: existing.authorInfo ?? '',
-        creationDate: existing.creationDate ?? '',
-        isDateEstimated: existing.isDateEstimated,
-        location: existing.location ?? '',
-        sourceType: existing.sourceType ?? '',
-        authenticity: existing.authenticity ?? '',
-        archiveInfo: existing.archiveInfo ?? '',
-        intent: existing.intent ?? '',
-        audience: existing.audience ?? '',
-        biasLevel: existing.biasLevel ?? '',
-        biasReason: existing.biasReason ?? '',
-        consistency: existing.consistency ?? '',
-        reliabilityScore: existing.reliabilityScore,
-        researcherNotes: existing.researcherNotes ?? '',
-      });
-      setShowForm(true);
-    } else {
-      resetForm();
-      setForm((prev) => ({ ...prev, paperId: selectedPaperId }));
-      setShowForm(true);
-    }
-  }, [selectedPaperId, critiques, resetForm]);
-
-  const handleSave = async () => {
-    if (!form.paperId) return;
+  const handleSave = useCallback(async () => {
+    if (!selectedPaperId) return;
     setSaving(true);
     try {
-      await invoke<SourceCritique>('upsert_source_critique', { dto: form });
-      await loadData();
-    } catch (e) {
-      console.error('史料批判保存に失敗:', e);
+      await invoke("upsert_source_critique", {
+        dto: { ...form, paperId: selectedPaperId },
+      });
+      // 一覧を再取得
+      const updated = await invoke<SourceCritique[]>(
+        "get_source_critiques_by_project",
+        { projectId }
+      );
+      setCritiques(updated);
+    } catch (err) {
+      console.error("史料批判保存エラー:", err);
     } finally {
       setSaving(false);
     }
-  };
+  }, [selectedPaperId, form, projectId]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('この史料批判シートを削除しますか？')) return;
-    try {
-      await invoke('delete_source_critique', { id });
-      setCritique(null);
-      setSelectedPaperId(null);
-      setShowForm(false);
-      await loadData();
-    } catch (e) {
-      console.error('史料批判削除に失敗:', e);
-    }
-  };
+  const handleDelete = useCallback(
+    async (id: string) => {
+      if (!confirm("この史料批判を削除しますか？")) return;
+      try {
+        await invoke("delete_source_critique", { id });
+        setCritiques((prev) => prev.filter((c) => c.id !== id));
+        if (critiques.find((c) => c.id === id)?.paperId === selectedPaperId) {
+          setSelectedPaperId(null);
+        }
+      } catch (err) {
+        console.error("史料批判削除エラー:", err);
+      }
+    },
+    [critiques, selectedPaperId]
+  );
 
-  const handleEdit = (c: SourceCritique) => {
-    setSelectedPaperId(c.paperId);
-    setShowForm(true);
-  };
-
-  const toggleSection = (key: string) => {
-    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  const updateField = <K extends keyof SourceCritiqueInput>(
-    key: K,
-    value: SourceCritiqueInput[K]
-  ) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+  const updateField = (field: keyof SourceCritiqueInput, value: unknown) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   if (loading) {
-    return <div className="qual-loading">読み込み中...</div>;
+    return (
+      <div className="flex items-center justify-center h-full" style={{ color: "var(--color-text-tertiary)" }}>
+        <span className="text-sm">読み込み中…</span>
+      </div>
+    );
   }
 
-  const SectionHeader: React.FC<{
-    sectionKey: string;
-    title: string;
-    icon: string;
-  }> = ({ sectionKey, title, icon }) => (
-    <button
-      className="source-critique-section-header"
-      onClick={() => toggleSection(sectionKey)}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        width: '100%',
-        padding: '8px 12px',
-        backgroundColor: 'var(--color-bg-secondary)',
-        border: '1px solid var(--color-border-secondary)',
-        borderRadius: '6px',
-        color: 'var(--color-text-primary)',
-        cursor: 'pointer',
-      }}
-    >
-      <span className="flex items-center gap-2">
-        <span>{icon}</span>
-        <span className="text-sm font-semibold">{title}</span>
-      </span>
-      <svg
-        width="14"
-        height="14"
-        viewBox="0 0 14 14"
+  return (
+    <div className="flex h-full overflow-hidden">
+      {/* 左: 論文一覧 + 既存批判 */}
+      <div
+        className="flex flex-col shrink-0 h-full"
         style={{
-          transform: expandedSections[sectionKey] ? 'rotate(180deg)' : 'rotate(0deg)',
-          transition: 'transform 0.2s',
+          width: "260px",
+          borderRight: "1px solid var(--color-border-primary)",
         }}
       >
-        <path d="M3 5l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      </svg>
-    </button>
-  );
-
-  const selectedPaperTitle = papers.find((p) => p.id === selectedPaperId)?.title;
-
-  return (
-    <div className="h-full overflow-y-auto p-4">
-      <div className="max-w-3xl mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-              史料批判シート
-            </h3>
-            <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-              論文ごとに史料の信頼性を評価
-            </p>
-          </div>
-          <button
-            onClick={() => { setShowForm(!showForm); setSelectedPaperId(null); resetForm(); }}
-            className="text-xs px-3 py-1.5"
-            style={{ backgroundColor: 'var(--color-accent-primary)', color: 'white', borderRadius: '6px' }}
-          >
-            + 新規作成
-          </button>
-        </div>
-
-        {/* 新規作成/編集フォーム */}
-        {showForm && (
-          <div
-            className="mb-6 p-4"
-            style={{
-              backgroundColor: 'var(--color-bg-secondary)',
-              border: '1px solid var(--color-border-secondary)',
-              borderRadius: '10px',
-            }}
-          >
-            <div className="mb-3">
-              <label className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-                対象論文
-              </label>
-              <select
-                className="w-full mt-1 text-sm"
-                value={selectedPaperId ?? ''}
-                onChange={(e) => setSelectedPaperId(e.target.value || null)}
+        <header
+          className="px-3 shrink-0 flex items-center"
+          style={{
+            height: "40px",
+            borderBottom: "1px solid var(--color-border-primary)",
+          }}
+        >
+          <span className="text-xs font-semibold" style={{ color: "var(--color-text-tertiary)" }}>
+            論文一覧
+          </span>
+        </header>
+        <div className="flex-1 overflow-y-auto p-2">
+          {papers.map((p) => {
+            const hasCritique = critiques.some((c) => c.paperId === p.id);
+            return (
+              <div
+                key={p.id}
+                onClick={() => void handleSelectPaper(p.id)}
+                className="flex items-center gap-2 py-1.5 px-2 group"
                 style={{
-                  backgroundColor: 'var(--color-bg-tertiary)',
-                  color: 'var(--color-text-primary)',
-                  border: '1px solid var(--color-border-secondary)',
-                  borderRadius: '6px',
-                  padding: '6px 10px',
-                  outline: 'none',
-                  width: '100%',
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  backgroundColor: selectedPaperId === p.id ? "var(--color-bg-hover)" : "transparent",
                 }}
               >
-                <option value="">論文を選択...</option>
-                {papers.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.title} {p.year ? `(${p.year})` : ''}
-                  </option>
-                ))}
-              </select>
-              {selectedPaperTitle && (
-                <p className="text-xs mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
-                  {selectedPaperTitle}
-                </p>
-              )}
+                <span
+                  style={{
+                    width: "6px",
+                    height: "6px",
+                    borderRadius: "50%",
+                    backgroundColor: hasCritique ? "#22c55e" : "var(--color-border-secondary)",
+                    flexShrink: 0,
+                  }}
+                />
+                <span
+                  className="text-xs truncate flex-1"
+                  style={{
+                    color: selectedPaperId === p.id
+                      ? "var(--color-accent-primary)"
+                      : "var(--color-text-secondary)",
+                  }}
+                >
+                  {p.title}
+                </span>
+              </div>
+            );
+          })}
+          {papers.length === 0 && (
+            <div className="text-center py-8 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+              論文なし
             </div>
+          )}
+        </div>
 
-            {selectedPaperId && (
-              <>
-                {/* 基本情報 */}
-                <div className="mb-2">
-                  <SectionHeader sectionKey="basic" title="基本情報" icon="📋" />
-                  {expandedSections.basic && (
-                    <div className="p-3 flex flex-col gap-2 mt-1">
-                      <div>
-                        <label className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>著者/作成者情報</label>
-                        <input className="w-full mt-1 text-sm" value={form.authorInfo ?? ''} onChange={(e) => updateField('authorInfo', e.target.value)} placeholder="著者の背景・所属・立場..." style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-secondary)', borderRadius: '6px', padding: '6px 10px', outline: 'none', width: '100%' }} />
-                      </div>
-                      <div className="flex gap-2">
-                        <div className="flex-1">
-                          <label className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>作成日</label>
-                          <input className="w-full mt-1 text-sm" value={form.creationDate ?? ''} onChange={(e) => updateField('creationDate', e.target.value)} placeholder="YYYY-MM-DD or 概算" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-secondary)', borderRadius: '6px', padding: '6px 10px', outline: 'none', width: '100%' }} />
-                        </div>
-                        <div>
-                          <label className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>推定日</label>
-                          <button className="block mt-1 text-xs px-3 py-1.5" onClick={() => updateField('isDateEstimated', !form.isDateEstimated)} style={{ backgroundColor: form.isDateEstimated ? 'var(--color-accent-primary)' : 'var(--color-bg-tertiary)', color: form.isDateEstimated ? 'white' : 'var(--color-text-secondary)', border: '1px solid var(--color-border-secondary)', borderRadius: '6px' }}>
-                            {form.isDateEstimated ? '推定' : '確定'}
-                          </button>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <div className="flex-1">
-                          <label className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>作成地</label>
-                          <input className="w-full mt-1 text-sm" value={form.location ?? ''} onChange={(e) => updateField('location', e.target.value)} placeholder="場所..." style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-secondary)', borderRadius: '6px', padding: '6px 10px', outline: 'none', width: '100%' }} />
-                        </div>
-                        <div className="flex-1">
-                          <label className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>史料種別</label>
-                          <select className="w-full mt-1 text-sm" value={form.sourceType ?? ''} onChange={(e) => updateField('sourceType', e.target.value)} style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-secondary)', borderRadius: '6px', padding: '6px 10px', outline: 'none', width: '100%' }}>
-                            <option value="">選択...</option>
-                            <option value="primary">一次史料</option>
-                            <option value="secondary">二次史料</option>
-                            <option value="official">公文書</option>
-                            <option value="personal">私文書</option>
-                            <option value="newspaper">新聞記事</option>
-                            <option value="interview">インタビュー</option>
-                            <option value="memoir">回顧録</option>
-                            <option value="statistics">統計資料</option>
-                            <option value="other">その他</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>原本性/所蔵情報</label>
-                        <input className="w-full mt-1 text-sm" value={form.archiveInfo ?? ''} onChange={(e) => updateField('archiveInfo', e.target.value)} placeholder="所蔵機関・資料番号..." style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-secondary)', borderRadius: '6px', padding: '6px 10px', outline: 'none', width: '100%' }} />
-                      </div>
-                      <div>
-                        <label className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>真正性</label>
-                        <select className="w-full mt-1 text-sm" value={form.authenticity ?? ''} onChange={(e) => updateField('authenticity', e.target.value)} style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-secondary)', borderRadius: '6px', padding: '6px 10px', outline: 'none', width: '100%' }}>
-                          <option value="">選択...</option>
-                          <option value="verified">検証済み</option>
-                          <option value="likely">おそらく真正</option>
-                          <option value="uncertain">不確実</option>
-                          <option value="disputed">係争中</option>
-                          <option value="fabricated">偽造の疑い</option>
-                        </select>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 内容分析 */}
-                <div className="mb-2">
-                  <SectionHeader sectionKey="content" title="内容分析" icon="🔍" />
-                  {expandedSections.content && (
-                    <div className="p-3 flex flex-col gap-2 mt-1">
-                      <div>
-                        <label className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>作成意図/目的</label>
-                        <textarea className="w-full mt-1 text-sm" rows={2} value={form.intent ?? ''} onChange={(e) => updateField('intent', e.target.value)} placeholder="この史料が作成された目的..." style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-secondary)', borderRadius: '6px', padding: '6px 10px', outline: 'none', width: '100%', resize: 'vertical' }} />
-                      </div>
-                      <div>
-                        <label className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>想定読者/受容者</label>
-                        <input className="w-full mt-1 text-sm" value={form.audience ?? ''} onChange={(e) => updateField('audience', e.target.value)} placeholder="誰に向けて書かれたか..." style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-secondary)', borderRadius: '6px', padding: '6px 10px', outline: 'none', width: '100%' }} />
-                      </div>
-                      <div>
-                        <label className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>他史料との整合性</label>
-                        <textarea className="w-full mt-1 text-sm" rows={2} value={form.consistency ?? ''} onChange={(e) => updateField('consistency', e.target.value)} placeholder="他の史料との一致/矛盾点..." style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-secondary)', borderRadius: '6px', padding: '6px 10px', outline: 'none', width: '100%', resize: 'vertical' }} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 信頼性評価 */}
-                <div className="mb-2">
-                  <SectionHeader sectionKey="evaluation" title="信頼性評価" icon="⭐" />
-                  {expandedSections.evaluation && (
-                    <div className="p-3 flex flex-col gap-2 mt-1">
-                      <div>
-                        <label className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>バイアス度</label>
-                        <div className="flex gap-2 mt-1">
-                          {(['none', 'low', 'medium', 'high', 'extreme'] as const).map((level) => (
-                            <button
-                              key={level}
-                              className="text-xs px-2 py-1"
-                              onClick={() => updateField('biasLevel', level)}
-                              style={{
-                                backgroundColor: form.biasLevel === level ? 'var(--color-accent-primary)' : 'var(--color-bg-tertiary)',
-                                color: form.biasLevel === level ? 'white' : 'var(--color-text-secondary)',
-                                border: '1px solid var(--color-border-secondary)',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              {{ none: 'なし', low: '低', medium: '中', high: '高', extreme: '極高' }[level]}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>バイアス理由</label>
-                        <textarea className="w-full mt-1 text-sm" rows={2} value={form.biasReason ?? ''} onChange={(e) => updateField('biasReason', e.target.value)} placeholder="バイアスの根拠..." style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-secondary)', borderRadius: '6px', padding: '6px 10px', outline: 'none', width: '100%', resize: 'vertical' }} />
-                      </div>
-                      <div>
-                        <label className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>信頼性スコア</label>
-                        <div className="flex items-center gap-1 mt-1">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <button key={star} onClick={() => updateField('reliabilityScore', star)} style={{ fontSize: '18px', color: (form.reliabilityScore ?? 0) >= star ? '#f59e0b' : 'var(--color-text-tertiary)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}>
-                              ★
-                            </button>
-                          ))}
-                          <span className="text-xs ml-2" style={{ color: 'var(--color-text-secondary)' }}>{form.reliabilityScore}/5</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 研究者メモ */}
-                <div className="mb-3">
-                  <SectionHeader sectionKey="notes" title="研究者メモ" icon="📝" />
-                  {expandedSections.notes && (
-                    <div className="p-3 mt-1">
-                      <textarea className="w-full text-sm" rows={4} value={form.researcherNotes ?? ''} onChange={(e) => updateField('researcherNotes', e.target.value)} placeholder="この史料に関する考察・分析メモ..." style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-secondary)', borderRadius: '6px', padding: '6px 10px', outline: 'none', width: '100%', resize: 'vertical' }} />
-                    </div>
-                  )}
-                </div>
-
-                {/* 保存ボタン */}
-                <div className="flex items-center gap-3">
-                  <button className="text-xs px-4 py-1.5" onClick={handleSave} disabled={saving} style={{ backgroundColor: 'var(--color-accent-primary)', color: 'white', borderRadius: '6px', opacity: saving ? 0.6 : 1 }}>
-                    {saving ? '保存中...' : critique ? '更新' : '保存'}
-                  </button>
-                  <button className="text-xs px-3 py-1.5" onClick={() => { setShowForm(false); setSelectedPaperId(null); }} style={{ color: 'var(--color-text-secondary)', border: '1px solid var(--color-border-secondary)', borderRadius: '6px' }}>
-                    キャンセル
-                  </button>
-                  {critique && (
-                    <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                      最終更新: {critique.updatedAt ?? critique.createdAt}
-                    </span>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* 既存の史料批判一覧 */}
+        {/* 既存批判の一覧 */}
         {critiques.length > 0 && (
-          <div>
-            <h4 className="text-xs font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
-              登録済み史料批判 ({critiques.length}件)
-            </h4>
-            <div className="flex flex-col gap-2">
-              {critiques.map((c) => {
-                const paper = papers.find((p) => p.id === c.paperId);
-                return (
-                  <div
-                    key={c.id}
-                    className="p-3 flex items-center justify-between group"
-                    style={{
-                      backgroundColor: 'var(--color-bg-secondary)',
-                      border: '1px solid var(--color-border-secondary)',
-                      borderRadius: '8px',
-                    }}
-                  >
-                    <div className="flex-1">
-                      <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                        {paper?.title ?? c.paperId}
-                      </p>
-                      <div className="flex gap-3 mt-1 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                        {c.authorInfo && <span>著者: {c.authorInfo}</span>}
-                        {c.creationDate && <span>作成日: {c.creationDate}</span>}
-                        <span>信頼性: {'★'.repeat(c.reliabilityScore)}{'☆'.repeat(5 - c.reliabilityScore)}</span>
-                        {c.biasLevel && <span>バイアス: {c.biasLevel}</span>}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => handleEdit(c)} className="text-xs px-2 py-1" style={{ color: 'var(--color-accent-primary)' }}>編集</button>
-                      <button onClick={() => handleDelete(c.id)} className="text-xs px-2 py-1 opacity-0 group-hover:opacity-100" style={{ color: '#ef4444', transition: 'opacity 0.15s' }}>削除</button>
-                    </div>
-                  </div>
-                );
-              })}
+          <div
+            className="shrink-0 p-2"
+            style={{ borderTop: "1px solid var(--color-border-primary)" }}
+          >
+            <div className="text-xs font-semibold mb-1" style={{ color: "var(--color-text-tertiary)" }}>
+              批判済み ({critiques.length})
             </div>
+            {critiques.map((c) => (
+              <div
+                key={c.id}
+                className="flex items-center justify-between py-1 text-xs group"
+              >
+                <span
+                  className="truncate flex-1 cursor-pointer"
+                  style={{ color: "var(--color-text-secondary)" }}
+                  onClick={() => void handleSelectPaper(c.paperId)}
+                >
+                  信頼度: {c.reliabilityScore}/5
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void handleDelete(c.id)}
+                  className="opacity-0 group-hover:opacity-100"
+                  style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer" }}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
           </div>
         )}
+      </div>
 
-        {critiques.length === 0 && !showForm && (
-          <div className="flex flex-col items-center justify-center py-12" style={{ color: 'var(--color-text-tertiary)' }}>
-            <span className="text-3xl opacity-30">📜</span>
-            <p className="text-sm mt-2">史料批判シートを作成して論文の信頼性を評価しましょう</p>
+      {/* 右: フォーム */}
+      <div className="flex-1 overflow-y-auto p-6" style={{ maxWidth: "700px" }}>
+        {selectedPaperId ? (
+          <>
+            <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text-primary)" }}>
+              史料批判シート
+            </h3>
+
+            <div className="flex flex-col gap-4">
+              <FormField label="著者情報" value={form.authorInfo ?? ""} onChange={(v) => updateField("authorInfo", v)} />
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <FormField label="作成年代" value={form.creationDate ?? ""} onChange={(v) => updateField("creationDate", v)} />
+                </div>
+                <label className="flex items-center gap-1 text-xs self-end pb-1" style={{ color: "var(--color-text-secondary)" }}>
+                  <input
+                    type="checkbox"
+                    checked={form.isDateEstimated ?? false}
+                    onChange={(e) => updateField("isDateEstimated", e.target.checked)}
+                  />
+                  推定日付
+                </label>
+              </div>
+              <FormField label="作成場所" value={form.location ?? ""} onChange={(v) => updateField("location", v)} />
+              <FormField label="史料種別" value={form.sourceType ?? ""} onChange={(v) => updateField("sourceType", v)} placeholder="一次/二次/公文書/私文書…" />
+              <FormField label="真正性" value={form.authenticity ?? ""} onChange={(v) => updateField("authenticity", v)} multiline />
+              <FormField label="所蔵・アーカイブ情報" value={form.archiveInfo ?? ""} onChange={(v) => updateField("archiveInfo", v)} />
+              <FormField label="作成意図" value={form.intent ?? ""} onChange={(v) => updateField("intent", v)} multiline />
+              <FormField label="想定読者" value={form.audience ?? ""} onChange={(v) => updateField("audience", v)} />
+
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <FormField label="バイアスレベル" value={form.biasLevel ?? ""} onChange={(v) => updateField("biasLevel", v)} placeholder="低/中/高" />
+                </div>
+                <div className="flex-1">
+                  <FormField label="バイアス理由" value={form.biasReason ?? ""} onChange={(v) => updateField("biasReason", v)} />
+                </div>
+              </div>
+
+              <FormField label="他史料との整合性" value={form.consistency ?? ""} onChange={(v) => updateField("consistency", v)} multiline />
+
+              <div>
+                <label className="text-xs mb-1 block" style={{ color: "var(--color-text-tertiary)" }}>
+                  信頼度スコア: {form.reliabilityScore}/5
+                </label>
+                <input
+                  type="range"
+                  min={1}
+                  max={5}
+                  value={form.reliabilityScore ?? 3}
+                  onChange={(e) => updateField("reliabilityScore", Number(e.target.value))}
+                  style={{ width: "100%" }}
+                />
+              </div>
+
+              <FormField label="研究者メモ" value={form.researcherNotes ?? ""} onChange={(v) => updateField("researcherNotes", v)} multiline />
+
+              <button
+                type="button"
+                onClick={() => void handleSave()}
+                disabled={saving}
+                className="text-sm px-4 py-2"
+                style={{
+                  backgroundColor: "var(--color-accent-primary)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "8px",
+                  cursor: saving ? "not-allowed" : "pointer",
+                  opacity: saving ? 0.6 : 1,
+                  alignSelf: "flex-start",
+                }}
+              >
+                {saving ? "保存中…" : "保存"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full gap-3" style={{ color: "var(--color-text-tertiary)" }}>
+            <span className="text-sm">左の一覧から論文を選択してください</span>
           </div>
         )}
       </div>
@@ -479,4 +340,49 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
   );
 };
 
-export default SourceCritiqueForm;
+/** 共通のフォームフィールド */
+const FormField: React.FC<{
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  multiline?: boolean;
+}> = ({ label, value, onChange, placeholder, multiline }) => (
+  <div>
+    <label className="text-xs mb-1 block" style={{ color: "var(--color-text-tertiary)" }}>
+      {label}
+    </label>
+    {multiline ? (
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={3}
+        className="w-full text-xs px-2 py-1.5"
+        style={{
+          backgroundColor: "var(--color-bg-primary)",
+          color: "var(--color-text-primary)",
+          border: "1px solid var(--color-border-primary)",
+          borderRadius: "6px",
+          outline: "none",
+          resize: "vertical",
+        }}
+      />
+    ) : (
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full text-xs px-2 py-1.5"
+        style={{
+          backgroundColor: "var(--color-bg-primary)",
+          color: "var(--color-text-primary)",
+          border: "1px solid var(--color-border-primary)",
+          borderRadius: "6px",
+          outline: "none",
+        }}
+      />
+    )}
+  </div>
+);

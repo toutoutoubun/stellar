@@ -1,172 +1,227 @@
 // src/components/qualitative/CodingMatrixView.tsx
-// 動的HTMLテーブルによるコーディングマトリクス + CSVエクスポート
+// コーディングマトリクス — コード×論文のクロス集計表
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import type { CodingMatrix } from '../../types';
+import React, { useState, useEffect, useCallback } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import type { CodingMatrix } from "../../types";
 
 interface CodingMatrixViewProps {
   projectId: string;
 }
 
-const CodingMatrixView: React.FC<CodingMatrixViewProps> = ({ projectId }) => {
+export const CodingMatrixView: React.FC<CodingMatrixViewProps> = ({
+  projectId,
+}) => {
   const [matrix, setMatrix] = useState<CodingMatrix | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const loadMatrix = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await invoke<CodingMatrix>('get_coding_matrix', { projectId });
-      setMatrix(data);
-    } catch (e) {
-      console.error('マトリクス取得に失敗:', e);
+      const result = await invoke<CodingMatrix>("get_coding_matrix", {
+        projectId,
+      });
+      setMatrix(result);
+    } catch (err) {
+      console.error("マトリクス取得エラー:", err);
     } finally {
       setLoading(false);
     }
   }, [projectId]);
 
   useEffect(() => {
-    loadMatrix();
+    void loadMatrix();
   }, [loadMatrix]);
 
-  const handleExportCsv = () => {
-    if (!matrix) return;
-    const headers = ['コード', ...matrix.cols.map((c) => c.paperTitle)];
-    const rows = matrix.rows.map((row) => {
-      const vals = matrix.cols.map((col) => {
-        const key = `${row.codeId}:${col.paperId}`;
-        return matrix.cells[key]?.toString() ?? '0';
-      });
-      return [row.codeName, ...vals];
-    });
-
-    const csv = [headers, ...rows].map((r) => r.join(',')).join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'coding_matrix.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   if (loading) {
-    return <div className="qual-loading">マトリクスを読み込み中...</div>;
-  }
-
-  if (!matrix || matrix.rows.length === 0 || matrix.cols.length === 0) {
     return (
-      <div className="qual-empty-state">
-        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" className="mx-auto mb-3 opacity-30">
-          <rect x="4" y="4" width="40" height="40" rx="4" stroke="currentColor" strokeWidth="2" />
-          <line x1="4" y1="16" x2="44" y2="16" stroke="currentColor" strokeWidth="1.5" />
-          <line x1="16" y1="4" x2="16" y2="44" stroke="currentColor" strokeWidth="1.5" />
-        </svg>
-        <p className="text-sm text-secondary">
-          コーディングマトリクスを表示するには、<br />
-          ハイライトにコードを割り当ててください。
-        </p>
+      <div
+        className="flex items-center justify-center h-full"
+        style={{ color: "var(--color-text-tertiary)" }}
+      >
+        <span className="text-sm">読み込み中…</span>
       </div>
     );
   }
 
-  // 最大値（ヒートマップ用）
+  if (!matrix || (matrix.rows.length === 0 && matrix.cols.length === 0)) {
+    return (
+      <div
+        className="flex flex-col items-center justify-center h-full gap-3"
+        style={{ color: "var(--color-text-tertiary)" }}
+      >
+        <span className="text-sm">
+          マトリクスデータなし。コードとハイライトを追加してください。
+        </span>
+      </div>
+    );
+  }
+
+  const getCount = (codeId: string, paperId: string): number => {
+    const key = `${codeId}:${paperId}`;
+    return matrix.cells[key] ?? 0;
+  };
+
   const maxCount = Math.max(
-    ...Object.values(matrix.cells).map(Number),
-    1
+    1,
+    ...Object.values(matrix.cells).map((v) => (typeof v === "number" ? v : 0))
   );
 
   return (
-    <div className="coding-matrix-view">
-      <div className="coding-matrix-header">
-        <h3 className="text-sm font-semibold">コーディングマトリクス</h3>
-        <div className="flex gap-2">
-          <button className="btn-ghost text-xs" onClick={loadMatrix}>
-            更新
-          </button>
-          <button className="btn-ghost text-xs" onClick={handleExportCsv}>
-            CSV出力
-          </button>
-        </div>
+    <div className="p-4 overflow-auto h-full">
+      <div className="flex items-center justify-between mb-4">
+        <h3
+          className="text-sm font-semibold"
+          style={{ color: "var(--color-text-primary)" }}
+        >
+          コーディングマトリクス
+        </h3>
+        <button
+          type="button"
+          onClick={() => void loadMatrix()}
+          className="text-xs px-2 py-1"
+          style={{
+            backgroundColor: "var(--color-bg-tertiary)",
+            color: "var(--color-text-secondary)",
+            border: "1px solid var(--color-border-secondary)",
+            borderRadius: "4px",
+            cursor: "pointer",
+          }}
+        >
+          更新
+        </button>
       </div>
 
-      <div className="coding-matrix-scroll">
-        <table className="coding-matrix-table">
+      <div className="overflow-auto">
+        <table
+          style={{
+            borderCollapse: "collapse",
+            fontSize: "12px",
+            minWidth: "100%",
+          }}
+        >
           <thead>
             <tr>
-              <th className="coding-matrix-corner">コード ＼ 文献</th>
+              <th
+                style={{
+                  padding: "8px 12px",
+                  textAlign: "left",
+                  borderBottom: "2px solid var(--color-border-primary)",
+                  color: "var(--color-text-tertiary)",
+                  fontWeight: 600,
+                  position: "sticky",
+                  left: 0,
+                  backgroundColor: "var(--color-bg-primary)",
+                  zIndex: 1,
+                }}
+              >
+                コード
+              </th>
               {matrix.cols.map((col) => (
-                <th key={col.paperId} className="coding-matrix-col-header" title={col.paperTitle}>
-                  <span className="coding-matrix-col-text">{col.paperTitle}</span>
+                <th
+                  key={col.paperId}
+                  style={{
+                    padding: "8px 12px",
+                    textAlign: "center",
+                    borderBottom: "2px solid var(--color-border-primary)",
+                    color: "var(--color-text-tertiary)",
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    maxWidth: "120px",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                  title={col.paperTitle}
+                >
+                  {col.paperTitle.length > 15
+                    ? col.paperTitle.slice(0, 15) + "…"
+                    : col.paperTitle}
                 </th>
               ))}
-              <th className="coding-matrix-total-header">合計</th>
+              <th
+                style={{
+                  padding: "8px 12px",
+                  textAlign: "center",
+                  borderBottom: "2px solid var(--color-border-primary)",
+                  color: "var(--color-text-tertiary)",
+                  fontWeight: 600,
+                }}
+              >
+                合計
+              </th>
             </tr>
           </thead>
           <tbody>
             {matrix.rows.map((row) => {
-              const rowTotal = matrix.cols.reduce((sum, col) => {
-                const key = `${row.codeId}:${col.paperId}`;
-                return sum + (matrix.cells[key] ?? 0);
-              }, 0);
-
+              const rowTotal = matrix.cols.reduce(
+                (sum, col) => sum + getCount(row.codeId, col.paperId),
+                0
+              );
               return (
                 <tr key={row.codeId}>
-                  <td className="coding-matrix-row-header">
-                    <span
-                      className="code-color-dot-sm"
-                      style={{ backgroundColor: row.codeColor }}
-                    />
-                    <span>{row.codeName}</span>
+                  <td
+                    style={{
+                      padding: "6px 12px",
+                      borderBottom: "1px solid var(--color-border-secondary)",
+                      color: "var(--color-text-primary)",
+                      position: "sticky",
+                      left: 0,
+                      backgroundColor: "var(--color-bg-primary)",
+                      zIndex: 1,
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        style={{
+                          width: "8px",
+                          height: "8px",
+                          borderRadius: "50%",
+                          backgroundColor: row.codeColor,
+                          display: "inline-block",
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span className="truncate" style={{ maxWidth: "120px" }}>
+                        {row.codeName}
+                      </span>
+                    </div>
                   </td>
                   {matrix.cols.map((col) => {
-                    const key = `${row.codeId}:${col.paperId}`;
-                    const count = matrix.cells[key] ?? 0;
-                    const intensity = count > 0 ? Math.min(count / maxCount, 1) : 0;
-
+                    const count = getCount(row.codeId, col.paperId);
+                    const intensity = count > 0 ? 0.15 + (count / maxCount) * 0.55 : 0;
                     return (
                       <td
                         key={col.paperId}
-                        className="coding-matrix-cell"
                         style={{
-                          backgroundColor:
-                            count > 0
-                              ? `rgba(99, 102, 241, ${0.1 + intensity * 0.5})`
-                              : undefined,
+                          padding: "6px 12px",
+                          textAlign: "center",
+                          borderBottom: "1px solid var(--color-border-secondary)",
+                          color: count > 0 ? "var(--color-text-primary)" : "var(--color-text-tertiary)",
+                          backgroundColor: count > 0 ? `${row.codeColor}${Math.round(intensity * 255).toString(16).padStart(2, "0")}` : "transparent",
+                          fontWeight: count > 0 ? 600 : 400,
                         }}
                       >
-                        {count > 0 ? count : ''}
+                        {count || "–"}
                       </td>
                     );
                   })}
-                  <td className="coding-matrix-total">{rowTotal}</td>
+                  <td
+                    style={{
+                      padding: "6px 12px",
+                      textAlign: "center",
+                      borderBottom: "1px solid var(--color-border-secondary)",
+                      color: "var(--color-text-primary)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {rowTotal}
+                  </td>
                 </tr>
               );
             })}
           </tbody>
-          <tfoot>
-            <tr>
-              <td className="coding-matrix-footer-label">合計</td>
-              {matrix.cols.map((col) => {
-                const colTotal = matrix.rows.reduce((sum, row) => {
-                  const key = `${row.codeId}:${col.paperId}`;
-                  return sum + (matrix.cells[key] ?? 0);
-                }, 0);
-                return (
-                  <td key={col.paperId} className="coding-matrix-total">
-                    {colTotal}
-                  </td>
-                );
-              })}
-              <td className="coding-matrix-grand-total">
-                {Object.values(matrix.cells).reduce((a, b) => a + b, 0)}
-              </td>
-            </tr>
-          </tfoot>
         </table>
       </div>
     </div>
   );
 };
-
-export default CodingMatrixView;

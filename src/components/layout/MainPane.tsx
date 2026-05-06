@@ -23,6 +23,9 @@ const ReaderView = lazy(() =>
   import("../reader/ReaderView").then((m) => ({ default: m.ReaderView }))
 );
 
+// QualitativeView も React.lazy で遅延読み込み（default export）
+const QualitativeView = lazy(() => import("../qualitative/QualitativeView"));
+
 /** 遅延コンポーネント用ローディング表示 */
 const LazyFallback: React.FC = () => (
   <div
@@ -135,6 +138,15 @@ export const MainPane: React.FC = () => {
       return <LibraryView />;
     }
 
+    // サイドバーが「質的分析」ビューの場合
+    if (sidebarView === "qualitative") {
+      return (
+        <Suspense fallback={<LazyFallback />}>
+          <QualitativeView />
+        </Suspense>
+      );
+    }
+
     // サイドバーが「ノート」ビューの場合：NoteList + NoteEditor 分割レイアウト
     if (sidebarView === "notes") {
       return (
@@ -197,6 +209,12 @@ export const MainPane: React.FC = () => {
           <GraphErrorBoundary>
             <GraphView />
           </GraphErrorBoundary>
+        );
+      case "qualitative":
+        return (
+          <Suspense fallback={<LazyFallback />}>
+            <QualitativeView />
+          </Suspense>
         );
       case "search":
         return (

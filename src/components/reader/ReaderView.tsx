@@ -446,6 +446,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
           onToggleSelect={toggleSelect}
           onClearSelection={clearSelection}
           onCreateNoteFromSelected={handleCreateNoteFromSelected}
+          paperId={paperId}
         />
       </div>
     </div>

@@ -1811,9 +1811,15 @@ pub async fn get_source_critiques_by_project(
     // プロジェクトスコープではハイライト経由で紐づく論文を使う
     let rows = sqlx::query(
         "SELECT DISTINCT sc.* FROM source_critiques sc
-         JOIN papers p ON p.id = sc.paper_id
+         WHERE sc.paper_id IN (
+             SELECT DISTINCT h.paper_id FROM highlights h
+             JOIN highlight_codes hc ON hc.highlight_id = h.id
+             JOIN codes c ON c.id = hc.code_id
+             WHERE c.project_id = ?
+         )
          ORDER BY sc.updated_at DESC",
     )
+    .bind(&project_id)
     .fetch_all(pool.as_ref())
     .await
     .map_err(|e| format!("史料批判一覧取得に失敗: {}", e))?;
