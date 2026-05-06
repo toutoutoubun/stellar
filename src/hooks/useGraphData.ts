@@ -46,16 +46,25 @@ interface UseGraphDataReturn {
   filteredNodeIds: Set<string>;
 }
 
+/**
+ * リンク数カウント用の型。
+ * Map の代わりに Record を使用 — esbuild が `new Map()` → `new Map`（括弧省略）に
+ * minify し、Safari WKWebView / Tauri の WebKit で
+ * "undefined is not an object (evaluating 'new Map')" が発生する問題を回避するため。
+ */
+type LinkCountRecord = Record<string, number>;
+
+/** 空の LinkCountRecord */
+const EMPTY_LINK_COUNTS: LinkCountRecord = Object.freeze({}) as LinkCountRecord;
+
 /** ノードごとのリンク数をカウント */
-function countLinks(
-  links: GraphLink[],
-): Map<string, number> {
-  const counts = new Map<string, number>();
+function countLinks(links: GraphLink[]): LinkCountRecord {
+  const counts: LinkCountRecord = Object.create(null) as LinkCountRecord;
   for (const link of links) {
     const src = typeof link.source === "string" ? link.source : (link.source as GraphNode).id;
     const tgt = typeof link.target === "string" ? link.target : (link.target as GraphNode).id;
-    counts.set(src, (counts.get(src) ?? 0) + 1);
-    counts.set(tgt, (counts.get(tgt) ?? 0) + 1);
+    counts[src] = (counts[src] ?? 0) + 1;
+    counts[tgt] = (counts[tgt] ?? 0) + 1;
   }
   return counts;
 }
@@ -63,11 +72,11 @@ function countLinks(
 /** rawGraphNode を拡張ノードに変換する */
 function toExtendedNodes(
   nodes: GraphNode[],
-  linkCounts: Map<string, number>,
+  linkCounts: LinkCountRecord,
 ): GraphNodeExtended[] {
   return nodes.map((node) => ({
     ...node,
-    linkCount: linkCounts.get(node.id) ?? 0,
+    linkCount: linkCounts[node.id] ?? 0,
     // タグ・updatedAtはRustからのGraphNodeにない場合の安全なデフォルト
     tags: (node as GraphNodeExtended).tags ?? [],
     updatedAt: (node as GraphNodeExtended).updatedAt ?? "",
@@ -148,9 +157,9 @@ export function useGraphData(): UseGraphDataReturn {
     void fetchData();
   }, [fetchData]);
 
-  /** リンク数マップ */
+  /** リンク数レコード */
   const linkCounts = useMemo(
-    () => (rawData ? countLinks(rawData.links) : new Map<string, number>()),
+    () => (rawData ? countLinks(rawData.links) : EMPTY_LINK_COUNTS),
     [rawData],
   );
 
@@ -162,7 +171,7 @@ export function useGraphData(): UseGraphDataReturn {
 
   /** 全タグリスト */
   const allTags = useMemo(() => {
-    const tagSet = new Set<string>();
+    const tagSet = new Set<string>([] as string[]);
     for (const node of extendedNodes) {
       for (const tag of node.tags) {
         tagSet.add(tag);

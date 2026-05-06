@@ -39,6 +39,14 @@ export default defineConfig({
 
   // 本番ビルドの最適化（低メモリ環境対応）
   build: {
+    // modulePreload を無効化:
+    // Vite はデフォルトで動的 import() を __vitePreload ヘルパーでラップする。
+    // このヘルパーが vendor-codemirror チャンク（1.6MB）に配置されるため、
+    // GraphView の lazy load 時に不要な巨大チャンクの評価が連鎖的にトリガーされ、
+    // Safari WKWebView (Tauri) で "undefined is not an object (evaluating 'new Map')"
+    // クラッシュが発生する。Tauri アプリではブラウザのネイティブ modulepreload が
+    // 不要なため、この機能を完全に無効化する。
+    modulePreload: false,
     // Tauri はセキュリティコンテキストで ES2021+ をサポート
     target: "es2021",
     // 低メモリ環境では minify を軽量に

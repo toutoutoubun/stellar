@@ -11,12 +11,14 @@ import {
   useState,
   useMemo,
 } from "react";
-import type ForceGraph2DComponent from "react-force-graph-2d";
+// 【重要】static import に変更 — 動的 import("react-force-graph-2d") を使うと
+// Vite が __vitePreload ヘルパーでラップし、vendor-codemirror チャンク（1.6MB）
+// への依存が発生して Safari WKWebView (Tauri) でクラッシュする。
+// static import にすれば GraphView チャンクに vendor-graph が含まれ、
+// React.lazy による遅延読み込みで十分。
+import ForceGraph2D from "react-force-graph-2d";
 import type { ForceGraphMethods } from "react-force-graph-2d";
 import type { GraphNodeExtended, GraphLink } from "../../types";
-
-/** react-force-graph-2d のコンポーネント型 */
-type FG2DType = typeof ForceGraph2DComponent;
 
 // ============================================================
 // Props
@@ -99,25 +101,16 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const lastClickRef = useRef<{ nodeId: string; time: number } | null>(null);
 
-  // react-force-graph-2d を動的インポート
-  // 循環チャンク依存（vendor-graph ↔ vendor-misc）によるモジュール評価時クラッシュを回避
-  const [FG2D, setFG2D] = useState<FG2DType | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    import("react-force-graph-2d").then((mod) => {
-      if (!cancelled) setFG2D(() => mod.default);
-    });
-    return () => { cancelled = true; };
-  }, []);
+
 
   /** 選択ノードに接続しているノードIDセット */
   const connectedNodeIds = useMemo(() => {
-    if (!selectedNodeId) return new Set<string>();
+    if (!selectedNodeId) return new Set<string>([] as string[]);
     // Cmd+A 全選択モード
     if (selectedNodeId === "__all__") {
       return new Set(nodes.map((n) => n.id));
     }
-    const ids = new Set<string>();
+    const ids = new Set<string>([] as string[]);
     ids.add(selectedNodeId);
     for (const link of links) {
       const src = typeof link.source === "string" ? link.source : (link.source as { id: string }).id;
@@ -410,26 +403,8 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
 
   const bgColor = getCSSVar("--color-bg-primary") || "#ffffff";
 
-  if (!FG2D) {
-    return (
-      <div
-        style={{
-          width,
-          height,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: bgColor,
-          color: "var(--color-text-secondary)",
-        }}
-      >
-        グラフを読み込み中…
-      </div>
-    );
-  }
-
   return (
-      <FG2D
+      <ForceGraph2D
         ref={graphRef as React.MutableRefObject<ForceGraphMethods<GraphNodeExtended, GraphLink> | undefined>}
         graphData={graphData}
         width={width}

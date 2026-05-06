@@ -10,6 +10,7 @@ import { LibraryView } from "../library/LibraryView";
 import { NoteEditor } from "../notes/NoteEditor";
 import { NoteList } from "../notes/NoteList";
 import { SettingsView } from "../settings/SettingsView";
+import { GraphErrorBoundary } from "../graph/GraphErrorBoundary";
 
 // 重いコンポーネントは React.lazy で遅延読み込み
 // GraphView: react-force-graph-2d + d3-force 依存
@@ -183,9 +184,11 @@ export const MainPane: React.FC = () => {
         return <NoteEditor noteId={mainPaneContent.noteId} />;
       case "graph":
         return (
-          <Suspense fallback={<LazyFallback />}>
-            <GraphView />
-          </Suspense>
+          <GraphErrorBoundary>
+            <Suspense fallback={<LazyFallback />}>
+              <GraphView />
+            </Suspense>
+          </GraphErrorBoundary>
         );
       case "search":
         return (
