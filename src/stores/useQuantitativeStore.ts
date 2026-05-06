@@ -117,15 +117,16 @@ export const useQuantitativeStore = create<QuantitativeState>((set, get) => ({
 
     set({ isLoading: true });
     try {
-      const [variables, dataRows] = await Promise.all([
+      const [variables, dataRows, analyses] = await Promise.all([
         invoke<Variable[]>("get_variables", { datasetId: id }),
         invoke<DataRow[]>("get_data_rows", {
           datasetId: id,
           offset: 0,
           limit: get().previewPageSize,
         }),
+        invoke<Analysis[]>("get_analyses", { datasetId: id }).catch(() => [] as Analysis[]),
       ]);
-      set({ variables, dataRows });
+      set({ variables, dataRows, analyses });
     } catch (e) {
       const msg =
         typeof e === "string" ? e : "データの読み込みに失敗しました";

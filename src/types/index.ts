@@ -913,4 +913,4 @@ export interface SaveAnalysisInput {
 }
 
 /** Data Studio のタブ */
-export type DataStudioTab = 'import' | 'variables' | 'preview';
+export type DataStudioTab = 'import' | 'variables' | 'preview' | 'analysis';
