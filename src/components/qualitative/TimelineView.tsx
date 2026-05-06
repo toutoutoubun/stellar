@@ -1,9 +1,12 @@
 // src/components/qualitative/TimelineView.tsx
 // タイムライン表示 — イベント一覧 + レーン別表示
+// ミニマルUI / カスタムアイコン / ヘルプ付き
 
 import React, { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { TimelineEvent, CreateTimelineEventInput } from "../../types";
+import { HelpTooltip } from "./HelpTooltip";
+import { IconPlus, IconDelete, IconClose, IconFilter, IconApproximate, IconTimeline } from "./icons/QualIcons";
 
 interface TimelineViewProps {
   projectId: string;
@@ -12,24 +15,19 @@ interface TimelineViewProps {
 /** 日付をパースしてYYYY-MM-DD形式に正規化 */
 function parseDateInput(input: string): { date: string; dateType: string } {
   const trimmed = input.trim();
-  // 完全な日付 YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
     return { date: trimmed, dateType: "exact" };
   }
-  // 年月 YYYY-MM
   if (/^\d{4}-\d{2}$/.test(trimmed)) {
     return { date: `${trimmed}-01`, dateType: "month" };
   }
-  // 年のみ YYYY
   if (/^\d{4}$/.test(trimmed)) {
     return { date: `${trimmed}-01-01`, dateType: "year" };
   }
-  // 「頃」「約」「circa」等の近似表現
   const approxMatch = trimmed.match(/(?:circa|c\.|ca\.|頃|約|~)\s*(\d{4})/i);
   if (approxMatch) {
     return { date: `${approxMatch[1]}-01-01`, dateType: "approximate" };
   }
-  // フォールバック
   return { date: trimmed, dateType: "exact" };
 }
 
@@ -51,7 +49,6 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
   const [showForm, setShowForm] = useState(false);
   const [filterLane, setFilterLane] = useState<string | null>(null);
 
-  // フォーム
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dateInput, setDateInput] = useState("");
@@ -125,42 +122,58 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full" style={{ color: "var(--color-text-tertiary)" }}>
-        <span className="text-sm">読み込み中…</span>
+        <span className="text-sm">読み込み中...</span>
       </div>
     );
   }
 
   return (
     <div className="p-4 h-full overflow-y-auto">
+      <HelpTooltip
+        storageKey="qual_timeline"
+        title="タイムラインの使い方"
+        paragraphs={[
+          "歴史的イベントを時系列で管理します。日付は柔軟に入力でき、YYYY, YYYY-MM, YYYY-MM-DD, circa YYYY などの形式に対応しています。",
+          "レーンを使ってイベントをカテゴリ別に分類できます。",
+        ]}
+        steps={[
+          "イベント追加ボタンからイベントを登録します",
+          "日付、種別、重要度、レーンを設定してください",
+          "レーンフィルタで表示を絞り込めます",
+        ]}
+      />
+
       {/* ヘッダー */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold" style={{ color: "var(--color-text-primary)" }}>
           タイムライン ({events.length}件)
         </h3>
         <div className="flex items-center gap-2">
-          {/* レーンフィルタ */}
           {lanes.length > 0 && (
-            <select
-              value={filterLane ?? ""}
-              onChange={(e) => setFilterLane(e.target.value || null)}
-              className="text-xs px-2 py-1"
-              style={{
-                backgroundColor: "var(--color-bg-primary)",
-                color: "var(--color-text-primary)",
-                border: "1px solid var(--color-border-primary)",
-                borderRadius: "4px",
-              }}
-            >
-              <option value="">全レーン</option>
-              {lanes.map((l) => (
-                <option key={l} value={l}>{l}</option>
-              ))}
-            </select>
+            <div className="inline-flex items-center gap-1">
+              <IconFilter size={11} color="var(--color-text-tertiary)" />
+              <select
+                value={filterLane ?? ""}
+                onChange={(e) => setFilterLane(e.target.value || null)}
+                className="text-xs px-2 py-1"
+                style={{
+                  backgroundColor: "var(--color-bg-primary)",
+                  color: "var(--color-text-primary)",
+                  border: "1px solid var(--color-border-primary)",
+                  borderRadius: "4px",
+                }}
+              >
+                <option value="">全レーン</option>
+                {lanes.map((l) => (
+                  <option key={l} value={l}>{l}</option>
+                ))}
+              </select>
+            </div>
           )}
           <button
             type="button"
             onClick={() => setShowForm(!showForm)}
-            className="text-xs px-3 py-1"
+            className="text-xs px-3 py-1 inline-flex items-center gap-1"
             style={{
               backgroundColor: "var(--color-accent-primary)",
               color: "#fff",
@@ -169,7 +182,8 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
               cursor: "pointer",
             }}
           >
-            + イベント追加
+            <IconPlus size={10} />
+            イベント追加
           </button>
         </div>
       </div>
@@ -250,7 +264,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
                 type="text"
                 value={lane}
                 onChange={(e) => setLane(e.target.value)}
-                placeholder="国内, 国際, …"
+                placeholder="国内, 国際, ..."
                 className="w-full text-xs px-2 py-1.5"
                 style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "6px", outline: "none" }}
               />
@@ -268,9 +282,10 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="text-xs px-3 py-1.5"
+              className="text-xs px-3 py-1.5 inline-flex items-center gap-1"
               style={{ backgroundColor: "transparent", color: "var(--color-text-secondary)", border: "1px solid var(--color-border-secondary)", borderRadius: "6px", cursor: "pointer" }}
             >
+              <IconClose size={10} />
               キャンセル
             </button>
           </div>
@@ -279,12 +294,12 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
 
       {/* タイムライン表示 */}
       {filteredEvents.length === 0 ? (
-        <div className="text-center py-12 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-          イベントなし。上のボタンで追加してください。
+        <div className="flex flex-col items-center justify-center py-12 gap-3" style={{ color: "var(--color-text-tertiary)" }}>
+          <IconTimeline size={28} />
+          <span className="text-xs">イベントなし。上のボタンで追加してください。</span>
         </div>
       ) : (
         <div className="relative" style={{ paddingLeft: "24px" }}>
-          {/* タイムラインの縦線 */}
           <div
             style={{
               position: "absolute",
@@ -298,7 +313,6 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
 
           {filteredEvents.map((event) => (
             <div key={event.id} className="relative mb-4 group">
-              {/* ドット */}
               <div
                 style={{
                   position: "absolute",
@@ -339,7 +353,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
                       </span>
                       {event.dateType !== "exact" && (
                         <span
-                          className="text-xs px-1 py-0.5"
+                          className="text-xs px-1 py-0.5 inline-flex items-center gap-0.5"
                           style={{
                             backgroundColor: "#f59e0b20",
                             color: "#f59e0b",
@@ -347,13 +361,14 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
                             fontSize: "9px",
                           }}
                         >
-                          {event.dateType === "approximate" ? "≈推定" : event.dateType === "year" ? "年のみ" : "月まで"}
+                          <IconApproximate size={8} color="#f59e0b" />
+                          {event.dateType === "approximate" ? "推定" : event.dateType === "year" ? "年のみ" : "月まで"}
                         </span>
                       )}
                     </div>
                     <div className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
                       {event.eventDate}
-                      {event.lane && <span> · {event.lane}</span>}
+                      {event.lane && <span> / {event.lane}</span>}
                     </div>
                     {event.description && (
                       <p className="text-xs mt-1" style={{ color: "var(--color-text-secondary)", lineHeight: "1.5" }}>
@@ -364,10 +379,11 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
                   <button
                     type="button"
                     onClick={() => void handleDelete(event.id)}
-                    className="text-xs opacity-0 group-hover:opacity-100"
-                    style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer" }}
+                    className="opacity-0 group-hover:opacity-100 shrink-0"
+                    title="削除"
+                    style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer", display: "flex", padding: "2px" }}
                   >
-                    ×
+                    <IconDelete size={12} />
                   </button>
                 </div>
               </div>

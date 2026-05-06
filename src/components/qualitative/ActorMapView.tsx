@@ -1,5 +1,6 @@
 // src/components/qualitative/ActorMapView.tsx
 // アクターマップ — アクター一覧 + 関係性管理
+// 折りたたみパネル / ミニマルUI / カスタムアイコン / ヘルプ付き
 
 import React, { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
@@ -10,6 +11,18 @@ import type {
   CreateActorInput,
   CreateActorRelationInput,
 } from "../../types";
+import { HelpTooltip } from "./HelpTooltip";
+import {
+  IconPlus,
+  IconDelete,
+  IconClose,
+  IconPanelLeft,
+  IconDotFilled,
+  IconDotEmpty,
+  IconArrowRight,
+  IconArrowBoth,
+  IconActorMap,
+} from "./icons/QualIcons";
 
 interface ActorMapViewProps {
   projectId: string;
@@ -50,6 +63,7 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
   const [loading, setLoading] = useState(true);
   const [showActorForm, setShowActorForm] = useState(false);
   const [showRelationForm, setShowRelationForm] = useState(false);
+  const [actorPanelCollapsed, setActorPanelCollapsed] = useState(false);
 
   // アクターフォーム
   const [actorName, setActorName] = useState("");
@@ -149,10 +163,23 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
 
   const getActorName = (id: string) => actors.find((a) => a.id === id)?.name ?? id;
 
+  /** 影響力ドットを SVG アイコンで描画 */
+  const renderInfluenceDots = (influence: number) => {
+    const dots = [];
+    for (let i = 0; i < 5; i++) {
+      if (i < influence) {
+        dots.push(<IconDotFilled key={i} size={7} color="var(--color-accent-primary)" />);
+      } else {
+        dots.push(<IconDotEmpty key={i} size={7} color="var(--color-text-tertiary)" />);
+      }
+    }
+    return <span className="inline-flex items-center gap-0.5">{dots}</span>;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full" style={{ color: "var(--color-text-tertiary)" }}>
-        <span className="text-sm">読み込み中…</span>
+        <span className="text-sm">読み込み中...</span>
       </div>
     );
   }
@@ -162,100 +189,131 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
       {/* 左: アクター一覧 */}
       <div
         className="flex flex-col shrink-0 h-full"
-        style={{ width: "300px", borderRight: "1px solid var(--color-border-primary)" }}
+        style={{
+          width: actorPanelCollapsed ? "40px" : "300px",
+          borderRight: "1px solid var(--color-border-primary)",
+          transition: "width 150ms ease-out",
+          overflow: "hidden",
+        }}
       >
         <header
-          className="flex items-center justify-between px-3 shrink-0"
+          className="flex items-center justify-between px-2 shrink-0"
           style={{ height: "40px", borderBottom: "1px solid var(--color-border-primary)" }}
         >
-          <span className="text-xs font-semibold" style={{ color: "var(--color-text-tertiary)" }}>
-            アクター ({actors.length})
-          </span>
+          {!actorPanelCollapsed && (
+            <>
+              <span className="text-xs font-semibold" style={{ color: "var(--color-text-tertiary)" }}>
+                アクター ({actors.length})
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setShowActorForm(!showActorForm)}
+                  className="text-xs inline-flex items-center gap-0.5"
+                  style={{ color: "var(--color-accent-primary)", background: "none", border: "none", cursor: "pointer" }}
+                >
+                  <IconPlus size={10} />
+                  追加
+                </button>
+              </div>
+            </>
+          )}
           <button
             type="button"
-            onClick={() => setShowActorForm(!showActorForm)}
-            className="text-xs"
-            style={{ color: "var(--color-accent-primary)", background: "none", border: "none", cursor: "pointer" }}
+            onClick={() => setActorPanelCollapsed(!actorPanelCollapsed)}
+            title={actorPanelCollapsed ? "展開" : "折りたたむ"}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-tertiary)", padding: "4px", display: "flex" }}
           >
-            + 追加
+            <IconPanelLeft size={13} />
           </button>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-2">
-          {showActorForm && (
-            <div className="mb-3 p-2" style={{ backgroundColor: "var(--color-bg-tertiary)", borderRadius: "8px" }}>
-              <input
-                type="text"
-                value={actorName}
-                onChange={(e) => setActorName(e.target.value)}
-                placeholder="アクター名"
-                className="w-full text-xs px-2 py-1 mb-1"
-                style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "4px", outline: "none" }}
-                onKeyDown={(e) => { if (e.key === "Enter") void handleCreateActor(); }}
-                autoFocus
-              />
-              <select
-                value={actorType}
-                onChange={(e) => setActorType(e.target.value)}
-                className="w-full text-xs px-2 py-1 mb-1"
-                style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "4px" }}
+        {!actorPanelCollapsed && (
+          <div className="flex-1 overflow-y-auto p-2">
+            {showActorForm && (
+              <div className="mb-3 p-2" style={{ backgroundColor: "var(--color-bg-tertiary)", borderRadius: "8px" }}>
+                <input
+                  type="text"
+                  value={actorName}
+                  onChange={(e) => setActorName(e.target.value)}
+                  placeholder="アクター名"
+                  className="w-full text-xs px-2 py-1 mb-1"
+                  style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "4px", outline: "none" }}
+                  onKeyDown={(e) => { if (e.key === "Enter") void handleCreateActor(); }}
+                  autoFocus
+                />
+                <select
+                  value={actorType}
+                  onChange={(e) => setActorType(e.target.value)}
+                  className="w-full text-xs px-2 py-1 mb-1"
+                  style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "4px" }}
+                >
+                  {ACTOR_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+                <div className="flex items-center gap-1 mb-1">
+                  <label className="text-xs" style={{ color: "var(--color-text-tertiary)", whiteSpace: "nowrap" }}>影響力: {actorInfluence}</label>
+                  <input type="range" min={1} max={5} value={actorInfluence} onChange={(e) => setActorInfluence(Number(e.target.value))} style={{ flex: 1 }} />
+                </div>
+                <textarea
+                  value={actorDescription}
+                  onChange={(e) => setActorDescription(e.target.value)}
+                  placeholder="説明（任意）"
+                  rows={2}
+                  className="w-full text-xs px-2 py-1 mb-1"
+                  style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "4px", outline: "none", resize: "vertical" }}
+                />
+                <div className="flex gap-1">
+                  <button type="button" onClick={() => void handleCreateActor()} className="flex-1 text-xs py-1" style={{ backgroundColor: "var(--color-accent-primary)", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>追加</button>
+                  <button type="button" onClick={() => setShowActorForm(false)} title="キャンセル" style={{ background: "transparent", color: "var(--color-text-tertiary)", border: "1px solid var(--color-border-secondary)", borderRadius: "4px", cursor: "pointer", display: "flex", alignItems: "center", padding: "4px 8px" }}>
+                    <IconClose size={10} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {actors.map((actor) => (
+              <div
+                key={actor.id}
+                className="p-2 mb-1 group"
+                style={{ backgroundColor: "var(--color-bg-secondary)", borderRadius: "6px", border: "1px solid var(--color-border-secondary)" }}
               >
-                {ACTOR_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </select>
-              <div className="flex items-center gap-1 mb-1">
-                <label className="text-xs" style={{ color: "var(--color-text-tertiary)", whiteSpace: "nowrap" }}>影響力: {actorInfluence}</label>
-                <input type="range" min={1} max={5} value={actorInfluence} onChange={(e) => setActorInfluence(Number(e.target.value))} style={{ flex: 1 }} />
-              </div>
-              <textarea
-                value={actorDescription}
-                onChange={(e) => setActorDescription(e.target.value)}
-                placeholder="説明（任意）"
-                rows={2}
-                className="w-full text-xs px-2 py-1 mb-1"
-                style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "4px", outline: "none", resize: "vertical" }}
-              />
-              <div className="flex gap-1">
-                <button type="button" onClick={() => void handleCreateActor()} className="flex-1 text-xs py-1" style={{ backgroundColor: "var(--color-accent-primary)", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>追加</button>
-                <button type="button" onClick={() => setShowActorForm(false)} className="text-xs px-2 py-1" style={{ background: "transparent", color: "var(--color-text-tertiary)", border: "1px solid var(--color-border-secondary)", borderRadius: "4px", cursor: "pointer" }}>×</button>
-              </div>
-            </div>
-          )}
-
-          {actors.map((actor) => (
-            <div
-              key={actor.id}
-              className="p-2 mb-1 group"
-              style={{ backgroundColor: "var(--color-bg-secondary)", borderRadius: "6px", border: "1px solid var(--color-border-secondary)" }}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="text-xs px-1.5 py-0.5"
-                    style={{ backgroundColor: "var(--color-bg-tertiary)", borderRadius: "4px", color: "var(--color-text-tertiary)", fontSize: "10px" }}
-                  >
-                    {ACTOR_TYPES.find((t) => t.value === actor.actorType)?.label ?? actor.actorType}
-                  </span>
-                  <span className="text-xs font-medium" style={{ color: "var(--color-text-primary)" }}>{actor.name}</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="text-xs px-1.5 py-0.5"
+                      style={{ backgroundColor: "var(--color-bg-tertiary)", borderRadius: "4px", color: "var(--color-text-tertiary)", fontSize: "10px" }}
+                    >
+                      {ACTOR_TYPES.find((t) => t.value === actor.actorType)?.label ?? actor.actorType}
+                    </span>
+                    <span className="text-xs font-medium" style={{ color: "var(--color-text-primary)" }}>{actor.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {renderInfluenceDots(actor.influence)}
+                    <button
+                      type="button"
+                      onClick={() => void handleDeleteActor(actor.id)}
+                      className="opacity-0 group-hover:opacity-100"
+                      title="削除"
+                      style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer", display: "flex", padding: "2px" }}
+                    >
+                      <IconDelete size={11} />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-                    {"●".repeat(actor.influence)}{"○".repeat(5 - actor.influence)}
-                  </span>
-                  <button type="button" onClick={() => void handleDeleteActor(actor.id)} className="text-xs opacity-0 group-hover:opacity-100" style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer" }}>×</button>
-                </div>
+                {actor.description && (
+                  <p className="text-xs mt-1" style={{ color: "var(--color-text-secondary)" }}>{actor.description}</p>
+                )}
               </div>
-              {actor.description && (
-                <p className="text-xs mt-1" style={{ color: "var(--color-text-secondary)" }}>{actor.description}</p>
-              )}
-            </div>
-          ))}
+            ))}
 
-          {actors.length === 0 && !showActorForm && (
-            <div className="text-center py-8 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-              アクターなし
-            </div>
-          )}
-        </div>
+            {actors.length === 0 && !showActorForm && (
+              <div className="flex flex-col items-center justify-center py-8 gap-2" style={{ color: "var(--color-text-tertiary)" }}>
+                <IconActorMap size={24} />
+                <span className="text-xs">アクターなし</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 右: 関係性一覧 */}
@@ -270,15 +328,30 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
           <button
             type="button"
             onClick={() => setShowRelationForm(!showRelationForm)}
-            className="text-xs"
+            className="text-xs inline-flex items-center gap-0.5"
             style={{ color: "var(--color-accent-primary)", background: "none", border: "none", cursor: "pointer" }}
             disabled={actors.length < 2}
           >
-            + 追加
+            <IconPlus size={10} />
+            追加
           </button>
         </header>
 
         <div className="flex-1 overflow-y-auto p-3">
+          <HelpTooltip
+            storageKey="qual_actor_map"
+            title="アクターマップの使い方"
+            paragraphs={[
+              "政治・歴史分析におけるアクター（行為者）とその関係性を管理します。",
+              "左パネルでアクターを追加し、右パネルで関係性を定義してください。",
+            ]}
+            steps={[
+              "アクター名、種別、影響力を設定して追加します",
+              "2つ以上のアクターがあれば関係性を追加できます",
+              "同盟/対立/協力/依存/影響/交渉などの関係種別から選択します",
+            ]}
+          />
+
           {showRelationForm && actors.length >= 2 && (
             <div className="mb-4 p-3" style={{ backgroundColor: "var(--color-bg-secondary)", borderRadius: "8px", border: "1px solid var(--color-border-primary)" }}>
               <div className="grid grid-cols-2 gap-2 mb-2">
@@ -303,7 +376,10 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
               <input type="text" value={relDescription} onChange={(e) => setRelDescription(e.target.value)} placeholder="説明（任意）" className="w-full text-xs px-2 py-1 mb-2" style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "4px", outline: "none" }} />
               <div className="flex gap-1">
                 <button type="button" onClick={() => void handleCreateRelation()} className="text-xs px-3 py-1" style={{ backgroundColor: "var(--color-accent-primary)", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>追加</button>
-                <button type="button" onClick={() => setShowRelationForm(false)} className="text-xs px-2 py-1" style={{ background: "transparent", color: "var(--color-text-tertiary)", border: "1px solid var(--color-border-secondary)", borderRadius: "4px", cursor: "pointer" }}>キャンセル</button>
+                <button type="button" onClick={() => setShowRelationForm(false)} className="text-xs px-2 py-1 inline-flex items-center gap-1" style={{ background: "transparent", color: "var(--color-text-tertiary)", border: "1px solid var(--color-border-secondary)", borderRadius: "4px", cursor: "pointer" }}>
+                  <IconClose size={10} />
+                  キャンセル
+                </button>
               </div>
             </div>
           )}
@@ -314,38 +390,53 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              {relations.map((rel) => (
-                <div
-                  key={rel.id}
-                  className="flex items-center gap-3 p-2 group"
-                  style={{ backgroundColor: "var(--color-bg-secondary)", borderRadius: "6px", border: "1px solid var(--color-border-secondary)" }}
-                >
-                  <span className="text-xs font-medium" style={{ color: "var(--color-text-primary)" }}>
-                    {getActorName(rel.actorFrom)}
-                  </span>
-                  <span
-                    className="text-xs px-2 py-0.5"
-                    style={{
-                      backgroundColor: (RELATION_COLORS[rel.relationType] ?? "#94a3b8") + "20",
-                      color: RELATION_COLORS[rel.relationType] ?? "#94a3b8",
-                      borderRadius: "999px",
-                      fontSize: "10px",
-                    }}
+              {relations.map((rel) => {
+                const relColor = RELATION_COLORS[rel.relationType] ?? "#94a3b8";
+                return (
+                  <div
+                    key={rel.id}
+                    className="flex items-center gap-3 p-2 group"
+                    style={{ backgroundColor: "var(--color-bg-secondary)", borderRadius: "6px", border: "1px solid var(--color-border-secondary)" }}
                   >
-                    {RELATION_TYPES.find((t) => t.value === rel.relationType)?.label ?? rel.relationType}
-                    {rel.relationType === "conflict" ? " ⟷" : " →"}
-                  </span>
-                  <span className="text-xs font-medium" style={{ color: "var(--color-text-primary)" }}>
-                    {getActorName(rel.actorTo)}
-                  </span>
-                  {rel.description && (
-                    <span className="text-xs flex-1 truncate" style={{ color: "var(--color-text-tertiary)" }}>
-                      {rel.description}
+                    <span className="text-xs font-medium" style={{ color: "var(--color-text-primary)" }}>
+                      {getActorName(rel.actorFrom)}
                     </span>
-                  )}
-                  <button type="button" onClick={() => void handleDeleteRelation(rel.id)} className="text-xs opacity-0 group-hover:opacity-100 shrink-0" style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer" }}>×</button>
-                </div>
-              ))}
+                    <span
+                      className="text-xs px-2 py-0.5 inline-flex items-center gap-1"
+                      style={{
+                        backgroundColor: relColor + "20",
+                        color: relColor,
+                        borderRadius: "999px",
+                        fontSize: "10px",
+                      }}
+                    >
+                      {RELATION_TYPES.find((t) => t.value === rel.relationType)?.label ?? rel.relationType}
+                      {rel.relationType === "conflict" ? (
+                        <IconArrowBoth size={10} color={relColor} />
+                      ) : (
+                        <IconArrowRight size={10} color={relColor} />
+                      )}
+                    </span>
+                    <span className="text-xs font-medium" style={{ color: "var(--color-text-primary)" }}>
+                      {getActorName(rel.actorTo)}
+                    </span>
+                    {rel.description && (
+                      <span className="text-xs flex-1 truncate" style={{ color: "var(--color-text-tertiary)" }}>
+                        {rel.description}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => void handleDeleteRelation(rel.id)}
+                      className="opacity-0 group-hover:opacity-100 shrink-0"
+                      title="削除"
+                      style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer", display: "flex", padding: "2px" }}
+                    >
+                      <IconDelete size={11} />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

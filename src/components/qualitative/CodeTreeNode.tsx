@@ -1,8 +1,9 @@
 // src/components/qualitative/CodeTreeNode.tsx
-// コードツリーの再帰ノードコンポーネント
+// コードツリーの再帰ノードコンポーネント — ミニマルUI / カスタムアイコン
 
 import React, { useState, useCallback } from "react";
 import type { CodeNode } from "../../types";
+import { IconChevronRight, IconEdit, IconDelete, IconCheck, IconClose } from "./icons/QualIcons";
 
 interface CodeTreeNodeProps {
   node: CodeNode;
@@ -43,7 +44,7 @@ export const CodeTreeNode: React.FC<CodeTreeNodeProps> = ({
       e.dataTransfer.setData("text/plain", node.id);
       e.stopPropagation();
     },
-    [node.id]
+    [node.id],
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -60,7 +61,7 @@ export const CodeTreeNode: React.FC<CodeTreeNodeProps> = ({
         onDrop(draggedId, node.id);
       }
     },
-    [node.id, onDrop]
+    [node.id, onDrop],
   );
 
   return (
@@ -79,17 +80,14 @@ export const CodeTreeNode: React.FC<CodeTreeNodeProps> = ({
           borderRadius: "4px",
           cursor: "pointer",
           backgroundColor: isSelected ? "var(--color-bg-hover)" : "transparent",
-          transition: "background-color 100ms ease-out",
+          transition: "background-color 80ms",
         }}
         onClick={() => onSelect(node.id)}
       >
         {/* 展開/折りたたみ */}
         <button
           type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setExpanded(!expanded);
-          }}
+          onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
           className="shrink-0"
           style={{
             width: "16px",
@@ -104,20 +102,11 @@ export const CodeTreeNode: React.FC<CodeTreeNodeProps> = ({
             visibility: hasChildren ? "visible" : "hidden",
           }}
         >
-          <svg
-            width="10"
-            height="10"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            style={{
-              transform: expanded ? "rotate(90deg)" : "none",
-              transition: "transform 100ms",
-            }}
-          >
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
+          <IconChevronRight
+            size={10}
+            color="var(--color-text-tertiary)"
+            className={expanded ? "rotate-90" : ""}
+          />
         </button>
 
         {/* カラードット */}
@@ -138,7 +127,7 @@ export const CodeTreeNode: React.FC<CodeTreeNodeProps> = ({
               type="color"
               value={editColor}
               onChange={(e) => setEditColor(e.target.value)}
-              style={{ width: "20px", height: "20px", border: "none", padding: 0, cursor: "pointer" }}
+              style={{ width: "20px", height: "20px", border: "none", padding: 0, cursor: "pointer", borderRadius: "4px" }}
             />
             <input
               type="text"
@@ -161,10 +150,16 @@ export const CodeTreeNode: React.FC<CodeTreeNodeProps> = ({
             <button
               type="button"
               onClick={handleSaveEdit}
-              className="text-xs"
-              style={{ color: "var(--color-accent-primary)", background: "none", border: "none", cursor: "pointer" }}
+              style={{ color: "var(--color-accent-primary)", background: "none", border: "none", cursor: "pointer", display: "flex", padding: "2px" }}
             >
-              ✓
+              <IconCheck size={12} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer", display: "flex", padding: "2px" }}
+            >
+              <IconClose size={12} />
             </button>
           </div>
         ) : (
@@ -172,20 +167,15 @@ export const CodeTreeNode: React.FC<CodeTreeNodeProps> = ({
             <span
               className="flex-1 text-xs truncate"
               style={{
-                color: isSelected
-                  ? "var(--color-accent-primary)"
-                  : "var(--color-text-primary)",
+                color: isSelected ? "var(--color-accent-primary)" : "var(--color-text-primary)",
               }}
             >
               {node.name}
             </span>
-            <span
-              className="text-xs shrink-0"
-              style={{ color: "var(--color-text-tertiary)" }}
-            >
+            <span className="text-xs shrink-0" style={{ color: "var(--color-text-tertiary)", fontSize: "10px" }}>
               {node.assignmentCount > 0 ? node.assignmentCount : ""}
             </span>
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100" style={{ transition: "opacity 80ms" }}>
               <button
                 type="button"
                 onClick={(e) => {
@@ -194,35 +184,18 @@ export const CodeTreeNode: React.FC<CodeTreeNodeProps> = ({
                   setEditColor(node.color);
                   setEditing(true);
                 }}
-                className="text-xs"
-                style={{
-                  color: "var(--color-text-tertiary)",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: "0 2px",
-                }}
                 title="編集"
+                style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer", padding: "2px", display: "flex" }}
               >
-                ✎
+                <IconEdit size={11} />
               </button>
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(node.id);
-                }}
-                className="text-xs"
-                style={{
-                  color: "var(--color-text-tertiary)",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: "0 2px",
-                }}
+                onClick={(e) => { e.stopPropagation(); onDelete(node.id); }}
                 title="削除"
+                style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer", padding: "2px", display: "flex" }}
               >
-                ×
+                <IconDelete size={11} />
               </button>
             </div>
           </>
@@ -230,20 +203,18 @@ export const CodeTreeNode: React.FC<CodeTreeNodeProps> = ({
       </div>
 
       {/* 子ノード */}
-      {expanded &&
-        hasChildren &&
-        node.children.map((child) => (
-          <CodeTreeNode
-            key={child.id}
-            node={child}
-            depth={depth + 1}
-            selectedCodeId={selectedCodeId}
-            onSelect={onSelect}
-            onUpdate={onUpdate}
-            onDelete={onDelete}
-            onDrop={onDrop}
-          />
-        ))}
+      {expanded && hasChildren && node.children.map((child) => (
+        <CodeTreeNode
+          key={child.id}
+          node={child}
+          depth={depth + 1}
+          selectedCodeId={selectedCodeId}
+          onSelect={onSelect}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          onDrop={onDrop}
+        />
+      ))}
     </div>
   );
 };

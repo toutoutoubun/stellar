@@ -1,9 +1,12 @@
 // src/components/qualitative/CodingMatrixView.tsx
 // コーディングマトリクス — コード×論文のクロス集計表
+// ミニマルUI / カスタムアイコン / ヘルプ付き
 
 import React, { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { CodingMatrix } from "../../types";
+import { HelpTooltip } from "./HelpTooltip";
+import { IconRefresh, IconMatrix } from "./icons/QualIcons";
 
 interface CodingMatrixViewProps {
   projectId: string;
@@ -39,7 +42,7 @@ export const CodingMatrixView: React.FC<CodingMatrixViewProps> = ({
         className="flex items-center justify-center h-full"
         style={{ color: "var(--color-text-tertiary)" }}
       >
-        <span className="text-sm">読み込み中…</span>
+        <span className="text-sm">読み込み中...</span>
       </div>
     );
   }
@@ -50,6 +53,7 @@ export const CodingMatrixView: React.FC<CodingMatrixViewProps> = ({
         className="flex flex-col items-center justify-center h-full gap-3"
         style={{ color: "var(--color-text-tertiary)" }}
       >
+        <IconMatrix size={28} />
         <span className="text-sm">
           マトリクスデータなし。コードとハイライトを追加してください。
         </span>
@@ -69,6 +73,20 @@ export const CodingMatrixView: React.FC<CodingMatrixViewProps> = ({
 
   return (
     <div className="p-4 overflow-auto h-full">
+      <HelpTooltip
+        storageKey="qual_matrix"
+        title="コーディングマトリクスの見方"
+        paragraphs={[
+          "コードと論文のクロス集計表です。各セルはコードが論文に何回割り当てられたかを示します。",
+          "色の濃さは相対的な頻度を表しています。",
+        ]}
+        steps={[
+          "PDFリーダーでハイライトを作成し、コードブックでコードを割り当てます",
+          "マトリクスが自動的に更新されます",
+          "更新ボタンで最新データを取得できます",
+        ]}
+      />
+
       <div className="flex items-center justify-between mb-4">
         <h3
           className="text-sm font-semibold"
@@ -79,7 +97,7 @@ export const CodingMatrixView: React.FC<CodingMatrixViewProps> = ({
         <button
           type="button"
           onClick={() => void loadMatrix()}
-          className="text-xs px-2 py-1"
+          className="text-xs px-2 py-1 inline-flex items-center gap-1"
           style={{
             backgroundColor: "var(--color-bg-tertiary)",
             color: "var(--color-text-secondary)",
@@ -88,6 +106,7 @@ export const CodingMatrixView: React.FC<CodingMatrixViewProps> = ({
             cursor: "pointer",
           }}
         >
+          <IconRefresh size={11} />
           更新
         </button>
       </div>
@@ -134,7 +153,7 @@ export const CodingMatrixView: React.FC<CodingMatrixViewProps> = ({
                   title={col.paperTitle}
                 >
                   {col.paperTitle.length > 15
-                    ? col.paperTitle.slice(0, 15) + "…"
+                    ? col.paperTitle.slice(0, 15) + "..."
                     : col.paperTitle}
                 </th>
               ))}
@@ -201,7 +220,7 @@ export const CodingMatrixView: React.FC<CodingMatrixViewProps> = ({
                           fontWeight: count > 0 ? 600 : 400,
                         }}
                       >
-                        {count || "–"}
+                        {count || "-"}
                       </td>
                     );
                   })}

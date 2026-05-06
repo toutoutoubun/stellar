@@ -1,5 +1,6 @@
 // src/components/qualitative/ComparativeDesignView.tsx
 // 比較ケースデザイン — MSSD/MDSD + 変数×ケースマトリクス + QCA CSV エクスポート
+// ミニマルUI / カスタムアイコン / ヘルプ付き
 
 import React, { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
@@ -7,6 +8,8 @@ import type {
   ComparativeDesignFull,
   CreateComparativeDesignInput,
 } from "../../types";
+import { HelpTooltip } from "./HelpTooltip";
+import { IconPlus, IconDelete, IconClose, IconCopy, IconExport, IconComparative } from "./icons/QualIcons";
 
 interface ComparativeDesignViewProps {
   projectId: string;
@@ -172,7 +175,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
         className="flex items-center justify-center h-full"
         style={{ color: "var(--color-text-tertiary)" }}
       >
-        <span className="text-sm">読み込み中…</span>
+        <span className="text-sm">読み込み中...</span>
       </div>
     );
   }
@@ -181,6 +184,21 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
   if (!design) {
     return (
       <div className="p-6">
+        <HelpTooltip
+          storageKey="qual_comparative"
+          title="比較デザインの使い方"
+          paragraphs={[
+            "比較政治学で用いられるMSSD（最類似事例法）、MDSD（最相違事例法）、QCA（質的比較分析）のデザインを管理します。",
+            "ケースと変数のマトリクスを作成し、QCA CSV形式でエクスポートできます。",
+          ]}
+          steps={[
+            "デザインの種別を選択して作成します",
+            "ケース（事例）と変数（独立/従属/統制/結果）を追加します",
+            "各セルに値を入力してマトリクスを完成させます",
+            "QCA CSV エクスポートで外部ツールに渡せます",
+          ]}
+        />
+
         {showCreateForm ? (
           <div
             className="p-4"
@@ -250,7 +268,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowCreateForm(false)}
-                className="text-xs px-3 py-1.5"
+                className="text-xs px-3 py-1.5 inline-flex items-center gap-1"
                 style={{
                   background: "transparent",
                   color: "var(--color-text-secondary)",
@@ -259,6 +277,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
                   cursor: "pointer",
                 }}
               >
+                <IconClose size={10} />
                 キャンセル
               </button>
             </div>
@@ -268,11 +287,12 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
             className="flex flex-col items-center justify-center gap-4 py-12"
             style={{ color: "var(--color-text-tertiary)" }}
           >
+            <IconComparative size={28} />
             <span className="text-sm">比較デザインがありません</span>
             <button
               type="button"
               onClick={() => setShowCreateForm(true)}
-              className="text-sm px-4 py-2"
+              className="text-sm px-4 py-2 inline-flex items-center gap-1"
               style={{
                 backgroundColor: "var(--color-accent-primary)",
                 color: "#fff",
@@ -281,7 +301,8 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
                 cursor: "pointer",
               }}
             >
-              + 比較デザインを作成
+              <IconPlus size={12} />
+              比較デザインを作成
             </button>
           </div>
         )}
@@ -291,6 +312,19 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
 
   return (
     <div className="p-4 h-full overflow-y-auto">
+      <HelpTooltip
+        storageKey="qual_comparative"
+        title="比較デザインの使い方"
+        paragraphs={[
+          "ケースと変数のマトリクスを編集し、QCA CSV形式でエクスポートできます。",
+        ]}
+        steps={[
+          "ケースと変数を追加してマトリクスを構築します",
+          "各セルに値を直接入力できます（0/1またはテキスト）",
+          "QCA CSV エクスポートでfsQCA等の外部ツールに渡せます",
+        ]}
+      />
+
       {/* ヘッダー */}
       <div className="flex items-center justify-between mb-4">
         <div>
@@ -311,7 +345,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
         <button
           type="button"
           onClick={() => void handleExportCsv()}
-          className="text-xs px-3 py-1"
+          className="text-xs px-3 py-1 inline-flex items-center gap-1"
           style={{
             backgroundColor: "var(--color-bg-tertiary)",
             color: "var(--color-text-secondary)",
@@ -320,6 +354,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
             cursor: "pointer",
           }}
         >
+          <IconExport size={11} />
           QCA CSV エクスポート
         </button>
       </div>
@@ -348,7 +383,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
           <button
             type="button"
             onClick={() => void handleAddCase()}
-            className="text-xs px-2 py-1"
+            className="text-xs px-2 py-1 inline-flex items-center gap-0.5"
             style={{
               backgroundColor: "var(--color-accent-primary)",
               color: "#fff",
@@ -357,7 +392,8 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
               cursor: "pointer",
             }}
           >
-            + ケース
+            <IconPlus size={10} />
+            ケース
           </button>
         </div>
         <div className="flex items-center gap-1">
@@ -398,7 +434,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
           <button
             type="button"
             onClick={() => void handleAddVariable()}
-            className="text-xs px-2 py-1"
+            className="text-xs px-2 py-1 inline-flex items-center gap-0.5"
             style={{
               backgroundColor: "var(--color-accent-primary)",
               color: "#fff",
@@ -407,7 +443,8 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
               cursor: "pointer",
             }}
           >
-            + 変数
+            <IconPlus size={10} />
+            変数
           </button>
         </div>
       </div>
@@ -448,9 +485,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
                   >
                     <div className="flex items-center justify-center gap-1">
                       <span>{v.name}</span>
-                      <span
-                        style={{ fontSize: "9px", opacity: 0.6 }}
-                      >
+                      <span style={{ fontSize: "9px", opacity: 0.6 }}>
                         ({v.varType === "dependent"
                           ? "従属"
                           : v.varType === "outcome"
@@ -462,15 +497,17 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
                       <button
                         type="button"
                         onClick={() => void handleDeleteVariable(v.id)}
+                        title="削除"
                         style={{
                           color: "var(--color-text-tertiary)",
                           background: "none",
                           border: "none",
                           cursor: "pointer",
-                          fontSize: "10px",
+                          display: "flex",
+                          padding: "1px",
                         }}
                       >
-                        ×
+                        <IconDelete size={10} />
                       </button>
                     </div>
                   </th>
@@ -483,8 +520,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
                   <td
                     style={{
                       padding: "6px 12px",
-                      borderBottom:
-                        "1px solid var(--color-border-secondary)",
+                      borderBottom: "1px solid var(--color-border-secondary)",
                       color: "var(--color-text-primary)",
                       fontWeight: 500,
                     }}
@@ -494,15 +530,17 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
                       <button
                         type="button"
                         onClick={() => void handleDeleteCase(c.id)}
+                        title="削除"
                         style={{
                           color: "var(--color-text-tertiary)",
                           background: "none",
                           border: "none",
                           cursor: "pointer",
-                          fontSize: "10px",
+                          display: "flex",
+                          padding: "1px",
                         }}
                       >
-                        ×
+                        <IconDelete size={10} />
                       </button>
                     </div>
                   </td>
@@ -511,8 +549,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
                       key={v.id}
                       style={{
                         padding: "4px 8px",
-                        borderBottom:
-                          "1px solid var(--color-border-secondary)",
+                        borderBottom: "1px solid var(--color-border-secondary)",
                         textAlign: "center",
                       }}
                     >
@@ -531,7 +568,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
                           outline: "none",
                           maxWidth: "100px",
                         }}
-                        placeholder="—"
+                        placeholder="--"
                       />
                     </td>
                   ))}
@@ -573,7 +610,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
             <button
               type="button"
               onClick={handleCopyCsv}
-              className="text-xs px-2 py-0.5"
+              className="text-xs px-2 py-0.5 inline-flex items-center gap-1"
               style={{
                 backgroundColor: "var(--color-accent-primary)",
                 color: "#fff",
@@ -582,6 +619,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
                 cursor: "pointer",
               }}
             >
+              <IconCopy size={10} />
               コピー
             </button>
           </div>

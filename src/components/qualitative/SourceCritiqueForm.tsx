@@ -1,9 +1,12 @@
 // src/components/qualitative/SourceCritiqueForm.tsx
 // 史料批判シート — 論文単位の史料評価フォーム
+// 折りたたみパネル / ミニマルUI / カスタムアイコン / ヘルプ付き
 
 import React, { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { SourceCritique, SourceCritiqueInput, Paper } from "../../types";
+import { HelpTooltip } from "./HelpTooltip";
+import { IconDelete, IconPanelLeft, IconScroll } from "./icons/QualIcons";
 
 interface SourceCritiqueFormProps {
   projectId: string;
@@ -17,6 +20,7 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
   const [selectedPaperId, setSelectedPaperId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [listCollapsed, setListCollapsed] = useState(false);
 
   // フォーム状態
   const [form, setForm] = useState<SourceCritiqueInput>({
@@ -37,7 +41,6 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
     researcherNotes: "",
   });
 
-  // 論文一覧と既存批判を取得
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -57,7 +60,6 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
     void load();
   }, [projectId]);
 
-  // 論文選択時に既存の批判データを読み込む
   const handleSelectPaper = useCallback(
     async (paperId: string) => {
       setSelectedPaperId(paperId);
@@ -114,7 +116,6 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
       await invoke("upsert_source_critique", {
         dto: { ...form, paperId: selectedPaperId },
       });
-      // 一覧を再取得
       const updated = await invoke<SourceCritique[]>(
         "get_source_critiques_by_project",
         { projectId }
@@ -150,7 +151,7 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full" style={{ color: "var(--color-text-tertiary)" }}>
-        <span className="text-sm">読み込み中…</span>
+        <span className="text-sm">読み込み中...</span>
       </div>
     );
   }
@@ -161,101 +162,132 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
       <div
         className="flex flex-col shrink-0 h-full"
         style={{
-          width: "260px",
+          width: listCollapsed ? "40px" : "260px",
           borderRight: "1px solid var(--color-border-primary)",
+          transition: "width 150ms ease-out",
+          overflow: "hidden",
         }}
       >
         <header
-          className="px-3 shrink-0 flex items-center"
+          className="px-2 shrink-0 flex items-center justify-between"
           style={{
             height: "40px",
             borderBottom: "1px solid var(--color-border-primary)",
           }}
         >
-          <span className="text-xs font-semibold" style={{ color: "var(--color-text-tertiary)" }}>
-            論文一覧
-          </span>
-        </header>
-        <div className="flex-1 overflow-y-auto p-2">
-          {papers.map((p) => {
-            const hasCritique = critiques.some((c) => c.paperId === p.id);
-            return (
-              <div
-                key={p.id}
-                onClick={() => void handleSelectPaper(p.id)}
-                className="flex items-center gap-2 py-1.5 px-2 group"
-                style={{
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  backgroundColor: selectedPaperId === p.id ? "var(--color-bg-hover)" : "transparent",
-                }}
-              >
-                <span
-                  style={{
-                    width: "6px",
-                    height: "6px",
-                    borderRadius: "50%",
-                    backgroundColor: hasCritique ? "#22c55e" : "var(--color-border-secondary)",
-                    flexShrink: 0,
-                  }}
-                />
-                <span
-                  className="text-xs truncate flex-1"
-                  style={{
-                    color: selectedPaperId === p.id
-                      ? "var(--color-accent-primary)"
-                      : "var(--color-text-secondary)",
-                  }}
-                >
-                  {p.title}
-                </span>
-              </div>
-            );
-          })}
-          {papers.length === 0 && (
-            <div className="text-center py-8 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-              論文なし
-            </div>
+          {!listCollapsed && (
+            <span className="text-xs font-semibold" style={{ color: "var(--color-text-tertiary)" }}>
+              論文一覧
+            </span>
           )}
-        </div>
-
-        {/* 既存批判の一覧 */}
-        {critiques.length > 0 && (
-          <div
-            className="shrink-0 p-2"
-            style={{ borderTop: "1px solid var(--color-border-primary)" }}
+          <button
+            type="button"
+            onClick={() => setListCollapsed(!listCollapsed)}
+            title={listCollapsed ? "展開" : "折りたたむ"}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-tertiary)", padding: "4px", display: "flex" }}
           >
-            <div className="text-xs font-semibold mb-1" style={{ color: "var(--color-text-tertiary)" }}>
-              批判済み ({critiques.length})
+            <IconPanelLeft size={13} />
+          </button>
+        </header>
+
+        {!listCollapsed && (
+          <>
+            <div className="flex-1 overflow-y-auto p-2">
+              {papers.map((p) => {
+                const hasCritique = critiques.some((c) => c.paperId === p.id);
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => void handleSelectPaper(p.id)}
+                    className="flex items-center gap-2 py-1.5 px-2 group"
+                    style={{
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      backgroundColor: selectedPaperId === p.id ? "var(--color-bg-hover)" : "transparent",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: "6px",
+                        height: "6px",
+                        borderRadius: "50%",
+                        backgroundColor: hasCritique ? "#22c55e" : "var(--color-border-secondary)",
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span
+                      className="text-xs truncate flex-1"
+                      style={{
+                        color: selectedPaperId === p.id
+                          ? "var(--color-accent-primary)"
+                          : "var(--color-text-secondary)",
+                      }}
+                    >
+                      {p.title}
+                    </span>
+                  </div>
+                );
+              })}
+              {papers.length === 0 && (
+                <div className="text-center py-8 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+                  論文なし
+                </div>
+              )}
             </div>
-            {critiques.map((c) => (
+
+            {critiques.length > 0 && (
               <div
-                key={c.id}
-                className="flex items-center justify-between py-1 text-xs group"
+                className="shrink-0 p-2"
+                style={{ borderTop: "1px solid var(--color-border-primary)" }}
               >
-                <span
-                  className="truncate flex-1 cursor-pointer"
-                  style={{ color: "var(--color-text-secondary)" }}
-                  onClick={() => void handleSelectPaper(c.paperId)}
-                >
-                  信頼度: {c.reliabilityScore}/5
-                </span>
-                <button
-                  type="button"
-                  onClick={() => void handleDelete(c.id)}
-                  className="opacity-0 group-hover:opacity-100"
-                  style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer" }}
-                >
-                  ×
-                </button>
+                <div className="text-xs font-semibold mb-1" style={{ color: "var(--color-text-tertiary)" }}>
+                  批判済み ({critiques.length})
+                </div>
+                {critiques.map((c) => (
+                  <div
+                    key={c.id}
+                    className="flex items-center justify-between py-1 text-xs group"
+                  >
+                    <span
+                      className="truncate flex-1 cursor-pointer"
+                      style={{ color: "var(--color-text-secondary)" }}
+                      onClick={() => void handleSelectPaper(c.paperId)}
+                    >
+                      信頼度: {c.reliabilityScore}/5
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void handleDelete(c.id)}
+                      className="opacity-0 group-hover:opacity-100"
+                      title="削除"
+                      style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer", display: "flex", padding: "2px" }}
+                    >
+                      <IconDelete size={11} />
+                    </button>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
 
       {/* 右: フォーム */}
       <div className="flex-1 overflow-y-auto p-6" style={{ maxWidth: "700px" }}>
+        <HelpTooltip
+          storageKey="qual_source_critique"
+          title="史料批判シートの使い方"
+          paragraphs={[
+            "歴史研究における史料の信頼性を体系的に評価するためのフォームです。",
+            "一次史料・二次史料の真正性、バイアス、整合性などを記録できます。",
+          ]}
+          steps={[
+            "左の一覧から論文を選択してください",
+            "フォームに史料情報を入力します",
+            "信頼度スコアを設定し、保存ボタンを押します",
+          ]}
+        />
+
         {selectedPaperId ? (
           <>
             <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text-primary)" }}>
@@ -278,7 +310,7 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
                 </label>
               </div>
               <FormField label="作成場所" value={form.location ?? ""} onChange={(v) => updateField("location", v)} />
-              <FormField label="史料種別" value={form.sourceType ?? ""} onChange={(v) => updateField("sourceType", v)} placeholder="一次/二次/公文書/私文書…" />
+              <FormField label="史料種別" value={form.sourceType ?? ""} onChange={(v) => updateField("sourceType", v)} placeholder="一次/二次/公文書/私文書..." />
               <FormField label="真正性" value={form.authenticity ?? ""} onChange={(v) => updateField("authenticity", v)} multiline />
               <FormField label="所蔵・アーカイブ情報" value={form.archiveInfo ?? ""} onChange={(v) => updateField("archiveInfo", v)} />
               <FormField label="作成意図" value={form.intent ?? ""} onChange={(v) => updateField("intent", v)} multiline />
@@ -326,12 +358,13 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
                   alignSelf: "flex-start",
                 }}
               >
-                {saving ? "保存中…" : "保存"}
+                {saving ? "保存中..." : "保存"}
               </button>
             </div>
           </>
         ) : (
           <div className="flex flex-col items-center justify-center h-full gap-3" style={{ color: "var(--color-text-tertiary)" }}>
+            <IconScroll size={28} />
             <span className="text-sm">左の一覧から論文を選択してください</span>
           </div>
         )}

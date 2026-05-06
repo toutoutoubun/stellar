@@ -1,9 +1,12 @@
 // src/components/qualitative/IcrCalculator.tsx
 // ICR（インターコーダー信頼性）計算 — Cohen's κ
+// ミニマルUI / カスタムアイコン / ヘルプ付き
 
 import React, { useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { IcrResult, ImportedCoding } from "../../types";
+import { HelpTooltip } from "./HelpTooltip";
+import { IconIcr } from "./icons/QualIcons";
 
 interface IcrCalculatorProps {
   projectId: string;
@@ -50,21 +53,26 @@ export const IcrCalculator: React.FC<IcrCalculatorProps> = ({ projectId }) => {
 
   return (
     <div className="p-6" style={{ maxWidth: "800px" }}>
+      <HelpTooltip
+        storageKey="qual_icr"
+        title="ICR計算の使い方"
+        paragraphs={[
+          "Cohen's kappa 係数を用いて、2人のコーダー間の一致度を測定します。",
+          "メインコーダーのデータは既存のハイライト-コード割り当てから自動取得されます。",
+        ]}
+        steps={[
+          "比較するコーダーのデータをJSON形式で入力してください",
+          "各エントリにはhighlightIdとcodeIds（コードIDの配列）を含めます",
+          "計算ボタンを押すとkappa係数と不一致箇所が表示されます",
+        ]}
+      />
+
       <h3
-        className="text-lg font-semibold mb-4"
+        className="text-sm font-semibold mb-3"
         style={{ color: "var(--color-text-primary)" }}
       >
         ICR（インターコーダー信頼性）計算
       </h3>
-
-      <p
-        className="text-xs mb-4"
-        style={{ color: "var(--color-text-secondary)", lineHeight: "1.6" }}
-      >
-        Cohen's κ（カッパ）係数を計算します。メインコーダーのコーディングは
-        既存のハイライト-コード割り当てから自動取得されます。 比較するコーダーの
-        データをJSON形式で入力してください。
-      </p>
 
       {/* 入力フォーマット説明 */}
       <div
@@ -100,7 +108,7 @@ export const IcrCalculator: React.FC<IcrCalculatorProps> = ({ projectId }) => {
       <textarea
         value={jsonInput}
         onChange={(e) => setJsonInput(e.target.value)}
-        placeholder="比較コーダーのデータ（JSON）を入力…"
+        placeholder="比較コーダーのデータ（JSON）を入力..."
         rows={8}
         className="w-full text-xs mb-3 p-3"
         style={{
@@ -131,7 +139,7 @@ export const IcrCalculator: React.FC<IcrCalculatorProps> = ({ projectId }) => {
         type="button"
         onClick={() => void handleCalculate()}
         disabled={loading}
-        className="text-sm px-4 py-2 mb-6"
+        className="text-sm px-4 py-2 mb-6 inline-flex items-center gap-1.5"
         style={{
           backgroundColor: "var(--color-accent-primary)",
           color: "#fff",
@@ -141,7 +149,8 @@ export const IcrCalculator: React.FC<IcrCalculatorProps> = ({ projectId }) => {
           opacity: loading ? 0.6 : 1,
         }}
       >
-        {loading ? "計算中…" : "κ係数を計算"}
+        <IconIcr size={14} color="#fff" />
+        {loading ? "計算中..." : "kappa係数を計算"}
       </button>
 
       {/* 結果表示 */}
@@ -155,7 +164,7 @@ export const IcrCalculator: React.FC<IcrCalculatorProps> = ({ projectId }) => {
           </h4>
 
           <div className="grid grid-cols-2 gap-3 mb-4" style={{ maxWidth: "400px" }}>
-            {/* κ係数 */}
+            {/* kappa係数 */}
             <div
               className="p-4"
               style={{
@@ -168,7 +177,7 @@ export const IcrCalculator: React.FC<IcrCalculatorProps> = ({ projectId }) => {
                 className="text-xs mb-1"
                 style={{ color: "var(--color-text-tertiary)" }}
               >
-                Cohen's κ
+                Cohen's kappa
               </div>
               <div
                 className="text-2xl font-bold"
@@ -234,7 +243,7 @@ export const IcrCalculator: React.FC<IcrCalculatorProps> = ({ projectId }) => {
               <br />
               Pe = 期待一致率（各カテゴリの偶然一致確率の合計）
               <br />
-              κ = (Po − Pe) / (1 − Pe) = {result.cohenKappa.toFixed(4)}
+              kappa = (Po - Pe) / (1 - Pe) = {result.cohenKappa.toFixed(4)}
             </div>
           </div>
 
@@ -264,9 +273,10 @@ export const IcrCalculator: React.FC<IcrCalculatorProps> = ({ projectId }) => {
                     >
                       {d.highlightId}
                     </div>
-                    <div style={{ color: "var(--color-text-secondary)" }}>
-                      メイン: [{d.mainCodes.join(", ")}] → インポート: [
-                      {d.importedCodes.join(", ")}]
+                    <div className="flex items-center gap-1" style={{ color: "var(--color-text-secondary)" }}>
+                      <span>メイン: [{d.mainCodes.join(", ")}]</span>
+                      <span style={{ color: "var(--color-text-tertiary)" }}>|</span>
+                      <span>インポート: [{d.importedCodes.join(", ")}]</span>
                     </div>
                   </div>
                 ))}

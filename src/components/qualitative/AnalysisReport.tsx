@@ -1,8 +1,11 @@
 // src/components/qualitative/AnalysisReport.tsx
 // 分析レポート生成 — Markdown形式のレポートをバックエンドで生成・表示
+// ミニマルUI / カスタムアイコン / ヘルプ付き
 
 import React, { useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { HelpTooltip } from "./HelpTooltip";
+import { IconReport, IconCopy } from "./icons/QualIcons";
 
 interface AnalysisReportProps {
   projectId: string;
@@ -40,8 +43,6 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
   const handleGenerate = useCallback(async () => {
     setLoading(true);
     try {
-      // バックエンドは sections: Vec<String> を期待するため、
-      // true のキーだけを文字列配列に変換して渡す
       const sectionList = (Object.keys(sections) as (keyof ReportSections)[])
         .filter((k) => sections[k]);
       const result = await invoke<string>("generate_analysis_report", {
@@ -93,10 +94,25 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
 
   return (
     <div className="p-6 h-full overflow-y-auto">
+      <HelpTooltip
+        storageKey="qual_report"
+        title="分析レポートの使い方"
+        paragraphs={[
+          "プロジェクトに蓄積された分析データからMarkdown形式のレポートを自動生成します。",
+          "含めるセクションを選択して生成ボタンを押してください。生成されたMarkdownはコピーして外部ツールで利用できます。",
+        ]}
+        steps={[
+          "レポートに含めるセクションをチェックボックスで選択します",
+          "生成ボタンを押すとバックエンドでレポートが作成されます",
+          "生成後、コピーボタンでMarkdownをクリップボードにコピーできます",
+        ]}
+      />
+
       <h3
-        className="text-lg font-semibold mb-4"
+        className="text-sm font-semibold mb-4 flex items-center gap-2"
         style={{ color: "var(--color-text-primary)" }}
       >
+        <IconReport size={16} />
         分析レポート生成
       </h3>
 
@@ -164,7 +180,7 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
         type="button"
         onClick={() => void handleGenerate()}
         disabled={loading || !Object.values(sections).some(Boolean)}
-        className="text-sm px-6 py-2.5 mb-6"
+        className="text-sm px-6 py-2.5 mb-6 inline-flex items-center gap-1.5"
         style={{
           backgroundColor: "var(--color-accent-primary)",
           color: "#fff",
@@ -179,7 +195,8 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
           transition: "opacity 150ms ease-out",
         }}
       >
-        {loading ? "生成中…" : "レポートを生成"}
+        <IconReport size={14} color="#fff" />
+        {loading ? "生成中..." : "レポートを生成"}
       </button>
 
       {/* レポート表示 */}
@@ -195,7 +212,7 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
             <button
               type="button"
               onClick={handleCopy}
-              className="text-xs px-3 py-1"
+              className="text-xs px-3 py-1 inline-flex items-center gap-1"
               style={{
                 backgroundColor: "var(--color-bg-tertiary)",
                 color: "var(--color-text-secondary)",
@@ -204,6 +221,7 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
                 cursor: "pointer",
               }}
             >
+              <IconCopy size={11} />
               Markdownをコピー
             </button>
           </div>

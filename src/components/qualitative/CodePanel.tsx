@@ -1,10 +1,12 @@
 // src/components/qualitative/CodePanel.tsx
 // PDFリーダー内コーディングパネル — ハイライトにコードを割り当て/解除
+// ミニマルUI / カスタムアイコン
 
 import React, { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Highlight, QualProject, CodeNode } from "../../types";
 import { CodeTreeNode } from "./CodeTreeNode";
+import { IconPlus, IconAssignCode, IconRemoveCode, IconCodebook } from "./icons/QualIcons";
 
 interface CodePanelProps {
   highlights: Highlight[];
@@ -246,7 +248,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
                   void handleAssignCode(h.id, selectedCodeId);
                 }
               }}
-              className="flex-1 text-xs py-1"
+              className="flex-1 text-xs py-1 inline-flex items-center justify-center gap-1"
               style={{
                 backgroundColor: "var(--color-accent-primary)",
                 color: "#fff",
@@ -255,6 +257,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
                 cursor: "pointer",
               }}
             >
+              <IconAssignCode size={11} color="#fff" />
               コード付与
             </button>
             <button
@@ -264,7 +267,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
                   void handleRemoveCode(h.id, selectedCodeId);
                 }
               }}
-              className="flex-1 text-xs py-1"
+              className="flex-1 text-xs py-1 inline-flex items-center justify-center gap-1"
               style={{
                 backgroundColor: "transparent",
                 color: "var(--color-text-secondary)",
@@ -273,6 +276,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
                 cursor: "pointer",
               }}
             >
+              <IconRemoveCode size={11} />
               コード解除
             </button>
           </div>
@@ -308,7 +312,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
                   className="text-xs truncate flex-1"
                   style={{ color: "var(--color-text-secondary)" }}
                 >
-                  {h.text.slice(0, 40)}…
+                  {h.text.slice(0, 40)}...
                 </span>
                 {codes && codes.size > 0 && (
                   <div className="flex gap-0.5 shrink-0">
@@ -368,16 +372,19 @@ const CodePanel: React.FC<CodePanelProps> = ({
         <button
           type="button"
           onClick={() => void handleCreateCode()}
-          className="text-xs px-1.5 py-0.5"
+          title="コードを追加"
           style={{
             backgroundColor: "var(--color-accent-primary)",
             color: "#fff",
             border: "none",
             borderRadius: "3px",
             cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            padding: "3px 6px",
           }}
         >
-          +
+          <IconPlus size={11} color="#fff" />
         </button>
       </div>
 
@@ -396,14 +403,15 @@ const CodePanel: React.FC<CodePanelProps> = ({
             className="text-center py-4 text-xs"
             style={{ color: "var(--color-text-tertiary)" }}
           >
-            読み込み中…
+            読み込み中...
           </div>
         ) : codeTree.length === 0 ? (
           <div
-            className="text-center py-4 text-xs"
+            className="flex flex-col items-center justify-center py-4 gap-2 text-xs"
             style={{ color: "var(--color-text-tertiary)" }}
           >
-            コードなし
+            <IconCodebook size={20} />
+            <span>コードなし</span>
           </div>
         ) : (
           codeTree.map((node) => (

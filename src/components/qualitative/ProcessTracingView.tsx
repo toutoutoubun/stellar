@@ -1,5 +1,6 @@
 // src/components/qualitative/ProcessTracingView.tsx
 // プロセストレーシング — 仮説管理 + 証拠テスト + サマリー
+// ミニマルUI / カスタムアイコン / ヘルプ付き
 
 import React, { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
@@ -10,6 +11,8 @@ import type {
   CreatePtHypothesisInput,
   CreatePtEvidenceInput,
 } from "../../types";
+import { HelpTooltip } from "./HelpTooltip";
+import { IconPlus, IconDelete, IconClose, IconProcessTracing } from "./icons/QualIcons";
 
 interface ProcessTracingViewProps {
   projectId: string;
@@ -38,12 +41,10 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
   const [showHypForm, setShowHypForm] = useState(false);
   const [addEvidenceFor, setAddEvidenceFor] = useState<string | null>(null);
 
-  // 仮説フォーム
   const [hypTitle, setHypTitle] = useState("");
   const [hypDesc, setHypDesc] = useState("");
   const [hypIsMain, setHypIsMain] = useState(true);
 
-  // 証拠フォーム
   const [evDesc, setEvDesc] = useState("");
   const [evTestType, setEvTestType] = useState("hoop");
 
@@ -146,13 +147,27 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full" style={{ color: "var(--color-text-tertiary)" }}>
-        <span className="text-sm">読み込み中…</span>
+        <span className="text-sm">読み込み中...</span>
       </div>
     );
   }
 
   return (
     <div className="p-4 h-full overflow-y-auto">
+      <HelpTooltip
+        storageKey="qual_process_tracing"
+        title="プロセストレーシングの使い方"
+        paragraphs={[
+          "因果メカニズムを検証するための手法です。仮説を立て、各種テスト（フープ、スモーキングガン等）で証拠を評価します。",
+          "Beach & Pedersen (2013) のフレームワークに基づいた4種類の証拠テストに対応しています。",
+        ]}
+        steps={[
+          "仮説を追加し、主仮説かどうかを設定します",
+          "各仮説に対して証拠とテスト種別を追加します",
+          "証拠の結果（通過/不通過/部分的）を更新するとサマリーが自動計算されます",
+        ]}
+      />
+
       {/* サマリー */}
       {summary && ptData && ptData.hypotheses.length > 0 && (
         <div
@@ -164,7 +179,7 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
           }}
         >
           <h4 className="text-sm font-semibold mb-2" style={{ color: "var(--color-text-primary)" }}>
-            プロセストレーシング・サマリー
+            サマリー
           </h4>
           <div className="grid grid-cols-3 gap-3">
             <div>
@@ -197,10 +212,11 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
         <button
           type="button"
           onClick={() => setShowHypForm(!showHypForm)}
-          className="text-xs px-3 py-1"
+          className="text-xs px-3 py-1 inline-flex items-center gap-1"
           style={{ backgroundColor: "var(--color-accent-primary)", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}
         >
-          + 仮説追加
+          <IconPlus size={10} />
+          仮説追加
         </button>
       </div>
 
@@ -233,15 +249,19 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={() => void handleCreateHypothesis()} className="text-xs px-3 py-1" style={{ backgroundColor: "var(--color-accent-primary)", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>追加</button>
-            <button type="button" onClick={() => setShowHypForm(false)} className="text-xs px-3 py-1" style={{ background: "transparent", color: "var(--color-text-secondary)", border: "1px solid var(--color-border-secondary)", borderRadius: "6px", cursor: "pointer" }}>キャンセル</button>
+            <button type="button" onClick={() => setShowHypForm(false)} className="text-xs px-3 py-1 inline-flex items-center gap-1" style={{ background: "transparent", color: "var(--color-text-secondary)", border: "1px solid var(--color-border-secondary)", borderRadius: "6px", cursor: "pointer" }}>
+              <IconClose size={10} />
+              キャンセル
+            </button>
           </div>
         </div>
       )}
 
       {/* 仮説一覧 */}
       {(!ptData || ptData.hypotheses.length === 0) ? (
-        <div className="text-center py-12 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-          仮説なし。上のボタンで追加してください。
+        <div className="flex flex-col items-center justify-center py-12 gap-3" style={{ color: "var(--color-text-tertiary)" }}>
+          <IconProcessTracing size={28} />
+          <span className="text-xs">仮説なし。上のボタンで追加してください。</span>
         </div>
       ) : (
         <div className="flex flex-col gap-4">
@@ -276,18 +296,19 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setAddEvidenceFor(addEvidenceFor === hyp.id ? null : hyp.id)}
-                    className="text-xs px-2 py-0.5"
+                    className="text-xs px-2 py-0.5 inline-flex items-center gap-0.5"
                     style={{ color: "var(--color-accent-primary)", background: "none", border: "1px solid var(--color-accent-primary)", borderRadius: "4px", cursor: "pointer" }}
                   >
-                    + 証拠
+                    <IconPlus size={9} />
+                    証拠
                   </button>
                   <button
                     type="button"
                     onClick={() => void handleDeleteHypothesis(hyp.id)}
-                    className="text-xs"
-                    style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer" }}
+                    title="削除"
+                    style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer", display: "flex", padding: "2px" }}
                   >
-                    ×
+                    <IconDelete size={12} />
                   </button>
                 </div>
               </div>
@@ -311,7 +332,7 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
                     style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "4px" }}
                   >
                     {TEST_TYPES.map((t) => (
-                      <option key={t.value} value={t.value}>{t.label} — {t.desc}</option>
+                      <option key={t.value} value={t.value}>{t.label} -- {t.desc}</option>
                     ))}
                   </select>
                   <button type="button" onClick={() => void handleAddEvidence(hyp.id)} className="text-xs px-2 py-1" style={{ backgroundColor: "var(--color-accent-primary)", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>
@@ -354,7 +375,15 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
                             <option key={r.value} value={r.value}>{r.label}</option>
                           ))}
                         </select>
-                        <button type="button" onClick={() => void handleDeleteEvidence(ev.id)} className="text-xs opacity-0 group-hover:opacity-100" style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer" }}>×</button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDeleteEvidence(ev.id)}
+                          className="opacity-0 group-hover:opacity-100"
+                          title="削除"
+                          style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer", display: "flex", padding: "2px" }}
+                        >
+                          <IconDelete size={11} />
+                        </button>
                       </div>
                     );
                   })}
