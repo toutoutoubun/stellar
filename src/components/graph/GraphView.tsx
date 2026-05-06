@@ -7,6 +7,7 @@ import type React from "react";
 import { useState, useCallback, useRef, useEffect } from "react";
 import type { ForceGraphMethods } from "react-force-graph-2d";
 import { useGraphData } from "../../hooks/useGraphData";
+import { useUIStore } from "../../stores/useUIStore";
 import type { GraphNodeExtended, GraphLink } from "../../types";
 import { ForceGraph } from "./ForceGraph";
 import { GraphFilterPanel } from "./GraphFilterPanel";
@@ -14,22 +15,7 @@ import { GraphLegendPanel } from "./GraphLegendPanel";
 import { GraphMiniMap } from "./GraphMiniMap";
 import { NodeDetailPopup } from "./NodeDetailPopup";
 
-/**
- * GraphView の props。
- * ── useUIStore への依存を排除するために、ナビゲーション関数を
- * 親コンポーネント（MainPane）から props 経由で受け取る。
- * 理由: useUIStore は index チャンクに配置され、GraphView チャンクから
- * 静的 import すると循環依存（index →(lazy) GraphView →(static) index）が
- * 形成され、Safari WKWebView でクラッシュを引き起こすため。
- */
-export interface GraphViewProps {
-  /** ノートを開くコールバック */
-  openNote: (noteId: string) => void;
-  /** 論文を開くコールバック */
-  openPaper: (paperId: string) => void;
-}
-
-export const GraphView: React.FC<GraphViewProps> = ({ openNote, openPaper }) => {
+export const GraphView: React.FC = () => {
   // グラフデータフック
   const {
     filteredNodes,
@@ -45,6 +31,10 @@ export const GraphView: React.FC<GraphViewProps> = ({ openNote, openPaper }) => 
     allTags,
     rawData,
   } = useGraphData();
+
+  // UI ストア
+  const openNote = useUIStore((s) => s.openNote);
+  const openPaper = useUIStore((s) => s.openPaper);
 
   // ローカル状態
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });

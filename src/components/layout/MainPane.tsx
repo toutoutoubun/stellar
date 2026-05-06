@@ -11,13 +11,14 @@ import { NoteEditor } from "../notes/NoteEditor";
 import { NoteList } from "../notes/NoteList";
 import { SettingsView } from "../settings/SettingsView";
 import { GraphErrorBoundary } from "../graph/GraphErrorBoundary";
+// GraphView は静的インポート:
+// React.lazy で別チャンクにすると、Safari WKWebView (Tauri) で
+// そのチャンクのモジュール評価が失敗する（"undefined is not an object"）。
+// Tauri アプリではネットワーク経由のチャンクロードがないため、
+// 静的インポートによる初期バンドルサイズ増加は許容範囲。
+import { GraphView } from "../graph/GraphView";
 
-// 重いコンポーネントは React.lazy で遅延読み込み
-// GraphView: react-force-graph-2d + d3-force 依存
-// ReaderView: pdfjs-dist 依存
-const GraphView = lazy(() =>
-  import("../graph/GraphView").then((m) => ({ default: m.GraphView }))
-);
+// ReaderView は引き続き React.lazy で遅延読み込み（pdfjs-dist 依存）
 const ReaderView = lazy(() =>
   import("../reader/ReaderView").then((m) => ({ default: m.ReaderView }))
 );
@@ -185,12 +186,7 @@ export const MainPane: React.FC = () => {
       case "graph":
         return (
           <GraphErrorBoundary>
-            <Suspense fallback={<LazyFallback />}>
-              <GraphView
-                openNote={(noteId) => useUIStore.getState().openNote(noteId)}
-                openPaper={(paperId) => useUIStore.getState().openPaper(paperId)}
-              />
-            </Suspense>
+            <GraphView />
           </GraphErrorBoundary>
         );
       case "search":
