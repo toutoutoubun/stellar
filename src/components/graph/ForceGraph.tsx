@@ -11,9 +11,12 @@ import {
   useState,
   useMemo,
 } from "react";
-import ForceGraph2D from "react-force-graph-2d";
+import type ForceGraph2DComponent from "react-force-graph-2d";
 import type { ForceGraphMethods } from "react-force-graph-2d";
 import type { GraphNodeExtended, GraphLink } from "../../types";
+
+/** react-force-graph-2d のコンポーネント型 */
+type FG2DType = typeof ForceGraph2DComponent;
 
 // ============================================================
 // Props
@@ -95,6 +98,17 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
   const graphRef = useRef<ForceGraphMethods<GraphNodeExtended, GraphLink>>(undefined);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const lastClickRef = useRef<{ nodeId: string; time: number } | null>(null);
+
+  // react-force-graph-2d を動的インポート
+  // 循環チャンク依存（vendor-graph ↔ vendor-misc）によるモジュール評価時クラッシュを回避
+  const [FG2D, setFG2D] = useState<FG2DType | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    import("react-force-graph-2d").then((mod) => {
+      if (!cancelled) setFG2D(() => mod.default);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   /** 選択ノードに接続しているノードIDセット */
   const connectedNodeIds = useMemo(() => {
@@ -396,46 +410,64 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
 
   const bgColor = getCSSVar("--color-bg-primary") || "#ffffff";
 
+  if (!FG2D) {
+    return (
+      <div
+        style={{
+          width,
+          height,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: bgColor,
+          color: "var(--color-text-secondary)",
+        }}
+      >
+        グラフを読み込み中…
+      </div>
+    );
+  }
+
   return (
-    <ForceGraph2D
-      ref={graphRef as React.MutableRefObject<ForceGraphMethods<GraphNodeExtended, GraphLink> | undefined>}
-      graphData={graphData}
-      width={width}
-      height={height}
-      backgroundColor={bgColor}
-      // ノード
-      nodeId="id"
-      nodeCanvasObject={nodeCanvasObject}
-      nodeCanvasObjectMode={() => "replace"}
-      nodePointerAreaPaint={nodePointerAreaPaint}
-      // リンク
-      linkCanvasObject={linkCanvasObject}
-      linkCanvasObjectMode={() => "replace"}
-      // インタラクション
-      onNodeClick={(node) => {
-        const now = Date.now();
-        const n = node as GraphNodeExtended;
-        const last = lastClickRef.current;
-        if (last && last.nodeId === n.id && now - last.time < 400) {
-          // ダブルクリック検出
-          lastClickRef.current = null;
-          handleNodeDoubleClick(n);
-        } else {
-          lastClickRef.current = { nodeId: n.id, time: now };
-          onNodeClick(n);
-        }
-      }}
-      onNodeHover={(node) => handleNodeHover(node as GraphNodeExtended | null)}
-      onNodeDragEnd={(node) => handleNodeDragEnd(node as GraphNodeExtended)}
-      onBackgroundClick={onBackgroundClick}
-      enableNodeDrag
-      enableZoomInteraction
-      enablePanInteraction
-      // パフォーマンス
-      cooldownTicks={100}
-      warmupTicks={30}
-      minZoom={0.3}
-      maxZoom={8}
-    />
+      <FG2D
+        ref={graphRef as React.MutableRefObject<ForceGraphMethods<GraphNodeExtended, GraphLink> | undefined>}
+        graphData={graphData}
+        width={width}
+        height={height}
+        backgroundColor={bgColor}
+        // ノード
+        nodeId="id"
+        nodeCanvasObject={nodeCanvasObject}
+        nodeCanvasObjectMode={() => "replace"}
+        nodePointerAreaPaint={nodePointerAreaPaint}
+        // リンク
+        linkCanvasObject={linkCanvasObject}
+        linkCanvasObjectMode={() => "replace"}
+        // インタラクション
+        onNodeClick={(node) => {
+          const now = Date.now();
+          const n = node as GraphNodeExtended;
+          const last = lastClickRef.current;
+          if (last && last.nodeId === n.id && now - last.time < 400) {
+            // ダブルクリック検出
+            lastClickRef.current = null;
+            handleNodeDoubleClick(n);
+          } else {
+            lastClickRef.current = { nodeId: n.id, time: now };
+            onNodeClick(n);
+          }
+        }}
+        onNodeHover={(node) => handleNodeHover(node as GraphNodeExtended | null)}
+        onNodeDragEnd={(node) => handleNodeDragEnd(node as GraphNodeExtended)}
+        onBackgroundClick={onBackgroundClick}
+        enableNodeDrag
+        enableZoomInteraction
+        enablePanInteraction
+        // パフォーマンス
+        cooldownTicks={100}
+        warmupTicks={30}
+        minZoom={0.3}
+        maxZoom={8}
+      />
   );
 };

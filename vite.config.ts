@@ -57,6 +57,8 @@ export default defineConfig({
           if (id.includes("node_modules/react-dom") || id.includes("node_modules/react/") || id.includes("node_modules/scheduler")) return "vendor-react";
           if (id.includes("node_modules/@codemirror/") || id.includes("node_modules/@uiw/") || id.includes("node_modules/@lezer/")) return "vendor-codemirror";
           if (id.includes("node_modules/pdfjs-dist") || id.includes("node_modules/react-pdf-highlighter")) return "vendor-pdf";
+          // prop-types は vendor-misc 側の react-pdf-highlighter も使うため
+          // vendor-graph に入れると循環依存が発生する → vendor-misc に落とす
           if (
             id.includes("node_modules/react-force-graph") ||
             id.includes("node_modules/force-graph") ||
@@ -66,7 +68,6 @@ export default defineConfig({
             id.includes("node_modules/accessor-fn") ||
             id.includes("node_modules/canvas-color-tracker") ||
             id.includes("node_modules/index-array-by") ||
-            id.includes("node_modules/prop-types") ||
             id.includes("node_modules/float-tooltip") ||
             id.includes("node_modules/lodash-es") ||
             id.includes("node_modules/bezier-js") ||
