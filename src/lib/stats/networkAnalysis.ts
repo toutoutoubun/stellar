@@ -9,7 +9,6 @@ import betweennessCentrality from "graphology-metrics/centrality/betweenness";
 import { degreeCentrality } from "graphology-metrics/centrality/degree";
 import closenessCentrality from "graphology-metrics/centrality/closeness";
 import { density } from "graphology-metrics/graph/density";
-import modularity from "graphology-metrics/graph/modularity";
 import louvain from "graphology-communities-louvain";
 
 import type { NetworkAnalysisResult } from "./types";
@@ -125,7 +124,7 @@ export function analyzeNetwork(
   }
 
   // -- 2. Degree centrality -----------------------------------------------
-  const degreeCentMap = degreeCentrality(graph);
+  degreeCentrality.assign(graph);
 
   // -- 3. Betweenness centrality ------------------------------------------
   const betweennessMap = betweennessCentrality(graph, {

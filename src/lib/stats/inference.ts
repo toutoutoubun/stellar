@@ -8,7 +8,6 @@
 import {
   mean,
   sampleVariance,
-  sampleStandardDeviation,
   linearRegression as ssLinearRegression,
   linearRegressionLine,
   sum,
@@ -452,7 +451,7 @@ export function chiSquareTest(
   const rowTotals = table.map((row) => row.reduce((s, v) => s + v, 0));
   const colTotals = new Array<number>(nCols).fill(0);
   for (let j = 0; j < nCols; j++) {
-    for (let i = 0; i < nRows; i++) colTotals[j] += table[i]![j]!;
+    for (let i = 0; i < nRows; i++) colTotals[j]! += table[i]![j]!;
   }
   const grandTotal = rowTotals.reduce((s, v) => s + v, 0);
 

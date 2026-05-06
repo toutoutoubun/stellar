@@ -90,7 +90,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
         );
         for (const h of hls) {
           map[h.id] ??= new Set();
-          map[h.id].add(code.id);
+          map[h.id]!.add(code.id);
         }
       } catch {
         // ignore
