@@ -1,11 +1,14 @@
 // src/components/quantitative/results/SurveyResult.tsx
 // Stellar — 調査データ結果表示コンポーネント
-// LikertSummaryChart（ダイバージング積み上げ棒グラフ）+ CrossTabResult
+// DivergingStackedBar（リッカート尺度）+ CrossTabResult
+// パフォーマンス最適化: React.memo, useMemo
 
 import type React from "react";
-import { useRef, useEffect, useMemo } from "react";
-import * as d3 from "d3";
+import { useMemo, memo, useRef, useState, useCallback } from "react";
 import type { Analysis, Variable, DataRow } from "../../../types";
+import { DivergingStackedBar } from "../charts";
+import { fmt } from "../charts/chartTheme";
+import { downloadSVG, downloadPNG } from "../../../lib/utils/exportChart";
 
 interface Props {
   analysis: Analysis;
@@ -13,229 +16,109 @@ interface Props {
   dataRows: DataRow[];
 }
 
-// ── テーマカラー取得 ──
-function getCSSVar(name: string): string {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
+// ── SVGアイコン ──
+const ClipboardIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+    <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+    <path d="M9 14l2 2 4-4" />
+  </svg>
+);
 
-function fmt(v: number, dp = 1): string {
-  if (!Number.isFinite(v)) return "—";
-  return v.toFixed(dp);
-}
+const BarChartIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="20" x2="18" y2="10" />
+    <line x1="12" y1="20" x2="12" y2="4" />
+    <line x1="6" y1="20" x2="6" y2="14" />
+  </svg>
+);
 
-// ── リッカート色スキーム（5段階: 否定→中立→肯定） ──
-const LIKERT_COLORS_LIGHT = ["#e03131", "#fa5252", "#ced4da", "#69db7c", "#2f9e44"];
-const LIKERT_COLORS_DARK = ["#c92a2a", "#e03131", "#868e96", "#51cf66", "#37b24d"];
+const GridIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M3 9h18" />
+    <path d="M3 15h18" />
+    <path d="M9 3v18" />
+  </svg>
+);
 
-function getLikertColors(): string[] {
-  const bg = getCSSVar("--color-bg-primary") || "#fff";
-  // 暗いテーマかチェック
-  const r = parseInt(bg.slice(1, 3), 16) || 255;
-  return r < 128 ? LIKERT_COLORS_DARK : LIKERT_COLORS_LIGHT;
-}
+const EmptyIcon = () => (
+  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.35 }}>
+    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+    <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+  </svg>
+);
 
-// ============================================================================
-// LikertSummaryChart — ダイバージング積み上げ棒グラフ (D3)
-// ============================================================================
-const LikertSummaryChart: React.FC<{
-  items: Array<{
-    label: string;
-    counts: number[]; // 各レベルの件数（例: [10, 15, 30, 25, 20]）
-    labels: string[]; // レベルラベル
-  }>;
-  width?: number;
-}> = ({ items, width = 560 }) => {
-  const svgRef = useRef<SVGSVGElement>(null);
-  const rowHeight = 36;
-  const height = items.length * rowHeight + 60;
-
-  useEffect(() => {
-    if (!svgRef.current || items.length === 0) return;
-    const svg = d3.select(svgRef.current);
-    svg.selectAll("*").remove();
-
-    const margin = { top: 30, right: 80, bottom: 24, left: 140 };
-    const w = width - margin.left - margin.right;
-    const h = items.length * rowHeight;
-
-    const g = svg
-      .append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`);
-
-    const textColor = getCSSVar("--color-text-primary") || "#333";
-    const textSecondary = getCSSVar("--color-text-tertiary") || "#888";
-    const colors = getLikertColors();
-    const nLevels = items[0]?.counts.length ?? 5;
-
-    // 中央をゼロとして、否定側を左・肯定側を右に配置
-    const midIndex = Math.floor(nLevels / 2);
-
-    // 各アイテムのデータを正規化して diverging 形式に
-    const processedItems = items.map((item) => {
-      const total = item.counts.reduce((s, c) => s + c, 0);
-      if (total === 0) return { label: item.label, segments: [], total: 0 };
-
-      const pcts = item.counts.map((c) => (c / total) * 100);
-      const segments: Array<{
-        x0: number;
-        x1: number;
-        pct: number;
-        color: string;
-        levelLabel: string;
-        count: number;
-      }> = [];
-
-      // 左側 (否定: 0 ~ midIndex-1)
-      let leftAccum = 0;
-      for (let i = midIndex - 1; i >= 0; i--) {
-        const p = pcts[i] ?? 0;
-        segments.push({
-          x0: -(leftAccum + p),
-          x1: -leftAccum,
-          pct: p,
-          color: colors[i] ?? "#ccc",
-          levelLabel: item.labels[i] ?? String(i + 1),
-          count: item.counts[i] ?? 0,
-        });
-        leftAccum += p;
-      }
-
-      // 中央 (奇数レベルの場合)
-      if (nLevels % 2 === 1) {
-        const mid = pcts[midIndex] ?? 0;
-        segments.push({
-          x0: -mid / 2,
-          x1: mid / 2,
-          pct: mid,
-          color: colors[midIndex] ?? "#ccc",
-          levelLabel: item.labels[midIndex] ?? String(midIndex + 1),
-          count: item.counts[midIndex] ?? 0,
-        });
-      }
-
-      // 右側 (肯定: midIndex+1 ~ nLevels-1)  ※奇数:midIndex+1, 偶数:midIndex
-      let rightAccum = 0;
-      const rightStart = nLevels % 2 === 1 ? midIndex + 1 : midIndex;
-      for (let i = rightStart; i < nLevels; i++) {
-        const p = pcts[i] ?? 0;
-        segments.push({
-          x0: rightAccum,
-          x1: rightAccum + p,
-          pct: p,
-          color: colors[i] ?? "#ccc",
-          levelLabel: item.labels[i] ?? String(i + 1),
-          count: item.counts[i] ?? 0,
-        });
-        rightAccum += p;
-      }
-
-      return { label: item.label, segments, total };
-    });
-
-    // X スケール
-    const maxExtent = d3.max(processedItems, (d) => {
-      const minX = d3.min(d.segments, (s) => s.x0) ?? -50;
-      const maxX = d3.max(d.segments, (s) => s.x1) ?? 50;
-      return Math.max(Math.abs(minX), Math.abs(maxX));
-    }) ?? 50;
-
-    const x = d3.scaleLinear().domain([-maxExtent, maxExtent]).range([0, w]);
-
-    // Y スケール
-    const y = d3
-      .scaleBand()
-      .domain(processedItems.map((d) => d.label))
-      .range([0, h])
-      .padding(0.25);
-
-    // 中央線
-    g.append("line")
-      .attr("x1", x(0))
-      .attr("x2", x(0))
-      .attr("y1", -4)
-      .attr("y2", h + 4)
-      .attr("stroke", textSecondary)
-      .attr("stroke-width", 1)
-      .attr("stroke-dasharray", "3 3")
-      .attr("opacity", 0.5);
-
-    // 棒を描画
-    for (const item of processedItems) {
-      for (const seg of item.segments) {
-        g.append("rect")
-          .attr("x", x(seg.x0))
-          .attr("y", y(item.label)!)
-          .attr("width", Math.max(0, x(seg.x1) - x(seg.x0)))
-          .attr("height", y.bandwidth())
-          .attr("fill", seg.color)
-          .attr("rx", 2);
-      }
-
-      // パーセンテージラベル（右端）
-      const total = item.total;
-      if (total > 0) {
-        const positiveSum = item.segments
-          .filter((s) => s.x1 > 0 && s.x0 >= 0)
-          .reduce((s, seg) => s + seg.pct, 0);
-        g.append("text")
-          .attr("x", w + 8)
-          .attr("y", (y(item.label) ?? 0) + y.bandwidth() / 2)
-          .attr("dominant-baseline", "middle")
-          .attr("font-size", "10px")
-          .attr("fill", textSecondary)
-          .text(`${positiveSum.toFixed(0)}%`);
-      }
-    }
-
-    // 行ラベル（左側）
-    g.selectAll(".row-label")
-      .data(processedItems)
-      .join("text")
-      .attr("class", "row-label")
-      .attr("x", -8)
-      .attr("y", (d) => (y(d.label) ?? 0) + y.bandwidth() / 2)
-      .attr("text-anchor", "end")
-      .attr("dominant-baseline", "middle")
-      .attr("font-size", "10px")
-      .attr("fill", textColor)
-      .text((d) => d.label.length > 18 ? d.label.slice(0, 17) + "..." : d.label);
-
-    // 凡例
-    const legendG = svg
-      .append("g")
-      .attr("transform", `translate(${margin.left}, 6)`);
-
-    const levelLabels = items[0]?.labels ?? [];
-    let legendX = 0;
-    for (let i = 0; i < nLevels; i++) {
-      legendG
-        .append("rect")
-        .attr("x", legendX)
-        .attr("y", 0)
-        .attr("width", 10)
-        .attr("height", 10)
-        .attr("fill", colors[i] ?? "#ccc")
-        .attr("rx", 2);
-
-      legendG
-        .append("text")
-        .attr("x", legendX + 14)
-        .attr("y", 9)
-        .attr("font-size", "9px")
-        .attr("fill", textSecondary)
-        .text(levelLabels[i] ?? String(i + 1));
-
-      legendX += 14 + (levelLabels[i]?.length ?? 1) * 7 + 8;
-    }
-  }, [items, width]);
-
-  return <svg ref={svgRef} width={width} height={height} />;
-};
+const DownloadIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+);
 
 // ============================================================================
-// CrossTabResult — クロス集計表
+// ExportButton
 // ============================================================================
-const CrossTabResult: React.FC<{
+const ExportButton = memo<{ containerRef: React.RefObject<HTMLDivElement | null>; name: string }>(
+  ({ containerRef, name }) => {
+    const [open, setOpen] = useState(false);
+
+    const handleExport = useCallback(
+      (format: "svg" | "png") => {
+        const svg = containerRef.current?.querySelector("svg");
+        if (!svg) return;
+        const filename = `${name}_${Date.now()}`;
+        if (format === "svg") downloadSVG(svg, filename);
+        else downloadPNG(svg, filename).catch(console.error);
+        setOpen(false);
+      },
+      [containerRef, name],
+    );
+
+    return (
+      <div className="relative">
+        <button
+          onClick={() => setOpen(!open)}
+          className="flex items-center gap-1 px-1.5 py-1 text-xs"
+          style={{ color: "var(--color-text-tertiary)", cursor: "pointer", borderRadius: "var(--radius-sm)" }}
+        >
+          <DownloadIcon />
+        </button>
+        {open && (
+          <div
+            className="absolute right-0 top-full mt-1 z-50 flex flex-col gap-0.5 p-1"
+            style={{
+              backgroundColor: "var(--color-bg-primary)",
+              borderRadius: "var(--radius-md)",
+              border: "1px solid var(--color-border-primary)",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+              minWidth: "80px",
+            }}
+          >
+            {(["svg", "png"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => handleExport(f)}
+                className="px-2 py-1.5 text-xs text-left"
+                style={{ color: "var(--color-text-secondary)", cursor: "pointer", borderRadius: "var(--radius-sm)" }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg-hover)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+              >
+                {f.toUpperCase()} 保存
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  },
+);
+
+// ============================================================================
+// CrossTabResult — クロス集計表（メモ化済み）
+// ============================================================================
+const CrossTabResult = memo<{
   rowVar: string;
   colVar: string;
   dataRows: DataRow[];
@@ -247,7 +130,7 @@ const CrossTabResult: React.FC<{
     significant: boolean;
     interpretation: string;
   } | null;
-}> = ({ rowVar, colVar, dataRows, chiSquareResult }) => {
+}>(({ rowVar, colVar, dataRows, chiSquareResult }) => {
   // クロス集計計算
   const { rowLabels, colLabels, table, rowTotals, colTotals, grandTotal } = useMemo(() => {
     const rowVals = new Set<string>();
@@ -276,14 +159,7 @@ const CrossTabResult: React.FC<{
     const ct = cl.map((_, ci) => tbl.reduce((s, row) => s + (row[ci] ?? 0), 0));
     const gt = rt.reduce((s, v) => s + v, 0);
 
-    return {
-      rowLabels: rl,
-      colLabels: cl,
-      table: tbl,
-      rowTotals: rt,
-      colTotals: ct,
-      grandTotal: gt,
-    };
+    return { rowLabels: rl, colLabels: cl, table: tbl, rowTotals: rt, colTotals: ct, grandTotal: gt };
   }, [rowVar, colVar, dataRows]);
 
   return (
@@ -307,11 +183,7 @@ const CrossTabResult: React.FC<{
             <tr>
               <th
                 className="py-2 px-2 text-left font-medium"
-                style={{
-                  color: "var(--color-text-tertiary)",
-                  borderBottom: "2px solid var(--color-border-primary)",
-                  fontSize: "10px",
-                }}
+                style={{ color: "var(--color-text-tertiary)", borderBottom: "2px solid var(--color-border-primary)", fontSize: "10px" }}
               >
                 {rowVar} \ {colVar}
               </th>
@@ -319,22 +191,14 @@ const CrossTabResult: React.FC<{
                 <th
                   key={cl}
                   className="py-2 px-2 text-center font-medium"
-                  style={{
-                    color: "var(--color-text-tertiary)",
-                    borderBottom: "2px solid var(--color-border-primary)",
-                    fontSize: "10px",
-                  }}
+                  style={{ color: "var(--color-text-tertiary)", borderBottom: "2px solid var(--color-border-primary)", fontSize: "10px" }}
                 >
                   {cl}
                 </th>
               ))}
               <th
                 className="py-2 px-2 text-center font-semibold"
-                style={{
-                  color: "var(--color-text-primary)",
-                  borderBottom: "2px solid var(--color-border-primary)",
-                  fontSize: "10px",
-                }}
+                style={{ color: "var(--color-text-primary)", borderBottom: "2px solid var(--color-border-primary)", fontSize: "10px" }}
               >
                 合計
               </th>
@@ -345,11 +209,7 @@ const CrossTabResult: React.FC<{
               <tr key={ri}>
                 <td
                   className="py-2 px-2 font-medium"
-                  style={{
-                    color: "var(--color-text-primary)",
-                    borderBottom: "1px solid var(--color-border-primary)",
-                    fontSize: "11px",
-                  }}
+                  style={{ color: "var(--color-text-primary)", borderBottom: "1px solid var(--color-border-primary)", fontSize: "11px" }}
                 >
                   {rowLabels[ri]}
                 </td>
@@ -360,19 +220,10 @@ const CrossTabResult: React.FC<{
                     <td
                       key={ci}
                       className="py-2 px-2 text-center"
-                      style={{
-                        borderBottom: "1px solid var(--color-border-primary)",
-                        color: "var(--color-text-primary)",
-                        fontSize: "11px",
-                      }}
+                      style={{ borderBottom: "1px solid var(--color-border-primary)", color: "var(--color-text-primary)", fontSize: "11px" }}
                     >
                       <div className="font-semibold">{count}</div>
-                      <div
-                        style={{
-                          color: "var(--color-text-tertiary)",
-                          fontSize: "9px",
-                        }}
-                      >
+                      <div style={{ color: "var(--color-text-tertiary)", fontSize: "9px" }}>
                         ({fmt(pct)}%)
                       </div>
                     </td>
@@ -395,11 +246,7 @@ const CrossTabResult: React.FC<{
             <tr>
               <td
                 className="py-2 px-2 font-semibold"
-                style={{
-                  color: "var(--color-text-primary)",
-                  borderTop: "2px solid var(--color-border-primary)",
-                  fontSize: "10px",
-                }}
+                style={{ color: "var(--color-text-primary)", borderTop: "2px solid var(--color-border-primary)", fontSize: "10px" }}
               >
                 合計
               </td>
@@ -470,7 +317,7 @@ const CrossTabResult: React.FC<{
       )}
     </div>
   );
-};
+});
 
 // ============================================================================
 // SurveyResult メインコンポーネント
@@ -478,6 +325,7 @@ const CrossTabResult: React.FC<{
 export const SurveyResult: React.FC<Props> = ({ analysis, variables, dataRows }) => {
   const result = analysis.result as Record<string, unknown> | null;
   const config = (analysis.config as Record<string, unknown>) ?? {};
+  const likertChartRef = useRef<HTMLDivElement>(null);
 
   // リッカート変数の集計データ生成
   const likertItems = useMemo(() => {
@@ -495,7 +343,6 @@ export const SurveyResult: React.FC<Props> = ({ analysis, variables, dataRows })
       if (!v) continue;
       if (v.variableType !== "ordinal" && v.variableType !== "scale") continue;
 
-      // リッカートラベルがある場合使用
       const likertLabels = v.likertLabels ?? [];
       const vals = dataRows
         .map((r) => r.values[v.name])
@@ -511,7 +358,7 @@ export const SurveyResult: React.FC<Props> = ({ analysis, variables, dataRows })
 
       if (nLevels < 2 || nLevels > 10) continue;
 
-      const counts = new Array(nLevels).fill(0);
+      const counts = new Array(nLevels).fill(0) as number[];
       for (const val of vals) {
         const idx = Math.round(val - minVal);
         if (idx >= 0 && idx < nLevels) counts[idx]!++;
@@ -527,6 +374,34 @@ export const SurveyResult: React.FC<Props> = ({ analysis, variables, dataRows })
 
     return items;
   }, [result, config, variables, dataRows]);
+
+  // リッカート要約テーブルデータ
+  const likertSummary = useMemo(() => {
+    return likertItems.map((item) => {
+      const total = item.counts.reduce((s, c) => s + c, 0);
+      const nLevels = item.counts.length;
+      const midIndex = Math.floor(nLevels / 2);
+
+      let sum = 0;
+      for (let i = 0; i < nLevels; i++) {
+        sum += (item.counts[i] ?? 0) * (i + 1);
+      }
+      const mean = total > 0 ? sum / total : 0;
+
+      let variance = 0;
+      for (let i = 0; i < nLevels; i++) {
+        variance += (item.counts[i] ?? 0) * Math.pow(i + 1 - mean, 2);
+      }
+      const sd = total > 1 ? Math.sqrt(variance / (total - 1)) : 0;
+
+      const positiveCount = item.counts
+        .slice(nLevels % 2 === 1 ? midIndex + 1 : midIndex)
+        .reduce((s, c) => s + c, 0);
+      const positiveRate = total > 0 ? (positiveCount / total) * 100 : 0;
+
+      return { label: item.label, total, mean, sd, positiveRate };
+    });
+  }, [likertItems]);
 
   // クロス集計用データ
   const crossTabPairs = useMemo(() => {
@@ -559,29 +434,25 @@ export const SurveyResult: React.FC<Props> = ({ analysis, variables, dataRows })
         className="text-sm font-semibold mb-4 flex items-center gap-2"
         style={{ color: "var(--color-text-primary)" }}
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-          <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
-          <path d="M9 14l2 2 4-4" />
-        </svg>
+        <ClipboardIcon />
         {analysis.name}
       </h3>
 
       {/* ── リッカート集計チャート ── */}
       {likertItems.length > 0 && (
         <div className="mb-6">
-          <h4
-            className="text-xs font-semibold mb-3 flex items-center gap-2"
-            style={{ color: "var(--color-text-secondary)" }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="20" x2="18" y2="10" />
-              <line x1="12" y1="20" x2="12" y2="4" />
-              <line x1="6" y1="20" x2="6" y2="14" />
-            </svg>
-            リッカート尺度集計
-          </h4>
+          <div className="flex items-center justify-between mb-3">
+            <h4
+              className="text-xs font-semibold flex items-center gap-2"
+              style={{ color: "var(--color-text-secondary)" }}
+            >
+              <BarChartIcon />
+              リッカート尺度集計
+            </h4>
+            <ExportButton containerRef={likertChartRef} name="likert_summary" />
+          </div>
           <div
+            ref={likertChartRef}
             className="p-4 overflow-x-auto"
             style={{
               backgroundColor: "var(--color-bg-secondary)",
@@ -589,7 +460,8 @@ export const SurveyResult: React.FC<Props> = ({ analysis, variables, dataRows })
               border: "1px solid var(--color-border-primary)",
             }}
           >
-            <LikertSummaryChart items={likertItems} />
+            {/* DivergingStackedBar コンポーネント使用 */}
+            <DivergingStackedBar items={likertItems} />
 
             {/* 各項目の要約テーブル */}
             <div className="mt-4 overflow-x-auto">
@@ -612,84 +484,34 @@ export const SurveyResult: React.FC<Props> = ({ analysis, variables, dataRows })
                   </tr>
                 </thead>
                 <tbody>
-                  {likertItems.map((item) => {
-                    const total = item.counts.reduce((s, c) => s + c, 0);
-                    const nLevels = item.counts.length;
-                    const midIndex = Math.floor(nLevels / 2);
-
-                    // 加重平均
-                    let sum = 0;
-                    for (let i = 0; i < nLevels; i++) {
-                      sum += (item.counts[i] ?? 0) * (i + 1);
-                    }
-                    const mean = total > 0 ? sum / total : 0;
-
-                    // SD
-                    let variance = 0;
-                    for (let i = 0; i < nLevels; i++) {
-                      variance += (item.counts[i] ?? 0) * Math.pow(i + 1 - mean, 2);
-                    }
-                    const sd = total > 1 ? Math.sqrt(variance / (total - 1)) : 0;
-
-                    // 肯定率（中央より上）
-                    const positiveCount = item.counts
-                      .slice(nLevels % 2 === 1 ? midIndex + 1 : midIndex)
-                      .reduce((s, c) => s + c, 0);
-                    const positiveRate = total > 0 ? (positiveCount / total) * 100 : 0;
-
-                    return (
-                      <tr key={item.label}>
-                        <td
-                          className="py-1.5 px-2"
-                          style={{
-                            color: "var(--color-text-primary)",
-                            borderBottom: "1px solid var(--color-border-primary)",
-                          }}
-                        >
-                          {item.label}
-                        </td>
-                        <td
-                          className="py-1.5 px-2 text-right"
-                          style={{
-                            color: "var(--color-text-secondary)",
-                            borderBottom: "1px solid var(--color-border-primary)",
-                          }}
-                        >
-                          {total}
-                        </td>
-                        <td
-                          className="py-1.5 px-2 text-right font-mono"
-                          style={{
-                            color: "var(--color-text-primary)",
-                            borderBottom: "1px solid var(--color-border-primary)",
-                          }}
-                        >
-                          {fmt(mean, 2)}
-                        </td>
-                        <td
-                          className="py-1.5 px-2 text-right font-mono"
-                          style={{
-                            color: "var(--color-text-secondary)",
-                            borderBottom: "1px solid var(--color-border-primary)",
-                          }}
-                        >
-                          {fmt(sd, 2)}
-                        </td>
-                        <td
-                          className="py-1.5 px-2 text-right"
-                          style={{
-                            color: positiveRate >= 50
-                              ? "var(--color-accent-secondary)"
-                              : "var(--color-accent-danger)",
-                            borderBottom: "1px solid var(--color-border-primary)",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {fmt(positiveRate)}%
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {likertSummary.map((item) => (
+                    <tr key={item.label}>
+                      <td className="py-1.5 px-2" style={{ color: "var(--color-text-primary)", borderBottom: "1px solid var(--color-border-primary)" }}>
+                        {item.label}
+                      </td>
+                      <td className="py-1.5 px-2 text-right" style={{ color: "var(--color-text-secondary)", borderBottom: "1px solid var(--color-border-primary)" }}>
+                        {item.total}
+                      </td>
+                      <td className="py-1.5 px-2 text-right font-mono" style={{ color: "var(--color-text-primary)", borderBottom: "1px solid var(--color-border-primary)" }}>
+                        {fmt(item.mean, 2)}
+                      </td>
+                      <td className="py-1.5 px-2 text-right font-mono" style={{ color: "var(--color-text-secondary)", borderBottom: "1px solid var(--color-border-primary)" }}>
+                        {fmt(item.sd, 2)}
+                      </td>
+                      <td
+                        className="py-1.5 px-2 text-right"
+                        style={{
+                          color: item.positiveRate >= 50
+                            ? "var(--color-accent-secondary)"
+                            : "var(--color-accent-danger)",
+                          borderBottom: "1px solid var(--color-border-primary)",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {fmt(item.positiveRate)}%
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -704,12 +526,7 @@ export const SurveyResult: React.FC<Props> = ({ analysis, variables, dataRows })
             className="text-xs font-semibold mb-3 flex items-center gap-2"
             style={{ color: "var(--color-text-secondary)" }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <path d="M3 9h18" />
-              <path d="M3 15h18" />
-              <path d="M9 3v18" />
-            </svg>
+            <GridIcon />
             クロス集計
           </h4>
           <div className="flex flex-col gap-4">
@@ -731,10 +548,7 @@ export const SurveyResult: React.FC<Props> = ({ analysis, variables, dataRows })
           className="flex flex-col items-center justify-center py-12 gap-4"
           style={{ color: "var(--color-text-tertiary)" }}
         >
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.35 }}>
-            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-            <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
-          </svg>
+          <EmptyIcon />
           <p className="text-xs">
             調査データの集計結果を表示するには、順序変数（リッカート尺度）を含むデータセットが必要です
           </p>

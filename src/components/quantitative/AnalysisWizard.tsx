@@ -121,6 +121,19 @@ const METHODS: MethodDef[] = [
     ),
     color: "#f472b6",
   },
+  {
+    key: "survey",
+    label: "調査データ",
+    description: "リッカート尺度の集計・クロス集計・カイ二乗検定",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+        <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+        <path d="M9 14l2 2 4-4" />
+      </svg>
+    ),
+    color: "#06b6d4",
+  },
 ];
 
 // ── Props ──
@@ -493,6 +506,14 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
         }
         result = { networkResults };
         analysisType = "network";
+      }
+
+      // ─── 調査データ分析 ───
+      if (method === "survey") {
+        // リッカート尺度の集計 + クロス集計用データをそのまま保存
+        // SurveyResult コンポーネント側で集計・表示を行う
+        result = { surveyVarIds: selectedVarIds };
+        analysisType = "survey";
       }
 
       if (!result) throw new Error("分析結果が空です");
@@ -889,6 +910,34 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
                     onChange={() => toggleVar(v.id)}
                   />
                 ))}
+            </div>
+          </div>
+        );
+      }
+
+      // ─── 調査データ ───
+      if (method === "survey") {
+        return (
+          <div>
+            <p className="text-xs mb-3" style={{ color: "var(--color-text-secondary)" }}>
+              調査データ分析の対象変数を選択してください。順序変数（リッカート尺度）はダイバージング棒グラフで、名義変数はクロス集計表で分析されます。
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {variables
+                .filter((v) => v.variableType === "ordinal" || v.variableType === "nominal" || v.variableType === "scale")
+                .map((v) => (
+                  <VarCheckbox
+                    key={v.id}
+                    v={v}
+                    checked={selectedVarIds.includes(v.id)}
+                    onChange={() => toggleVar(v.id)}
+                  />
+                ))}
+              {ordinalVars.length === 0 && nominalVars.length === 0 && (
+                <p className="text-xs py-2 px-3" style={{ color: "var(--color-accent-warning)" }}>
+                  順序変数または名義変数がありません。変数定義を確認してください。
+                </p>
+              )}
             </div>
           </div>
         );
