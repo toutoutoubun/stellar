@@ -77,7 +77,7 @@ const QualitativeView: React.FC = () => {
     try {
       const result = await invoke<QualProject[]>("get_projects");
       setProjects(result);
-      if (result.length > 0 && !selectedProjectId) {
+      if (result.length > 0 && !selectedProjectId && result[0]) {
         setSelectedProjectId(result[0].id);
       }
     } catch (err) {

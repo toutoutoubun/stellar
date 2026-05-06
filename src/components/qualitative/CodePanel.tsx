@@ -28,7 +28,7 @@ function flattenTree(nodes: CodeNode[]): CodeNode[] {
 const CodePanel: React.FC<CodePanelProps> = ({
   highlights,
   selectedHighlightIds,
-  paperId,
+  paperId: _paperId,
   currentProjectId,
 }) => {
   const [projects, setProjects] = useState<QualProject[]>([]);
@@ -49,7 +49,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
       try {
         const result = await invoke<QualProject[]>("get_projects");
         setProjects(result);
-        if (!projectId && result.length > 0) {
+        if (!projectId && result.length > 0 && result[0]) {
           setProjectId(result[0].id);
         }
       } catch (err) {
@@ -89,7 +89,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
           { codeId: code.id }
         );
         for (const h of hls) {
-          if (!map[h.id]) map[h.id] = new Set();
+          map[h.id] ??= new Set();
           map[h.id].add(code.id);
         }
       } catch {

@@ -249,6 +249,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
   if (!open) return null;
 
   const currentStep = TUTORIAL_STEPS[step];
+  if (!currentStep) return null;
 
   return (
     <div

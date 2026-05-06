@@ -68,7 +68,7 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
   // アクターフォーム
   const [actorName, setActorName] = useState("");
   const [actorType, setActorType] = useState("state");
-  const [actorPosition, setActorPosition] = useState("neutral");
+  const [actorPosition, _setActorPosition] = useState("neutral");
   const [actorInfluence, setActorInfluence] = useState(3);
   const [actorDescription, setActorDescription] = useState("");
 

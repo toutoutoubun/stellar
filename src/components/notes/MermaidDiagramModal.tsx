@@ -252,7 +252,7 @@ export const MermaidDiagramModal: React.FC<MermaidDiagramModalProps> = ({
   onClose,
   onInsert,
 }) => {
-  const [code, setCode] = useState(MERMAID_TEMPLATES[0].code);
+  const [code, setCode] = useState(MERMAID_TEMPLATES[0]?.code ?? "");
   const [selectedTemplate, setSelectedTemplate] = useState<string>("flowchart");
   const [previewSvg, setPreviewSvg] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
@@ -280,7 +280,7 @@ export const MermaidDiagramModal: React.FC<MermaidDiagramModalProps> = ({
       setPreviewSvg("");
       const msg = e instanceof Error ? e.message : "レンダリングエラー";
       // Mermaid のエラーメッセージを短く整形
-      const shortMsg = msg.split("\n")[0].slice(0, 200);
+      const shortMsg = String(msg.split("\n")[0] ?? "").slice(0, 200);
       setError(shortMsg);
     } finally {
       setIsRendering(false);
@@ -317,7 +317,7 @@ export const MermaidDiagramModal: React.FC<MermaidDiagramModalProps> = ({
     if (!open) {
       // 少し遅延してリセット（フェードアウト完了後）
       const timer = setTimeout(() => {
-        setCode(MERMAID_TEMPLATES[0].code);
+        setCode(MERMAID_TEMPLATES[0]?.code ?? "");
         setSelectedTemplate("flowchart");
         setPreviewSvg("");
         setError(null);
