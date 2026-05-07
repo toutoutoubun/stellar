@@ -13,6 +13,7 @@ import { Input } from "../ui/Input";
 import { toast } from "../ui/Toast";
 import type { DatasetSourceType } from "../../types";
 import { useT, useI18nStore } from "../../stores/useI18nStore";
+import { IconEdit, IconTag, IconClipboard, IconTrash } from "../ui/Icons";
 
 // ── ソースタイプのバッジ設定 ──
 const SOURCE_BADGES: Record<
@@ -409,23 +410,23 @@ export const DatasetList: React.FC = () => {
           {[
             {
               label: t.quantitative.k_ay4t7v,
-              icon: "✏️",
+              icon: <IconEdit size={13} />,
               action: () => setContextMenu(null),
             },
             {
               label: t.quantitative.k_y5e6kx,
-              icon: "🏷",
+              icon: <IconTag size={13} />,
               action: handleGenerateCodesFromContext,
             },
             {
               label: t.quantitative.k_txzgk9,
-              icon: "📋",
+              icon: <IconClipboard size={13} />,
               action: handleGenerateHighlightsFromContext,
             },
-            { label: "separator", icon: "", action: () => {} },
+            { label: "separator", icon: null as React.ReactNode, action: () => {} },
             {
               label: t.common.delete,
-              icon: "🗑",
+              icon: <IconTrash size={13} />,
               action: handleDeleteFromContext,
               danger: true,
             },

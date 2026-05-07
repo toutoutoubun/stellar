@@ -6,9 +6,8 @@
 use crate::db::get_pool;
 use crate::db::models::*;
 use serde::{Deserialize, Serialize};
-use sqlx::Row;
 use std::sync::Arc;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 

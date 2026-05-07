@@ -10,18 +10,19 @@ import { Button } from "../ui/Button";
 import { toast } from "../ui/Toast";
 import type { VariableType } from "../../types";
 import { useI18nStore } from "../../stores/useI18nStore";
+import { IconChart, IconTag, IconClipboard, IconNote, IconCalendar, IconWarning } from "../ui/Icons";
 
 // ── 変数タイプアイコン定義 ──
 const VARIABLE_TYPE_OPTIONS: {
   type: VariableType;
-  icon: string;
+  icon: React.ReactNode;
   label: string;
 }[] = [
-  { type: "scale", icon: "📊", label: useI18nStore.getState().t.quantitative.k_g4muy4 },
-  { type: "nominal", icon: "🏷", label: useI18nStore.getState().t.quantitative.k_ii97u4 },
-  { type: "ordinal", icon: "📋", label: useI18nStore.getState().t.quantitative.k_u8ggn7 },
-  { type: "text", icon: "📝", label: useI18nStore.getState().t.quantitative.k_6ctu6u },
-  { type: "date", icon: "📅", label: useI18nStore.getState().t.quantitative.k_hrir },
+  { type: "scale", icon: <IconChart size={14} />, label: useI18nStore.getState().t.quantitative.k_g4muy4 },
+  { type: "nominal", icon: <IconTag size={14} />, label: useI18nStore.getState().t.quantitative.k_ii97u4 },
+  { type: "ordinal", icon: <IconClipboard size={14} />, label: useI18nStore.getState().t.quantitative.k_u8ggn7 },
+  { type: "text", icon: <IconNote size={14} />, label: useI18nStore.getState().t.quantitative.k_6ctu6u },
+  { type: "date", icon: <IconCalendar size={14} />, label: useI18nStore.getState().t.quantitative.k_hrir },
 ];
 
 // ── 区切り文字選択肢 ──
@@ -545,7 +546,7 @@ export const CsvImporter: React.FC = () => {
                                 color: "var(--color-accent-warning)",
                               }}
                             >
-                              ⚠️ {issue.issues}件の値が数値に変換できません
+                              <IconWarning size={12} /> {issue.issues}件の値が数値に変換できません
                             </p>
                           )}
                         </th>

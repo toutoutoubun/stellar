@@ -8,7 +8,8 @@ import type React from "react";
 import { useState, useCallback, useEffect } from "react";
 import { useThemeStore, THEMES } from "../../stores/useThemeStore";
 import { useI18nStore, useT } from "../../stores/useI18nStore";
-import { SUPPORTED_LOCALES, LOCALE_NATIVE_NAMES, LOCALE_FLAGS } from "../../i18n";
+import { SUPPORTED_LOCALES, LOCALE_NATIVE_NAMES } from "../../i18n";
+import { LocaleFlag } from "../ui/Icons";
 import { ThemePreviewCard } from "../settings/ThemePreviewCard";
 import type { Theme, Locale } from "../../types";
 import { StellarIcon } from "../ui/StellarIcon";
@@ -119,7 +120,7 @@ const LanguageStep: React.FC<{
               transition: "all var(--transition-fast)",
             }}
           >
-            <span style={{ fontSize: "22px" }}>{LOCALE_FLAGS[loc]}</span>
+            <LocaleFlag locale={loc} size={22} />
             <span className="flex-1 text-sm font-medium" style={{ color: "var(--color-text-primary)" }}>
               {LOCALE_NATIVE_NAMES[loc]}
             </span>

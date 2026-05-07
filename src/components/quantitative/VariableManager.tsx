@@ -10,17 +10,18 @@ import { Input } from "../ui/Input";
 import { toast } from "../ui/Toast";
 import type { Variable, VariableType, LikertLabel } from "../../types";
 import { useI18nStore } from "../../stores/useI18nStore";
+import { IconChart, IconTag, IconClipboard, IconNote, IconCalendar, IconWarning } from "../ui/Icons";
 
 // ── 変数タイプアイコン・ラベル ──
 const VARIABLE_TYPE_META: Record<
   VariableType,
-  { icon: string; label: string; color: string }
+  { icon: React.ReactNode; label: string; color: string }
 > = {
-  scale: { icon: "📊", label: useI18nStore.getState().t.quantitative.k_6clnyf, color: "#4285f4" },
-  nominal: { icon: "🏷", label: useI18nStore.getState().t.quantitative.k_ezwc, color: "#34a853" },
-  ordinal: { icon: "📋", label: useI18nStore.getState().t.quantitative.k_qdl5, color: "#a08cff" },
-  text: { icon: "📝", label: useI18nStore.getState().t.quantitative.k_6ctu6u, color: "#fb8c00" },
-  date: { icon: "📅", label: useI18nStore.getState().t.quantitative.k_hrir, color: "#e03131" },
+  scale: { icon: <IconChart size={14} />, label: useI18nStore.getState().t.quantitative.k_6clnyf, color: "#4285f4" },
+  nominal: { icon: <IconTag size={14} />, label: useI18nStore.getState().t.quantitative.k_ezwc, color: "#34a853" },
+  ordinal: { icon: <IconClipboard size={14} />, label: useI18nStore.getState().t.quantitative.k_qdl5, color: "#a08cff" },
+  text: { icon: <IconNote size={14} />, label: useI18nStore.getState().t.quantitative.k_6ctu6u, color: "#fb8c00" },
+  date: { icon: <IconCalendar size={14} />, label: useI18nStore.getState().t.quantitative.k_hrir, color: "#e03131" },
 };
 
 export const VariableManager: React.FC = () => {
@@ -699,7 +700,7 @@ const VariableEditSheet: React.FC<{
                 className="text-[11px] flex items-center gap-1"
                 style={{ color: "var(--color-accent-warning)" }}
               >
-                <span>⚠️</span>
+                <IconWarning size={12} />
                 変数タイプを変更すると、この変数を使用した分析結果が無効になる場合があります
               </p>
             )}

@@ -181,7 +181,7 @@ pub struct OutlineHeading {
 }
 
 /// ハイライトレスポンス — 矩形座標を展開済み
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HighlightResponse {
     pub id: String,
@@ -195,7 +195,7 @@ pub struct HighlightResponse {
 }
 
 /// リンクレスポンス
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LinkResponse {
     pub id: String,

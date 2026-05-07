@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::collections::HashMap;
 use std::io::{Read as IoRead, Write as IoWrite};
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 
 // ============================================================
 // HTML テンプレート定数
