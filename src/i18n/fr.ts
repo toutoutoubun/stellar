@@ -297,6 +297,8 @@ const fr: TranslationKeys = {
     k_mmd_state_fail: "\u00c9chec",
     k_mmd_state_retry: "R\u00e9essayer",
     k_mmd_pie_title: "R\u00e9partition du temps de recherche",
+    k_footnote_text: "Texte de la note de bas de page",
+    k_code_placeholder: "Entrez le code ici",
 },
 
   // ============================================================

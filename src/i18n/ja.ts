@@ -295,6 +295,8 @@ const ja = {
     k_mmd_state_fail: "失敗",
     k_mmd_state_retry: "リトライ",
     k_mmd_pie_title: "研究時間の内訳",
+    k_footnote_text: "脚注テキスト",
+    k_code_placeholder: "コードをここに入力",
 },
 
   // ============================================================

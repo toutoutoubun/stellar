@@ -11,6 +11,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Titlebar } from "./components/layout/Titlebar";
 import { Sidebar } from "./components/layout/Sidebar";
 import { MainPane } from "./components/layout/MainPane";
+import { ContextPanel } from "./components/layout/ContextPanel";
 import { SearchModal } from "./components/search/SearchModal";
 import { ToastContainer } from "./components/ui/Toast";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -167,7 +168,7 @@ const AppContent: React.FC = () => {
 
         {/* メインペイン（画面遷移アニメーション付き） */}
         <main
-          className="flex-1 overflow-hidden"
+          className="flex-1 overflow-hidden flex"
           style={{
             marginLeft: sidebarCollapsed
               ? "var(--sidebar-width-collapsed)"
@@ -175,13 +176,18 @@ const AppContent: React.FC = () => {
             transition: "margin-left var(--transition-normal)",
           }}
         >
-          <ScreenTransition
-            key={JSON.stringify(mainPaneContent)}
-            direction={transitionDirection}
-            onTransitionEnd={handleTransitionEnd}
-          >
-            <MainPane />
-          </ScreenTransition>
+          <div className="flex-1 overflow-hidden">
+            <ScreenTransition
+              key={JSON.stringify(mainPaneContent)}
+              direction={transitionDirection}
+              onTransitionEnd={handleTransitionEnd}
+            >
+              <MainPane />
+            </ScreenTransition>
+          </div>
+
+          {/* コンテキストパネル（右側スライドイン） */}
+          <ContextPanel />
         </main>
       </div>
 

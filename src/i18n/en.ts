@@ -297,6 +297,8 @@ const en: TranslationKeys = {
     k_mmd_state_fail: "Failure",
     k_mmd_state_retry: "Retry",
     k_mmd_pie_title: "Research Time Breakdown",
+    k_footnote_text: "Footnote text",
+    k_code_placeholder: "Enter code here",
 },
 
   // ============================================================

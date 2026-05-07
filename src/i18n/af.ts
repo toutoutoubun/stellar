@@ -297,6 +297,8 @@ const af: TranslationKeys = {
     k_mmd_state_fail: "Mislukking",
     k_mmd_state_retry: "Herprobeer",
     k_mmd_pie_title: "Verdeling van navorsingstyd",
+    k_footnote_text: "Voetnoot teks",
+    k_code_placeholder: "Voer kode hier in",
 },
 
   // ============================================================

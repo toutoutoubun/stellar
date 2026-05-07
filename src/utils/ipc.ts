@@ -157,19 +157,163 @@ export const searchApi = {
     invoke<BackendSearchResults>("full_text_search", { query }),
 };
 
-/** データ管理 API（未実装 — 将来のバックエンドコマンド追加後に有効化） */
+/** データ管理 API — Rust バックエンドコマンドを呼び出し、未実装の場合はフロントで代替 */
 export const dataApi = {
-  /** データサマリーを取得 */
-  getSummary: () => Promise.resolve({} as DataSummary),
+  /** データサマリーを取得（論文・ノート・ハイライト数 + ディスク使用量） */
+  getSummary: async (): Promise<DataSummary> => {
+    try {
+      // Rust 側に get_data_summary コマンドがあればそれを使う
+      return await invoke<DataSummary>("get_data_summary");
+    } catch {
+      // フォールバック: 各APIから件数を集計
+      try {
+        const [papersRes, notesRes] = await Promise.all([
+          invoke<{ items: Paper[]; totalItems: number }>("get_papers", { limit: 1 }),
+          invoke<{ items: Note[]; totalItems: number }>("get_notes", { limit: 1 }),
+        ]);
+
+        let highlightCount = 0;
+        try {
+          // ハイライト数はざっくり取得（全論文のハイライトを数えると重いのでバックエンドに任せる）
+          const hlResult = await invoke<number>("get_highlight_count");
+          highlightCount = hlResult;
+        } catch {
+          highlightCount = 0;
+        }
+
+        // ディスク使用量の取得を試みる
+        let diskUsage = "—";
+        try {
+          diskUsage = await invoke<string>("get_disk_usage");
+        } catch {
+          diskUsage = "—";
+        }
+
+        // データパスの取得を試みる
+        let dataPath = "~/Stellar";
+        try {
+          dataPath = await invoke<string>("get_data_path");
+        } catch {
+          dataPath = "~/Stellar";
+        }
+
+        return {
+          paperCount: papersRes?.totalItems ?? papersRes?.items?.length ?? 0,
+          noteCount: notesRes?.totalItems ?? notesRes?.items?.length ?? 0,
+          highlightCount,
+          diskUsage,
+          dataPath,
+        };
+      } catch {
+        return {
+          paperCount: 0,
+          noteCount: 0,
+          highlightCount: 0,
+          diskUsage: "—",
+          dataPath: "~/Stellar",
+        };
+      }
+    }
+  },
 
   /** データパスを変更 */
-  changePath: (_newPath: string) => Promise.resolve(),
+  changePath: async (newPath: string): Promise<void> => {
+    try {
+      await invoke<void>("change_data_path", { newPath });
+    } catch {
+      // バックエンド未対応の場合はログのみ
+      console.warn("[dataApi] change_data_path not available on backend");
+    }
+  },
 
   /** データをエクスポート（JSON + PDF ZIP） */
-  export: () => Promise.resolve(""),
+  export: async (): Promise<string> => {
+    try {
+      // Rust 側で ZIP を生成してパスを返す
+      return await invoke<string>("export_data");
+    } catch {
+      // フォールバック: フロントでJSONエクスポート
+      try {
+        const [papers, notes] = await Promise.all([
+          invoke<{ items: Paper[] }>("get_papers", { limit: 10000 }).then((r) => r.items),
+          invoke<{ items: Note[] }>("get_notes", { limit: 10000 }).then((r) => r.items),
+        ]);
+
+        const exportData = {
+          version: "1.0",
+          exportedAt: new Date().toISOString(),
+          papers,
+          notes,
+        };
+
+        const json = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `stellar_export_${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        return a.download;
+      } catch (e) {
+        throw new Error(`Export failed: ${String(e)}`);
+      }
+    }
+  },
 
   /** バックアップを作成 (stellar_backup_YYYYMMDD.zip) */
-  createBackup: () => Promise.resolve(""),
+  createBackup: async (): Promise<string> => {
+    try {
+      // Rust 側でバックアップを作成してパスを返す
+      return await invoke<string>("create_backup");
+    } catch {
+      // フォールバック: フロントでJSONバックアップ
+      try {
+        const [papers, notes] = await Promise.all([
+          invoke<{ items: Paper[] }>("get_papers", { limit: 10000 }).then((r) => r.items),
+          invoke<{ items: Note[] }>("get_notes", { limit: 10000 }).then((r) => r.items),
+        ]);
+
+        let highlights: Highlight[] = [];
+        try {
+          // 全論文のハイライトを取得
+          const allHighlights = await Promise.all(
+            papers.map((p) =>
+              invoke<Highlight[]>("get_highlights", { paperId: p.id }).catch(() => [])
+            )
+          );
+          highlights = allHighlights.flat();
+        } catch {
+          highlights = [];
+        }
+
+        const backup = {
+          version: "1.0",
+          type: "backup",
+          createdAt: new Date().toISOString(),
+          papers,
+          notes,
+          highlights,
+        };
+
+        const json = JSON.stringify(backup, null, 2);
+        const blob = new Blob([json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `stellar_backup_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        return a.download;
+      } catch (e) {
+        throw new Error(`Backup failed: ${String(e)}`);
+      }
+    }
+  },
 };
 
 /** すべての API をまとめたオブジェクト */

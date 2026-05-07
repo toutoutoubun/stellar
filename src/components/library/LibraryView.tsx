@@ -21,6 +21,8 @@ import { useT } from "../../stores/useI18nStore";
 import { invoke } from "../../lib/tauriShim";
 import { StaticSiteExportModal } from "../export/StaticSiteExportModal";
 import { StellarPackageModal } from "../export/StellarPackageModal";
+import { EditPaperModal } from "./EditPaperModal";
+import type { UpdatePaperInput } from "../../types";
 
 /** フィルタードロップダウンの共通スタイル */
 const dropdownStyle: React.CSSProperties = {
@@ -67,6 +69,7 @@ export const LibraryView: React.FC = () => {
   const deletePaper = useLibraryStore((s) => s.deletePaper);
   const createPaper = useLibraryStore((s) => s.createPaper);
   const attachPdf = useLibraryStore((s) => s.attachPdf);
+  const updatePaper = useLibraryStore((s) => s.updatePaper);
   const setFilterTag = useLibraryStore((s) => s.setFilterTag);
   const setFilterYear = useLibraryStore((s) => s.setFilterYear);
   const setFilterHasPdf = useLibraryStore((s) => s.setFilterHasPdf);
@@ -87,6 +90,8 @@ export const LibraryView: React.FC = () => {
   const [showShareDropdown, setShowShareDropdown] = useState(false);
   const [staticSiteModalOpen, setStaticSiteModalOpen] = useState(false);
   const [stellarPackageModalOpen, setStellarPackageModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingPaper, setEditingPaper] = useState<import("../../types").Paper | null>(null);
 
   const tagDropdownRef = useRef<HTMLDivElement>(null);
   const yearDropdownRef = useRef<HTMLDivElement>(null);
@@ -169,10 +174,24 @@ export const LibraryView: React.FC = () => {
     [createPaper]
   );
 
-  // ── 編集（現時点ではトースト通知のみ） ──
-  const handleEditPaper = useCallback((_id: string) => {
-    toast.info(t.library.k_obwo3j);
-  }, []);
+  // ── 編集モーダルを開く ──
+  const handleEditPaper = useCallback((id: string) => {
+    const paper = papers.find((p) => p.id === id) ?? null;
+    if (paper) {
+      setEditingPaper(paper);
+      setEditModalOpen(true);
+    }
+  }, [papers]);
+
+  // ── 論文更新を保存 ──
+  const handleSaveEditPaper = useCallback(async (id: string, input: UpdatePaperInput) => {
+    try {
+      await updatePaper(id, input);
+      toast.success(t.common.save);
+    } catch (e) {
+      toast.error(String(e));
+    }
+  }, [updatePaper, t]);
 
   // ── PDF添付（ファイルダイアログ→バックエンド保存） ──
   const handleAttachPdf = useCallback(
@@ -952,6 +971,7 @@ export const LibraryView: React.FC = () => {
           onOpenPdf={handleOpenPdfReader}
           onDelete={(id) => void handleDeletePaper(id)}
           onAttachPdf={(id) => void handleAttachPdf(id)}
+          onEdit={handleEditPaper}
         />
       )}
 
@@ -974,6 +994,14 @@ export const LibraryView: React.FC = () => {
       <StellarPackageModal
         open={stellarPackageModalOpen}
         onClose={() => setStellarPackageModalOpen(false)}
+      />
+
+      {/* 論文編集モーダル */}
+      <EditPaperModal
+        open={editModalOpen}
+        onClose={() => { setEditModalOpen(false); setEditingPaper(null); }}
+        paper={editingPaper}
+        onSave={handleSaveEditPaper}
       />
     </div>
   );

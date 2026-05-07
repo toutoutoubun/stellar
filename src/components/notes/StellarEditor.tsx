@@ -503,21 +503,18 @@ export const StellarEditor: React.FC<StellarEditorProps> = ({
           selection: { anchor: cursor + insert.length },
         });
       } catch {
-        // save_note_attachment が未実装の場合、Base64 インラインで挿入
-        const reader = new FileReader();
-        reader.onload = () => {
-          const dataUrl = reader.result as string;
-          const imgMarkdown = `![${file.name}](${dataUrl})`;
-          const cursor = view.state.selection.main.head;
-          const docLine = view.state.doc.lineAt(cursor);
-          const prefix = docLine.text.trim() === "" ? "" : "\n";
-          const insert = `${prefix}${imgMarkdown}\n`;
-          view.dispatch({
-            changes: { from: cursor, insert },
-            selection: { anchor: cursor + insert.length },
-          });
-        };
-        reader.readAsDataURL(file);
+        // save_note_attachment が未実装の場合、Blob URL で挿入
+        // Blob URL はセッション中のみ有効だが、Base64 より軽量でエディタのパフォーマンスを維持
+        const blobUrl = URL.createObjectURL(file);
+        const imgMarkdown = `![${file.name}](${blobUrl})`;
+        const cursor = view.state.selection.main.head;
+        const docLine = view.state.doc.lineAt(cursor);
+        const prefix = docLine.text.trim() === "" ? "" : "\n";
+        const insert = `${prefix}${imgMarkdown}\n`;
+        view.dispatch({
+          changes: { from: cursor, insert },
+          selection: { anchor: cursor + insert.length },
+        });
       }
     }
   }, [noteId]);

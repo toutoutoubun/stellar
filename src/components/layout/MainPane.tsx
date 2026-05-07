@@ -20,6 +20,7 @@ import { SplitView } from "./SplitView";
 // 静的インポートによる初期バンドルサイズ増加は許容範囲。
 import { GraphView } from "../graph/GraphView";
 import { useI18nStore } from "../../stores/useI18nStore";
+import { SearchResultsView } from "../search/SearchResultsView";
 
 // ReaderView は引き続き React.lazy で遅延読み込み（pdfjs-dist 依存）
 const ReaderView = lazy(() =>
@@ -254,14 +255,7 @@ export const MainPane: React.FC = () => {
           </Suspense>
         );
       case "search":
-        return (
-          <div
-            className="flex items-center justify-center h-full"
-            style={{ color: "var(--color-text-tertiary)" }}
-          >
-            <p className="text-sm">{useI18nStore.getState().t.layout.str_umlkcu}</p>
-          </div>
-        );
+        return <SearchResultsView />;
       case "settings":
         return <SettingsView />;
       case "empty":

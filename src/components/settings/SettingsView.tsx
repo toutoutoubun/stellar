@@ -10,6 +10,8 @@ import { SUPPORTED_LOCALES, LOCALE_NATIVE_NAMES } from "../../i18n";
 import { ThemePreviewCard } from "./ThemePreviewCard";
 import { StellarPackageModal } from "../export/StellarPackageModal";
 import { invoke } from "../../lib/tauriShim";
+import { dataApi } from "../../utils/ipc";
+import { toast } from "../ui/Toast";
 import type { Paper } from "../../types";
 import type {
   Theme,
@@ -147,23 +149,26 @@ export const SettingsView: React.FC = () => {
     },
   ];
 
-  // データサマリーの読み込み
+  // データサマリーの読み込み（実データ取得）
   useEffect(() => {
     if (activeTab === "data") {
       setIsLoadingData(true);
-      Promise.resolve()
-        .then(() => {
+      dataApi.getSummary()
+        .then((summary) => {
+          setDataSummary(summary);
+        })
+        .catch(() => {
           setDataSummary({
             paperCount: 0,
             noteCount: 0,
             highlightCount: 0,
-            diskUsage: t.settings.data.calculating,
+            diskUsage: "—",
             dataPath: "~/Stellar",
           });
         })
         .finally(() => setIsLoadingData(false));
     }
-  }, [activeTab, t]);
+  }, [activeTab]);
 
   // ブラウザ拡張ステータスチェック
   useEffect(() => {
@@ -213,37 +218,43 @@ export const SettingsView: React.FC = () => {
     try {
       const { open } = await import("@tauri-apps/plugin-dialog");
       const selected = await open({ directory: true, multiple: false });
-      if (selected) {
-        console.warn(t.settings.k_dbvkig, selected);
+      if (selected && typeof selected === "string") {
+        await dataApi.changePath(selected);
+        // サマリーを再取得して表示を更新
+        const summary = await dataApi.getSummary();
+        setDataSummary(summary);
+        toast.success(t.settings.data.storagePath + ": " + selected);
       }
     } catch {
       // キャンセルまたはエラー
     }
-  }, []);
+  }, [t]);
 
   // エクスポート
   const handleExport = useCallback(async () => {
     setIsExporting(true);
     try {
-      console.warn(t.settings.k_6yb0wy);
-    } catch {
-      // エラー
+      const result = await dataApi.export();
+      toast.success(`${t.settings.data.exportData}: ${result}`);
+    } catch (e) {
+      toast.error(String(e));
     } finally {
       setIsExporting(false);
     }
-  }, []);
+  }, [t]);
 
   // バックアップ
   const handleBackup = useCallback(async () => {
     setIsBackingUp(true);
     try {
-      console.warn(t.settings.k_13z8tu);
-    } catch {
-      // エラー
+      const result = await dataApi.createBackup();
+      toast.success(`${t.settings.data.createBackup}: ${result}`);
+    } catch (e) {
+      toast.error(String(e));
     } finally {
       setIsBackingUp(false);
     }
-  }, []);
+  }, [t]);
 
   // ============================================================
   // 外観タブ
