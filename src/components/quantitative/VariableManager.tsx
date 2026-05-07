@@ -408,7 +408,7 @@ const VariableCard: React.FC<{
 
         {/* 日付フォーマットヒント */}
         {variable.variableType === "date" && variable.dateFormat && (
-          <span>{t.quantitative.k_format_label} {variable.dateFormat}</span>
+          <span>{useI18nStore.getState().t.quantitative.k_format_label} {variable.dateFormat}</span>
         )}
       </div>
 
@@ -442,7 +442,7 @@ const VariableCard: React.FC<{
               >
                 <polyline points="9 18 15 12 9 6" />
               </svg>
-              <span>{t.quantitative.k_likert_settings}</span>
+              <span>{useI18nStore.getState().t.quantitative.k_likert_settings}</span>
             </button>
 
             {likertExpanded && (
@@ -701,7 +701,7 @@ const VariableEditSheet: React.FC<{
                 style={{ color: "var(--color-accent-warning)" }}
               >
                 <IconWarning size={12} />
-                {t.quantitative.k_type_change_warning}
+                {useI18nStore.getState().t.quantitative.k_type_change_warning}
               </p>
             )}
           </div>

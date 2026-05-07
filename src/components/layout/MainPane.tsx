@@ -83,7 +83,7 @@ const EmptyState: React.FC = () => (
         {useI18nStore.getState().t.onboarding.welcome.title}
       </h2>
       <p className="text-sm" style={{ lineHeight: "var(--line-height-relaxed)" }}>
-        {useI18nStore.getState().t.layout.k_welcome_desc.split("\n").map((line, i) => (
+        {useI18nStore.getState().t.library.k_welcome_desc.split("\n").map((line: string, i: number) => (
           <span key={i}>{line}{i === 0 && <br />}</span>
         ))}
       </p>

@@ -38,7 +38,7 @@ export const ContextPanel: React.FC = () => {
           className="text-sm font-semibold"
           style={{ color: "var(--color-text-primary)" }}
         >
-          {t.layout.k_detail_info}
+          {t.library.k_detail_info}
         </h3>
         <button
           onClick={toggleContextPanel}
@@ -78,7 +78,7 @@ export const ContextPanel: React.FC = () => {
           className="text-sm"
           style={{ color: "var(--color-text-tertiary)" }}
         >
-          {t.layout.k_context_placeholder}
+          {t.library.k_context_placeholder}
         </p>
         <p
           className="text-xs mt-2"
@@ -87,9 +87,9 @@ export const ContextPanel: React.FC = () => {
             lineHeight: "var(--line-height-relaxed)",
           }}
         >
-          {t.layout.k_context_paper}
+          {t.library.k_context_paper}
           <br />
-          {t.layout.k_context_note}
+          {t.library.k_context_note}
         </p>
       </div>
     </aside>
