@@ -7,6 +7,7 @@ import type React from "react";
 import { useCallback } from "react";
 import { clsx } from "clsx";
 import { useUIStore } from "../../stores/useUIStore";
+import { useT } from "../../stores/useI18nStore";
 import type { SidebarView } from "../../types";
 
 /** サイドバーのナビゲーションアイテム定義 */
@@ -18,11 +19,11 @@ interface NavItem {
   bottom?: boolean;
 }
 
-/** ナビゲーションアイコン群（Lucide 風の SVG） */
+/** ナビゲーションアイコン群（Lucide 風の SVG）— label はプレースホルダ、実行時に t() で上書き */
 const NAV_ITEMS: NavItem[] = [
   {
     view: "library",
-    label: "文献",
+    label: "__library__",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
@@ -32,7 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     view: "notes",
-    label: "ノート",
+    label: "__notes__",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -45,7 +46,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     view: "graph",
-    label: "グラフ",
+    label: "__graph__",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3" />
@@ -62,7 +63,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     view: "qualitative",
-    label: "質的分析",
+    label: "__qualitative__",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
@@ -72,7 +73,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     view: "quantitative",
-    label: "量的分析",
+    label: "__quantitative__",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <line x1="18" y1="20" x2="18" y2="10" />
@@ -83,7 +84,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     view: "settings",
-    label: "設定",
+    label: "__settings__",
     bottom: true,
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -95,6 +96,19 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 export const Sidebar: React.FC = () => {
+  const t = useT();
+
+  /** ビュー → 翻訳済みラベルのマッピング */
+  const labelMap: Record<SidebarView, string> = {
+    library: t.sidebar.library,
+    notes: t.sidebar.notes,
+    graph: t.sidebar.graph,
+    qualitative: t.sidebar.qualitative,
+    quantitative: t.sidebar.quantitative,
+    settings: t.sidebar.settings,
+    search: t.common.search,
+  };
+
   const sidebarView = useUIStore((s) => s.sidebarView);
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
   const setSidebarView = useUIStore((s) => s.setSidebarView);
@@ -203,7 +217,7 @@ export const Sidebar: React.FC = () => {
                   e.currentTarget.style.color = "var(--color-text-secondary)";
                 }
               }}
-              title={sidebarCollapsed ? item.label : undefined}
+              title={sidebarCollapsed ? labelMap[item.view] : undefined}
             >
               {/* アクティブインジケーター */}
               {isActive && !sidebarCollapsed && (
@@ -221,7 +235,7 @@ export const Sidebar: React.FC = () => {
                 />
               )}
               <span className="shrink-0" style={{ opacity: isActive ? 1 : 0.7 }}>{item.icon}</span>
-              {!sidebarCollapsed && <span>{item.label}</span>}
+              {!sidebarCollapsed && <span>{labelMap[item.view]}</span>}
             </button>
           );
         })}
@@ -265,7 +279,7 @@ export const Sidebar: React.FC = () => {
                   e.currentTarget.style.color = "var(--color-text-secondary)";
                 }
               }}
-              title={sidebarCollapsed ? item.label : undefined}
+              title={sidebarCollapsed ? labelMap[item.view] : undefined}
             >
               {isActive && !sidebarCollapsed && (
                 <span
@@ -282,7 +296,7 @@ export const Sidebar: React.FC = () => {
                 />
               )}
               <span className="shrink-0" style={{ opacity: isActive ? 1 : 0.7 }}>{item.icon}</span>
-              {!sidebarCollapsed && <span>{item.label}</span>}
+              {!sidebarCollapsed && <span>{labelMap[item.view]}</span>}
             </button>
           );
         })}
@@ -307,7 +321,7 @@ export const Sidebar: React.FC = () => {
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = "transparent";
           }}
-          title={sidebarCollapsed ? "サイドバーを展開" : "サイドバーを折りたたむ"}
+          title={sidebarCollapsed ? t.sidebar.expandSidebar : t.sidebar.collapseSidebar}
         >
           <svg
             width="16"

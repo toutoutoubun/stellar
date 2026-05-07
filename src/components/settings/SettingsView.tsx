@@ -1,10 +1,12 @@
 // src/components/settings/SettingsView.tsx
 // Stellar — 設定画面
-// 4タブ: 外観 / データ / ショートカット / 引用スタイル
+// 5タブ: 外観 / データ / ショートカット / 引用スタイル / 言語
 
 import type React from "react";
 import { useState, useCallback, useEffect } from "react";
 import { useThemeStore, THEMES } from "../../stores/useThemeStore";
+import { useI18nStore, useT } from "../../stores/useI18nStore";
+import { SUPPORTED_LOCALES, LOCALE_NATIVE_NAMES, LOCALE_FLAGS } from "../../i18n";
 import { ThemePreviewCard } from "./ThemePreviewCard";
 import type {
   Theme,
@@ -14,6 +16,7 @@ import type {
   ShortcutEntry,
   CitationStyle,
   AuthorNameOrder,
+  Locale,
 } from "../../types";
 import {
   DEFAULT_APPEARANCE_SETTINGS,
@@ -22,104 +25,14 @@ import {
 } from "../../types";
 
 // ============================================================
-// ショートカット一覧（定数）
-// ============================================================
-
-const SHORTCUTS: ShortcutEntry[] = [
-  // ナビゲーション
-  { keys: "Ctrl+K", description: "全文検索を開く", category: "ナビゲーション" },
-  { keys: "Ctrl+N", description: "新しいノートを作成", category: "ナビゲーション" },
-  { keys: "Ctrl+,", description: "設定を開く", category: "ナビゲーション" },
-  { keys: "Ctrl+1", description: "文献ライブラリに切替", category: "ナビゲーション" },
-  { keys: "Ctrl+2", description: "ノートビューに切替", category: "ナビゲーション" },
-  { keys: "Ctrl+3", description: "グラフビューに切替", category: "ナビゲーション" },
-  // エディタ
-  { keys: "Ctrl+S", description: "保存", category: "エディタ" },
-  { keys: "Ctrl+B", description: "太字", category: "エディタ" },
-  { keys: "Ctrl+I", description: "斜体", category: "エディタ" },
-  { keys: "Ctrl+Z", description: "元に戻す", category: "エディタ" },
-  { keys: "Ctrl+Shift+Z", description: "やり直し", category: "エディタ" },
-  { keys: "[[", description: "WikiLink を挿入", category: "エディタ" },
-  // グラフ
-  { keys: "Cmd+A", description: "全ノードを選択", category: "グラフ" },
-  { keys: "スクロール", description: "ズームイン/アウト", category: "グラフ" },
-  { keys: "ドラッグ", description: "キャンバスをパン", category: "グラフ" },
-  { keys: "ダブルクリック", description: "ノード詳細へ遷移", category: "グラフ" },
-  // PDF リーダー
-  { keys: "Ctrl++", description: "ズームイン", category: "PDF リーダー" },
-  { keys: "Ctrl+-", description: "ズームアウト", category: "PDF リーダー" },
-  { keys: "Ctrl+0", description: "ズームリセット", category: "PDF リーダー" },
-];
-
-// ============================================================
-// タブ定義
-// ============================================================
-
-const TABS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
-  {
-    id: "appearance",
-    label: "外観",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="5" />
-        <line x1="12" y1="1" x2="12" y2="3" />
-        <line x1="12" y1="21" x2="12" y2="23" />
-        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-        <line x1="1" y1="12" x2="3" y2="12" />
-        <line x1="21" y1="12" x2="23" y2="12" />
-        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-      </svg>
-    ),
-  },
-  {
-    id: "data",
-    label: "データ",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <ellipse cx="12" cy="5" rx="9" ry="3" />
-        <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-      </svg>
-    ),
-  },
-  {
-    id: "shortcuts",
-    label: "ショートカット",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="4" width="20" height="16" rx="2" ry="2" />
-        <path d="M6 8h.001" />
-        <path d="M10 8h.001" />
-        <path d="M14 8h.001" />
-        <path d="M18 8h.001" />
-        <path d="M8 12h.001" />
-        <path d="M12 12h.001" />
-        <path d="M16 12h.001" />
-        <path d="M7 16h10" />
-      </svg>
-    ),
-  },
-  {
-    id: "citation",
-    label: "引用スタイル",
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M6 17c2-2 4-6 4-10" />
-        <path d="M6 17H3" />
-        <path d="M14 17c2-2 4-6 4-10" />
-        <path d="M14 17h-3" />
-      </svg>
-    ),
-  },
-];
-
-// ============================================================
 // SettingsView コンポーネント
 // ============================================================
 
 export const SettingsView: React.FC = () => {
+  const t = useT();
+  const locale = useI18nStore((s) => s.locale);
+  const setLocale = useI18nStore((s) => s.setLocale);
+
   const [activeTab, setActiveTab] = useState<SettingsTab>("appearance");
 
   // 外観設定
@@ -140,26 +53,109 @@ export const SettingsView: React.FC = () => {
   const [authorNameOrder, setAuthorNameOrder] =
     useState<AuthorNameOrder>("surname-first");
 
+  // ショートカット一覧（翻訳キーベース）
+  const SHORTCUTS: ShortcutEntry[] = [
+    { keys: "Ctrl+K", description: t.settings.shortcuts.items.openSearch, category: t.settings.shortcuts.categories.navigation },
+    { keys: "Ctrl+N", description: t.settings.shortcuts.items.newNote, category: t.settings.shortcuts.categories.navigation },
+    { keys: "Ctrl+,", description: t.settings.shortcuts.items.openSettings, category: t.settings.shortcuts.categories.navigation },
+    { keys: "Ctrl+1", description: t.settings.shortcuts.items.switchLibrary, category: t.settings.shortcuts.categories.navigation },
+    { keys: "Ctrl+2", description: t.settings.shortcuts.items.switchNotes, category: t.settings.shortcuts.categories.navigation },
+    { keys: "Ctrl+3", description: t.settings.shortcuts.items.switchGraph, category: t.settings.shortcuts.categories.navigation },
+    { keys: "Ctrl+S", description: t.settings.shortcuts.items.save, category: t.settings.shortcuts.categories.editor },
+    { keys: "Ctrl+B", description: t.settings.shortcuts.items.bold, category: t.settings.shortcuts.categories.editor },
+    { keys: "Ctrl+I", description: t.settings.shortcuts.items.italic, category: t.settings.shortcuts.categories.editor },
+    { keys: "Ctrl+Z", description: t.settings.shortcuts.items.undo, category: t.settings.shortcuts.categories.editor },
+    { keys: "Ctrl+Shift+Z", description: t.settings.shortcuts.items.redo, category: t.settings.shortcuts.categories.editor },
+    { keys: "[[", description: t.settings.shortcuts.items.insertWikiLink, category: t.settings.shortcuts.categories.editor },
+    { keys: "Cmd+A", description: t.settings.shortcuts.items.selectAll, category: t.settings.shortcuts.categories.graph },
+    { keys: t.settings.shortcuts.keys.scroll, description: t.settings.shortcuts.items.scroll, category: t.settings.shortcuts.categories.graph },
+    { keys: t.settings.shortcuts.keys.drag, description: t.settings.shortcuts.items.drag, category: t.settings.shortcuts.categories.graph },
+    { keys: t.settings.shortcuts.keys.doubleClick, description: t.settings.shortcuts.items.doubleClick, category: t.settings.shortcuts.categories.graph },
+    { keys: "Ctrl++", description: t.settings.shortcuts.items.zoomIn, category: t.settings.shortcuts.categories.pdfReader },
+    { keys: "Ctrl+-", description: t.settings.shortcuts.items.zoomOut, category: t.settings.shortcuts.categories.pdfReader },
+    { keys: "Ctrl+0", description: t.settings.shortcuts.items.zoomReset, category: t.settings.shortcuts.categories.pdfReader },
+  ];
+
+  // タブ定義
+  const TABS: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
+    {
+      id: "appearance",
+      label: t.settings.tabs.appearance,
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="5" />
+          <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+          <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+        </svg>
+      ),
+    },
+    {
+      id: "data",
+      label: t.settings.tabs.data,
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <ellipse cx="12" cy="5" rx="9" ry="3" />
+          <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+        </svg>
+      ),
+    },
+    {
+      id: "shortcuts",
+      label: t.settings.tabs.shortcuts,
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="4" width="20" height="16" rx="2" ry="2" />
+          <path d="M6 8h.001" /><path d="M10 8h.001" /><path d="M14 8h.001" /><path d="M18 8h.001" />
+          <path d="M8 12h.001" /><path d="M12 12h.001" /><path d="M16 12h.001" />
+          <path d="M7 16h10" />
+        </svg>
+      ),
+    },
+    {
+      id: "citation",
+      label: t.settings.tabs.citation,
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 17c2-2 4-6 4-10" /><path d="M6 17H3" />
+          <path d="M14 17c2-2 4-6 4-10" /><path d="M14 17h-3" />
+        </svg>
+      ),
+    },
+    {
+      id: "language",
+      label: t.settings.tabs.language,
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="2" y1="12" x2="22" y2="12" />
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+        </svg>
+      ),
+    },
+  ];
+
   // データサマリーの読み込み
   useEffect(() => {
     if (activeTab === "data") {
       setIsLoadingData(true);
-      // TODO: get_data_summary コマンド未実装 — デフォルト値を設定
       Promise.resolve()
         .then(() => {
           setDataSummary({
             paperCount: 0,
             noteCount: 0,
             highlightCount: 0,
-            diskUsage: "計算中...",
+            diskUsage: t.settings.data.calculating,
             dataPath: "~/Stellar",
           });
         })
         .finally(() => setIsLoadingData(false));
     }
-  }, [activeTab]);
+  }, [activeTab, t]);
 
-  // テーマ切替ハンドラ（data-theme-transition クラス付与）
+  // テーマ切替ハンドラ
   const handleThemeChange = useCallback(
     (newTheme: Theme) => {
       document.body.setAttribute("data-theme-transition", "");
@@ -177,7 +173,6 @@ export const SettingsView: React.FC = () => {
       const { open } = await import("@tauri-apps/plugin-dialog");
       const selected = await open({ directory: true, multiple: false });
       if (selected) {
-        // TODO: change_data_path コマンド未実装
         console.warn("change_data_path は未実装です", selected);
       }
     } catch {
@@ -189,10 +184,9 @@ export const SettingsView: React.FC = () => {
   const handleExport = useCallback(async () => {
     setIsExporting(true);
     try {
-      // TODO: export_data コマンド未実装
       console.warn("export_data は未実装です");
     } catch {
-      // エラー時は何もしない
+      // エラー
     } finally {
       setIsExporting(false);
     }
@@ -202,10 +196,9 @@ export const SettingsView: React.FC = () => {
   const handleBackup = useCallback(async () => {
     setIsBackingUp(true);
     try {
-      // TODO: create_backup コマンド未実装
       console.warn("create_backup は未実装です");
     } catch {
-      // エラー時は何もしない
+      // エラー
     } finally {
       setIsBackingUp(false);
     }
@@ -216,170 +209,84 @@ export const SettingsView: React.FC = () => {
   // ============================================================
   const renderAppearanceTab = () => (
     <div className="flex flex-col gap-8">
-      {/* テーマ選択 */}
       <section>
-        <h3
-          className="text-base font-semibold mb-1"
-          style={{ color: "var(--color-text-primary)" }}
-        >
-          テーマ
+        <h3 className="text-base font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
+          {t.settings.appearance.theme}
         </h3>
-        <p
-          className="text-sm mb-4"
-          style={{ color: "var(--color-text-tertiary)" }}
-        >
-          アプリの外観テーマを選択します
+        <p className="text-sm mb-4" style={{ color: "var(--color-text-tertiary)" }}>
+          {t.settings.appearance.themeDesc}
         </p>
         <div className="flex flex-wrap gap-3">
           {THEMES.map((meta) => (
-            <ThemePreviewCard
-              key={meta.id}
-              meta={meta}
-              isSelected={theme === meta.id}
-              onSelect={handleThemeChange}
-            />
+            <ThemePreviewCard key={meta.id} meta={meta} isSelected={theme === meta.id} onSelect={handleThemeChange} />
           ))}
         </div>
       </section>
 
-      {/* フォントサイズ */}
       <section>
-        <h3
-          className="text-base font-semibold mb-1"
-          style={{ color: "var(--color-text-primary)" }}
-        >
-          フォントサイズ
+        <h3 className="text-base font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
+          {t.settings.appearance.fontSize}
         </h3>
-        <p
-          className="text-sm mb-3"
-          style={{ color: "var(--color-text-tertiary)" }}
-        >
-          アプリ全体のベースフォントサイズ（13px〜16px）
+        <p className="text-sm mb-3" style={{ color: "var(--color-text-tertiary)" }}>
+          {t.settings.appearance.fontSizeDesc}
         </p>
         <div className="flex items-center gap-4">
-          <input
-            type="range"
-            min={13}
-            max={16}
-            step={1}
-            value={appearance.fontSize}
-            onChange={(e) =>
-              setAppearance((s) => ({
-                ...s,
-                fontSize: Number(e.target.value),
-              }))
-            }
-            style={{
-              accentColor: "var(--color-accent-primary)",
-              width: "200px",
-            }}
+          <input type="range" min={13} max={16} step={1} value={appearance.fontSize}
+            onChange={(e) => setAppearance((s) => ({ ...s, fontSize: Number(e.target.value) }))}
+            style={{ accentColor: "var(--color-accent-primary)", width: "200px" }}
           />
-          <span
-            className="text-sm font-medium"
-            style={{
-              color: "var(--color-text-primary)",
-              minWidth: "40px",
-            }}
-          >
+          <span className="text-sm font-medium" style={{ color: "var(--color-text-primary)", minWidth: "40px" }}>
             {appearance.fontSize}px
           </span>
         </div>
       </section>
 
-      {/* 行の高さ */}
       <section>
-        <h3
-          className="text-base font-semibold mb-1"
-          style={{ color: "var(--color-text-primary)" }}
-        >
-          行の高さ
+        <h3 className="text-base font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
+          {t.settings.appearance.lineHeight}
         </h3>
-        <p
-          className="text-sm mb-3"
-          style={{ color: "var(--color-text-tertiary)" }}
-        >
-          エディタの行間（1.5〜2.0）
+        <p className="text-sm mb-3" style={{ color: "var(--color-text-tertiary)" }}>
+          {t.settings.appearance.lineHeightDesc}
         </p>
         <div className="flex items-center gap-4">
-          <input
-            type="range"
-            min={1.5}
-            max={2.0}
-            step={0.1}
-            value={appearance.lineHeight}
-            onChange={(e) =>
-              setAppearance((s) => ({
-                ...s,
-                lineHeight: Number(e.target.value),
-              }))
-            }
-            style={{
-              accentColor: "var(--color-accent-primary)",
-              width: "200px",
-            }}
+          <input type="range" min={1.5} max={2.0} step={0.1} value={appearance.lineHeight}
+            onChange={(e) => setAppearance((s) => ({ ...s, lineHeight: Number(e.target.value) }))}
+            style={{ accentColor: "var(--color-accent-primary)", width: "200px" }}
           />
-          <span
-            className="text-sm font-medium"
-            style={{
-              color: "var(--color-text-primary)",
-              minWidth: "40px",
-            }}
-          >
+          <span className="text-sm font-medium" style={{ color: "var(--color-text-primary)", minWidth: "40px" }}>
             {appearance.lineHeight.toFixed(1)}
           </span>
         </div>
       </section>
 
-      {/* エディタフォント */}
       <section>
-        <h3
-          className="text-base font-semibold mb-1"
-          style={{ color: "var(--color-text-primary)" }}
-        >
-          エディタフォント
+        <h3 className="text-base font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
+          {t.settings.appearance.editorFont}
         </h3>
-        <p
-          className="text-sm mb-3"
-          style={{ color: "var(--color-text-tertiary)" }}
-        >
-          ノートエディタで使用するフォント
+        <p className="text-sm mb-3" style={{ color: "var(--color-text-tertiary)" }}>
+          {t.settings.appearance.editorFontDesc}
         </p>
         <select
           value={appearance.editorFont}
-          onChange={(e) =>
-            setAppearance((s) => ({ ...s, editorFont: e.target.value }))
-          }
+          onChange={(e) => setAppearance((s) => ({ ...s, editorFont: e.target.value }))}
           className="text-sm px-3 py-2"
           style={{
-            backgroundColor: "var(--color-bg-input)",
-            color: "var(--color-text-primary)",
-            border: "1px solid var(--color-border-primary)",
-            borderRadius: "var(--radius-input)",
-            outline: "none",
-            minWidth: "240px",
-            fontFamily: appearance.editorFont,
+            backgroundColor: "var(--color-bg-input)", color: "var(--color-text-primary)",
+            border: "1px solid var(--color-border-primary)", borderRadius: "var(--radius-input)",
+            outline: "none", minWidth: "240px", fontFamily: appearance.editorFont,
           }}
         >
           {EDITOR_FONTS.map((font) => (
-            <option key={font.value} value={font.value}>
-              {font.label}
-            </option>
+            <option key={font.value} value={font.value}>{font.label}</option>
           ))}
         </select>
-        <div
-          className="mt-3 p-3 text-sm"
-          style={{
-            backgroundColor: "var(--color-bg-secondary)",
-            borderRadius: "var(--radius-input)",
-            border: "1px solid var(--color-border-secondary)",
-            fontFamily: appearance.editorFont,
-            fontSize: `${appearance.fontSize}px`,
-            lineHeight: appearance.lineHeight,
-            color: "var(--color-text-primary)",
-          }}
-        >
-          これはプレビューテキストです。The quick brown fox jumps over the lazy
-          dog. 研究論文を効率的に管理し、知識をつなげましょう。
+        <div className="mt-3 p-3 text-sm" style={{
+          backgroundColor: "var(--color-bg-secondary)", borderRadius: "var(--radius-input)",
+          border: "1px solid var(--color-border-secondary)", fontFamily: appearance.editorFont,
+          fontSize: `${appearance.fontSize}px`, lineHeight: appearance.lineHeight,
+          color: "var(--color-text-primary)",
+        }}>
+          {t.settings.appearance.previewText}
         </div>
       </section>
     </div>
@@ -390,69 +297,33 @@ export const SettingsView: React.FC = () => {
   // ============================================================
   const renderDataTab = () => (
     <div className="flex flex-col gap-8">
-      {/* データサマリー */}
       <section>
-        <h3
-          className="text-base font-semibold mb-1"
-          style={{ color: "var(--color-text-primary)" }}
-        >
-          データサマリー
+        <h3 className="text-base font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
+          {t.settings.data.summary}
         </h3>
-        <p
-          className="text-sm mb-4"
-          style={{ color: "var(--color-text-tertiary)" }}
-        >
-          アプリケーションのデータ統計
+        <p className="text-sm mb-4" style={{ color: "var(--color-text-tertiary)" }}>
+          {t.settings.data.summaryDesc}
         </p>
         {isLoadingData ? (
-          <div
-            className="flex items-center gap-2 text-sm"
-            style={{ color: "var(--color-text-tertiary)" }}
-          >
-            <svg
-              className="animate-spin"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-            >
-              <circle
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="2"
-                opacity="0.3"
-              />
-              <path
-                d="M12 2a10 10 0 0 1 10 10"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
+          <div className="flex items-center gap-2 text-sm" style={{ color: "var(--color-text-tertiary)" }}>
+            <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" opacity="0.3" />
+              <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            読み込み中...
+            {t.common.loading}
           </div>
         ) : dataSummary ? (
-          <div
-            className="grid grid-cols-2 gap-3"
-            style={{ maxWidth: "400px" }}
-          >
+          <div className="grid grid-cols-2 gap-3" style={{ maxWidth: "400px" }}>
             {[
-              { label: "論文", value: `${dataSummary.paperCount} 件`, iconType: "paper" as const },
-              { label: "ノート", value: `${dataSummary.noteCount} 件`, iconType: "note" as const },
-              { label: "ハイライト", value: `${dataSummary.highlightCount} 件`, iconType: "highlight" as const },
-              { label: "ディスク使用量", value: dataSummary.diskUsage, iconType: "disk" as const },
+              { label: t.settings.data.papers, value: `${dataSummary.paperCount} ${t.common.items}`, iconType: "paper" as const },
+              { label: t.settings.data.notes, value: `${dataSummary.noteCount} ${t.common.items}`, iconType: "note" as const },
+              { label: t.settings.data.highlights, value: `${dataSummary.highlightCount} ${t.common.items}`, iconType: "highlight" as const },
+              { label: t.settings.data.diskUsage, value: dataSummary.diskUsage, iconType: "disk" as const },
             ].map((item) => (
-              <div
-                key={item.label}
-                className="flex items-center gap-3 p-3"
-                style={{
-                  backgroundColor: "var(--color-bg-secondary)",
-                  borderRadius: "var(--radius-input)",
-                  border: "1px solid var(--color-border-secondary)",
-                }}
-              >
+              <div key={item.label} className="flex items-center gap-3 p-3" style={{
+                backgroundColor: "var(--color-bg-secondary)", borderRadius: "var(--radius-input)",
+                border: "1px solid var(--color-border-secondary)",
+              }}>
                 <span style={{ color: "var(--color-text-secondary)" }}>
                   {item.iconType === "paper" ? (
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -465,18 +336,8 @@ export const SettingsView: React.FC = () => {
                   )}
                 </span>
                 <div>
-                  <div
-                    className="text-xs"
-                    style={{ color: "var(--color-text-tertiary)" }}
-                  >
-                    {item.label}
-                  </div>
-                  <div
-                    className="text-sm font-medium"
-                    style={{ color: "var(--color-text-primary)" }}
-                  >
-                    {item.value}
-                  </div>
+                  <div className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>{item.label}</div>
+                  <div className="text-sm font-medium" style={{ color: "var(--color-text-primary)" }}>{item.value}</div>
                 </div>
               </div>
             ))}
@@ -484,146 +345,68 @@ export const SettingsView: React.FC = () => {
         ) : null}
       </section>
 
-      {/* データパス */}
       <section>
-        <h3
-          className="text-base font-semibold mb-1"
-          style={{ color: "var(--color-text-primary)" }}
-        >
-          データ保存先
+        <h3 className="text-base font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
+          {t.settings.data.storagePath}
         </h3>
-        <p
-          className="text-sm mb-3"
-          style={{ color: "var(--color-text-tertiary)" }}
-        >
-          データベースと PDF ファイルの保存場所
+        <p className="text-sm mb-3" style={{ color: "var(--color-text-tertiary)" }}>
+          {t.settings.data.storagePathDesc}
         </p>
         <div className="flex items-center gap-3">
-          <div
-            className="flex-1 px-3 py-2 text-sm truncate"
-            style={{
-              backgroundColor: "var(--color-bg-tertiary)",
-              color: "var(--color-text-secondary)",
-              borderRadius: "var(--radius-input)",
-              border: "1px solid var(--color-border-secondary)",
-              maxWidth: "360px",
-            }}
-          >
+          <div className="flex-1 px-3 py-2 text-sm truncate" style={{
+            backgroundColor: "var(--color-bg-tertiary)", color: "var(--color-text-secondary)",
+            borderRadius: "var(--radius-input)", border: "1px solid var(--color-border-secondary)", maxWidth: "360px",
+          }}>
             {dataSummary?.dataPath ?? "~/Stellar"}
           </div>
-          <button
-            type="button"
-            onClick={handleChangeDataPath}
-            className="px-3 py-2 text-xs font-medium"
-            style={{
-              backgroundColor: "var(--color-bg-hover)",
-              color: "var(--color-text-primary)",
-              borderRadius: "var(--radius-button)",
-              border: "1px solid var(--color-border-primary)",
-              transition: "all var(--transition-fast)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor =
-                "var(--color-bg-active)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor =
-                "var(--color-bg-hover)";
-            }}
+          <button type="button" onClick={handleChangeDataPath} className="px-3 py-2 text-xs font-medium" style={{
+            backgroundColor: "var(--color-bg-hover)", color: "var(--color-text-primary)",
+            borderRadius: "var(--radius-button)", border: "1px solid var(--color-border-primary)",
+            transition: "all var(--transition-fast)",
+          }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg-active)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg-hover)"; }}
           >
-            変更...
+            {t.settings.data.change}
           </button>
         </div>
-        <p
-          className="text-xs mt-2"
-          style={{ color: "var(--color-text-tertiary)" }}
-        >
-          ※ 変更時に DB と PDF フォルダがコピーされます
+        <p className="text-xs mt-2" style={{ color: "var(--color-text-tertiary)" }}>
+          {t.settings.data.storageNote}
         </p>
       </section>
 
-      {/* エクスポート & バックアップ */}
       <section>
-        <h3
-          className="text-base font-semibold mb-1"
-          style={{ color: "var(--color-text-primary)" }}
-        >
-          エクスポート＆バックアップ
+        <h3 className="text-base font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
+          {t.settings.data.exportBackup}
         </h3>
-        <p
-          className="text-sm mb-4"
-          style={{ color: "var(--color-text-tertiary)" }}
-        >
-          データの書き出しやバックアップを作成します
+        <p className="text-sm mb-4" style={{ color: "var(--color-text-tertiary)" }}>
+          {t.settings.data.exportBackupDesc}
         </p>
         <div className="flex flex-wrap gap-3">
-          <button
-            onClick={handleExport}
-            disabled={isExporting}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-medium"
-            style={{
-              backgroundColor: "var(--color-accent-primary)",
-              color: "var(--color-text-inverse)",
-              borderRadius: "var(--radius-button)",
-              opacity: isExporting ? 0.6 : 1,
-              cursor: isExporting ? "not-allowed" : "pointer",
-              transition: "all var(--transition-fast)",
-            }}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
+          <button onClick={handleExport} disabled={isExporting} className="flex items-center gap-2 px-4 py-2 text-xs font-medium" style={{
+            backgroundColor: "var(--color-accent-primary)", color: "var(--color-text-inverse)",
+            borderRadius: "var(--radius-button)", opacity: isExporting ? 0.6 : 1,
+            cursor: isExporting ? "not-allowed" : "pointer", transition: "all var(--transition-fast)",
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            {isExporting ? "エクスポート中..." : "データをエクスポート"}
+            {isExporting ? t.settings.data.exporting : t.settings.data.exportData}
           </button>
-
-          <button
-            onClick={handleBackup}
-            disabled={isBackingUp}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-medium"
-            style={{
-              backgroundColor: "var(--color-bg-hover)",
-              color: "var(--color-text-primary)",
-              borderRadius: "var(--radius-button)",
-              border: "1px solid var(--color-border-primary)",
-              opacity: isBackingUp ? 0.6 : 1,
-              cursor: isBackingUp ? "not-allowed" : "pointer",
-              transition: "all var(--transition-fast)",
-            }}
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-              <polyline points="17 21 17 13 7 13 7 21" />
-              <polyline points="7 3 7 8 15 8" />
+          <button onClick={handleBackup} disabled={isBackingUp} className="flex items-center gap-2 px-4 py-2 text-xs font-medium" style={{
+            backgroundColor: "var(--color-bg-hover)", color: "var(--color-text-primary)",
+            borderRadius: "var(--radius-button)", border: "1px solid var(--color-border-primary)",
+            opacity: isBackingUp ? 0.6 : 1, cursor: isBackingUp ? "not-allowed" : "pointer",
+            transition: "all var(--transition-fast)",
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" />
             </svg>
-            {isBackingUp ? "バックアップ中..." : "バックアップを作成"}
+            {isBackingUp ? t.settings.data.backingUp : t.settings.data.createBackup}
           </button>
         </div>
-        <p
-          className="text-xs mt-2"
-          style={{ color: "var(--color-text-tertiary)" }}
-        >
-          エクスポート: JSON + PDF ZIP / バックアップ:
-          stellar_backup_YYYYMMDD.zip
+        <p className="text-xs mt-2" style={{ color: "var(--color-text-tertiary)" }}>
+          {t.settings.data.exportNote}
         </p>
       </section>
     </div>
@@ -637,94 +420,48 @@ export const SettingsView: React.FC = () => {
     return (
       <div className="flex flex-col gap-6">
         <div>
-          <h3
-            className="text-base font-semibold mb-1"
-            style={{ color: "var(--color-text-primary)" }}
-          >
-            キーボードショートカット
+          <h3 className="text-base font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
+            {t.settings.shortcuts.title}
           </h3>
-          <p
-            className="text-sm mb-4"
-            style={{ color: "var(--color-text-tertiary)" }}
-          >
-            利用可能なキーボードショートカットの一覧です
+          <p className="text-sm mb-4" style={{ color: "var(--color-text-tertiary)" }}>
+            {t.settings.shortcuts.desc}
           </p>
         </div>
-
         {categories.map((category) => (
           <section key={category}>
-            <h4
-              className="text-xs font-semibold mb-2 uppercase tracking-wider"
-              style={{ color: "var(--color-text-tertiary)" }}
-            >
+            <h4 className="text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: "var(--color-text-tertiary)" }}>
               {category}
             </h4>
-            <div
-              style={{
-                borderRadius: "var(--radius-input)",
-                border: "1px solid var(--color-border-secondary)",
-                overflow: "hidden",
-              }}
-            >
-              {SHORTCUTS.filter((s) => s.category === category).map(
-                (shortcut, index, arr) => (
-                  <div
-                    key={shortcut.keys}
-                    className="flex items-center justify-between px-4 py-2.5"
-                    style={{
-                      backgroundColor: "var(--color-bg-card)",
-                      borderBottom:
-                        index < arr.length - 1
-                          ? "1px solid var(--color-border-secondary)"
-                          : "none",
-                    }}
-                  >
-                    <span
-                      className="text-sm"
-                      style={{ color: "var(--color-text-primary)" }}
-                    >
-                      {shortcut.description}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      {shortcut.keys.split("+").map((key, ki) => (
-                        <span key={`${shortcut.keys}-${key.trim()}`}>
-                          {ki > 0 && (
-                            <span
-                              className="mx-0.5 text-xs"
-                              style={{ color: "var(--color-text-tertiary)" }}
-                            >
-                              +
-                            </span>
-                          )}
-                          <kbd
-                            className="px-1.5 py-0.5 text-xs"
-                            style={{
-                              backgroundColor: "var(--color-bg-tertiary)",
-                              color: "var(--color-text-secondary)",
-                              borderRadius: "4px",
-                              border:
-                                "1px solid var(--color-border-secondary)",
-                              fontSize: "11px",
-                              fontFamily: "system-ui",
-                            }}
-                          >
-                            {key.trim()}
-                          </kbd>
-                        </span>
-                      ))}
-                    </div>
+            <div style={{ borderRadius: "var(--radius-input)", border: "1px solid var(--color-border-secondary)", overflow: "hidden" }}>
+              {SHORTCUTS.filter((s) => s.category === category).map((shortcut, index, arr) => (
+                <div key={shortcut.keys} className="flex items-center justify-between px-4 py-2.5" style={{
+                  backgroundColor: "var(--color-bg-card)",
+                  borderBottom: index < arr.length - 1 ? "1px solid var(--color-border-secondary)" : "none",
+                }}>
+                  <span className="text-sm" style={{ color: "var(--color-text-primary)" }}>{shortcut.description}</span>
+                  <div className="flex items-center gap-1">
+                    {shortcut.keys.split("+").map((key, ki) => (
+                      <span key={`${shortcut.keys}-${key.trim()}`}>
+                        {ki > 0 && (
+                          <span className="mx-0.5 text-xs" style={{ color: "var(--color-text-tertiary)" }}>+</span>
+                        )}
+                        <kbd className="px-1.5 py-0.5 text-xs" style={{
+                          backgroundColor: "var(--color-bg-tertiary)", color: "var(--color-text-secondary)",
+                          borderRadius: "4px", border: "1px solid var(--color-border-secondary)",
+                          fontSize: "11px", fontFamily: "system-ui",
+                        }}>
+                          {key.trim()}
+                        </kbd>
+                      </span>
+                    ))}
                   </div>
-                )
-              )}
+                </div>
+              ))}
             </div>
           </section>
         ))}
-
-        <p
-          className="text-xs"
-          style={{ color: "var(--color-text-tertiary)" }}
-        >
-          ※ ショートカットのカスタマイズは今後のアップデートで対応予定です
+        <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+          {t.settings.shortcuts.customizeNote}
         </p>
       </div>
     );
@@ -733,164 +470,131 @@ export const SettingsView: React.FC = () => {
   // ============================================================
   // 引用スタイルタブ
   // ============================================================
-  const renderCitationTab = () => (
+  const renderCitationTab = () => {
+    const citationHints: Record<CitationStyle, string> = {
+      apa7: t.settings.citation.apa7Hint,
+      mla9: t.settings.citation.mla9Hint,
+      chicago17: t.settings.citation.chicago17Hint,
+      hitotsubashi: t.settings.citation.hitotsubashiHint,
+    };
+
+    return (
+      <div className="flex flex-col gap-8">
+        <section>
+          <h3 className="text-base font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
+            {t.settings.citation.defaultStyle}
+          </h3>
+          <p className="text-sm mb-4" style={{ color: "var(--color-text-tertiary)" }}>
+            {t.settings.citation.defaultStyleDesc}
+          </p>
+          <div className="flex flex-col gap-2" style={{ maxWidth: "400px" }}>
+            {(Object.entries(CITATION_STYLE_LABELS) as [CitationStyle, string][]).map(([style, label]) => (
+              <label key={style} className="flex items-center gap-3 px-4 py-3 cursor-pointer" style={{
+                backgroundColor: citationStyle === style ? "var(--color-bg-hover)" : "var(--color-bg-card)",
+                borderRadius: "var(--radius-input)",
+                border: citationStyle === style ? "2px solid var(--color-accent-primary)" : "2px solid var(--color-border-secondary)",
+                transition: "all var(--transition-fast)",
+              }}>
+                <input type="radio" name="citation-style" value={style} checked={citationStyle === style}
+                  onChange={() => setCitationStyle(style)} style={{ accentColor: "var(--color-accent-primary)" }} />
+                <div>
+                  <div className="text-sm font-medium" style={{ color: "var(--color-text-primary)" }}>{label}</div>
+                  <div className="text-xs mt-0.5" style={{ color: "var(--color-text-tertiary)" }}>
+                    {citationHints[style]}
+                  </div>
+                </div>
+              </label>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <h3 className="text-base font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
+            {t.settings.citation.authorOrder}
+          </h3>
+          <p className="text-sm mb-4" style={{ color: "var(--color-text-tertiary)" }}>
+            {t.settings.citation.authorOrderDesc}
+          </p>
+          <div className="flex flex-col gap-2" style={{ maxWidth: "400px" }}>
+            {([
+              { value: "surname-first" as const, label: t.settings.citation.surnameFirst, example: t.settings.citation.surnameFirstExample },
+              { value: "given-first" as const, label: t.settings.citation.givenFirst, example: t.settings.citation.givenFirstExample },
+            ]).map((opt) => (
+              <label key={opt.value} className="flex items-center gap-3 px-4 py-3 cursor-pointer" style={{
+                backgroundColor: authorNameOrder === opt.value ? "var(--color-bg-hover)" : "var(--color-bg-card)",
+                borderRadius: "var(--radius-input)",
+                border: authorNameOrder === opt.value ? "2px solid var(--color-accent-primary)" : "2px solid var(--color-border-secondary)",
+                transition: "all var(--transition-fast)",
+              }}>
+                <input type="radio" name="author-order" value={opt.value} checked={authorNameOrder === opt.value}
+                  onChange={() => setAuthorNameOrder(opt.value)} style={{ accentColor: "var(--color-accent-primary)" }} />
+                <div>
+                  <div className="text-sm font-medium" style={{ color: "var(--color-text-primary)" }}>{opt.label}</div>
+                  <div className="text-xs mt-0.5" style={{ color: "var(--color-text-tertiary)" }}>{opt.example}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+        </section>
+      </div>
+    );
+  };
+
+  // ============================================================
+  // 言語タブ
+  // ============================================================
+  const renderLanguageTab = () => (
     <div className="flex flex-col gap-8">
-      {/* デフォルト引用スタイル */}
       <section>
-        <h3
-          className="text-base font-semibold mb-1"
-          style={{ color: "var(--color-text-primary)" }}
-        >
-          デフォルト引用スタイル
+        <h3 className="text-base font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
+          {t.settings.language.title}
         </h3>
-        <p
-          className="text-sm mb-4"
-          style={{ color: "var(--color-text-tertiary)" }}
-        >
-          引用を生成する際のデフォルトフォーマットを選択します
+        <p className="text-sm mb-4" style={{ color: "var(--color-text-tertiary)" }}>
+          {t.settings.language.desc}
         </p>
         <div className="flex flex-col gap-2" style={{ maxWidth: "400px" }}>
-          {(
-            Object.entries(CITATION_STYLE_LABELS) as [CitationStyle, string][]
-          ).map(([style, label]) => (
+          {SUPPORTED_LOCALES.map((loc: Locale) => (
             <label
-              key={style}
+              key={loc}
               className="flex items-center gap-3 px-4 py-3 cursor-pointer"
               style={{
-                backgroundColor:
-                  citationStyle === style
-                    ? "var(--color-bg-hover)"
-                    : "var(--color-bg-card)",
+                backgroundColor: locale === loc ? "var(--color-bg-hover)" : "var(--color-bg-card)",
                 borderRadius: "var(--radius-input)",
-                border:
-                  citationStyle === style
-                    ? "2px solid var(--color-accent-primary)"
-                    : "2px solid var(--color-border-secondary)",
+                border: locale === loc ? "2px solid var(--color-accent-primary)" : "2px solid var(--color-border-secondary)",
                 transition: "all var(--transition-fast)",
               }}
             >
               <input
                 type="radio"
-                name="citation-style"
-                value={style}
-                checked={citationStyle === style}
-                onChange={() => setCitationStyle(style)}
+                name="locale"
+                value={loc}
+                checked={locale === loc}
+                onChange={() => setLocale(loc)}
                 style={{ accentColor: "var(--color-accent-primary)" }}
               />
-              <div>
-                <div
-                  className="text-sm font-medium"
-                  style={{ color: "var(--color-text-primary)" }}
-                >
-                  {label}
+              <span style={{ fontSize: "20px" }}>{LOCALE_FLAGS[loc]}</span>
+              <div className="flex-1">
+                <div className="text-sm font-medium" style={{ color: "var(--color-text-primary)" }}>
+                  {LOCALE_NATIVE_NAMES[loc]}
                 </div>
-                <div
-                  className="text-xs mt-0.5"
-                  style={{ color: "var(--color-text-tertiary)" }}
-                >
-                  {style === "apa7" && "著者名, (年). タイトル. 雑誌名, 巻(号), ページ."}
-                  {style === "mla9" && '著者名. "タイトル." 雑誌名, 巻.号, 年, ページ.'}
-                  {style === "chicago17" && "著者名. タイトル. 雑誌名 巻, no. 号 (年): ページ."}
-                  {style === "hitotsubashi" && "著者名『タイトル』雑誌名、第巻号、年、ページ。"}
-                </div>
+                {locale === loc && (
+                  <div className="text-xs mt-0.5" style={{ color: "var(--color-accent-primary)" }}>
+                    {t.settings.language.current}
+                  </div>
+                )}
               </div>
+              {locale === loc && (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                  strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--color-accent-primary)" }}>
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
             </label>
           ))}
         </div>
-      </section>
-
-      {/* 著者名順序 */}
-      <section>
-        <h3
-          className="text-base font-semibold mb-1"
-          style={{ color: "var(--color-text-primary)" }}
-        >
-          日本語著者名の表示順序
-        </h3>
-        <p
-          className="text-sm mb-4"
-          style={{ color: "var(--color-text-tertiary)" }}
-        >
-          日本語の著者名を表示する際の姓名順序を選択します
+        <p className="text-xs mt-3" style={{ color: "var(--color-text-tertiary)" }}>
+          {t.settings.language.restart}
         </p>
-        <div className="flex flex-col gap-2" style={{ maxWidth: "400px" }}>
-          <label
-            className="flex items-center gap-3 px-4 py-3 cursor-pointer"
-            style={{
-              backgroundColor:
-                authorNameOrder === "surname-first"
-                  ? "var(--color-bg-hover)"
-                  : "var(--color-bg-card)",
-              borderRadius: "var(--radius-input)",
-              border:
-                authorNameOrder === "surname-first"
-                  ? "2px solid var(--color-accent-primary)"
-                  : "2px solid var(--color-border-secondary)",
-              transition: "all var(--transition-fast)",
-            }}
-          >
-            <input
-              type="radio"
-              name="author-order"
-              value="surname-first"
-              checked={authorNameOrder === "surname-first"}
-              onChange={() => setAuthorNameOrder("surname-first")}
-              style={{ accentColor: "var(--color-accent-primary)" }}
-            />
-            <div>
-              <div
-                className="text-sm font-medium"
-                style={{ color: "var(--color-text-primary)" }}
-              >
-                姓・名（姓が先）
-              </div>
-              <div
-                className="text-xs mt-0.5"
-                style={{ color: "var(--color-text-tertiary)" }}
-              >
-                例: 山田 太郎
-              </div>
-            </div>
-          </label>
-          <label
-            className="flex items-center gap-3 px-4 py-3 cursor-pointer"
-            style={{
-              backgroundColor:
-                authorNameOrder === "given-first"
-                  ? "var(--color-bg-hover)"
-                  : "var(--color-bg-card)",
-              borderRadius: "var(--radius-input)",
-              border:
-                authorNameOrder === "given-first"
-                  ? "2px solid var(--color-accent-primary)"
-                  : "2px solid var(--color-border-secondary)",
-              transition: "all var(--transition-fast)",
-            }}
-          >
-            <input
-              type="radio"
-              name="author-order"
-              value="given-first"
-              checked={authorNameOrder === "given-first"}
-              onChange={() => setAuthorNameOrder("given-first")}
-              style={{ accentColor: "var(--color-accent-primary)" }}
-            />
-            <div>
-              <div
-                className="text-sm font-medium"
-                style={{ color: "var(--color-text-primary)" }}
-              >
-                名・姓（名が先）
-              </div>
-              <div
-                className="text-xs mt-0.5"
-                style={{ color: "var(--color-text-tertiary)" }}
-              >
-                例: 太郎 山田
-              </div>
-            </div>
-          </label>
-        </div>
       </section>
     </div>
   );
@@ -899,58 +603,28 @@ export const SettingsView: React.FC = () => {
   // メインレンダリング
   // ============================================================
   return (
-    <div
-      className="flex h-full overflow-hidden"
-      style={{ backgroundColor: "var(--color-bg-primary)" }}
-    >
+    <div className="flex h-full overflow-hidden" style={{ backgroundColor: "var(--color-bg-primary)" }}>
       {/* 左: タブナビゲーション */}
-      <nav
-        className="shrink-0 flex flex-col gap-1 p-3 overflow-y-auto"
-        style={{
-          width: "200px",
-          borderRight: "1px solid var(--color-border-secondary)",
-          backgroundColor: "var(--color-bg-secondary)",
-        }}
-      >
-        <h2
-          className="text-xs font-semibold uppercase tracking-wider px-3 py-2"
-          style={{ color: "var(--color-text-tertiary)" }}
-        >
-          設定
+      <nav className="shrink-0 flex flex-col gap-1 p-3 overflow-y-auto" style={{
+        width: "200px", borderRight: "1px solid var(--color-border-secondary)",
+        backgroundColor: "var(--color-bg-secondary)",
+      }}>
+        <h2 className="text-xs font-semibold uppercase tracking-wider px-3 py-2" style={{ color: "var(--color-text-tertiary)" }}>
+          {t.settings.title}
         </h2>
         {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className="flex items-center gap-2.5 px-3 py-2 text-sm text-left w-full"
-            style={{
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+            className="flex items-center gap-2.5 px-3 py-2 text-sm text-left w-full" style={{
               borderRadius: "var(--radius-button)",
-              color:
-                activeTab === tab.id
-                  ? "var(--color-accent-primary)"
-                  : "var(--color-text-secondary)",
-              backgroundColor:
-                activeTab === tab.id
-                  ? "var(--color-bg-hover)"
-                  : "transparent",
+              color: activeTab === tab.id ? "var(--color-accent-primary)" : "var(--color-text-secondary)",
+              backgroundColor: activeTab === tab.id ? "var(--color-bg-hover)" : "transparent",
               fontWeight: activeTab === tab.id ? 600 : 400,
               transition: "all var(--transition-fast)",
             }}
-            onMouseEnter={(e) => {
-              if (activeTab !== tab.id) {
-                e.currentTarget.style.backgroundColor =
-                  "var(--color-bg-hover)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (activeTab !== tab.id) {
-                e.currentTarget.style.backgroundColor = "transparent";
-              }
-            }}
+            onMouseEnter={(e) => { if (activeTab !== tab.id) e.currentTarget.style.backgroundColor = "var(--color-bg-hover)"; }}
+            onMouseLeave={(e) => { if (activeTab !== tab.id) e.currentTarget.style.backgroundColor = "transparent"; }}
           >
-            <span className="shrink-0" style={{ opacity: 0.8 }}>
-              {tab.icon}
-            </span>
+            <span className="shrink-0" style={{ opacity: 0.8 }}>{tab.icon}</span>
             <span>{tab.label}</span>
           </button>
         ))}
@@ -962,6 +636,7 @@ export const SettingsView: React.FC = () => {
         {activeTab === "data" && renderDataTab()}
         {activeTab === "shortcuts" && renderShortcutsTab()}
         {activeTab === "citation" && renderCitationTab()}
+        {activeTab === "language" && renderLanguageTab()}
       </div>
     </div>
   );

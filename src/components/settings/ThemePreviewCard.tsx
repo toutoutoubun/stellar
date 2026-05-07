@@ -5,6 +5,8 @@
 import type React from "react";
 import { useCallback } from "react";
 import type { ThemeMeta } from "../../stores/useThemeStore";
+import { useT } from "../../stores/useI18nStore";
+import type { Theme } from "../../types";
 
 interface ThemePreviewCardProps {
   /** テーマメタデータ */
@@ -20,9 +22,14 @@ export const ThemePreviewCard: React.FC<ThemePreviewCardProps> = ({
   isSelected,
   onSelect,
 }) => {
+  const t = useT();
   const handleClick = useCallback(() => {
     onSelect(meta.id);
   }, [meta.id, onSelect]);
+
+  // i18n: テーマラベルと説明を翻訳リソースから取得
+  const themeLabel = t.themes[meta.id as Theme] ?? meta.label;
+  const themeDesc = t.themes[`${meta.id}Desc` as keyof typeof t.themes] ?? meta.description;
 
   return (
     <button
@@ -194,7 +201,7 @@ export const ThemePreviewCard: React.FC<ThemePreviewCardProps> = ({
           className="text-xs font-medium"
           style={{ color: "var(--color-text-primary)" }}
         >
-          {meta.label}
+          {themeLabel}
         </div>
         <div
           className="text-xs mt-0.5"
@@ -203,7 +210,7 @@ export const ThemePreviewCard: React.FC<ThemePreviewCardProps> = ({
             fontSize: "10px",
           }}
         >
-          {meta.description}
+          {themeDesc}
         </div>
       </div>
     </button>

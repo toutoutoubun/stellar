@@ -380,7 +380,10 @@ export interface GraphNodeExtended extends GraphNode {
 // ============================================================
 
 /** 設定タブ種別 */
-export type SettingsTab = 'appearance' | 'data' | 'shortcuts' | 'citation';
+export type SettingsTab = 'appearance' | 'data' | 'shortcuts' | 'citation' | 'language';
+
+/** 対応ロケール */
+export type Locale = 'ja' | 'en' | 'fr' | 'af';
 
 /** 外観設定 */
 export interface AppearanceSettings {

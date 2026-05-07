@@ -6,12 +6,16 @@ import type React from "react";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useNoteStore } from "../../stores/useNoteStore";
 import { useUIStore } from "../../stores/useUIStore";
+import { useT } from "../../stores/useI18nStore";
 import type { Note, NoteSortKey } from "../../types";
 import { Badge } from "../ui/Badge";
 import { toast } from "../ui/Toast";
 
-/** 日付フォーマット（相対表示） */
-function formatRelativeDate(isoStr: string): string {
+/** 日付フォーマット（相対表示・i18n対応） */
+function formatRelativeDate(
+  isoStr: string,
+  labels: { justNow: string; minutesAgo: string; hoursAgo: string; daysAgo: string },
+): string {
   const date = new Date(isoStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -19,11 +23,10 @@ function formatRelativeDate(isoStr: string): string {
   const diffHour = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHour / 24);
 
-  if (diffMin < 1) return "たった今";
-  if (diffMin < 60) return `${String(diffMin)}分前`;
-  if (diffHour < 24) return `${String(diffHour)}時間前`;
-  if (diffDay < 7) return `${String(diffDay)}日前`;
-  if (diffDay < 30) return `${String(diffDay)}日前`;
+  if (diffMin < 1) return labels.justNow;
+  if (diffMin < 60) return labels.minutesAgo.replace("{n}", String(diffMin));
+  if (diffHour < 24) return labels.hoursAgo.replace("{n}", String(diffHour));
+  if (diffDay < 30) return labels.daysAgo.replace("{n}", String(diffDay));
 
   // 30日以上前は年月日表示
   const y = date.getFullYear();
@@ -34,14 +37,16 @@ function formatRelativeDate(isoStr: string): string {
   return `${String(y)}/${String(date.getMonth() + 1)}/${String(date.getDate())}`;
 }
 
-/** ソートキーの日本語ラベルとアイコン */
-const SORT_KEY_LABELS: Record<NoteSortKey, string> = {
-  updatedAt: "更新日",
-  createdAt: "作成日",
-  title: "タイトル",
-};
-
 export const NoteList: React.FC = () => {
+  const t = useT();
+
+  /** ソートキーラベル（i18n） */
+  const SORT_KEY_LABELS: Record<NoteSortKey, string> = {
+    updatedAt: t.notes.sortUpdated,
+    createdAt: t.notes.sortCreated,
+    title: t.notes.sortTitle,
+  };
+
   // ストア
   const notes = useNoteStore((s) => s.notes);
   const loading = useNoteStore((s) => s.loading);
@@ -98,13 +103,13 @@ export const NoteList: React.FC = () => {
   const handleCreateNote = useCallback(async () => {
     try {
       const note = await createNote({
-        title: "無題のノート",
+        title: t.notes.untitled,
         content: "",
         tags: [],
       });
       openNote(note.id);
     } catch {
-      toast.error("ノートの作成に失敗しました");
+      toast.error(t.notes.createFailed);
     }
   }, [createNote, openNote]);
 
@@ -127,7 +132,7 @@ export const NoteList: React.FC = () => {
             className="text-sm font-semibold"
             style={{ color: "var(--color-text-primary)" }}
           >
-            ノート
+            {t.notes.title}
           </h2>
           <span
             className="text-xs"
@@ -157,7 +162,7 @@ export const NoteList: React.FC = () => {
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = "transparent";
           }}
-          title="新しいノートを作成（Ctrl+N）"
+          title={t.notes.createNote}
         >
           <svg
             width="16"
@@ -214,7 +219,7 @@ export const NoteList: React.FC = () => {
             onChange={(e) => setFilterQuery(e.target.value)}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
-            placeholder="ノートを検索…"
+            placeholder={t.notes.searchPlaceholder}
             className="flex-1 text-xs"
             style={{
               backgroundColor: "transparent",
@@ -228,7 +233,7 @@ export const NoteList: React.FC = () => {
               type="button"
               onClick={() => setFilterQuery("")}
               style={{ color: "var(--color-text-tertiary)" }}
-              aria-label="検索をクリア"
+              aria-label={t.notes.clearSearch}
             >
               <svg
                 width="12"
@@ -331,8 +336,8 @@ export const NoteList: React.FC = () => {
             </svg>
             <p className="text-sm text-center">
               {filterQuery
-                ? "該当するノートが見つかりません"
-                : "ノートがありません"}
+                ? t.notes.noResults
+                : t.notes.empty}
             </p>
             {!filterQuery && (
               <button
@@ -346,7 +351,7 @@ export const NoteList: React.FC = () => {
                   border: "1px solid var(--color-accent-primary)",
                 }}
               >
-                最初のノートを作成
+                {t.notes.createFirst}
               </button>
             )}
           </div>
@@ -376,6 +381,7 @@ const NoteListItem: React.FC<{
   isSelected: boolean;
   onClick: () => void;
 }> = ({ note, isSelected, onClick }) => {
+  const t = useT();
   /** コンテンツプレビュー（最初の60文字、Markdown記法を除去） */
   const preview = useMemo(() => {
     const text = note.content
@@ -421,7 +427,7 @@ const NoteListItem: React.FC<{
           className="text-sm font-medium truncate"
           style={{ color: "var(--color-text-primary)", minWidth: 0, display: "block" }}
         >
-          {note.title || "無題のノート"}
+          {note.title || t.notes.untitled}
         </span>
       </div>
 
@@ -448,7 +454,12 @@ const NoteListItem: React.FC<{
           className="text-xs shrink-0"
           style={{ color: "var(--color-text-disabled)", fontSize: "10px" }}
         >
-          {formatRelativeDate(note.updatedAt)}
+          {formatRelativeDate(note.updatedAt, {
+            justNow: t.notes.justNow,
+            minutesAgo: t.notes.minutesAgo,
+            hoursAgo: t.notes.hoursAgo,
+            daysAgo: t.notes.daysAgo,
+          })}
         </span>
         {charCount > 0 && (
           <>
@@ -461,7 +472,7 @@ const NoteListItem: React.FC<{
               className="text-xs shrink-0"
               style={{ color: "var(--color-text-disabled)", fontSize: "10px" }}
             >
-              {charCount.toLocaleString()}字
+              {charCount.toLocaleString()}{t.common.chars}
             </span>
           </>
         )}

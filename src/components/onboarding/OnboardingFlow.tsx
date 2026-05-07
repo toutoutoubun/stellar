@@ -1,14 +1,16 @@
 // src/components/onboarding/OnboardingFlow.tsx
 // Stellar — オンボーディングフロー
 // 初回起動時のみ表示（localStorage 'stellar-onboarded'）
-// 4ステップ: ウェルカム → ストレージ選択 → テーマプレビュー → 完了
+// 5ステップ: ウェルカム → 言語選択 → ストレージ選択 → テーマプレビュー → 完了
 // フェードトランジション（250ms）＋ プログレスドット
 
 import type React from "react";
 import { useState, useCallback, useEffect } from "react";
 import { useThemeStore, THEMES } from "../../stores/useThemeStore";
+import { useI18nStore, useT } from "../../stores/useI18nStore";
+import { SUPPORTED_LOCALES, LOCALE_NATIVE_NAMES, LOCALE_FLAGS } from "../../i18n";
 import { ThemePreviewCard } from "../settings/ThemePreviewCard";
-import type { Theme } from "../../types";
+import type { Theme, Locale } from "../../types";
 import { StellarIcon } from "../ui/StellarIcon";
 
 const STORAGE_KEY = "stellar-onboarded";
@@ -36,59 +38,135 @@ function markOnboarded(): void {
 // ============================================================
 
 /** Step 1: ウェルカム */
-const WelcomeStep: React.FC<{ onNext: () => void }> = ({ onNext }) => (
-  <div className="flex flex-col items-center gap-6 text-center">
-    {/* ロゴ */}
-    <StellarIcon size={72} />
-
-    <div>
-      <h1
-        className="text-3xl font-bold mb-3"
-        style={{ color: "var(--color-text-primary)" }}
-      >
-        Stellar へようこそ
-      </h1>
-      <p
-        className="text-base leading-relaxed"
+const WelcomeStep: React.FC<{ onNext: () => void }> = ({ onNext }) => {
+  const t = useT();
+  return (
+    <div className="flex flex-col items-center gap-6 text-center">
+      <StellarIcon size={72} />
+      <div>
+        <h1 className="text-3xl font-bold mb-3" style={{ color: "var(--color-text-primary)" }}>
+          {t.onboarding.welcome.title}
+        </h1>
+        <p className="text-base leading-relaxed" style={{ color: "var(--color-text-secondary)", maxWidth: "400px" }}>
+          {t.onboarding.welcome.desc.split("\n").map((line, i) => (
+            <span key={i}>{line}{i === 0 && <br />}</span>
+          ))}
+        </p>
+      </div>
+      <button
+        onClick={onNext}
+        className="px-6 py-2.5 text-sm font-semibold"
         style={{
-          color: "var(--color-text-secondary)",
-          maxWidth: "400px",
+          backgroundColor: "var(--color-accent-primary)", color: "var(--color-text-inverse)",
+          borderRadius: "var(--radius-button)", border: "none", cursor: "pointer",
+          transition: "opacity 150ms ease-out",
         }}
+        onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.9"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
       >
-        文献管理・ノート・グラフビューを1つのアプリで。
-        <br />
-        研究をもっとスマートに。
-      </p>
+        {t.onboarding.welcome.start}
+      </button>
     </div>
+  );
+};
 
-    <button
-      onClick={onNext}
-      className="px-6 py-2.5 text-sm font-semibold"
-      style={{
-        backgroundColor: "var(--color-accent-primary)",
-        color: "var(--color-text-inverse)",
-        borderRadius: "var(--radius-button)",
-        border: "none",
-        cursor: "pointer",
-        transition: "opacity 150ms ease-out",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.opacity = "0.9";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.opacity = "1";
-      }}
-    >
-      はじめる
-    </button>
-  </div>
-);
+/** Step 2: 言語選択 */
+const LanguageStep: React.FC<{
+  onNext: () => void;
+  onBack: () => void;
+}> = ({ onNext, onBack }) => {
+  const t = useT();
+  const locale = useI18nStore((s) => s.locale);
+  const setLocale = useI18nStore((s) => s.setLocale);
 
-/** Step 2: ストレージ選択 */
+  return (
+    <div className="flex flex-col items-center gap-6 text-center">
+      {/* Globe icon */}
+      <svg
+        width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+        style={{ color: "var(--color-accent-primary)" }}
+      >
+        <circle cx="12" cy="12" r="10" />
+        <line x1="2" y1="12" x2="22" y2="12" />
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+      </svg>
+
+      <div>
+        <h2 className="text-xl font-bold mb-2" style={{ color: "var(--color-text-primary)" }}>
+          {t.onboarding.language.title}
+        </h2>
+        <p className="text-base leading-relaxed" style={{ color: "var(--color-text-secondary)", maxWidth: "400px" }}>
+          {t.onboarding.language.desc}
+        </p>
+      </div>
+
+      {/* 言語選択カード */}
+      <div className="flex flex-col gap-2" style={{ width: "320px" }}>
+        {SUPPORTED_LOCALES.map((loc: Locale) => (
+          <button
+            key={loc}
+            type="button"
+            onClick={() => setLocale(loc)}
+            className="flex items-center gap-3 px-4 py-3 text-left"
+            style={{
+              backgroundColor: locale === loc ? "var(--color-bg-hover)" : "var(--color-bg-card)",
+              borderRadius: "var(--radius-input)",
+              border: locale === loc
+                ? "2px solid var(--color-accent-primary)"
+                : "2px solid var(--color-border-secondary)",
+              cursor: "pointer",
+              transition: "all var(--transition-fast)",
+            }}
+          >
+            <span style={{ fontSize: "22px" }}>{LOCALE_FLAGS[loc]}</span>
+            <span className="flex-1 text-sm font-medium" style={{ color: "var(--color-text-primary)" }}>
+              {LOCALE_NATIVE_NAMES[loc]}
+            </span>
+            {locale === loc && (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                style={{ color: "var(--color-accent-primary)" }}>
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* ナビゲーションボタン */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onBack}
+          className="px-5 py-2 text-sm font-medium"
+          style={{
+            color: "var(--color-text-secondary)", backgroundColor: "transparent",
+            border: "1px solid var(--color-border-primary)", borderRadius: "var(--radius-button)", cursor: "pointer",
+          }}
+        >
+          {t.common.back}
+        </button>
+        <button
+          onClick={onNext}
+          className="px-5 py-2 text-sm font-semibold"
+          style={{
+            backgroundColor: "var(--color-accent-primary)", color: "var(--color-text-inverse)",
+            borderRadius: "var(--radius-button)", border: "none", cursor: "pointer",
+          }}
+        >
+          {t.common.next}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+/** Step 3: ストレージ選択 */
 const StorageStep: React.FC<{
   onNext: () => void;
   onBack: () => void;
 }> = ({ onNext, onBack }) => {
+  const t = useT();
   const [dataPath, setDataPath] = useState("~/Stellar");
 
   const handleChooseFolder = useCallback(async () => {
@@ -105,116 +183,80 @@ const StorageStep: React.FC<{
 
   return (
     <div className="flex flex-col items-center gap-6 text-center">
-      {/* アイコン */}
       <svg
-        width="48"
-        height="48"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
         style={{ color: "var(--color-accent-primary)" }}
       >
         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
       </svg>
 
       <div>
-        <h2
-          className="text-xl font-bold mb-2"
-          style={{ color: "var(--color-text-primary)" }}
-        >
-          データの保存先
+        <h2 className="text-xl font-bold mb-2" style={{ color: "var(--color-text-primary)" }}>
+          {t.onboarding.storage.title}
         </h2>
-        <p
-          className="text-base leading-relaxed"
-          style={{
-            color: "var(--color-text-secondary)",
-            maxWidth: "400px",
-          }}
-        >
-          文献データや PDF の保存先を選択してください。
-          <br />
-          あとから設定で変更できます。
+        <p className="text-base leading-relaxed" style={{ color: "var(--color-text-secondary)", maxWidth: "400px" }}>
+          {t.onboarding.storage.desc.split("\n").map((line, i) => (
+            <span key={i}>{line}{i === 0 && <br />}</span>
+          ))}
         </p>
       </div>
 
-      {/* 現在のパス表示 + 変更ボタン */}
       <div className="flex items-center gap-3">
-        <div
-          className="px-4 py-2 text-sm truncate"
-          style={{
-            backgroundColor: "var(--color-bg-tertiary)",
-            color: "var(--color-text-secondary)",
-            borderRadius: "var(--radius-input)",
-            border: "1px solid var(--color-border-secondary)",
-            maxWidth: "300px",
-            minWidth: "200px",
-          }}
-        >
+        <div className="px-4 py-2 text-sm truncate" style={{
+          backgroundColor: "var(--color-bg-tertiary)", color: "var(--color-text-secondary)",
+          borderRadius: "var(--radius-input)", border: "1px solid var(--color-border-secondary)",
+          maxWidth: "300px", minWidth: "200px",
+        }}>
           {dataPath}
         </div>
         <button
           onClick={handleChooseFolder}
           className="px-3 py-2 text-xs font-medium"
           style={{
-            backgroundColor: "var(--color-bg-hover)",
-            color: "var(--color-text-primary)",
-            borderRadius: "var(--radius-button)",
-            border: "1px solid var(--color-border-primary)",
-            cursor: "pointer",
-            transition: "all var(--transition-fast)",
+            backgroundColor: "var(--color-bg-hover)", color: "var(--color-text-primary)",
+            borderRadius: "var(--radius-button)", border: "1px solid var(--color-border-primary)",
+            cursor: "pointer", transition: "all var(--transition-fast)",
           }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "var(--color-bg-active)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
-          }}
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg-active)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg-hover)"; }}
         >
-          変更...
+          {t.onboarding.storage.change}
         </button>
       </div>
 
-      {/* ナビゲーションボタン */}
       <div className="flex items-center gap-3">
         <button
           onClick={onBack}
           className="px-5 py-2 text-sm font-medium"
           style={{
-            color: "var(--color-text-secondary)",
-            backgroundColor: "transparent",
-            border: "1px solid var(--color-border-primary)",
-            borderRadius: "var(--radius-button)",
-            cursor: "pointer",
+            color: "var(--color-text-secondary)", backgroundColor: "transparent",
+            border: "1px solid var(--color-border-primary)", borderRadius: "var(--radius-button)", cursor: "pointer",
           }}
         >
-          戻る
+          {t.common.back}
         </button>
         <button
           onClick={onNext}
           className="px-5 py-2 text-sm font-semibold"
           style={{
-            backgroundColor: "var(--color-accent-primary)",
-            color: "var(--color-text-inverse)",
-            borderRadius: "var(--radius-button)",
-            border: "none",
-            cursor: "pointer",
+            backgroundColor: "var(--color-accent-primary)", color: "var(--color-text-inverse)",
+            borderRadius: "var(--radius-button)", border: "none", cursor: "pointer",
           }}
         >
-          次へ
+          {t.common.next}
         </button>
       </div>
     </div>
   );
 };
 
-/** Step 3: テーマプレビュー */
+/** Step 4: テーマプレビュー */
 const ThemeStep: React.FC<{
   onNext: () => void;
   onBack: () => void;
 }> = ({ onNext, onBack }) => {
+  const t = useT();
   const theme = useThemeStore((s) => s.theme);
   const setTheme = useThemeStore((s) => s.setTheme);
 
@@ -231,223 +273,142 @@ const ThemeStep: React.FC<{
 
   return (
     <div className="flex flex-col items-center gap-6 text-center">
-      {/* アイコン */}
       <svg
-        width="48"
-        height="48"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
         style={{ color: "var(--color-accent-primary)" }}
       >
         <circle cx="12" cy="12" r="5" />
-        <line x1="12" y1="1" x2="12" y2="3" />
-        <line x1="12" y1="21" x2="12" y2="23" />
-        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-        <line x1="1" y1="12" x2="3" y2="12" />
-        <line x1="21" y1="12" x2="23" y2="12" />
-        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+        <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+        <line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" />
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
       </svg>
 
       <div>
-        <h2
-          className="text-xl font-bold mb-2"
-          style={{ color: "var(--color-text-primary)" }}
-        >
-          テーマを選ぶ
+        <h2 className="text-xl font-bold mb-2" style={{ color: "var(--color-text-primary)" }}>
+          {t.onboarding.theme.title}
         </h2>
-        <p
-          className="text-base"
-          style={{ color: "var(--color-text-secondary)" }}
-        >
-          お好みの外観テーマを選択してください
+        <p className="text-base" style={{ color: "var(--color-text-secondary)" }}>
+          {t.onboarding.theme.desc}
         </p>
       </div>
 
       <div className="flex flex-wrap justify-center gap-3">
         {THEMES.map((meta) => (
-          <ThemePreviewCard
-            key={meta.id}
-            meta={meta}
-            isSelected={theme === meta.id}
-            onSelect={handleThemeChange}
-          />
+          <ThemePreviewCard key={meta.id} meta={meta} isSelected={theme === meta.id} onSelect={handleThemeChange} />
         ))}
       </div>
 
-      {/* ナビゲーションボタン */}
       <div className="flex items-center gap-3">
         <button
           onClick={onBack}
           className="px-5 py-2 text-sm font-medium"
           style={{
-            color: "var(--color-text-secondary)",
-            backgroundColor: "transparent",
-            border: "1px solid var(--color-border-primary)",
-            borderRadius: "var(--radius-button)",
-            cursor: "pointer",
+            color: "var(--color-text-secondary)", backgroundColor: "transparent",
+            border: "1px solid var(--color-border-primary)", borderRadius: "var(--radius-button)", cursor: "pointer",
           }}
         >
-          戻る
+          {t.common.back}
         </button>
         <button
           onClick={onNext}
           className="px-5 py-2 text-sm font-semibold"
           style={{
-            backgroundColor: "var(--color-accent-primary)",
-            color: "var(--color-text-inverse)",
-            borderRadius: "var(--radius-button)",
-            border: "none",
-            cursor: "pointer",
+            backgroundColor: "var(--color-accent-primary)", color: "var(--color-text-inverse)",
+            borderRadius: "var(--radius-button)", border: "none", cursor: "pointer",
           }}
         >
-          次へ
+          {t.common.next}
         </button>
       </div>
     </div>
   );
 };
 
-/** Step 4: 完了 */
-const CompletionStep: React.FC<{ onComplete: () => void }> = ({
-  onComplete,
-}) => (
-  <div className="flex flex-col items-center gap-6 text-center">
-    {/* チェックアイコン */}
-    <div
-      style={{
-        width: "64px",
-        height: "64px",
-        borderRadius: "50%",
+/** Step 5: 完了 */
+const CompletionStep: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
+  const t = useT();
+  return (
+    <div className="flex flex-col items-center gap-6 text-center">
+      <div style={{
+        width: "64px", height: "64px", borderRadius: "50%",
         backgroundColor: "var(--color-accent-secondary)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <svg
-        width="32"
-        height="32"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="white"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <polyline points="20 6 9 17 4 12" />
-      </svg>
-    </div>
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white"
+          strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      </div>
 
-    <div>
-      <h2
-        className="text-xl font-bold mb-2"
-        style={{ color: "var(--color-text-primary)" }}
-      >
-        準備完了!
-      </h2>
-      <p
-        className="text-base leading-relaxed"
+      <div>
+        <h2 className="text-xl font-bold mb-2" style={{ color: "var(--color-text-primary)" }}>
+          {t.onboarding.completion.title}
+        </h2>
+        <p className="text-base leading-relaxed" style={{ color: "var(--color-text-secondary)", maxWidth: "400px" }}>
+          {t.onboarding.completion.desc.split("\n").map((line, i) => (
+            <span key={i}>{line}{i === 0 && <br />}</span>
+          ))}
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-2 text-sm" style={{ color: "var(--color-text-tertiary)" }}>
+        <div className="flex items-center gap-2">
+          <kbd className="px-1.5 py-0.5" style={{
+            backgroundColor: "var(--color-bg-tertiary)", borderRadius: "4px",
+            border: "1px solid var(--color-border-secondary)", fontSize: "10px",
+          }}>Ctrl+K</kbd>
+          <span>{t.onboarding.completion.shortcutSearch}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <kbd className="px-1.5 py-0.5" style={{
+            backgroundColor: "var(--color-bg-tertiary)", borderRadius: "4px",
+            border: "1px solid var(--color-border-secondary)", fontSize: "10px",
+          }}>Ctrl+N</kbd>
+          <span>{t.onboarding.completion.shortcutNote}</span>
+        </div>
+      </div>
+
+      <button
+        onClick={onComplete}
+        className="px-6 py-2.5 text-sm font-semibold"
         style={{
-          color: "var(--color-text-secondary)",
-          maxWidth: "400px",
+          backgroundColor: "var(--color-accent-primary)", color: "var(--color-text-inverse)",
+          borderRadius: "var(--radius-button)", border: "none", cursor: "pointer",
+          transition: "opacity 150ms ease-out",
         }}
+        onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.9"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
       >
-        Stellar の設定が完了しました。
-        <br />
-        さっそく文献を追加して、研究を始めましょう。
-      </p>
+        {t.onboarding.completion.startButton}
+      </button>
     </div>
-
-    <div
-      className="flex flex-col gap-2 text-sm"
-      style={{ color: "var(--color-text-tertiary)" }}
-    >
-      <div className="flex items-center gap-2">
-        <kbd
-          className="px-1.5 py-0.5"
-          style={{
-            backgroundColor: "var(--color-bg-tertiary)",
-            borderRadius: "4px",
-            border: "1px solid var(--color-border-secondary)",
-            fontSize: "10px",
-          }}
-        >
-          Ctrl+K
-        </kbd>
-        <span>全文検索を開く</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <kbd
-          className="px-1.5 py-0.5"
-          style={{
-            backgroundColor: "var(--color-bg-tertiary)",
-            borderRadius: "4px",
-            border: "1px solid var(--color-border-secondary)",
-            fontSize: "10px",
-          }}
-        >
-          Ctrl+N
-        </kbd>
-        <span>新しいノートを作成</span>
-      </div>
-    </div>
-
-    <button
-      onClick={onComplete}
-      className="px-6 py-2.5 text-sm font-semibold"
-      style={{
-        backgroundColor: "var(--color-accent-primary)",
-        color: "var(--color-text-inverse)",
-        borderRadius: "var(--radius-button)",
-        border: "none",
-        cursor: "pointer",
-        transition: "opacity 150ms ease-out",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.opacity = "0.9";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.opacity = "1";
-      }}
-    >
-      Stellar を使い始める
-    </button>
-  </div>
-);
+  );
+};
 
 // ============================================================
 // メインコンポーネント
 // ============================================================
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
 
 interface OnboardingFlowProps {
   onComplete: () => void;
 }
 
-export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
-  onComplete,
-}) => {
+export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) => {
   const [step, setStep] = useState(0);
   const [fadeState, setFadeState] = useState<"in" | "out">("in");
 
   /** ステップ遷移（フェードアウト → ステップ変更 → フェードイン） */
-  const goToStep = useCallback(
-    (nextStep: number) => {
-      setFadeState("out");
-      setTimeout(() => {
-        setStep(nextStep);
-        setFadeState("in");
-      }, 250);
-    },
-    [],
-  );
+  const goToStep = useCallback((nextStep: number) => {
+    setFadeState("out");
+    setTimeout(() => {
+      setStep(nextStep);
+      setFadeState("in");
+    }, 250);
+  }, []);
 
   const handleNext = useCallback(() => {
     if (step < TOTAL_STEPS - 1) {
@@ -477,43 +438,31 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   return (
     <div
       className="fixed inset-0 flex items-center justify-center"
-      style={{
-        backgroundColor: "var(--color-bg-primary)",
-        zIndex: 9998,
-      }}
+      style={{ backgroundColor: "var(--color-bg-primary)", zIndex: 9998 }}
     >
       {/* ステップコンテンツ（フェードトランジション） */}
-      <div
-        style={{
-          opacity: fadeState === "in" ? 1 : 0,
-          transition: "opacity 250ms ease-in-out",
-          padding: "32px",
-          minWidth: "480px",
-        }}
-      >
+      <div style={{
+        opacity: fadeState === "in" ? 1 : 0,
+        transition: "opacity 250ms ease-in-out",
+        padding: "32px", minWidth: "480px",
+      }}>
         {step === 0 && <WelcomeStep onNext={handleNext} />}
-        {step === 1 && <StorageStep onNext={handleNext} onBack={handleBack} />}
-        {step === 2 && <ThemeStep onNext={handleNext} onBack={handleBack} />}
-        {step === 3 && <CompletionStep onComplete={handleComplete} />}
+        {step === 1 && <LanguageStep onNext={handleNext} onBack={handleBack} />}
+        {step === 2 && <StorageStep onNext={handleNext} onBack={handleBack} />}
+        {step === 3 && <ThemeStep onNext={handleNext} onBack={handleBack} />}
+        {step === 4 && <CompletionStep onComplete={handleComplete} />}
       </div>
 
       {/* プログレスドット */}
-      <div
-        className="fixed bottom-8 left-1/2"
-        style={{ transform: "translateX(-50%)" }}
-      >
+      <div className="fixed bottom-8 left-1/2" style={{ transform: "translateX(-50%)" }}>
         <div className="flex items-center gap-2">
           {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
             <div
               key={i}
               style={{
                 width: step === i ? "24px" : "8px",
-                height: "8px",
-                borderRadius: "4px",
-                backgroundColor:
-                  step === i
-                    ? "var(--color-accent-primary)"
-                    : "var(--color-border-primary)",
+                height: "8px", borderRadius: "4px",
+                backgroundColor: step === i ? "var(--color-accent-primary)" : "var(--color-border-primary)",
                 transition: "all 250ms ease-out",
               }}
             />
