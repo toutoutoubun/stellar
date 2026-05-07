@@ -65,13 +65,14 @@ export default defineConfig({
     // チャンク分割でビルド時メモリ使用量を削減
     rollupOptions: {
       // 巨大依存をexternalにしてバンドルから除外 → OOM回避
-      // kuromoji: 18MB辞書, pdfjs-dist: PDF.js (Tauri時はローカルで読み込む)
+      // ブラウザでは index.html の importmap で CDN にマッピング
       external: ["kuromoji", "pdfjs-dist", "docx", "marked"],
       output: {
         manualChunks(id) {
           // ── node_modules のチャンク分割（低メモリ環境向けに簡素化）──
           if (id.includes("node_modules/react-dom") || id.includes("node_modules/react/") || id.includes("node_modules/scheduler")) return "vendor-react";
-          if (id.includes("node_modules/@codemirror/") || id.includes("node_modules/@uiw/") || id.includes("node_modules/@lezer/")) return "vendor-codemirror";
+          // style-mod を codemirror と同じチャンクに含めて循環参照を防ぐ
+          if (id.includes("node_modules/@codemirror/") || id.includes("node_modules/@uiw/") || id.includes("node_modules/@lezer/") || id.includes("node_modules/style-mod") || id.includes("node_modules/crelt") || id.includes("node_modules/w3c-keyname")) return "vendor-codemirror";
           if (id.includes("node_modules/@tauri-apps/")) return "vendor-tauri";
           if (id.includes("node_modules/")) return "vendor-misc";
           return undefined;
