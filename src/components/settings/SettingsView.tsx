@@ -7,7 +7,6 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useThemeStore, THEMES } from "../../stores/useThemeStore";
 import { useI18nStore, useT } from "../../stores/useI18nStore";
 import { SUPPORTED_LOCALES, LOCALE_NATIVE_NAMES } from "../../i18n";
-import { LocaleFlag } from "../ui/Icons";
 import { ThemePreviewCard } from "./ThemePreviewCard";
 import { StellarPackageModal } from "../export/StellarPackageModal";
 import { invoke } from "../../lib/tauriShim";
@@ -790,7 +789,6 @@ export const SettingsView: React.FC = () => {
                 onChange={() => setLocale(loc)}
                 style={{ accentColor: "var(--color-accent-primary)" }}
               />
-              <LocaleFlag locale={loc} size={20} />
               <div className="flex-1">
                 <div className="text-sm font-medium" style={{ color: "var(--color-text-primary)" }}>
                   {LOCALE_NATIVE_NAMES[loc]}

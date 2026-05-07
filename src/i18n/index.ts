@@ -27,7 +27,4 @@ export const LOCALE_NATIVE_NAMES: Record<Locale, string> = {
   af: "Afrikaans",
 };
 
-/** ロケールの国旗絵文字 — 廃止（LocaleFlag SVG コンポーネントを使用すること） */
-// LOCALE_FLAGS は削除済み。代わりに src/components/ui/Icons.tsx の LocaleFlag を使用
-
 export type { TranslationKeys };

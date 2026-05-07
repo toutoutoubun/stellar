@@ -100,62 +100,6 @@ export const IconItemType: React.FC<IconProps & { itemType: "paper" | "note" }> 
 }) => (itemType === "paper" ? <IconPaper {...rest} /> : <IconNote {...rest} />);
 
 // ────────────────────────────────────────────
-// 国旗アイコン（システム絵文字を排除するため SVG で描画）
-// ────────────────────────────────────────────
-
-/** 日本国旗 */
-export const FlagJP: React.FC<IconProps> = ({ size = 20, className, style }) => (
-  <svg width={size} height={size} viewBox="0 0 640 480" className={className} style={style}>
-    <rect width="640" height="480" fill="#fff" />
-    <circle cx="320" cy="240" r="120" fill="#bc002d" />
-  </svg>
-);
-
-/** 英国旗 */
-export const FlagGB: React.FC<IconProps> = ({ size = 20, className, style }) => (
-  <svg width={size} height={size} viewBox="0 0 640 480" className={className} style={style}>
-    <rect width="640" height="480" fill="#012169" />
-    <path d="M75 0l244 181L562 0h78v62L400 241l240 178v61h-80L320 301 81 480H0v-60l239-178L0 64V0z" fill="#fff" />
-    <path d="M424 281l216 159v40L369 281zm-184 20l6 35L54 480H0zM640 0v3L391 191l2-44L590 0zM0 0l239 176h-60L0 42z" fill="#C8102E" />
-    <path d="M241 0v480h160V0zM0 160v160h640V160z" fill="#fff" />
-    <path d="M0 193v96h640v-96zM273 0v480h96V0z" fill="#C8102E" />
-  </svg>
-);
-
-/** フランス国旗 */
-export const FlagFR: React.FC<IconProps> = ({ size = 20, className, style }) => (
-  <svg width={size} height={size} viewBox="0 0 640 480" className={className} style={style}>
-    <rect width="213.3" height="480" fill="#002395" />
-    <rect x="213.3" width="213.4" height="480" fill="#fff" />
-    <rect x="426.7" width="213.3" height="480" fill="#ED2939" />
-  </svg>
-);
-
-/** 南アフリカ国旗 */
-export const FlagZA: React.FC<IconProps> = ({ size = 20, className, style }) => (
-  <svg width={size} height={size} viewBox="0 0 640 480" className={className} style={style}>
-    <rect width="640" height="480" fill="#002395" />
-    <rect y="160" width="640" height="160" fill="#fff" />
-    <rect y="176" width="640" height="128" fill="#DE3831" />
-    <rect y="320" width="640" height="160" fill="#002395" />
-    <path d="M0 0v480l320-240z" fill="#007A4D" />
-    <path d="M0 40v400l280-200z" fill="#FFB612" />
-    <path d="M0 80v320l240-160z" fill="#000" />
-  </svg>
-);
-
-/** ロケールから国旗コンポーネントを返す */
-export const LocaleFlag: React.FC<IconProps & { locale: string }> = ({ locale, ...rest }) => {
-  switch (locale) {
-    case "ja": return <FlagJP {...rest} />;
-    case "en": return <FlagGB {...rest} />;
-    case "fr": return <FlagFR {...rest} />;
-    case "af": return <FlagZA {...rest} />;
-    default:   return <FlagJP {...rest} />;
-  }
-};
-
-// ────────────────────────────────────────────
 // 量的分析・データ系アイコン (旧: 📊📋📝✏️🏷📅🗑⚠️)
 // ────────────────────────────────────────────
 
