@@ -83,7 +83,7 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
       const title = `質的分析レポート（${selectedNames.slice(0, 3).join(t.stats.k_9ob)}${selectedNames.length > 3 ? "…" : ""}）`;
       const tags = [t.qualitative.k_it0yjj, t.qualitative.k_pbsye];
       const note = await createNote({ title, content: report, tags });
-      toast.success(`ノート「${note.title}」を作成しました`);
+      toast.success(t.qualitative.k_fpwqww);
     } catch (err) {
       console.error(t.qualitative.k_pszidi, err);
       toast.error(t.notes.createFailed);

@@ -205,7 +205,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
               >
                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
               </svg>
-              <span className="text-sm">PDFを読み込んでいます…</span>
+              <span className="text-sm">{t.reader.PDF}</span>
             </div>
           </div>
         }
@@ -232,7 +232,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
                 <line x1="15" y1="9" x2="9" y2="15" />
                 <line x1="9" y1="9" x2="15" y2="15" />
               </svg>
-              <span className="text-sm">PDFの読み込みに失敗しました</span>
+              <span className="text-sm">{t.reader.PDF_3}</span>
             </div>
           </div>
         }

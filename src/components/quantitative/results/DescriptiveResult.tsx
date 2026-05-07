@@ -134,7 +134,7 @@ const ExportMenu = memo<{ containerRef: React.RefObject<HTMLDivElement | null>; 
                 onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg-hover)"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
               >
-                {f.toUpperCase()} 保存
+                {f.toUpperCase()} {t.items.save}
               </button>
             ))}
           </div>
@@ -211,7 +211,7 @@ const DescriptiveCard = memo<{
                 fontWeight: 500,
               }}
             >
-              欠損 {desc.missingCount}件
+              欠損 {desc.missingCount} {t.common.items}
             </span>
           )}
         </div>

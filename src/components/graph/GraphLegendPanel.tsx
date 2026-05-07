@@ -55,7 +55,7 @@ export const GraphLegendPanel: React.FC<GraphLegendPanelProps> = ({
               className="text-xs"
               style={{ color: "var(--color-text-primary)" }}
             >
-              ノート
+              {t.notes.title}
             </span>
           </div>
 
@@ -76,7 +76,7 @@ export const GraphLegendPanel: React.FC<GraphLegendPanelProps> = ({
               className="text-xs"
               style={{ color: "var(--color-text-primary)" }}
             >
-              論文
+              {t.data.papers}
             </span>
           </div>
 
@@ -117,7 +117,7 @@ export const GraphLegendPanel: React.FC<GraphLegendPanelProps> = ({
           className="flex items-center gap-3 mb-3 text-xs"
           style={{ color: "var(--color-text-tertiary)", fontSize: "10px" }}
         >
-          <span>{nodeCount} ノード</span>
+          <span>{nodeCount} {t.quantResults.str_7dy1n}</span>
           <span>·</span>
           <span>{linkCount} リンク</span>
         </div>

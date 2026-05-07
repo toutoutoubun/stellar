@@ -60,7 +60,7 @@ export function getInterpretationWarning(
   switch (testType) {
     case "t-test":
       if (n < 30) {
-        return `サンプルサイズが小さい（n=${n}）ため、正規性の仮定を確認してください。`;
+        return t.stats.k_qp8r7v;
       }
       return null;
 
@@ -71,7 +71,7 @@ export function getInterpretationWarning(
     case "regression": {
       const p = predictors ?? 1;
       if (n < 10 * p) {
-        return `観測数に対して予測変数が多すぎる可能性があります（n=${n}, 予測変数=${p}、推奨: n≥${10 * p}）。`;
+        return t.stats.k_o9muiv;
       }
       return null;
     }

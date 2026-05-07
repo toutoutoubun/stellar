@@ -64,7 +64,7 @@ export interface TTestResult {
   pValue: number;
   /** Cohen's d */
   effectSize: number;
-  /** "小" | "中" | "大" etc. */
+  /** t.stats.k_i6n | t.stats.k_ffx | t.stats.k_hlz etc. */
   effectSizeLabel: string;
   mean1: number;
   mean2?: number;

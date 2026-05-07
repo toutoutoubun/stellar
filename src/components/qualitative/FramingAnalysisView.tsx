@@ -115,7 +115,7 @@ export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({
         className="flex items-center justify-center h-full"
         style={{ color: "var(--color-text-tertiary)" }}
       >
-        <span className="text-sm">読み込み中...</span>
+        <span className="text-sm">{t.common.loading}</span>
       </div>
     );
   }

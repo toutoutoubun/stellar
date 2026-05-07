@@ -148,7 +148,7 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
             onScrollToPdf(highlight);
           }
         }}
-        aria-label={`ハイライト: ${highlight.text.slice(0, 50)}…`}
+        aria-label={t.reader.k_nz9we3}
       >
         {/* 左側カラーインジケーターバー */}
         <div
@@ -290,7 +290,7 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
                 fontSize: "10px",
               }}
             >
-              保存中...
+              {t.qualitative.k_vts3p8}
             </span>
           )}
         </div>
@@ -422,7 +422,7 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
               <polyline points="3 6 5 6 21 6" />
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
             </svg>
-            削除
+            {t.common.delete}
           </button>
         </div>
       )}

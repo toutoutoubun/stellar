@@ -328,18 +328,18 @@ export function independentTTest(
 
   // Japanese interpretation
   const sigText = significant
-    ? `統計的に有意な差が認められました（t(${r(df, 1)})=${r(t)}, p=${pValue}）`
-    : `統計的に有意な差は認められませんでした（t(${r(df, 1)})=${r(t)}, p=${pValue}）`;
+    ? t.stats.k_a2e9rv
+    : t.stats.k_vg77f5;
 
   const parts: string[] = [
-    `${targetVarName}について、${group1Label}（平均${r(m1)}）と${group2Label}（平均${r(m2)}）の間に${sigText}。`,
+    t.stats.k_wc4pvp,
     `効果量 Cohen's d=${r(d)}（${label}）。`,
-    `95%信頼区間 [${ci95Lower}, ${ci95Upper}]。`,
+    t.stats.k_1iwabe,
   ];
 
   if (n1 < 30 || n2 < 30) {
     parts.push(
-      `注意：サンプルサイズが小さい（n1=${n1}, n2=${n2}）ため、正規性の仮定を確認してください。`,
+      t.stats.k_r5jrsp,
     );
   }
 
@@ -418,10 +418,10 @@ export function mannWhitneyU(
     : useI18nStore.getState().t.stats.str_wubo15;
 
   const interpretation =
-    `ノンパラメトリック検定（Mann-Whitney U検定）の結果、` +
-    `${targetVarName}について${group1Label}と${group2Label}の間に` +
+    t.stats.k_3mqqt4 +
+    t.stats.k_yqrrij +
     `${sigText}（U=${r(U)}, p=${pValue}）。` +
-    `効果量 r=${effectR}。`;
+    t.stats.k_2781yo;
 
   return {
     targetVar: targetVarName,
@@ -483,10 +483,10 @@ export function chiSquareTest(
   const esLabel = cramersLabel(cramersV);
 
   const parts: string[] = [
-    `χ²検定の結果、${var1Id}と${var2Id}の間に`,
+    t.stats.k_cl209p,
     significant
-      ? `統計的に有意な関連が認められました（χ²(${df})=${r(chi2)}, p=${pValue}）。`
-      : `統計的に有意な関連は認められませんでした（χ²(${df})=${r(chi2)}, p=${pValue}）。`,
+      ? t.stats.k_u3uf7v
+      : t.stats.k_1724gz,
     `Cramér's V=${cramersV}（効果量：${esLabel}）。`,
   ];
 
@@ -556,9 +556,9 @@ export function linearRegression(
 
     const sigText = fP < 0.05 ? useI18nStore.getState().t.quantResults.str_i23q : useI18nStore.getState().t.stats.str_avhzj9;
     const interpretation =
-      `単回帰分析の結果、モデル全体は統計的に${sigText}でした` +
+      t.stats.k_z0cdlq +
       `（F(1,${n - 2})=${r(fStat)}, p=${fP}）。` +
-      `R²=${r(r2)}のため、従属変数の分散の約${r(r2 * 100, 1)}%を説明します。`;
+      t.stats.k_3wlga0;
 
     return {
       type: "simple",
@@ -670,9 +670,9 @@ export function linearRegression(
       : useI18nStore.getState().t.stats.str_3p7bnb;
 
   const interpretation =
-    `重回帰分析の結果、モデル全体は統計的に${sigText}でした` +
+    t.stats.k_uw6hot +
     `（F(${p},${n - pFull})=${r(fStat)}, p=${fP}）。` +
-    `R²=${r(r2)}のため、従属変数の分散の約${r(r2 * 100, 1)}%を説明します。` +
+    t.stats.k_3wlga0 +
     sigVarsText;
 
   return {

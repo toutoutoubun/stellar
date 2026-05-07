@@ -44,7 +44,7 @@ export const CodingMatrixView: React.FC<CodingMatrixViewProps> = ({
         className="flex items-center justify-center h-full"
         style={{ color: "var(--color-text-tertiary)" }}
       >
-        <span className="text-sm">読み込み中...</span>
+        <span className="text-sm">{t.common.loading}</span>
       </div>
     );
   }
@@ -94,7 +94,7 @@ export const CodingMatrixView: React.FC<CodingMatrixViewProps> = ({
           className="text-sm font-semibold"
           style={{ color: "var(--color-text-primary)" }}
         >
-          コーディングマトリクス
+          {t.qualitative.k_5l342g}
         </h3>
         <button
           type="button"

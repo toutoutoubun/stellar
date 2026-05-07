@@ -158,7 +158,7 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full" style={{ color: "var(--color-text-tertiary)" }}>
-        <span className="text-sm">読み込み中...</span>
+        <span className="text-sm">{t.common.loading}</span>
       </div>
     );
   }
@@ -372,7 +372,7 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
         ) : (
           <div className="flex flex-col items-center justify-center h-full gap-3" style={{ color: "var(--color-text-tertiary)" }}>
             <IconScroll size={28} />
-            <span className="text-sm">左の一覧から論文を選択してください</span>
+            <span className="text-sm">{t.qualitative.k_xhv9sn}</span>
           </div>
         )}
       </div>

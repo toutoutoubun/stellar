@@ -359,7 +359,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           >
             Esc
           </kbd>
-          閉じる
+          {t.common.close}
         </span>
       </div>
     </div>
@@ -463,12 +463,12 @@ const ResultList: React.FC<ResultListProps> = ({
 
     const groups: { label: string; items: SearchResultItem[] }[] = [];
     if (results.papers.length > 0)
-      groups.push({ label: `論文 (${results.papers.length}件)`, items: results.papers });
+      groups.push({ label: t.search.k_c4sqz, items: results.papers });
     if (results.notes.length > 0)
-      groups.push({ label: `ノート (${results.notes.length}件)`, items: results.notes });
+      groups.push({ label: t.search.k_nd06pg, items: results.notes });
     if (results.highlights.length > 0)
       groups.push({
-        label: `ハイライト (${results.highlights.length}件)`,
+        label: t.search.k_8aeu7e,
         items: results.highlights,
       });
 

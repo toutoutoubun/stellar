@@ -124,7 +124,7 @@ export const ThemeToggleButton: React.FC = () => {
         backgroundColor: isHovered ? "var(--color-bg-hover)" : "transparent",
         transition: "all var(--transition-fast)",
       }}
-      title={`次のテーマ: ${nextMeta.label}`}
+      title={t.layout.k_tlq9dl}
     >
       <ThemeIcon icon={currentMeta.icon} size={14} />
     </button>

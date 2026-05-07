@@ -202,7 +202,7 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
             dataRows.map((r) => r.values[gv.name]).filter((v) => v != null),
           );
           if (uniqueValues.size !== 2) {
-            w.push(`グループ変数は正確に2カテゴリ必要です（現在 ${uniqueValues.size} カテゴリ）`);
+            w.push(t.quantitative.k_p5rr3n);
           }
         }
       }
@@ -541,7 +541,7 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
       };
 
       const saved = await saveAnalysis(input);
-      toast.success(`分析「${analysisName}」を完了しました`);
+      toast.success(t.quantitative.k_g99hw5);
       onComplete(saved.id);
     } catch (err) {
       const msg = err instanceof Error ? err.message : t.quantitative.k_rpdz75;
@@ -1159,7 +1159,7 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
           <div className="flex flex-col gap-1 text-xs" style={{ color: "var(--color-text-secondary)" }}>
             <span>手法: {METHODS.find((m) => m.key === method)?.label}</span>
             <span>変数: {selectedVarIds.length}個</span>
-            <span>データ行: {dataRows.length}件</span>
+            <span>データ行: {dataRows.length} {t.common.items}</span>
             <span>有意水準: α = {alpha}</span>
           </div>
         </div>
@@ -1323,7 +1323,7 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
                 transition: "all var(--transition-fast)",
               }}
             >
-              次へ
+              {t.common.next}
             </button>
           ) : (
             <button

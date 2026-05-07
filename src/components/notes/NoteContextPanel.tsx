@@ -80,7 +80,7 @@ const BacklinksSection: React.FC<{
           <polyline points="6 9 12 15 18 9" />
         </svg>
         <span className="text-xs font-semibold uppercase tracking-wider">
-          バックリンク
+          {t.library.k_4vgs8a}
         </span>
         <span
           className="text-xs px-1.5 py-0.5 ml-auto"
@@ -101,7 +101,7 @@ const BacklinksSection: React.FC<{
               className="text-xs py-2"
               style={{ color: "var(--color-text-tertiary)" }}
             >
-              読み込み中…
+              {t.layout.loading}
             </div>
           ) : backlinks.length === 0 ? (
             <div

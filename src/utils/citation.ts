@@ -70,8 +70,8 @@ const formatAuthorsChicago = (authors: string[]): string => {
 const formatAuthorsHitotsubashi = (authors: string[]): string => {
   if (authors.length === 0) return "";
   if (authors.length === 1) return authors[0] ?? "";
-  if (authors.length === 2) return `${authors[0]}・${authors[1]}`;
-  return `${authors[0]}・${authors[1]}ほか`;
+  if (authors.length === 2) return t.utils.k_i1b03y;
+  return t.utils.k_1b00wu;
 };
 
 // ============================================================
@@ -256,11 +256,11 @@ const formatHitotsubashi = (paper: Paper): string => {
 
     // 巻号
     if (paper.volume) {
-      journalPart += `第${paper.volume}`;
+      journalPart += t.utils.k_pz2w2q;
       if (paper.issue) {
-        journalPart += `号`;
+        journalPart += t.library.k_gl3;
       } else {
-        journalPart += `巻`;
+        journalPart += t.library.k_ikb;
       }
     }
 
@@ -269,12 +269,12 @@ const formatHitotsubashi = (paper: Paper): string => {
 
   // 年
   if (paper.year !== null) {
-    parts.push(`${paper.year}年`);
+    parts.push(t.utils.k_7ms3nx);
   }
 
   // ページ
   if (paper.pages) {
-    parts.push(`${paper.pages}頁`);
+    parts.push(t.utils.k_vnz5zj);
   }
 
   // 最後の要素を「。」で結び読点で区切る

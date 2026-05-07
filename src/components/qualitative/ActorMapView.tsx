@@ -183,7 +183,7 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full" style={{ color: "var(--color-text-tertiary)" }}>
-        <span className="text-sm">読み込み中...</span>
+        <span className="text-sm">{t.common.loading}</span>
       </div>
     );
   }
@@ -382,7 +382,7 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
                 <button type="button" onClick={() => void handleCreateRelation()} className="text-xs px-3 py-1" style={{ backgroundColor: "var(--color-accent-primary)", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>追加</button>
                 <button type="button" onClick={() => setShowRelationForm(false)} className="text-xs px-2 py-1 inline-flex items-center gap-1" style={{ background: "transparent", color: "var(--color-text-tertiary)", border: "1px solid var(--color-border-secondary)", borderRadius: "4px", cursor: "pointer" }}>
                   <IconClose size={10} />
-                  キャンセル
+                  {t.common.cancel}
                 </button>
               </div>
             </div>

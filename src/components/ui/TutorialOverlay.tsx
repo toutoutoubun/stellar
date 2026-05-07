@@ -305,7 +305,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
                 color: "var(--color-text-tertiary)",
               }}
             >
-              Stellar ガイド
+              {t.ui.str_z5hxct}
             </span>
           </div>
           <button
@@ -459,7 +459,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
                   cursor: "pointer",
                   padding: 0,
                 }}
-                aria-label={`ステップ ${i + 1}`}
+                aria-label={`${t.common.next} ${i + 1}`}
               />
             ))}
           </div>
@@ -492,7 +492,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
                   transition: "all 150ms ease-out",
                 }}
               >
-                戻る
+                {t.common.back}
               </button>
             )}
 
@@ -511,7 +511,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
                   transition: "opacity 150ms ease-out",
                 }}
               >
-                次へ
+                {t.common.next}
               </button>
             ) : (
               <button
@@ -528,7 +528,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
                   transition: "opacity 150ms ease-out",
                 }}
               >
-                はじめる
+                {t.common.start}
               </button>
             )}
           </div>

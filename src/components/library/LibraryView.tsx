@@ -134,7 +134,7 @@ export const LibraryView: React.FC = () => {
         await deletePaper(id);
         toast.success(t.library.k_u38ovq);
       } catch (e) {
-        toast.error(`削除に失敗しました: ${String(e)}`);
+        toast.error(t.library.k_dtz2fv);
       }
     },
     [papers, deletePaper]
@@ -186,7 +186,7 @@ export const LibraryView: React.FC = () => {
           toast.success(t.library.k_uojkt0);
         }
       } catch (e) {
-        toast.error(`PDFの添付に失敗しました: ${String(e)}`);
+        toast.error(t.library.k_e12e0q);
       }
     },
     [attachPdf]
@@ -231,8 +231,8 @@ export const LibraryView: React.FC = () => {
                   }}
                 >
                   {hasActiveFilters
-                    ? `${filteredPapers.length} / ${papers.length}件`
-                    : `${papers.length}件`}
+                    ? t.library.k_7fsnpg
+                    : t.library.k_9p8m7j}
                 </span>
               )}
             </div>
@@ -445,7 +445,7 @@ export const LibraryView: React.FC = () => {
                   setShowYearDropdown(false);
                 }}
               >
-                PDFあり{" "}
+                PDF{t.stats.str_8h3c}{" "}
                 {filterHasPdf !== null
                   ? filterHasPdf
                     ? t.library.k_8152k
@@ -473,7 +473,7 @@ export const LibraryView: React.FC = () => {
                       e.currentTarget.style.backgroundColor = "transparent";
                     }}
                   >
-                    すべて
+                    {t.quantResults.str_7bg2u}
                   </button>
                   <button
                     className="flex items-center w-full px-3 py-2 text-xs text-left"
@@ -645,7 +645,7 @@ export const LibraryView: React.FC = () => {
                 >
                   <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                 </svg>
-                <span className="text-sm">読み込み中...</span>
+                <span className="text-sm">{t.common.loading}</span>
               </div>
             </div>
           )}
@@ -792,7 +792,7 @@ export const LibraryView: React.FC = () => {
                 }}
               >
                 <div style={{ width: "16px" }} />
-                <div className="flex-1">タイトル</div>
+                <div className="flex-1">{t.notes.sortTitle}</div>
                 <div style={{ width: "160px", textAlign: "left" }}>著者</div>
                 <div style={{ width: "48px", textAlign: "center" }}>年</div>
                 <div style={{ width: "140px", textAlign: "left" }}>

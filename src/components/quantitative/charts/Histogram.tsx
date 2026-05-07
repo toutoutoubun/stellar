@@ -105,7 +105,7 @@ export const Histogram: React.FC<HistogramProps> = memo(function Histogram({
         d3.select(this).attr("fill", colors.accent).attr("opacity", 0.9);
         const pct = values.length > 0 ? ((d.length / values.length) * 100).toFixed(1) : "0";
         tooltip.show(
-          `<strong>${fmt(d.x0!, 1)} ~ ${fmt(d.x1!, 1)}</strong><br/>度数: ${d.length}<br/>割合: ${pct}%`,
+          t.quantCharts.k_5jzdhe,
           event.offsetX,
           event.offsetY,
         );

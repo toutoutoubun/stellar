@@ -136,7 +136,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
   /** ノート削除 */
   const handleDelete = useCallback(async () => {
     if (!activeNote) return;
-    const ok = await swalConfirm(t.notes.k_4t9g8e, `「${activeNote.title}」を削除しますか？この操作は取り消せません。`);
+    const ok = await swalConfirm(t.notes.k_4t9g8e, t.notes.k_6k4h8p);
     if (ok) {
       try {
         await deleteNote(activeNote.id);
@@ -177,18 +177,18 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
         switch (format) {
           case "markdown":
             exportMarkdownFile(editorContent, title);
-            toast.success(`${title}.md をダウンロードしました`);
+            toast.success(t.notes.k_s8vwhj);
             break;
 
           case "plaintext":
             exportPlainText(editorContent, title);
-            toast.success(`${title}.txt をダウンロードしました`);
+            toast.success(t.notes.k_8attkc);
             break;
 
           case "html": {
             const blob = exportHtmlBlob(editorContent, title);
             downloadBlob(blob, `${title}.html`);
-            toast.success(`${title}.html をダウンロードしました`);
+            toast.success(t.notes.k_l6f0hh);
             break;
           }
 
@@ -200,7 +200,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
           case "docx": {
             const blob = await generateDocx(editorContent, title);
             downloadBlob(blob, `${title}.docx`);
-            toast.success(`${title}.docx をダウンロードしました`);
+            toast.success(t.notes.k_fni71c);
             break;
           }
         }
@@ -323,11 +323,11 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
       case "saving":
         return t.notes.k_agdrec;
       case "saved":
-        return lastSavedAt ? `最終保存: ${lastSavedAt}` : t.notes.k_agj9oy;
+        return lastSavedAt ? t.notes.k_22zaod : t.notes.k_agj9oy;
       case "error":
         return t.notes.k_v5y7ts;
       default:
-        return isModified ? t.notes.k_fi2f9 : lastSavedAt ? `最終保存: ${lastSavedAt}` : "";
+        return isModified ? t.notes.k_fi2f9 : lastSavedAt ? t.notes.k_22zaod : "";
     }
   })();
 
@@ -712,7 +712,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
                 className="text-xs"
                 style={{ color: "var(--color-text-tertiary)" }}
               >
-                {wordCount.toLocaleString()}語
+                {wordCount.toLocaleString()} {t.quantResults.k_rdq}
               </span>
               <span
                 className="text-xs"

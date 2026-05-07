@@ -127,7 +127,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full" style={{ color: "var(--color-text-tertiary)" }}>
-        <span className="text-sm">読み込み中...</span>
+        <span className="text-sm">{t.common.loading}</span>
       </div>
     );
   }
@@ -205,7 +205,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
         >
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
-              <label className="text-xs mb-1 block" style={{ color: "var(--color-text-tertiary)" }}>タイトル *</label>
+              <label className="text-xs mb-1 block" style={{ color: "var(--color-text-tertiary)" }}>{t.library.k_3n500e}</label>
               <input
                 type="text"
                 value={title}
@@ -291,7 +291,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
               style={{ backgroundColor: "transparent", color: "var(--color-text-secondary)", border: "1px solid var(--color-border-secondary)", borderRadius: "6px", cursor: "pointer" }}
             >
               <IconClose size={10} />
-              キャンセル
+              {t.common.cancel}
             </button>
           </div>
         </div>

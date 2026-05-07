@@ -222,13 +222,13 @@ export async function analyzeTextVariable(
   // ── Step 6: Interpretation ────────────────────────────────────────────
   const top5 = topWords.slice(0, 5).map((w) => w.token);
   const interpretation =
-    `テキスト${N}件を形態素解析した結果、合計${totalTokenCount}トークン（` +
-    `異なり語数${uniqueTokens}）が抽出されました。` +
+    t.stats.k_n7ssx7 +
+    t.stats.k_5um8a4 +
     `頻出語は「${top5.join(useI18nStore.getState().t.stats.str_8fq7)}」などです。` +
     (cooccurrenceNetwork.nodes.length > 0
-      ? `共起ネットワーク（${cooccurrenceNetwork.nodes.length}ノード・` +
-        `${cooccurrenceNetwork.edges.length}エッジ）を構築しました。` +
-        `${cooccurrenceNetwork.communities.length}個のトピッククラスタが検出されました。`
+      ? t.stats.k_8vfq2c +
+        t.stats.k_cdvohy +
+        t.stats.k_gusnfq
       : useI18nStore.getState().t.stats.str_4bxlt9);
 
   return {

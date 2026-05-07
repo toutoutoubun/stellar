@@ -121,7 +121,7 @@ export const HighlightPanel: React.FC<HighlightPanelProps> = ({
             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
           </svg>
-          ハイライト
+          {t.data.highlights}
           <span
             className="text-xs px-1.5 py-0.5"
             style={{
@@ -188,7 +188,7 @@ export const HighlightPanel: React.FC<HighlightPanelProps> = ({
               cursor: "pointer",
             }}
           >
-            選択解除
+            {t.reader.str_in3h53}
           </button>
         )}
       </header>
@@ -316,7 +316,7 @@ export const HighlightPanel: React.FC<HighlightPanelProps> = ({
                 className="flex items-center justify-center h-32"
                 style={{ color: "var(--color-text-tertiary)" }}
               >
-                <span className="text-sm">読み込み中…</span>
+                <span className="text-sm">{t.layout.loading}</span>
               </div>
             }
           >

@@ -137,13 +137,13 @@ export const DatasetList: React.FC = () => {
     const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     switch (source) {
       case "csv":
-        return `CSV データ ${dateStr}`;
+        return t.quantitative.k_ewifof;
       case "manual":
-        return `手入力データ ${dateStr}`;
+        return t.quantitative.k_n15ubc;
       case "codes":
-        return `コード集計 ${dateStr}`;
+        return t.quantitative.k_wq3gz3;
       case "highlights":
-        return `ハイライト抽出 ${dateStr}`;
+        return t.quantitative.k_d7dk5g;
     }
   }, []);
 
@@ -167,11 +167,11 @@ export const DatasetList: React.FC = () => {
         // CSV: まず空のデータセットを作成し、インポートタブに遷移
         const ds = await createDatasetManually(name, datasetDesc);
         setTab("import");
-        toast.success(`データセット「${ds.name}」を作成しました`);
+        toast.success(t.quantitative.k_7zq8nc);
       } else if (createSource === "manual") {
         const ds = await createDatasetManually(name, datasetDesc);
         setTab("variables");
-        toast.success(`データセット「${ds.name}」を作成しました`);
+        toast.success(t.quantitative.k_7zq8nc);
       } else if (createSource === "codes") {
         if (!selectedProjectId) {
           toast.warning(t.quantitative.k_un0ypx);
@@ -180,7 +180,7 @@ export const DatasetList: React.FC = () => {
         const ds = await createDatasetFromCodes(selectedProjectId, name);
         setTab("preview");
         toast.success(
-          `データセット「${ds.name}」を生成しました（${ds.rowCount}件）`,
+          t.quantitative.k_t1hi1i,
         );
       } else if (createSource === "highlights") {
         const ds = await createDatasetFromHighlights(
@@ -188,7 +188,7 @@ export const DatasetList: React.FC = () => {
         );
         setTab("preview");
         toast.success(
-          `データセット「${ds.name}」を生成しました（${ds.rowCount}件）`,
+          t.quantitative.k_t1hi1i,
         );
       }
       setModalOpen(false);
@@ -478,7 +478,7 @@ export const DatasetList: React.FC = () => {
         footer={
           <>
             <Button variant="ghost" onClick={() => setModalOpen(false)}>
-              キャンセル
+              {t.common.cancel}
             </Button>
             <Button
               variant="primary"
@@ -556,7 +556,7 @@ export const DatasetList: React.FC = () => {
                 className="text-xs font-medium"
                 style={{ color: "var(--color-text-secondary)" }}
               >
-                説明（任意）
+                {t.qualitative.k_knmvip}
               </label>
               <textarea
                 value={datasetDesc}

@@ -32,7 +32,7 @@ export function useTauriEvents(): void {
 
         // トースト通知
         toast.info(
-          `論文をインポート中: ${payload.paper?.title ?? payload.source}`,
+          t.hooks.k_87adpo,
         );
 
         // 楽観的追加: パース済みの論文データがあればすぐに開く

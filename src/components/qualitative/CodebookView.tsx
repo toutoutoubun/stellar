@@ -81,7 +81,7 @@ export const CodebookView: React.FC<CodebookViewProps> = ({ projectId }) => {
   }, [handleDrop]);
 
   if (loading) {
-    return <div className="flex items-center justify-center h-full" style={{ color: "var(--color-text-tertiary)" }}><span className="text-sm">読み込み中...</span></div>;
+    return <div className="flex items-center justify-center h-full" style={{ color: "var(--color-text-tertiary)" }}><span className="text-sm">{t.common.loading}</span></div>;
   }
 
   return (

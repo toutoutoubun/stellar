@@ -152,7 +152,7 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full" style={{ color: "var(--color-text-tertiary)" }}>
-        <span className="text-sm">読み込み中...</span>
+        <span className="text-sm">{t.common.loading}</span>
       </div>
     );
   }
@@ -194,7 +194,7 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
               </div>
             </div>
             <div>
-              <div className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>スモーキングガン</div>
+              <div className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>{t.qualitative.k_ye20bm}</div>
               <div className="text-lg font-bold" style={{ color: summary.hasSmokingGun ? "#22c55e" : "#94a3b8" }}>
                 {summary.hasSmokingGun ? t.qualitative.k_kwnl : t.qualitative.k_fovzv}
               </div>
@@ -256,7 +256,7 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
             <button type="button" onClick={() => void handleCreateHypothesis()} className="text-xs px-3 py-1" style={{ backgroundColor: "var(--color-accent-primary)", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}>追加</button>
             <button type="button" onClick={() => setShowHypForm(false)} className="text-xs px-3 py-1 inline-flex items-center gap-1" style={{ background: "transparent", color: "var(--color-text-secondary)", border: "1px solid var(--color-border-secondary)", borderRadius: "6px", cursor: "pointer" }}>
               <IconClose size={10} />
-              キャンセル
+              {t.common.cancel}
             </button>
           </div>
         </div>

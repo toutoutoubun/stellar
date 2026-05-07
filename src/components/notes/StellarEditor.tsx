@@ -252,7 +252,7 @@ class CitationWidget extends WidgetType {
     iconSvg.innerHTML = '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>';
     span.appendChild(iconSvg);
     span.appendChild(document.createTextNode(` ${this.citeKey}`));
-    span.title = `引用: ${this.citeKey}`;
+    span.title = t.notes.k_ulvl3p;
     return span;
   }
   ignoreEvent(): boolean {

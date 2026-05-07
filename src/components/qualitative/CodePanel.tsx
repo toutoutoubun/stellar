@@ -406,7 +406,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
             className="text-center py-4 text-xs"
             style={{ color: "var(--color-text-tertiary)" }}
           >
-            読み込み中...
+            {t.common.loading}
           </div>
         ) : codeTree.length === 0 ? (
           <div

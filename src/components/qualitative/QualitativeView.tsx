@@ -235,7 +235,7 @@ const QualitativeView: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full" style={{ color: "var(--color-text-tertiary)" }}>
-        <span className="text-sm">読み込み中...</span>
+        <span className="text-sm">{t.common.loading}</span>
       </div>
     );
   }
@@ -260,7 +260,7 @@ const QualitativeView: React.FC = () => {
         >
           {!sidebarCollapsed && (
             <span className="text-sm font-semibold" style={{ color: "var(--color-text-tertiary)" }}>
-              プロジェクト
+              {t.qualitative.k_8tzti6}
             </span>
           )}
           <button
@@ -290,7 +290,7 @@ const QualitativeView: React.FC = () => {
                 }}
               >
                 <IconPlus size={12} />
-                新規プロジェクト
+                {t.utils.str_9w7zjx}
               </button>
             </div>
 

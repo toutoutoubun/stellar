@@ -9,7 +9,8 @@ Zotero の文献管理 × Obsidian の双方向リンク を単一デスクト�
 - **ローカルファースト** — データはすべてローカル SQLite に保存
 - **完全無料** — サブスクリプション不要
 - **AI 機能なし** — 研究者自身の思考を支援するシンプルな設計
-- **美しい日本語 UI** — 4テーマ対応（ホワイト / アイボリー / ダークブルー / ブラック）
+- **美しい多言語 UI** — 4テーマ対応（ホワイト / アイボリー / ダークブルー / ブラック）
+- **多言語対応 (i18n)** — 日本語 / English / Français / Afrikaans の4言語
 
 ## 技術スタック
 
@@ -73,12 +74,19 @@ stellar/
     │   ├── useLibraryStore.ts  # 論文ライブラリ状態
     │   ├── useNoteStore.ts     # ノート状態
     │   ├── useUIStore.ts       # UI 状態 + ナビゲーション履歴
-    │   └── useThemeStore.ts    # テーマ状態 (localStorage 永続化)
+    │   ├── useThemeStore.ts    # テーマ状態 (localStorage 永続化)
+    │   └── useI18nStore.ts     # i18n 状態 (ロケール永続化 + 翻訳リソース)
     ├── utils/
     │   ├── ipc.ts              # 型安全 invoke<T> + API オブジェクト
     │   ├── citation.ts         # 引用フォーマット生成
     │   ├── highlight.ts        # ハイライトユーティリティ
     │   └── highlightColors.ts  # ハイライト色定義
+    ├── i18n/
+    │   ├── index.ts            # i18n エントリポイント (ロケールマッピング)
+    │   ├── ja.ts               # 日本語 (権威ファイル, 1,279行)
+    │   ├── en.ts               # English (1,276行)
+    │   ├── fr.ts               # Français (1,276行)
+    │   └── af.ts               # Afrikaans (1,276行)
     ├── types/index.ts          # 全型定義
     └── styles/
         ├── themes.css          # 4テーマの CSS Custom Properties
@@ -163,11 +171,21 @@ FTS5 トリガーにより papers / notes の INSERT / UPDATE / DELETE 時に ft
 - [x] デバウンス 200ms リアルタイム検索
 
 ### 設定
-- [x] SettingsView (4タブ: 外観 / データ / ショートカット / 引用)
+- [x] SettingsView (5タブ: 外観 / データ / ショートカット / 引用 / 言語)
 - [x] テーマプレビューカード
 - [x] フォントサイズ・行高さ・エディタフォント設定
 - [x] データパス変更 / エクスポート / バックアップ
 - [x] 引用スタイル選択 (APA 7 / MLA 9 / Chicago 17 / 一橋大学式)
+- [x] 言語切替 UI (4言語: 日本語 / English / Français / Afrikaans)
+
+### 多言語対応 (i18n)
+- [x] 4言語対応: 日本語 (ja) / English (en) / Français (fr) / Afrikaans (af)
+- [x] Zustand persist ストア (useI18nStore) による言語設定の永続化
+- [x] ブラウザ言語自動検出 (detectBrowserLocale)
+- [x] 全1,127翻訳キーが4言語で完全同期
+- [x] 翻訳リソース構造: `src/i18n/` (ja.ts / en.ts / fr.ts / af.ts / index.ts)
+- [x] TutorialOverlay のハードコード日本語を i18n キーに置換
+- [x] TypeScript ビルドエラー 0
 
 ### IPC / ユーティリティ
 - [x] ipc.ts: 型安全 invoke<T> ラッパー + api オブジェクト (papers / notes / highlights / links / search / data)

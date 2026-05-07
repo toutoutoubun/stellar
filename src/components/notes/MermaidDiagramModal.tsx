@@ -125,11 +125,11 @@ const MERMAID_TEMPLATES: MermaidTemplate[] = [
     先行研究
       論文A
       論文B
-    手法
+    {t.qualitative.k_hbe2}
       実験1
       実験2
-    結果
-      分析
+    {t.qualitative.k_lvt8}
+      {t.notes.k_eiq2}
       考察`,
   },
   {
@@ -379,7 +379,7 @@ export const MermaidDiagramModal: React.FC<MermaidDiagramModalProps> = ({
               backgroundColor: "transparent",
             }}
           >
-            キャンセル
+            {t.common.cancel}
           </button>
           <button
             type="button"

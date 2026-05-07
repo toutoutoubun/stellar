@@ -271,7 +271,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
           >
             <path d="M21 12a9 9 0 1 1-6.219-8.56" />
           </svg>
-          <span className="text-sm">論文を読み込んでいます…</span>
+          <span className="text-sm">{t.reader.str_2daabg}</span>
         </div>
       </div>
     );
@@ -299,7 +299,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
             <line x1="12" y1="8" x2="12" y2="12" />
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
-          <span className="text-sm">論文が見つかりません</span>
+          <span className="text-sm">{t.reader.str_lbfixv}</span>
         </div>
       </div>
     );

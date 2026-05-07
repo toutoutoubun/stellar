@@ -180,7 +180,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
         className="flex items-center justify-center h-full"
         style={{ color: "var(--color-text-tertiary)" }}
       >
-        <span className="text-sm">読み込み中...</span>
+        <span className="text-sm">{t.common.loading}</span>
       </div>
     );
   }
@@ -283,7 +283,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
                 }}
               >
                 <IconClose size={10} />
-                キャンセル
+                {t.common.cancel}
               </button>
             </div>
           </div>
@@ -434,7 +434,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
             <option value="independent">独立変数</option>
             <option value="dependent">従属変数</option>
             <option value="control">統制変数</option>
-            <option value="outcome">結果</option>
+            <option value="outcome">{t.qualitative.k_lvt8}</option>
           </select>
           <button
             type="button"
@@ -449,7 +449,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
             }}
           >
             <IconPlus size={10} />
-            変数
+            {t.quantitative.k_fp8n}
           </button>
         </div>
       </div>

@@ -217,7 +217,7 @@ export function analyzeNetwork(
   for (let cid = 0; cid < communityCount; cid++) {
     communities.push({
       id: cid,
-      label: `コミュニティ ${cid + 1}`,
+      label: t.stats.k_l758uj,
       nodeCount: communityNodeCounts.get(cid) ?? 0,
       color: COMMUNITY_COLORS[cid % COMMUNITY_COLORS.length]!,
     });
@@ -227,12 +227,12 @@ export function analyzeNetwork(
 
   // -- 10. Japanese interpretation ----------------------------------------
   const interpretation =
-    `ネットワークは${graph.order}ノード・${graph.size}エッジで構成されています。` +
-    `${communityCount}個のコミュニティが検出されました（モジュラリティ=${r(modularityValue)}）。` +
+    t.stats.k_r9zil9 +
+    t.stats.k_driqes +
     (topBetweennessNode
-      ? `最も中心的なノードは「${topBetweennessNode}」です。`
+      ? t.stats.k_7gp3x
       : "") +
-    `密度=${graphDensity}、平均次数=${avgDegree}、平均クラスタリング係数=${avgClust}。`;
+    t.stats.k_68prw6;
 
   return {
     nodes: resultNodes,

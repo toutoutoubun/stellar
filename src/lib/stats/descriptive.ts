@@ -192,7 +192,7 @@ export function computeDescriptive(
       skewness: NaN,
       kurtosis: NaN,
       missingCount,
-      interpretation: `${variableName}：有効なデータがありません（欠損${missingCount}件）。`,
+      interpretation: t.stats.k_6uf3zu,
     };
   }
 
@@ -216,7 +216,7 @@ export function computeDescriptive(
   // Build Japanese interpretation
   const parts: string[] = [];
   parts.push(
-    `n=${n}件（欠損${missingCount}件）。平均${_mean}（SD=${_sd}）、中央値${_median}。`,
+    t.stats.k_k923nm,
   );
   if (Number.isFinite(_skew) && Math.abs(_skew) > 1) {
     parts.push(
@@ -225,7 +225,7 @@ export function computeDescriptive(
   }
   if (Number.isFinite(_cv) && _cv > 30) {
     parts.push(
-      `変動係数が高く（${_cv}%）、データのばらつきが大きいです。`,
+      t.stats.k_ubc1z8,
     );
   }
 

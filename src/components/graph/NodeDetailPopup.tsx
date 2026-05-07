@@ -54,7 +54,7 @@ function formatDate(isoStr: string): string {
   if (!isoStr) return "—";
   const d = new Date(isoStr);
   if (Number.isNaN(d.getTime())) return "—";
-  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+  return t.graph.k_gzdkqo;
 }
 
 export const NodeDetailPopup: React.FC<NodeDetailPopupProps> = ({

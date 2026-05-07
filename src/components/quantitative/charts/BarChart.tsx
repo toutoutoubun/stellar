@@ -108,7 +108,7 @@ export const BarChart: React.FC<BarChartProps> = memo(function BarChart({
         .on("mouseenter", function (event, d) {
           d3.select(this).attr("opacity", 0.85);
           const pct = total > 0 ? ((d.value / total) * 100).toFixed(1) : "0";
-          tooltip.show(`<strong>${d.label}</strong><br/>値: ${fmt(d.value)}<br/>割合: ${pct}%`, event.offsetX, event.offsetY);
+          tooltip.show(t.quantCharts.k_43xnrq, event.offsetX, event.offsetY);
         })
         .on("mousemove", (event) => { tooltip.show(tooltip.el.innerHTML, event.offsetX, event.offsetY); })
         .on("mouseleave", function () {
@@ -175,7 +175,7 @@ export const BarChart: React.FC<BarChartProps> = memo(function BarChart({
         .on("mouseenter", function (event, d) {
           d3.select(this).attr("opacity", 0.85);
           const pct = total > 0 ? ((d.value / total) * 100).toFixed(1) : "0";
-          tooltip.show(`<strong>${d.label}</strong><br/>値: ${fmt(d.value)}<br/>割合: ${pct}%`, event.offsetX, event.offsetY);
+          tooltip.show(t.quantCharts.k_43xnrq, event.offsetX, event.offsetY);
         })
         .on("mousemove", (event) => { tooltip.show(tooltip.el.innerHTML, event.offsetX, event.offsetY); })
         .on("mouseleave", function () {

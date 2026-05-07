@@ -79,7 +79,7 @@ export const VariableManager: React.FC = () => {
             className="text-sm font-semibold"
             style={{ color: "var(--color-text-primary)" }}
           >
-            変数定義
+            {t.quantitative.k_bnl1qu}
           </h3>
           <p
             className="text-[11px] mt-0.5"
@@ -381,7 +381,7 @@ const VariableCard: React.FC<{
               borderRadius: "4px",
             }}
           >
-            欠損 {variable.missingCount}件
+            欠損 {variable.missingCount} {t.common.items}
           </span>
         )}
 
@@ -498,7 +498,7 @@ const LikertEditor: React.FC<{
             <input
               value={existing?.label ?? ""}
               onChange={(e) => onChange(point, e.target.value)}
-              placeholder={`${point}のラベル`}
+              placeholder={t.quantitative.k_pbbqp}
               className="flex-1 text-[11px] px-2 py-1 selectable"
               data-selectable="true"
               style={{
@@ -720,10 +720,10 @@ const VariableEditSheet: React.FC<{
           {/* アクション */}
           <div className="flex justify-end gap-2 pb-2">
             <Button variant="ghost" onClick={onClose}>
-              キャンセル
+              {t.common.cancel}
             </Button>
             <Button variant="primary" onClick={handleSave} loading={saving}>
-              保存
+              {t.items.save}
             </Button>
           </div>
         </div>

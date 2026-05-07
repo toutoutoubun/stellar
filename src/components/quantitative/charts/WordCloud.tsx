@@ -185,9 +185,9 @@ export const WordCloud: React.FC<WordCloudProps> = memo(function WordCloud({
       .text((d) => d.text)
       .on("mouseenter", function (event, d) {
         d3.select(this).attr("fill", d.color).attr("font-weight", "700");
-        const catLine = d.category ? `<br/>品詞: ${d.category}` : "";
+        const catLine = d.category ? t.quantCharts.k_8swmcg : "";
         tooltip.show(
-          `<strong>${d.text}</strong><br/>頻度: ${d.value}${catLine}`,
+          t.quantCharts.k_jnurd9,
           event.offsetX, event.offsetY,
         );
       })

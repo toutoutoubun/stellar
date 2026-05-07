@@ -271,8 +271,8 @@ export const DataPreviewTable: React.FC = () => {
             style={{ color: "var(--color-text-tertiary)" }}
           >
             {searchQuery
-              ? `${filteredRows.length} / ${dataRows.length} 行`
-              : `${totalRows} 行`}
+              ? t.quantitative.k_rgcwb4
+              : t.quantitative.k_dc6a3h}
           </span>
 
           {/* エクスポートボタン */}
@@ -410,7 +410,7 @@ export const DataPreviewTable: React.FC = () => {
                 >
                   <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                 </svg>
-                <span className="text-sm">読み込み中…</span>
+                <span className="text-sm">{t.layout.loading}</span>
               </div>
             </div>
           ) : sortedRows.length === 0 ? (

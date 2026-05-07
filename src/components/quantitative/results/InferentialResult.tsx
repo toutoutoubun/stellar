@@ -123,7 +123,7 @@ const ExportButton = memo<{ containerRef: React.RefObject<HTMLDivElement | null>
                 onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg-hover)"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
               >
-                {f.toUpperCase()} 保存
+                {f.toUpperCase()} {t.items.save}
               </button>
             ))}
           </div>
@@ -302,7 +302,7 @@ const TTestResultCard = memo<{
         <EffectSizeBar
           value={Math.abs(result.effectSize)}
           max={1.5}
-          label={`効果量（${result.effectSizeLabel}）`}
+          label={t.quantResults.k_jy82sw}
           color={
             Math.abs(result.effectSize) >= 0.8
               ? "var(--color-accent-danger)"
@@ -488,7 +488,7 @@ const ChiSquareResultCard = memo<{ result: ChiSquareResult }>(({ result }) => (
       <EffectSizeBar
         value={result.cramersV}
         max={1}
-        label={`効果量（${result.effectSizeLabel}）`}
+        label={t.quantResults.k_jy82sw}
         color={
           result.cramersV >= 0.5 ? "var(--color-accent-danger)"
             : result.cramersV >= 0.3 ? "var(--color-accent-warning)"
@@ -657,7 +657,7 @@ const RegressionResultCard = memo<{
       {/* R²プログレスバー */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-xs" style={{ color: "var(--color-text-secondary)" }}>説明率</span>
+          <span className="text-xs" style={{ color: "var(--color-text-secondary)" }}>{t.quantResults.str_kt7fp}</span>
           <span className="text-sm font-semibold" style={{ color: "var(--color-text-primary)" }}>
             {fmt(result.r2 * 100, 1)}%
           </span>

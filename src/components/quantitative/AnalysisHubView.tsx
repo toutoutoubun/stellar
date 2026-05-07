@@ -131,21 +131,21 @@ function analysisToMarkdown(a: Analysis): string {
   const lines: string[] = [];
   lines.push(`## ${a.name}`);
   lines.push(``);
-  lines.push(`- **分析タイプ:** ${analysisTypeLabel(a.analysisType)}`);
+  lines.push(t.quantitative.k_3qi8q5);
   lines.push(`- **実行日時:** ${new Date(a.createdAt).toLocaleString("ja-JP")}`);
   lines.push(``);
 
   const r = a.result as Record<string, unknown> | null;
   if (!r) {
-    lines.push(`*結果データなし*`);
+    lines.push(t.quantitative.k_qmu0l3);
     return lines.join("\n");
   }
 
   // 記述統計
   const descs = (r.descriptives as Array<Record<string, unknown>>) ?? [];
   if (descs.length > 0) {
-    lines.push(`### 記述統計`);
-    lines.push(`| 変数 | N | 平均 | 標準偏差 | 最小 | 最大 |`);
+    lines.push(t.quantitative.k_52uat0);
+    lines.push(t.quantitative.k_u5jagh);
     lines.push(`|---|---|---|---|---|---|`);
     for (const d of descs) {
       lines.push(`| ${d.variableName ?? d.variable} | ${d.n ?? d.count ?? "-"} | ${typeof d.mean === "number" ? d.mean.toFixed(3) : "-"} | ${typeof d.sd === "number" ? d.sd.toFixed(3) : "-"} | ${d.min ?? "-"} | ${d.max ?? "-"} |`);
@@ -156,7 +156,7 @@ function analysisToMarkdown(a: Analysis): string {
   // 推測統計 results 配列
   const results = (r.results as Array<Record<string, unknown>>) ?? [];
   if (results.length > 0) {
-    lines.push(`### 検定結果`);
+    lines.push(t.quantitative.k_9ga6ex);
     for (const res of results) {
       const entries = Object.entries(res).filter(([k]) => k !== "interpretation");
       for (const [k, v] of entries) {
@@ -173,8 +173,8 @@ function analysisToMarkdown(a: Analysis): string {
   // 相関
   const correlations = (r.correlations as Array<Record<string, unknown>>) ?? [];
   if (correlations.length > 0) {
-    lines.push(`### 相関`);
-    lines.push(`| 変数1 | 変数2 | r | p |`);
+    lines.push(t.quantitative.k_h51mw7);
+    lines.push(t.quantitative.k_5aijhf);
     lines.push(`|---|---|---|---|`);
     for (const c of correlations) {
       lines.push(`| ${c.var1Name} | ${c.var2Name} | ${typeof c.r === "number" ? c.r.toFixed(3) : c.r} | ${typeof c.pValue === "number" ? c.pValue.toFixed(4) : c.pValue} |`);
@@ -184,14 +184,14 @@ function analysisToMarkdown(a: Analysis): string {
 
   // 回帰
   if (r.r2 != null) {
-    lines.push(`### 回帰分析`);
+    lines.push(t.quantitative.k_bqxtd3);
     lines.push(`- **R²:** ${(r.r2 as number).toFixed(4)}`);
     if (r.fStatistic) lines.push(`- **F:** ${(r.fStatistic as number).toFixed(3)}`);
     if (r.fPValue != null) lines.push(`- **p(F):** ${(r.fPValue as number).toFixed(4)}`);
     const coefficients = (r.coefficients as Array<Record<string, unknown>>) ?? [];
     if (coefficients.length > 0) {
       lines.push(``);
-      lines.push(`| 変数 | B | SE | t | p |`);
+      lines.push(t.quantitative.k_oj4l51);
       lines.push(`|---|---|---|---|---|`);
       for (const c of coefficients) {
         lines.push(`| ${c.varName} | ${(c.b as number).toFixed(3)} | ${(c.stdError as number).toFixed(3)} | ${(c.t as number).toFixed(3)} | ${(c.pValue as number).toFixed(4)} |`);
@@ -202,7 +202,7 @@ function analysisToMarkdown(a: Analysis): string {
 
   // interpretation
   if (typeof r.interpretation === "string") {
-    lines.push(`### 解釈`);
+    lines.push(t.quantitative.k_h54tz6);
     lines.push(r.interpretation as string);
     lines.push(``);
   }
@@ -282,11 +282,11 @@ export const AnalysisHubView: React.FC = () => {
     try {
       const now = new Date().toLocaleString("ja-JP");
       const mdParts: string[] = [
-        `# 量的分析結果`,
+        t.quantitative.k_lhours,
         ``,
-        `- **データセット:** ${selectedDataset.name}`,
-        `- **分析数:** ${analyses.length}`,
-        `- **出力日時:** ${now}`,
+        t.quantitative.k_ofrjiz,
+        t.quantitative.k_cacerd,
+        t.quantitative.k_tfgi23,
         ``,
         `---`,
         ``,
@@ -302,11 +302,11 @@ export const AnalysisHubView: React.FC = () => {
       for (const tp of usedTypes) tags.push(`#${analysisTypeLabel(tp)}`);
 
       const note = await createNote({
-        title: `量的分析: ${selectedDataset.name}（${analyses.length}件）`,
+        title: t.quantitative.k_t8dwwa,
         content: md,
         tags,
       });
-      toast.success(`ノート「${note.title}」を作成しました`);
+      toast.success(t.qualitative.k_fpwqww);
     } catch (err) {
       console.error(t.qualitative.k_pszidi, err);
       toast.error(t.notes.createFailed);

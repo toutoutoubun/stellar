@@ -305,8 +305,8 @@ export const HighlightToolbar: React.FC<HighlightToolbarProps> = ({
                   : "transparent",
                 transition: "border-color 150ms ease-out, background-color 150ms ease-out",
               }}
-              title={`${colorConfig.label}（キー${colorConfig.shortcutKey}）`}
-              aria-label={`ハイライト色: ${colorConfig.label}`}
+              title={t.reader.k_nlzi09}
+              aria-label={t.reader.k_x4p26h}
               aria-pressed={isSelected}
             >
               <div

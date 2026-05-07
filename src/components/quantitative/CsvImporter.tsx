@@ -82,7 +82,7 @@ function parseCsv(
   }
 
   const colCount = allRows[0]?.length ?? 0;
-  const headers = Array.from({ length: colCount }, (_, i) => `列${i + 1}`);
+  const headers = Array.from({ length: colCount }, (_, i) => t.quantitative.k_1xvw56);
   return { headers, rows: allRows };
 }
 
@@ -262,7 +262,7 @@ export const CsvImporter: React.FC = () => {
     try {
       await importCsv(selectedDataset.id, csvText, hasHeader, delimiter);
       toast.success(
-        `✓ ${parsed?.rows.length ?? 0}件のデータを読み込みました`,
+        t.quantitative.k_wrktw3,
       );
       setTab("preview");
     } catch {

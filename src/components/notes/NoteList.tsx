@@ -292,7 +292,7 @@ export const NoteList: React.FC = () => {
             className="text-xs ml-auto"
             style={{ color: "var(--color-text-tertiary)" }}
           >
-            {filteredNotes.length}件
+            {filteredNotes.length} {t.common.items}
           </span>
         )}
       </div>

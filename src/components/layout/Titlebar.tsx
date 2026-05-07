@@ -96,7 +96,7 @@ export const Titlebar: React.FC<TitlebarProps> = ({ onOpenTutorial }) => {
           <circle cx="11" cy="11" r="8" />
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
-        <span>検索...</span>
+        <span>{t.layout.str_kn3fs}</span>
         <kbd
           className="ml-auto text-xs px-1 py-0.5"
           style={{

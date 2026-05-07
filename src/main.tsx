@@ -15,7 +15,7 @@ document.documentElement.setAttribute("data-theme", "white");
 
 const rootEl = document.getElementById("root");
 if (!rootEl) {
-  throw new Error("ルート要素が見つかりません: #root");
+  throw new Error({t.common.k_xtkx2v});
 }
 
 ReactDOM.createRoot(rootEl).render(

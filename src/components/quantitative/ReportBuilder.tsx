@@ -144,13 +144,13 @@ function formatStat(key: string, value: number | string, style: CitationStyle): 
   if (!Number.isFinite(v)) return `${key} = ${value}`;
   const fmtP = (p: number) => p < .001 ? "< .001" : p.toFixed(3).replace(/^0/, "");
   if (style === "wabun") {
-    if (key === "t") return `t値${v.toFixed(2)}`;
-    if (key === "df") return `自由度${Math.round(v)}`;
-    if (key === "p") return `p値${fmtP(v)}`;
-    if (key === "d" || key === "r" || key === "V") return `効果量${key}=${v.toFixed(2)}`;
-    if (key === "R²") return `決定係数R²=${v.toFixed(3)}`;
-    if (key === "F") return `F値${v.toFixed(2)}`;
-    if (key === "χ²") return `χ²値${v.toFixed(2)}`;
+    if (key === "t") return t.quantitative.k_psdes8;
+    if (key === "df") return t.quantitative.k_7d97mo;
+    if (key === "p") return t.quantitative.k_4r1gog;
+    if (key === "d" || key === "r" || key === "V") return t.quantitative.k_h8smxg;
+    if (key === "R²") return t.quantitative.k_wkddi2;
+    if (key === "F") return t.quantitative.k_9bfi1i;
+    if (key === "χ²") return t.quantitative.k_t658bz;
     return `${key}=${typeof value === "number" ? v.toFixed(3) : value}`;
   }
   // APA / MLA / Chicago (all very similar for stats)
@@ -212,7 +212,7 @@ function buildStatString(analysis: Analysis, style: CitationStyle): string {
   // Descriptive — just note count
   if (type === "descriptive") {
     const descs = (r.descriptives as Array<Record<string, unknown>>) ?? [];
-    return descs.length > 0 ? `${descs.length}変数の記述統計` : "";
+    return descs.length > 0 ? t.quantitative.k_j2vela : "";
   }
 
   return analysis.analysisType;
@@ -389,9 +389,9 @@ const SortableBlock: React.FC<SortableBlockProps> = memo(({ block, analyses, cit
                   width: "130px",
                 }}
               >
-                <option value="frequency">度数分布表</option>
-                <option value="contingency">分割表</option>
-                <option value="coefficient">係数表</option>
+                <option value="frequency">{t.quantitative.k_s253lt}</option>
+                <option value="contingency">{t.quantitative.k_cfa2k}</option>
+                <option value="coefficient">{t.quantitative.k_c6kai}</option>
               </select>
             </div>
             {tableAnalysis && (
@@ -525,10 +525,10 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({ onClose }) => {
     // Header
     lines.push(`# ${title || useI18nStore.getState().t.quantitative.k_5zkqdc}`);
     lines.push("");
-    if (author) lines.push(`**著者:** ${author}`);
-    lines.push(`**日付:** ${today}`);
-    if (selectedDataset) lines.push(`**データセット:** [[${selectedDataset.name}]]`);
-    lines.push(`**引用スタイル:** ${CITATION_LABELS[citationStyle]}`);
+    if (author) lines.push(t.quantitative.k_6osg6f);
+    lines.push(t.quantitative.k_4st9kc);
+    if (selectedDataset) lines.push(t.quantitative.k_iojhgy);
+    lines.push(t.quantitative.k_gn6b87);
     lines.push("");
     lines.push("---");
     lines.push("");
@@ -540,7 +540,7 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({ onClose }) => {
           if (a) {
             lines.push(`## ${a.name}`);
             lines.push("");
-            lines.push(`**統計量:** ${buildStatString(a, citationStyle)}`);
+            lines.push(t.quantitative.k_91pdf);
             lines.push("");
             const interp = getInterpretation(a);
             if (interp) {
@@ -553,7 +553,7 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({ onClose }) => {
         case "chart": {
           const a = analyses.find((x) => x.id === block.chartAnalysisId);
           if (a) {
-            lines.push(`### ${a.name} — チャート`);
+            lines.push(t.quantitative.k_y4b0mh);
             lines.push("");
             lines.push(`![${a.name}](chart-${a.id}.png)`);
             lines.push("");
@@ -638,7 +638,7 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({ onClose }) => {
         tags,
       });
 
-      toast.success(`ノート「${note.title}」を作成しました`);
+      toast.success(t.qualitative.k_fpwqww);
     } catch (err) {
       toast.error(useI18nStore.getState().t.notes.createFailed);
       console.error(err);
@@ -725,7 +725,7 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({ onClose }) => {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium mb-1 block" style={{ color: "var(--color-text-secondary)" }}>引用スタイル</label>
+                <label className="text-xs font-medium mb-1 block" style={{ color: "var(--color-text-secondary)" }}>{t.tabs.citation}</label>
                 <div className="flex gap-1">
                   {(Object.entries(CITATION_LABELS) as [CitationStyle, string][]).map(([key, label]) => (
                     <button

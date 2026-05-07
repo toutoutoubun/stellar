@@ -47,7 +47,7 @@ const LazyFallback: React.FC = () => (
       >
         <path d="M21 12a9 9 0 1 1-6.219-8.56" />
       </svg>
-      <span className="text-sm">読み込み中…</span>
+      <span className="text-sm">{t.layout.loading}</span>
     </div>
   </div>
 );
@@ -77,7 +77,7 @@ const EmptyState: React.FC = () => (
         className="text-lg font-semibold mb-2"
         style={{ color: "var(--color-text-secondary)" }}
       >
-        Stellar へようこそ
+        {t.welcome.title}
       </h2>
       <p className="text-sm" style={{ lineHeight: "var(--line-height-relaxed)" }}>
         サイドバーから文献やノートを選択するか、
@@ -101,7 +101,7 @@ const EmptyState: React.FC = () => (
         >
           Ctrl+K
         </kbd>
-        <span>全文検索</span>
+        <span>{t.layout.str_ap0rmt}</span>
       </div>
       <div className="flex items-center gap-2">
         <kbd
@@ -115,7 +115,7 @@ const EmptyState: React.FC = () => (
         >
           Ctrl+N
         </kbd>
-        <span>新しいノートを作成</span>
+        <span>{t.completion.shortcutNote}</span>
       </div>
     </div>
   </div>
@@ -199,7 +199,7 @@ export const MainPane: React.FC = () => {
                   <line x1="16" y1="13" x2="8" y2="13" />
                   <line x1="16" y1="17" x2="8" y2="17" />
                 </svg>
-                <p className="text-sm">ノートを選択するか、新しいノートを作成してください</p>
+                <p className="text-sm">{t.layout.str_18oqaa}</p>
               </div>
             )}
           </div>
@@ -240,7 +240,7 @@ export const MainPane: React.FC = () => {
             className="flex items-center justify-center h-full"
             style={{ color: "var(--color-text-tertiary)" }}
           >
-            <p className="text-sm">検索結果 — 実装予定</p>
+            <p className="text-sm">{t.layout.str_umlkcu}</p>
           </div>
         );
       case "settings":

@@ -148,7 +148,7 @@ export const GraphFilterPanel: React.FC<GraphFilterPanelProps> = ({
             className="text-xs mb-3"
             style={{ color: "var(--color-text-tertiary)" }}
           >
-            表示中: {filteredNodes} / {totalNodes} ノード
+            表示中: {filteredNodes} / {totalNodes} {t.quantResults.str_7dy1n}
           </div>
 
           {/* ── 表示タイプ ── */}
@@ -179,7 +179,7 @@ export const GraphFilterPanel: React.FC<GraphFilterPanelProps> = ({
                     display: "inline-block",
                   }}
                 />
-                ノート
+                {t.notes.title}
               </span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
@@ -204,7 +204,7 @@ export const GraphFilterPanel: React.FC<GraphFilterPanelProps> = ({
                       "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
                   }}
                 />
-                論文
+                {t.data.papers}
               </span>
             </label>
           </div>
