@@ -110,7 +110,7 @@ export class ErrorBoundary extends React.Component<
               color: "var(--color-text-primary, #1a1a2e)",
             }}
           >
-            予期しないエラーが発生しました
+            {(window as any).__STELLAR_T__?.layout?.k_error_title ?? "An unexpected error occurred"}
           </h1>
 
           {/* 説明文 */}
@@ -122,9 +122,9 @@ export class ErrorBoundary extends React.Component<
               marginBottom: "24px",
             }}
           >
-            アプリケーションで問題が発生しました。
-            <br />
-            アプリを再起動するか、このエラーを無視して続行できます。
+            {((window as any).__STELLAR_T__?.layout?.k_error_desc ?? "Something went wrong.\nYou can restart the app or dismiss this error.").split("\n").map((line: string, i: number) => (
+              <span key={i}>{line}{i === 0 && <br />}</span>
+            ))}
           </p>
 
           {/* エラー詳細（展開可能） */}
@@ -144,7 +144,7 @@ export class ErrorBoundary extends React.Component<
                   userSelect: "none",
                 }}
               >
-                エラーの詳細を表示
+                {(window as any).__STELLAR_T__?.layout?.k_error_details ?? "Show error details"}
               </summary>
               <div
                 style={{
@@ -223,7 +223,7 @@ export class ErrorBoundary extends React.Component<
                 <polyline points="23 4 23 10 17 10" />
                 <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
               </svg>
-              アプリを再起動
+              {(window as any).__STELLAR_T__?.layout?.k_restart_app ?? "Restart app"}
             </button>
 
             <button
@@ -249,7 +249,7 @@ export class ErrorBoundary extends React.Component<
                 (e.target as HTMLButtonElement).style.opacity = "1";
               }}
             >
-              無視して続行
+              {(window as any).__STELLAR_T__?.layout?.k_dismiss_error ?? "Dismiss"}
             </button>
           </div>
         </div>

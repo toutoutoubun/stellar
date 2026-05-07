@@ -260,6 +260,43 @@ const en: TranslationKeys = {
     k_6difsy: "Link URL",
     k_re2tdz: "[ ] Papers",
     k_glszmd: "[=] Notes",
+    k_mmd_flow_start: "Start",
+    k_mmd_flow_branch: "Condition",
+    k_mmd_flow_procA: "Process A",
+    k_mmd_flow_procB: "Process B",
+    k_mmd_flow_end: "End",
+    k_mmd_flow_yes: "Yes",
+    k_mmd_flow_no: "No",
+    k_mmd_seq_user: "User",
+    k_mmd_seq_system: "System",
+    k_mmd_seq_db: "Database",
+    k_mmd_seq_request: "Request",
+    k_mmd_seq_query: "Execute query",
+    k_mmd_seq_result: "Return result",
+    k_mmd_seq_response: "Response",
+    k_mmd_gantt_title: "Project Plan",
+    k_mmd_gantt_phase1: "Phase 1",
+    k_mmd_gantt_phase2: "Phase 2",
+    k_mmd_gantt_req: "Requirements",
+    k_mmd_gantt_design: "Design",
+    k_mmd_gantt_impl: "Implementation",
+    k_mmd_gantt_test: "Testing",
+    k_mmd_mind_root: "Research Topic",
+    k_mmd_mind_prior: "Prior Research",
+    k_mmd_mind_paperA: "Paper A",
+    k_mmd_mind_paperB: "Paper B",
+    k_mmd_mind_exp1: "Experiment 1",
+    k_mmd_mind_exp2: "Experiment 2",
+    k_mmd_mind_discuss: "Discussion",
+    k_mmd_state_idle: "Idle",
+    k_mmd_state_proc: "Processing",
+    k_mmd_state_done: "Completed",
+    k_mmd_state_err: "Error",
+    k_mmd_state_start: "Start",
+    k_mmd_state_success: "Success",
+    k_mmd_state_fail: "Failure",
+    k_mmd_state_retry: "Retry",
+    k_mmd_pie_title: "Research Time Breakdown",
 },
 
   // ============================================================
@@ -291,6 +328,9 @@ const en: TranslationKeys = {
       shortcutNote: "Create a new note",
       startButton: "Start Using Stellar",
     },
+    k_footnote_text: "Footnote text",
+    k_code_placeholder: "Enter code here",
+
   },
 
   // ============================================================
@@ -798,6 +838,28 @@ const en: TranslationKeys = {
     k_4vgs8a: "Backlinks",
     k_e5u2bq: "PDF attached",
     k_vn8gmj: "No PDF attached",
+    k_welcome_desc: "Select papers or notes from the sidebar,\nor add new papers to start your research.",
+    k_detail_info: "Details",
+    k_context_placeholder: "Context panel — coming soon",
+    k_context_paper: "When paper selected: Metadata, highlights, related notes",
+    k_context_note: "When note selected: Links, tags",
+
+    k_tag_filter: "Tags",
+    k_year_filter: "Year",
+    k_all_tags: "All tags",
+    k_no_tags: "No tags",
+    k_all_years: "All years",
+    k_confirm_delete: "Delete '${title}'?\nThis action cannot be undone.",
+    k_add_label: "Add",
+    k_attach_pdf: "Attach PDF",
+    k_show_more_highlights: "Show ${count} more...",
+
+    k_error_title: "An unexpected error occurred",
+    k_error_desc: "Something went wrong.\nYou can restart the app or dismiss this error to continue.",
+    k_error_details: "Show error details",
+    k_restart_app: "Restart app",
+    k_dismiss_error: "Dismiss",
+
   },
 
   // ============================================================
@@ -813,12 +875,22 @@ const en: TranslationKeys = {
     k_lmzev: "Selected",
     k_gzdkqo: "${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}",
     k_k2tn: "Untitled",
+    k_loading_engine: "Loading graph engine…",
+    k_loading_data: "Loading graph data…",
+    k_load_failed: "Failed to load graph",
+    k_reload: "Reload",
+    k_no_nodes: "No nodes to display in the graph",
+    k_create_links_hint: "Create links between notes and papers to see the graph here",
+    k_min_links: "Min. links",
+    k_links_count: "${count} links",
+
   },
 
   // ============================================================
   // Qualitative
   // ============================================================
   qualitative: {
+    k_quick_actions: "Quick Actions",
     k_fas9: "State",
     k_m00g: "Organization",
     k_e1ov: "Individual",
@@ -1076,12 +1148,32 @@ const en: TranslationKeys = {
     k_hgc2: "Approximate",
     k_e2jwl: "Year only",
     k_fbsmp: "Up to month",
+    k_select_placeholder: "Select",
+    k_select_project: "Select project",
+    k_no_codes: "No codes",
+    k_icr_desc: "Measures inter-coder agreement using Cohen's kappa coefficient.",
+    k_formula: "Formula:",
+    k_main_codes: "Main:",
+    k_imported_codes: "Imported:",
+    k_thematic: "Thematic analysis",
+    k_grounded: "Grounded theory",
+    k_content_analysis: "Content analysis",
+    k_historical: "Historical analysis",
+    k_comparative: "Comparative political analysis",
+    k_all_lanes: "All lanes",
+    k_independent_var: "Independent variable",
+    k_dependent_var: "Dependent variable",
+    k_control_var: "Control variable",
+
+    k_report_title_fmt: "Qualitative Analysis Report (${names})",
+
   },
 
   // ============================================================
   // Quantitative
   // ============================================================
   quantitative: {
+    k_exec_datetime: "Executed at",
     k_i0q6xb: "Descriptive Statistics",
     k_d192d7: "Inferential Statistics",
     k_bcmod8: "Regression Analysis",
@@ -1245,6 +1337,40 @@ const en: TranslationKeys = {
     k_hhhlfi: "e.g. Satisfaction",
     k_pgiqya: "Date Format",
     k_t6suhb: "e.g. YYYY-MM-DD",
+    k_rows_label: "${count} rows",
+    k_select_project_ds: "Select project...",
+    k_all_papers: "All papers",
+    k_method_label: "Method:",
+    k_vars_label: "Variables:",
+    k_data_rows_label: "Data rows:",
+    k_sig_level: "Significance: α =",
+    k_format_label: "Format:",
+    k_likert_settings: "Likert settings",
+    k_select_analysis: "Select analysis...",
+    k_select_chart_analysis: "Select chart analysis...",
+    k_chart_will_insert: "Chart: ${name} graph will be inserted",
+    k_table_will_insert: "${name} ${tableType} table will be inserted",
+    k_date_label: "Date:",
+    k_dataset_label: "Dataset:",
+    k_median: "Median:",
+    k_mean: "Mean:",
+    k_outliers: "Outliers: ${count}",
+    k_group1_mean: "Group 1 mean:",
+    k_group2_mean: "Group 2 mean:",
+    k_t_stat: "t-statistic:",
+    k_df: "Degrees of freedom:",
+    k_p_value: "p-value:",
+    k_degree: "Degree:",
+    k_betweenness: "Betweenness:",
+    k_closeness: "Closeness:",
+    k_community: "Community:",
+    k_issues_not_numeric: "${count} values cannot be converted to numbers",
+    k_type_change_warning: "Changing the variable type may invalidate analysis results that use this variable",
+
+    k_data_rows_count: "Data rows: ${count}",
+    k_chart_insert_desc: "Chart: ${name} graph will be inserted",
+    k_table_insert_desc: "${name} ${type} table will be inserted",
+
   },
 
   // ============================================================
@@ -1255,6 +1381,11 @@ const en: TranslationKeys = {
     k_c4sqz: "Papers (${results.papers.length} items)",
     k_nd06pg: "Notes (${results.notes.length} items)",
     k_8aeu7e: "Highlights (${results.highlights.length} items)",
+    k_tips_title: "Search tips:",
+    k_tip_shorter: "· Use shorter keywords",
+    k_tip_different: "· Try different expressions",
+    k_tip_all_tab: "· Switch to the 'All' tab",
+
   },
 
   // ============================================================
@@ -1460,6 +1591,13 @@ const en: TranslationKeys = {
     k_minutesAgo: "${n} min ago",
     k_hoursAgo: "${n} hr ago",
     k_justNow: "Just now",
+    k_extension_steps: [
+      "1. Search 'Stellar Clipper' on Chrome Web Store / Firefox Add-ons",
+      "2. Install the extension and pin it to the browser toolbar",
+      "3. Launch the Stellar desktop app (local server starts automatically)",
+      "4. Click the extension icon on a paper page to import",
+    ],
+
   },
 
   // ============================================================

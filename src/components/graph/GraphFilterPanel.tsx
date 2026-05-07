@@ -264,7 +264,7 @@ export const GraphFilterPanel: React.FC<GraphFilterPanelProps> = ({
               className="text-xs font-semibold mb-2 uppercase tracking-wider flex items-center justify-between"
               style={{ color: "var(--color-text-secondary)" }}
             >
-              <span>最小リンク数</span>
+              <span>{useI18nStore.getState().t.graph.k_min_links}</span>
               <span
                 className="font-mono"
                 style={{

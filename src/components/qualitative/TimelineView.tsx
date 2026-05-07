@@ -168,7 +168,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
                   borderRadius: "4px",
                 }}
               >
-                <option value="">全レーン</option>
+                <option value="">{t.qualitative.k_all_lanes}</option>
                 {lanes.map((l) => (
                   <option key={l} value={l}>{l}</option>
                 ))}

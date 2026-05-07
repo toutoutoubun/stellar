@@ -381,7 +381,7 @@ export const DatasetList: React.FC = () => {
                 className="flex items-center gap-2 text-[11px]"
                 style={{ color: "var(--color-text-tertiary)" }}
               >
-                <span>{ds.rowCount}行</span>
+                <span>{t.quantitative.k_rows_label.replace("${count}", String(ds.rowCount))}</span>
                 <span>·</span>
                 <span>{formatDate(ds.createdAt)}</span>
               </div>
@@ -599,7 +599,7 @@ export const DatasetList: React.FC = () => {
                   fontSize: "var(--font-size-sm)",
                 }}
               >
-                <option value="">プロジェクトを選択...</option>
+                <option value="">{t.quantitative.k_select_project_ds}</option>
                 {qualProjects.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -631,7 +631,7 @@ export const DatasetList: React.FC = () => {
                   fontSize: "var(--font-size-sm)",
                 }}
               >
-                <option value="">全ての論文</option>
+                <option value="">{t.quantitative.k_all_papers}</option>
                 {papers.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.title}

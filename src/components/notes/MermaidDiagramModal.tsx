@@ -31,10 +31,10 @@ const MERMAID_TEMPLATES: MermaidTemplate[] = [
       </svg>
     ),
     code: `graph TD
-    A[開始] --> B{条件分岐}
-    B -->|はい| C[処理A]
-    B -->|いいえ| D[処理B]
-    C --> E[終了]
+    A[${useI18nStore.getState().t.notes.k_mmd_flow_start}] --> B{${useI18nStore.getState().t.notes.k_mmd_flow_branch}}
+    B -->|${useI18nStore.getState().t.notes.k_mmd_flow_yes}| C[${useI18nStore.getState().t.notes.k_mmd_flow_procA}]
+    B -->|${useI18nStore.getState().t.notes.k_mmd_flow_no}| D[${useI18nStore.getState().t.notes.k_mmd_flow_procB}]
+    C --> E[${useI18nStore.getState().t.notes.k_mmd_flow_end}]
     D --> E`,
   },
   {
@@ -51,13 +51,13 @@ const MERMAID_TEMPLATES: MermaidTemplate[] = [
       </svg>
     ),
     code: `sequenceDiagram
-    participant A as ユーザー
-    participant B as システム
-    participant C as データベース
-    A->>B: リクエスト
-    B->>C: クエリ実行
-    C-->>B: 結果返却
-    B-->>A: レスポンス`,
+    participant A as ${useI18nStore.getState().t.notes.k_mmd_seq_user}
+    participant B as ${useI18nStore.getState().t.notes.k_mmd_seq_system}
+    participant C as ${useI18nStore.getState().t.notes.k_mmd_seq_db}
+    A->>B: ${useI18nStore.getState().t.notes.k_mmd_seq_request}
+    B->>C: ${useI18nStore.getState().t.notes.k_mmd_seq_query}
+    C-->>B: ${useI18nStore.getState().t.notes.k_mmd_seq_result}
+    B-->>A: ${useI18nStore.getState().t.notes.k_mmd_seq_response}`,
   },
   {
     id: "class",
@@ -99,14 +99,14 @@ const MERMAID_TEMPLATES: MermaidTemplate[] = [
       </svg>
     ),
     code: `gantt
-    title プロジェクト計画
+    title ${useI18nStore.getState().t.notes.k_mmd_gantt_title}
     dateFormat  YYYY-MM-DD
-    section フェーズ1
-    要件定義      :a1, 2024-01-01, 14d
-    設計          :a2, after a1, 10d
-    section フェーズ2
-    実装          :b1, after a2, 21d
-    テスト        :b2, after b1, 7d`,
+    section ${useI18nStore.getState().t.notes.k_mmd_gantt_phase1}
+    ${useI18nStore.getState().t.notes.k_mmd_gantt_req}      :a1, 2024-01-01, 14d
+    ${useI18nStore.getState().t.notes.k_mmd_gantt_design}          :a2, after a1, 10d
+    section ${useI18nStore.getState().t.notes.k_mmd_gantt_phase2}
+    ${useI18nStore.getState().t.notes.k_mmd_gantt_impl}          :b1, after a2, 21d
+    ${useI18nStore.getState().t.notes.k_mmd_gantt_test}        :b2, after b1, 7d`,
   },
   {
     id: "mindmap",
@@ -121,16 +121,16 @@ const MERMAID_TEMPLATES: MermaidTemplate[] = [
       </svg>
     ),
     code: `mindmap
-  root((研究テーマ))
-    先行研究
-      論文A
-      論文B
+  root((${useI18nStore.getState().t.notes.k_mmd_mind_root}))
+    ${useI18nStore.getState().t.notes.k_mmd_mind_prior}
+      ${useI18nStore.getState().t.notes.k_mmd_mind_paperA}
+      ${useI18nStore.getState().t.notes.k_mmd_mind_paperB}
     {t.qualitative.k_hbe2}
-      実験1
-      実験2
+      ${useI18nStore.getState().t.notes.k_mmd_mind_exp1}
+      ${useI18nStore.getState().t.notes.k_mmd_mind_exp2}
     {t.qualitative.k_lvt8}
       {t.notes.k_eiq2}
-      考察`,
+      ${useI18nStore.getState().t.notes.k_mmd_mind_discuss}`,
   },
   {
     id: "state",
@@ -144,12 +144,12 @@ const MERMAID_TEMPLATES: MermaidTemplate[] = [
       </svg>
     ),
     code: `stateDiagram-v2
-    [*] --> 待機中
-    待機中 --> 処理中 : 開始
-    処理中 --> 完了 : 成功
-    処理中 --> エラー : 失敗
-    エラー --> 待機中 : リトライ
-    完了 --> [*]`,
+    [*] --> ${useI18nStore.getState().t.notes.k_mmd_state_idle}
+    ${useI18nStore.getState().t.notes.k_mmd_state_idle} --> ${useI18nStore.getState().t.notes.k_mmd_state_proc} : ${useI18nStore.getState().t.notes.k_mmd_state_start}
+    ${useI18nStore.getState().t.notes.k_mmd_state_proc} --> ${useI18nStore.getState().t.notes.k_mmd_state_done} : ${useI18nStore.getState().t.notes.k_mmd_state_success}
+    ${useI18nStore.getState().t.notes.k_mmd_state_proc} --> ${useI18nStore.getState().t.notes.k_mmd_state_err} : ${useI18nStore.getState().t.notes.k_mmd_state_fail}
+    ${useI18nStore.getState().t.notes.k_mmd_state_err} --> ${useI18nStore.getState().t.notes.k_mmd_state_idle} : ${useI18nStore.getState().t.notes.k_mmd_state_retry}
+    ${useI18nStore.getState().t.notes.k_mmd_state_done} --> [*]`,
   },
   {
     id: "er",
@@ -193,7 +193,7 @@ const MERMAID_TEMPLATES: MermaidTemplate[] = [
         <path d="M22 12A10 10 0 0 0 12 2v10z" />
       </svg>
     ),
-    code: `pie title 研究時間の内訳
+    code: `pie title ${useI18nStore.getState().t.notes.k_mmd_pie_title}
     t.notes.k_dajeg3 : 30
     t.notes.k_gfh0 : 25
     t.notes.k_eiq2 : 20

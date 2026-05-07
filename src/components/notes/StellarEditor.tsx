@@ -731,7 +731,7 @@ export const StellarEditor: React.FC<StellarEditorProps> = ({
             const fnCount = (doc.match(/\[\^\d+\]/g) ?? []).length / 2 + 1;
             const id = String(fnCount);
             const ref = `[^${id}]`;
-            const def = `\n\n[^${id}]: 脚注テキスト`;
+            const def = `\n\n[^${id}]: ${useI18nStore.getState().t.notes.k_footnote_text}`;
             view.dispatch({
               changes: [
                 { from: cursor, insert: ref },
@@ -767,7 +767,7 @@ export const StellarEditor: React.FC<StellarEditorProps> = ({
         </button>
         {/* コードブロック */}
         <button type="button" style={tbBtnStyle} onMouseEnter={tbEnter} onMouseLeave={tbLeave}
-          onClick={() => insertBlock("```\nコードをここに入力\n```")} title={useI18nStore.getState().t.notes.k_ejhizv}>
+          onClick={() => insertBlock(`\`\`\`\n${useI18nStore.getState().t.notes.k_code_placeholder}\n\`\`\``)} title={useI18nStore.getState().t.notes.k_ejhizv}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="m9 10-2 2 2 2"/><path d="m15 10 2 2-2 2"/></svg>
         </button>
         {/* WikiLink */}

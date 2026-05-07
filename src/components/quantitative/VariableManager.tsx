@@ -408,7 +408,7 @@ const VariableCard: React.FC<{
 
         {/* 日付フォーマットヒント */}
         {variable.variableType === "date" && variable.dateFormat && (
-          <span>形式: {variable.dateFormat}</span>
+          <span>{t.quantitative.k_format_label} {variable.dateFormat}</span>
         )}
       </div>
 
@@ -442,7 +442,7 @@ const VariableCard: React.FC<{
               >
                 <polyline points="9 18 15 12 9 6" />
               </svg>
-              <span>リッカート設定</span>
+              <span>{t.quantitative.k_likert_settings}</span>
             </button>
 
             {likertExpanded && (
@@ -701,7 +701,7 @@ const VariableEditSheet: React.FC<{
                 style={{ color: "var(--color-accent-warning)" }}
               >
                 <IconWarning size={12} />
-                変数タイプを変更すると、この変数を使用した分析結果が無効になる場合があります
+                {t.quantitative.k_type_change_warning}
               </p>
             )}
           </div>

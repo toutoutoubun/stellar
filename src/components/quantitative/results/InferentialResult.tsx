@@ -373,11 +373,11 @@ const TTestResultCard = memo<{
           }}
         >
           <div className="grid grid-cols-2 gap-1">
-            <span>群1平均: {fmt(result.mean1, 4)}</span>
-            <span>群2平均: {fmt(result.mean2 ?? NaN, 4)}</span>
-            <span>t統計量: {fmt(result.t, 6)}</span>
-            <span>自由度: {fmt(result.df, 4)}</span>
-            <span>p値: {result.pValue.toExponential(4)}</span>
+            <span>{t.quantitative.k_group1_mean} {fmt(result.mean1, 4)}</span>
+            <span>{t.quantitative.k_group2_mean} {fmt(result.mean2 ?? NaN, 4)}</span>
+            <span>{t.quantitative.k_t_stat} {fmt(result.t, 6)}</span>
+            <span>{t.quantitative.k_df} {fmt(result.df, 4)}</span>
+            <span>{t.quantitative.k_p_value} {result.pValue.toExponential(4)}</span>
             <span>Cohen's d: {fmt(result.effectSize, 6)}</span>
           </div>
         </div>

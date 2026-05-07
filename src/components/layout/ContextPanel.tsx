@@ -38,7 +38,7 @@ export const ContextPanel: React.FC = () => {
           className="text-sm font-semibold"
           style={{ color: "var(--color-text-primary)" }}
         >
-          詳細情報
+          {t.layout.k_detail_info}
         </h3>
         <button
           onClick={toggleContextPanel}
@@ -78,7 +78,7 @@ export const ContextPanel: React.FC = () => {
           className="text-sm"
           style={{ color: "var(--color-text-tertiary)" }}
         >
-          コンテキストパネル — 実装予定
+          {t.layout.k_context_placeholder}
         </p>
         <p
           className="text-xs mt-2"
@@ -87,9 +87,9 @@ export const ContextPanel: React.FC = () => {
             lineHeight: "var(--line-height-relaxed)",
           }}
         >
-          論文選択時: メタデータ・ハイライト・関連ノート
+          {t.layout.k_context_paper}
           <br />
-          ノート選択時: リンク先一覧・タグ
+          {t.layout.k_context_note}
         </p>
       </div>
     </aside>

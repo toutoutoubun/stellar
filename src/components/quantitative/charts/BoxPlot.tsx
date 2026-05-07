@@ -279,7 +279,7 @@ export const BoxPlot: React.FC<BoxPlotProps> = memo(function BoxPlot({
           .attr("fill", "transparent").attr("cursor", "pointer")
           .on("mouseenter", (event) => {
             tooltip.show(
-              `<strong>${label}</strong><br/>中央値: ${fmt(stats.median)}<br/>Q1: ${fmt(stats.q1)} / Q3: ${fmt(stats.q3)}<br/>平均: ${fmt(stats.mean)}${stats.outliers.length > 0 ? `<br/>外れ値: ${stats.outliers.length}件` : ""}`,
+              `<strong>${label}</strong><br/>${t.quantitative.k_median} ${fmt(stats.median)}<br/>Q1: ${fmt(stats.q1)} / Q3: ${fmt(stats.q3)}<br/>${t.quantitative.k_mean} ${fmt(stats.mean)}${stats.outliers.length > 0 ? `<br/>${t.quantitative.k_outliers.replace("\${count}", String(stats.outliers.length))}` : ""}`,
               event.offsetX, event.offsetY,
             );
           })

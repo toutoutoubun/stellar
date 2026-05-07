@@ -546,7 +546,7 @@ export const CsvImporter: React.FC = () => {
                                 color: "var(--color-accent-warning)",
                               }}
                             >
-                              <IconWarning size={12} /> {issue.issues}件の値が数値に変換できません
+                              <IconWarning size={12} /> {t.quantitative.k_issues_not_numeric.replace("${count}", String(issue.issues))}
                             </p>
                           )}
                         </th>

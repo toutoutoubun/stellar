@@ -1157,10 +1157,10 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
             分析サマリー
           </p>
           <div className="flex flex-col gap-1 text-xs" style={{ color: "var(--color-text-secondary)" }}>
-            <span>手法: {METHODS.find((m) => m.key === method)?.label}</span>
-            <span>変数: {selectedVarIds.length}個</span>
-            <span>データ行: {dataRows.length} {t.common.items}</span>
-            <span>有意水準: α = {alpha}</span>
+            <span>{t.quantitative.k_method_label} {METHODS.find((m) => m.key === method)?.label}</span>
+            <span>{t.quantitative.k_vars_label} {selectedVarIds.length}</span>
+            <span>{t.quantitative.k_data_rows_label} {dataRows.length} {t.common.items}</span>
+            <span>{t.quantitative.k_sig_level} {alpha}</span>
           </div>
         </div>
       </div>

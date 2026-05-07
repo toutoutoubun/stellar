@@ -260,6 +260,43 @@ const af: TranslationKeys = {
     k_6difsy: "Skakel-URL",
     k_re2tdz: "[ ] Artikels",
     k_glszmd: "[=] Notas",
+    k_mmd_flow_start: "Begin",
+    k_mmd_flow_branch: "Voorwaarde",
+    k_mmd_flow_procA: "Proses A",
+    k_mmd_flow_procB: "Proses B",
+    k_mmd_flow_end: "Einde",
+    k_mmd_flow_yes: "Ja",
+    k_mmd_flow_no: "Nee",
+    k_mmd_seq_user: "Gebruiker",
+    k_mmd_seq_system: "Stelsel",
+    k_mmd_seq_db: "Databasis",
+    k_mmd_seq_request: "Versoek",
+    k_mmd_seq_query: "Voer navraag uit",
+    k_mmd_seq_result: "Gee resultaat terug",
+    k_mmd_seq_response: "Respons",
+    k_mmd_gantt_title: "Projekplan",
+    k_mmd_gantt_phase1: "Fase 1",
+    k_mmd_gantt_phase2: "Fase 2",
+    k_mmd_gantt_req: "Vereistes",
+    k_mmd_gantt_design: "Ontwerp",
+    k_mmd_gantt_impl: "Implementering",
+    k_mmd_gantt_test: "Toetsing",
+    k_mmd_mind_root: "Navorsingsonderwerp",
+    k_mmd_mind_prior: "Vorige navorsing",
+    k_mmd_mind_paperA: "Artikel A",
+    k_mmd_mind_paperB: "Artikel B",
+    k_mmd_mind_exp1: "Eksperiment 1",
+    k_mmd_mind_exp2: "Eksperiment 2",
+    k_mmd_mind_discuss: "Bespreking",
+    k_mmd_state_idle: "Wagtend",
+    k_mmd_state_proc: "Verwerking",
+    k_mmd_state_done: "Voltooi",
+    k_mmd_state_err: "Fout",
+    k_mmd_state_start: "Begin",
+    k_mmd_state_success: "Sukses",
+    k_mmd_state_fail: "Mislukking",
+    k_mmd_state_retry: "Herprobeer",
+    k_mmd_pie_title: "Verdeling van navorsingstyd",
 },
 
   // ============================================================
@@ -291,6 +328,9 @@ const af: TranslationKeys = {
       shortcutNote: "Skep 'n nuwe nota",
       startButton: "Begin Stellar gebruik",
     },
+    k_footnote_text: "Voetnoot teks",
+    k_code_placeholder: "Voer kode hier in",
+
   },
 
   // ============================================================
@@ -798,6 +838,28 @@ const af: TranslationKeys = {
     k_4vgs8a: "Terugskakels",
     k_e5u2bq: "PDF aangeheg",
     k_vn8gmj: "Geen PDF aangeheg nie",
+    k_welcome_desc: "Kies artikels of notas uit die sybalk,\nof voeg nuwe artikels by om jou navorsing te begin.",
+    k_detail_info: "Besonderhede",
+    k_context_placeholder: "Kontekspaneel — binnekort beskikbaar",
+    k_context_paper: "Wanneer artikel gekies: Metadata, hoogtepunte, verwante notas",
+    k_context_note: "Wanneer nota gekies: Skakels, etikette",
+
+    k_tag_filter: "Etikette",
+    k_year_filter: "Jaar",
+    k_all_tags: "Alle etikette",
+    k_no_tags: "Geen etikette",
+    k_all_years: "Alle jare",
+    k_confirm_delete: "Verwyder '${title}'?\nHierdie aksie kan nie ongedaan gemaak word nie.",
+    k_add_label: "Voeg by",
+    k_attach_pdf: "Heg PDF aan",
+    k_show_more_highlights: "Wys ${count} meer...",
+
+    k_error_title: "'n Onverwagte fout het voorgekom",
+    k_error_desc: "Iets het verkeerd gegaan.\nJy kan die toepassing herbegin of hierdie fout ignoreer.",
+    k_error_details: "Wys foutbesonderhede",
+    k_restart_app: "Herbegin toepassing",
+    k_dismiss_error: "Ignoreer",
+
   },
 
   // ============================================================
@@ -813,12 +875,22 @@ const af: TranslationKeys = {
     k_lmzev: "Geselekteer",
     k_gzdkqo: "${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}",
     k_k2tn: "Naamloos",
+    k_loading_engine: "Laai grafiekenjin…",
+    k_loading_data: "Laai grafiekdata…",
+    k_load_failed: "Kon grafiek nie laai nie",
+    k_reload: "Herlaai",
+    k_no_nodes: "Geen nodusse om in die grafiek te wys nie",
+    k_create_links_hint: "Skep skakels tussen notas en artikels om die grafiek hier te sien",
+    k_min_links: "Min. skakels",
+    k_links_count: "${count} skakels",
+
   },
 
   // ============================================================
   // Qualitative
   // ============================================================
   qualitative: {
+    k_quick_actions: "Vinnige aksies",
     k_fas9: "Staat",
     k_m00g: "Organisasie",
     k_e1ov: "Individu",
@@ -1076,12 +1148,32 @@ const af: TranslationKeys = {
     k_hgc2: "Benaderd",
     k_e2jwl: "Slegs jaar",
     k_fbsmp: "Tot maand",
+    k_select_placeholder: "Kies",
+    k_select_project: "Kies projek",
+    k_no_codes: "Geen kodes",
+    k_icr_desc: "Meet interkodeerder-ooreenstemming met Cohen se kappa-koëffisiënt.",
+    k_formula: "Formule:",
+    k_main_codes: "Hoof:",
+    k_imported_codes: "Ingevoer:",
+    k_thematic: "Tematiese analise",
+    k_grounded: "Gegronde teorie",
+    k_content_analysis: "Inhoudsanalise",
+    k_historical: "Historiese analise",
+    k_comparative: "Vergelykende politieke analise",
+    k_all_lanes: "Alle bane",
+    k_independent_var: "Onafhanklike veranderlike",
+    k_dependent_var: "Afhanklike veranderlike",
+    k_control_var: "Beheerveranderlike",
+
+    k_report_title_fmt: "Kwalitatiewe Analise Verslag (${names})",
+
   },
 
   // ============================================================
   // Quantitative
   // ============================================================
   quantitative: {
+    k_exec_datetime: "Uitgevoer op",
     k_i0q6xb: "Beskrywende statistieke",
     k_d192d7: "Inferensiële statistieke",
     k_bcmod8: "Regressie-analise",
@@ -1245,6 +1337,40 @@ const af: TranslationKeys = {
     k_hhhlfi: "bv. Tevredenheid",
     k_pgiqya: "Datumformaat",
     k_t6suhb: "bv. JJJJ-MM-DD",
+    k_rows_label: "${count} rye",
+    k_select_project_ds: "Kies projek...",
+    k_all_papers: "Alle artikels",
+    k_method_label: "Metode:",
+    k_vars_label: "Veranderlikes:",
+    k_data_rows_label: "Datarye:",
+    k_sig_level: "Betekenisvolheid: α =",
+    k_format_label: "Formaat:",
+    k_likert_settings: "Likert-instellings",
+    k_select_analysis: "Kies analise...",
+    k_select_chart_analysis: "Kies grafiekanalise...",
+    k_chart_will_insert: "Grafiek: ${name} grafiek sal ingevoeg word",
+    k_table_will_insert: "${name} ${tableType} tabel sal ingevoeg word",
+    k_date_label: "Datum:",
+    k_dataset_label: "Datastel:",
+    k_median: "Mediaan:",
+    k_mean: "Gemiddeld:",
+    k_outliers: "Uitskieters: ${count}",
+    k_group1_mean: "Groep 1 gemiddeld:",
+    k_group2_mean: "Groep 2 gemiddeld:",
+    k_t_stat: "t-statistiek:",
+    k_df: "Grade van vryheid:",
+    k_p_value: "p-waarde:",
+    k_degree: "Graad:",
+    k_betweenness: "Tussenliggendheid:",
+    k_closeness: "Nabyheid:",
+    k_community: "Gemeenskap:",
+    k_issues_not_numeric: "${count} waardes kan nie na getalle omgeskakel word nie",
+    k_type_change_warning: "Die verandering van die veranderlike tipe kan analise-resultate wat hierdie veranderlike gebruik ongeldig maak",
+
+    k_data_rows_count: "Datarye: ${count}",
+    k_chart_insert_desc: "Grafiek: ${name} grafiek sal ingevoeg word",
+    k_table_insert_desc: "${name} ${type} tabel sal ingevoeg word",
+
   },
 
   // ============================================================
@@ -1255,6 +1381,11 @@ const af: TranslationKeys = {
     k_c4sqz: "Papers (${results.papers.length} items)",
     k_nd06pg: "Notes (${results.notes.length} items)",
     k_8aeu7e: "Highlights (${results.highlights.length} items)",
+    k_tips_title: "Soek wenke:",
+    k_tip_shorter: "· Gebruik korter sleutelwoorde",
+    k_tip_different: "· Probeer verskillende uitdrukkings",
+    k_tip_all_tab: "· Skakel na die 'Alles' oortjie",
+
   },
 
   // ============================================================
@@ -1460,6 +1591,13 @@ const af: TranslationKeys = {
     k_minutesAgo: "${n} min gelede",
     k_hoursAgo: "${n} uur gelede",
     k_justNow: "Sopas",
+    k_extension_steps: [
+      "1. Soek 'Stellar Clipper' op Chrome Web Store / Firefox Add-ons",
+      "2. Installeer die uitbreiding en speld dit aan die werkbalk vas",
+      "3. Begin die Stellar-toepassing (plaaslike bediener begin outomaties)",
+      "4. Klik op die uitbreidingsikoon op 'n artikelbladsy om in te voer",
+    ],
+
   },
 
   // ============================================================

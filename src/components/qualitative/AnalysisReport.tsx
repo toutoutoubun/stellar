@@ -59,7 +59,7 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
       setReport(result);
     } catch (err) {
       console.error(t.qualitative.k_8gkv65, err);
-      setReport(`エラー: ${typeof err === "string" ? err : t.qualitative.k_xbkqi6}`);
+      setReport(`${t.common.error ?? "Error"}: ${typeof err === "string" ? err : t.qualitative.k_xbkqi6}`);
     } finally {
       setLoading(false);
     }
@@ -80,7 +80,7 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
       const selectedNames = (Object.keys(sections) as (keyof ReportSections)[])
         .filter((k) => sections[k])
         .map((k) => SECTION_LABELS_MAP[k] ?? k);
-      const title = `質的分析レポート（${selectedNames.slice(0, 3).join(t.stats.k_9ob)}${selectedNames.length > 3 ? "…" : ""}）`;
+      const title = t.qualitative.k_report_title_fmt.replace("${names}", `${selectedNames.slice(0, 3).join(t.stats.k_9ob)}${selectedNames.length > 3 ? "…" : ""}`);
       const tags = [t.qualitative.k_it0yjj, t.qualitative.k_pbsye];
       await createNote({ title, content: report, tags });
       toast.success(t.qualitative.k_fpwqww);

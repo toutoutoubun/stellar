@@ -510,7 +510,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                   <line x1="12" y1="5" x2="12" y2="19" />
                   <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
-                <span>追加</span>
+                <span>{t.library.k_add_label}</span>
               </button>
             )}
           </div>
@@ -773,7 +773,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                     e.currentTarget.style.opacity = "1";
                   }}
                 >
-                  他 {highlights.length - 3} 件を表示...
+                  {t.library.k_show_more_highlights.replace("${count}", String(highlights.length - 3))}
                 </button>
               )}
             </div>

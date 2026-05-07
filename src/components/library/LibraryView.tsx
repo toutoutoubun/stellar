@@ -141,7 +141,7 @@ export const LibraryView: React.FC = () => {
     async (id: string) => {
       const paper = papers.find((p) => p.id === id);
       const title = paper?.title ?? t.library.k_6b6q7g;
-      const confirmed = await swalConfirm(t.library.k_cdyrih, `「${title}」を削除しますか？\nこの操作は取り消せません。`);
+      const confirmed = await swalConfirm(t.library.k_cdyrih, t.library.k_wf1by1.replace("${title}", title));
       if (!confirmed) return;
       try {
         await deletePaper(id);
@@ -311,7 +311,7 @@ export const LibraryView: React.FC = () => {
                   setShowPdfDropdown(false);
                 }}
               >
-                タグ {filterTag !== null ? `(${filterTag})` : "▼"}
+                {t.library.k_tag_filter} {filterTag !== null ? `(${filterTag})` : "▼"}
               </Button>
               {showTagDropdown && (
                 <div style={dropdownStyle}>
@@ -335,14 +335,14 @@ export const LibraryView: React.FC = () => {
                       e.currentTarget.style.backgroundColor = "transparent";
                     }}
                   >
-                    すべてのタグ
+                    {t.library.k_all_tags}
                   </button>
                   {allTags.length === 0 ? (
                     <div
                       className="px-3 py-2 text-xs"
                       style={{ color: "var(--color-text-disabled)" }}
                     >
-                      タグがありません
+                      {t.library.k_no_tags}
                     </div>
                   ) : (
                     allTags.map((tag) => (
@@ -385,7 +385,7 @@ export const LibraryView: React.FC = () => {
                   setShowPdfDropdown(false);
                 }}
               >
-                年 {filterYear !== null ? `(${filterYear})` : "▼"}
+                {t.library.k_year_filter} {filterYear !== null ? `(${filterYear})` : "▼"}
               </Button>
               {showYearDropdown && (
                 <div style={dropdownStyle}>

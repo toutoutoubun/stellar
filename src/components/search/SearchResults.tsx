@@ -287,10 +287,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
               &ldquo;{query}&rdquo; の検索結果はありません
             </p>
             <div className="text-xs text-center" style={{ maxWidth: "280px", lineHeight: "1.7" }}>
-              <p>検索のコツ:</p>
-              <p>・キーワードを短くする</p>
-              <p>・別の表現で試す</p>
-              <p>・タブを「すべて」にする</p>
+              <p>{useI18nStore.getState().t.search.k_tips_title}</p>
+              <p>{useI18nStore.getState().t.search.k_tip_shorter}</p>
+              <p>{useI18nStore.getState().t.search.k_tip_different}</p>
+              <p>{useI18nStore.getState().t.search.k_tip_all_tab}</p>
             </div>
           </div>
         ) : (

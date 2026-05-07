@@ -15,8 +15,7 @@ import { FocusMode } from "./FocusMode";
 import { toast } from "../ui/Toast";
 import { swalConfirm } from "../../lib/swal";
 import { countWords, estimateReadingTime } from "../../lib/exportMarkdown";
-import { exportMarkdownFile, exportPlainText, exportPdf, exportHtmlBlob, downloadBlob } from "../../lib/exportPdf";
-import { generateDocx } from "../../lib/exportDocx";
+// exportPdf.ts は marked (CDN external) に依存するため、全て動的 import で遅延ロード
 import { useT } from "../../stores/useI18nStore";
 import { StaticSiteExportModal } from "../export/StaticSiteExportModal";
 
@@ -176,32 +175,36 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
       const title = activeNote.title || t.notes.untitled;
 
       try {
+        // exportPdf.ts は marked (CDN external) を静的 import するため、
+        // 全エクスポート関数を動的 import で遅延ロードする
+        const ep = await import("../../lib/exportPdf");
         switch (format) {
           case "markdown":
-            exportMarkdownFile(editorContent, title);
+            ep.exportMarkdownFile(editorContent, title);
             toast.success(t.notes.k_s8vwhj);
             break;
 
           case "plaintext":
-            exportPlainText(editorContent, title);
+            ep.exportPlainText(editorContent, title);
             toast.success(t.notes.k_8attkc);
             break;
 
           case "html": {
-            const blob = exportHtmlBlob(editorContent, title);
-            downloadBlob(blob, `${title}.html`);
+            const blob = ep.exportHtmlBlob(editorContent, title);
+            ep.downloadBlob(blob, `${title}.html`);
             toast.success(t.notes.k_l6f0hh);
             break;
           }
 
           case "pdf":
-            exportPdf(editorContent, title);
+            ep.exportPdf(editorContent, title);
             toast.info(t.notes.k_cuig0f);
             break;
 
           case "docx": {
+            const { generateDocx } = await import("../../lib/exportDocx");
             const blob = await generateDocx(editorContent, title);
-            downloadBlob(blob, `${title}.docx`);
+            ep.downloadBlob(blob, `${title}.docx`);
             toast.success(t.notes.k_fni71c);
             break;
           }

@@ -258,6 +258,43 @@ const ja = {
     k_6difsy: "リンク先",
     k_re2tdz: "[ ] 論文",
     k_glszmd: "[=] ノート",
+    k_mmd_flow_start: "開始",
+    k_mmd_flow_branch: "条件分岐",
+    k_mmd_flow_procA: "処理A",
+    k_mmd_flow_procB: "処理B",
+    k_mmd_flow_end: "終了",
+    k_mmd_flow_yes: "はい",
+    k_mmd_flow_no: "いいえ",
+    k_mmd_seq_user: "ユーザー",
+    k_mmd_seq_system: "システム",
+    k_mmd_seq_db: "データベース",
+    k_mmd_seq_request: "リクエスト",
+    k_mmd_seq_query: "クエリ実行",
+    k_mmd_seq_result: "結果返却",
+    k_mmd_seq_response: "レスポンス",
+    k_mmd_gantt_title: "プロジェクト計画",
+    k_mmd_gantt_phase1: "フェーズ1",
+    k_mmd_gantt_phase2: "フェーズ2",
+    k_mmd_gantt_req: "要件定義",
+    k_mmd_gantt_design: "設計",
+    k_mmd_gantt_impl: "実装",
+    k_mmd_gantt_test: "テスト",
+    k_mmd_mind_root: "研究テーマ",
+    k_mmd_mind_prior: "先行研究",
+    k_mmd_mind_paperA: "論文A",
+    k_mmd_mind_paperB: "論文B",
+    k_mmd_mind_exp1: "実験1",
+    k_mmd_mind_exp2: "実験2",
+    k_mmd_mind_discuss: "考察",
+    k_mmd_state_idle: "待機中",
+    k_mmd_state_proc: "処理中",
+    k_mmd_state_done: "完了",
+    k_mmd_state_err: "エラー",
+    k_mmd_state_start: "開始",
+    k_mmd_state_success: "成功",
+    k_mmd_state_fail: "失敗",
+    k_mmd_state_retry: "リトライ",
+    k_mmd_pie_title: "研究時間の内訳",
 },
 
   // ============================================================
@@ -289,6 +326,9 @@ const ja = {
       shortcutNote: "新しいノートを作成",
       startButton: "Stellar を使い始める",
     },
+    k_footnote_text: "脚注テキスト",
+    k_code_placeholder: "コードをここに入力",
+
   },
 
   // ============================================================
@@ -796,6 +836,28 @@ const ja = {
     k_4vgs8a: "バックリンク",
     k_e5u2bq: "PDF添付済み",
     k_vn8gmj: "PDF未添付",
+    k_welcome_desc: "サイドバーから文献やノートを選択するか、\n新しい文献を追加して研究を始めましょう。",
+    k_detail_info: "詳細情報",
+    k_context_placeholder: "コンテキストパネル — 実装予定",
+    k_context_paper: "論文選択時: メタデータ・ハイライト・関連ノート",
+    k_context_note: "ノート選択時: リンク先一覧・タグ",
+
+    k_tag_filter: "タグ",
+    k_year_filter: "年",
+    k_all_tags: "すべてのタグ",
+    k_no_tags: "タグがありません",
+    k_all_years: "すべての年",
+    k_confirm_delete: "「${title}」を削除しますか？\nこの操作は取り消せません。",
+    k_add_label: "追加",
+    k_attach_pdf: "PDFを追加",
+    k_show_more_highlights: "他 ${count} 件を表示...",
+
+    k_error_title: "予期しないエラーが発生しました",
+    k_error_desc: "アプリケーションで問題が発生しました。\nアプリを再起動するか、このエラーを無視して続行できます。",
+    k_error_details: "エラーの詳細を表示",
+    k_restart_app: "アプリを再起動",
+    k_dismiss_error: "無視して続行",
+
   },
 
   // ============================================================
@@ -811,12 +873,22 @@ const ja = {
     k_lmzev: "選択中",
     k_gzdkqo: "${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日",
     k_k2tn: "無題",
+    k_loading_engine: "グラフエンジンを読み込み中…",
+    k_loading_data: "グラフデータを読み込み中…",
+    k_load_failed: "グラフの読み込みに失敗しました",
+    k_reload: "再読み込み",
+    k_no_nodes: "グラフに表示するノードがありません",
+    k_create_links_hint: "ノートと論文にリンクを作成すると、ここに関係図が表示されます",
+    k_min_links: "最小リンク数",
+    k_links_count: "${count} リンク",
+
   },
 
   // ============================================================
   // qualitative
   // ============================================================
   qualitative: {
+    k_quick_actions: "クイックアクション",
     k_fas9: "国家",
     k_m00g: "組織",
     k_e1ov: "個人",
@@ -1074,12 +1146,32 @@ const ja = {
     k_hgc2: "推定",
     k_e2jwl: "年のみ",
     k_fbsmp: "月まで",
+    k_select_placeholder: "選択",
+    k_select_project: "プロジェクトを選択",
+    k_no_codes: "コードなし",
+    k_icr_desc: "Cohen's kappa 係数を用いて、2人のコーダー間の一致度を測定します。",
+    k_formula: "計算式:",
+    k_main_codes: "メイン:",
+    k_imported_codes: "インポート:",
+    k_thematic: "テーマ分析",
+    k_grounded: "グラウンデッド・セオリー",
+    k_content_analysis: "内容分析",
+    k_historical: "歴史的分析",
+    k_comparative: "比較政治分析",
+    k_all_lanes: "全レーン",
+    k_independent_var: "独立変数",
+    k_dependent_var: "従属変数",
+    k_control_var: "統制変数",
+
+    k_report_title_fmt: "質的分析レポート（${names}）",
+
   },
 
   // ============================================================
   // quantitative
   // ============================================================
   quantitative: {
+    k_exec_datetime: "実行日時",
     k_i0q6xb: "記述統計",
     k_d192d7: "推測統計",
     k_bcmod8: "回帰分析",
@@ -1243,6 +1335,40 @@ const ja = {
     k_hhhlfi: "例: 満足度",
     k_pgiqya: "日付フォーマット",
     k_t6suhb: "例: YYYY-MM-DD",
+    k_rows_label: "${count}行",
+    k_select_project_ds: "プロジェクトを選択...",
+    k_all_papers: "全ての論文",
+    k_method_label: "手法:",
+    k_vars_label: "変数:",
+    k_data_rows_label: "データ行:",
+    k_sig_level: "有意水準: α =",
+    k_format_label: "形式:",
+    k_likert_settings: "リッカート設定",
+    k_select_analysis: "分析を選択...",
+    k_select_chart_analysis: "チャートの分析を選択...",
+    k_chart_will_insert: "チャート: ${name} のグラフが挿入されます",
+    k_table_will_insert: "${name} の${tableType}表が挿入されます",
+    k_date_label: "日付:",
+    k_dataset_label: "データセット:",
+    k_median: "中央値:",
+    k_mean: "平均:",
+    k_outliers: "外れ値: ${count}件",
+    k_group1_mean: "群1平均:",
+    k_group2_mean: "群2平均:",
+    k_t_stat: "t統計量:",
+    k_df: "自由度:",
+    k_p_value: "p値:",
+    k_degree: "次数:",
+    k_betweenness: "媒介中心性:",
+    k_closeness: "近接中心性:",
+    k_community: "コミュニティ:",
+    k_issues_not_numeric: "${count}件の値が数値に変換できません",
+    k_type_change_warning: "変数タイプを変更すると、この変数を使用した分析結果が無効になる場合があります",
+
+    k_data_rows_count: "データ行: ${count}",
+    k_chart_insert_desc: "チャート: ${name} のグラフが挿入されます",
+    k_table_insert_desc: "${name} の${type}表が挿入されます",
+
   },
 
   // ============================================================
@@ -1253,6 +1379,11 @@ const ja = {
     k_c4sqz: "論文 (${results.papers.length}件)",
     k_nd06pg: "ノート (${results.notes.length}件)",
     k_8aeu7e: "ハイライト (${results.highlights.length}件)",
+    k_tips_title: "検索のコツ:",
+    k_tip_shorter: "・キーワードを短くする",
+    k_tip_different: "・別の表現で試す",
+    k_tip_all_tab: "・タブを「すべて」にする",
+
   },
 
   // ============================================================
@@ -1458,6 +1589,13 @@ const ja = {
     k_minutesAgo: "${n}分前",
     k_hoursAgo: "${n}時間前",
     k_justNow: "たった今",
+    k_extension_steps: [
+      "1. Chrome Web Store / Firefox Add-ons で「Stellar Clipper」を検索",
+      "2. 拡張機能をインストールし、ブラウザのツールバーにピン留め",
+      "3. Stellar デスクトップアプリを起動（ローカルサーバーが自動起動）",
+      "4. 論文ページで拡張機能アイコンをクリックしてインポート",
+    ],
+
   },
 
   // ============================================================

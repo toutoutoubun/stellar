@@ -431,9 +431,9 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
               borderRadius: "4px",
             }}
           >
-            <option value="independent">独立変数</option>
-            <option value="dependent">従属変数</option>
-            <option value="control">統制変数</option>
+            <option value="independent">{t.qualitative.k_independent_var}</option>
+            <option value="dependent">{t.qualitative.k_dependent_var}</option>
+            <option value="control">{t.qualitative.k_control_var}</option>
             <option value="outcome">{t.qualitative.k_lvt8}</option>
           </select>
           <button

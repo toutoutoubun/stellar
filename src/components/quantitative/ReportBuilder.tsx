@@ -289,7 +289,7 @@ const SortableBlock: React.FC<SortableBlockProps> = memo(({ block, analyses, cit
                 borderRadius: "var(--radius-sm)",
               }}
             >
-              <option value="">分析を選択...</option>
+              <option value="">{useI18nStore.getState().t.quantitative.k_select_analysis}</option>
               {analyses.map((a) => (
                 <option key={a.id} value={a.id}>{a.name} ({a.analysisType})</option>
               ))}
@@ -322,7 +322,7 @@ const SortableBlock: React.FC<SortableBlockProps> = memo(({ block, analyses, cit
                 borderRadius: "var(--radius-sm)",
               }}
             >
-              <option value="">チャートの分析を選択...</option>
+              <option value="">{useI18nStore.getState().t.quantitative.k_select_chart_analysis}</option>
               {analyses.map((a) => (
                 <option key={a.id} value={a.id}>{a.name}</option>
               ))}
@@ -330,7 +330,7 @@ const SortableBlock: React.FC<SortableBlockProps> = memo(({ block, analyses, cit
             {chartAnalysis && (
               <div className="flex items-center gap-2 p-2 text-xs" style={{ backgroundColor: "var(--color-bg-primary)", borderRadius: "var(--radius-sm)", border: "1px dashed var(--color-border-primary)", color: "var(--color-text-tertiary)" }}>
                 <ChartIcon />
-                <span>チャート: {chartAnalysis.name} のグラフが挿入されます</span>
+                <span>{useI18nStore.getState().t.quantitative.k_chart_insert_desc.replace("${name}", chartAnalysis.name)}</span>
               </div>
             )}
           </div>
@@ -372,7 +372,7 @@ const SortableBlock: React.FC<SortableBlockProps> = memo(({ block, analyses, cit
                   borderRadius: "var(--radius-sm)",
                 }}
               >
-                <option value="">分析を選択...</option>
+                <option value="">{useI18nStore.getState().t.quantitative.k_select_analysis}</option>
                 {analyses.map((a) => (
                   <option key={a.id} value={a.id}>{a.name}</option>
                 ))}
@@ -397,7 +397,7 @@ const SortableBlock: React.FC<SortableBlockProps> = memo(({ block, analyses, cit
             {tableAnalysis && (
               <div className="flex items-center gap-2 p-2 text-xs" style={{ backgroundColor: "var(--color-bg-primary)", borderRadius: "var(--radius-sm)", border: "1px dashed var(--color-border-primary)", color: "var(--color-text-tertiary)" }}>
                 <TableIcon />
-                <span>{tableAnalysis.name} の{block.tableType === "frequency" ? useI18nStore.getState().t.quantitative.k_cd0slj : block.tableType === "contingency" ? useI18nStore.getState().t.quantitative.k_cfa2k : useI18nStore.getState().t.quantitative.k_e4fi}表が挿入されます</span>
+                <span>{useI18nStore.getState().t.quantitative.k_table_insert_desc.replace("${name}", tableAnalysis.name).replace("${type}", block.tableType === "frequency" ? useI18nStore.getState().t.quantitative.k_cd0slj : block.tableType === "contingency" ? useI18nStore.getState().t.quantitative.k_cfa2k : useI18nStore.getState().t.quantitative.k_e4fi)}</span>
               </div>
             )}
           </div>
@@ -750,8 +750,8 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({ onClose }) => {
 
             {/* Date (auto) */}
             <div className="flex items-center gap-2 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-              <span>日付: {today}</span>
-              {selectedDataset && <span>| データセット: {selectedDataset.name}</span>}
+              <span>{useI18nStore.getState().t.quantitative.k_date_label} {today}</span>
+              {selectedDataset && <span>| {useI18nStore.getState().t.quantitative.k_dataset_label} {selectedDataset.name}</span>}
             </div>
 
             {/* Blocks area */}

@@ -551,10 +551,12 @@ export const SettingsView: React.FC = () => {
               }}
             >
               {[
-                "1. Chrome Web Store / Firefox Add-ons で「Stellar Clipper」を検索",
-                "2. 拡張機能をインストールし、ブラウザのツールバーにピン留め",
-                "3. Stellar デスクトップアプリを起動（ローカルサーバーが自動起動）",
-                "4. 論文ページで拡張機能アイコンをクリックしてインポート",
+                ...(t.exportImport.k_extension_steps ?? [
+                  "1. Search Stellar Clipper on Chrome Web Store / Firefox Add-ons",
+                  "2. Install and pin the extension",
+                  "3. Launch Stellar desktop app",
+                  "4. Click the extension icon on a paper page to import",
+                ]),
               ].map((step, i) => (
                 <div key={i} className="flex items-start gap-2">
                   <span

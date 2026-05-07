@@ -83,9 +83,9 @@ const EmptyState: React.FC = () => (
         {useI18nStore.getState().t.onboarding.welcome.title}
       </h2>
       <p className="text-sm" style={{ lineHeight: "var(--line-height-relaxed)" }}>
-        サイドバーから文献やノートを選択するか、
-        <br />
-        新しい文献を追加して研究を始めましょう。
+        {useI18nStore.getState().t.layout.k_welcome_desc.split("\n").map((line, i) => (
+          <span key={i}>{line}{i === 0 && <br />}</span>
+        ))}
       </p>
     </div>
     <div

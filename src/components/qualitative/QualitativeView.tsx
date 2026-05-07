@@ -196,7 +196,7 @@ const QualitativeView: React.FC = () => {
         <InfoCard label={t.qualitative.k_hbe2} value={selectedProject?.methodType ?? "-"} />
         <InfoCard
           label={t.notes.sortCreated}
-          value={selectedProject ? new Date(selectedProject.createdAt).toLocaleDateString("ja-JP") : "-"}
+          value={selectedProject ? new Date(selectedProject.createdAt).toLocaleDateString() : "-"}
         />
       </div>
       <p className="mt-3 text-xs" style={{ color: "var(--color-text-secondary)", lineHeight: "1.6" }}>
@@ -205,7 +205,7 @@ const QualitativeView: React.FC = () => {
 
       <div className="mt-6">
         <h3 className="text-xs font-semibold mb-3" style={{ color: "var(--color-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-          クイックアクション
+          {t.qualitative.k_quick_actions}
         </h3>
         <div className="flex flex-wrap gap-2">
           {TABS.filter((t) => t.key !== "dashboard").map((t) => (
@@ -327,11 +327,11 @@ const QualitativeView: React.FC = () => {
                     borderRadius: "4px",
                   }}
                 >
-                  <option value="thematic">テーマ分析</option>
-                  <option value="grounded">グラウンデッド・セオリー</option>
-                  <option value="content">内容分析</option>
-                  <option value="historical">歴史的分析</option>
-                  <option value="comparative">比較政治分析</option>
+                  <option value="thematic">{t.qualitative.k_thematic}</option>
+                  <option value="grounded">{t.qualitative.k_grounded}</option>
+                  <option value="content">{t.qualitative.k_content_analysis}</option>
+                  <option value="historical">{t.qualitative.k_historical}</option>
+                  <option value="comparative">{t.qualitative.k_comparative}</option>
                 </select>
                 <div className="flex gap-1">
                   <button

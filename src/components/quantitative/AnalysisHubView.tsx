@@ -132,7 +132,7 @@ function analysisToMarkdown(a: Analysis): string {
   lines.push(`## ${a.name}`);
   lines.push(``);
   lines.push(useI18nStore.getState().t.quantitative.k_3qi8q5);
-  lines.push(`- **実行日時:** ${new Date(a.createdAt).toLocaleString("ja-JP")}`);
+  lines.push(`- **${useI18nStore.getState().t.quantitative.k_exec_datetime}:** ${new Date(a.createdAt).toLocaleString()}`);
   lines.push(``);
 
   const r = a.result as Record<string, unknown> | null;

@@ -362,14 +362,14 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
                 <div>
                   <label className="text-xs mb-1 block" style={{ color: "var(--color-text-tertiary)" }}>From</label>
                   <select value={relFrom} onChange={(e) => setRelFrom(e.target.value)} className="w-full text-xs px-2 py-1" style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "4px" }}>
-                    <option value="">選択</option>
+                    <option value="">{t.qualitative.k_select_placeholder}</option>
                     {actors.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="text-xs mb-1 block" style={{ color: "var(--color-text-tertiary)" }}>To</label>
                   <select value={relTo} onChange={(e) => setRelTo(e.target.value)} className="w-full text-xs px-2 py-1" style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "4px" }}>
-                    <option value="">選択</option>
+                    <option value="">{t.qualitative.k_select_placeholder}</option>
                     {actors.filter((a) => a.id !== relFrom).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                   </select>
                 </div>

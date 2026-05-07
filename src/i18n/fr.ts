@@ -260,6 +260,43 @@ const fr: TranslationKeys = {
     k_6difsy: "URL du lien",
     k_re2tdz: "[ ] Articles",
     k_glszmd: "[=] Notes",
+    k_mmd_flow_start: "D\u00e9but",
+    k_mmd_flow_branch: "Condition",
+    k_mmd_flow_procA: "Traitement A",
+    k_mmd_flow_procB: "Traitement B",
+    k_mmd_flow_end: "Fin",
+    k_mmd_flow_yes: "Oui",
+    k_mmd_flow_no: "Non",
+    k_mmd_seq_user: "Utilisateur",
+    k_mmd_seq_system: "Syst\u00e8me",
+    k_mmd_seq_db: "Base de donn\u00e9es",
+    k_mmd_seq_request: "Requ\u00eate",
+    k_mmd_seq_query: "Ex\u00e9cuter requ\u00eate",
+    k_mmd_seq_result: "Retourner r\u00e9sultat",
+    k_mmd_seq_response: "R\u00e9ponse",
+    k_mmd_gantt_title: "Plan de projet",
+    k_mmd_gantt_phase1: "Phase 1",
+    k_mmd_gantt_phase2: "Phase 2",
+    k_mmd_gantt_req: "Exigences",
+    k_mmd_gantt_design: "Conception",
+    k_mmd_gantt_impl: "Impl\u00e9mentation",
+    k_mmd_gantt_test: "Tests",
+    k_mmd_mind_root: "Th\u00e8me de recherche",
+    k_mmd_mind_prior: "Recherches ant\u00e9rieures",
+    k_mmd_mind_paperA: "Article A",
+    k_mmd_mind_paperB: "Article B",
+    k_mmd_mind_exp1: "Exp\u00e9rience 1",
+    k_mmd_mind_exp2: "Exp\u00e9rience 2",
+    k_mmd_mind_discuss: "Discussion",
+    k_mmd_state_idle: "En attente",
+    k_mmd_state_proc: "En cours",
+    k_mmd_state_done: "Termin\u00e9",
+    k_mmd_state_err: "Erreur",
+    k_mmd_state_start: "D\u00e9marrer",
+    k_mmd_state_success: "Succ\u00e8s",
+    k_mmd_state_fail: "\u00c9chec",
+    k_mmd_state_retry: "R\u00e9essayer",
+    k_mmd_pie_title: "R\u00e9partition du temps de recherche",
 },
 
   // ============================================================
@@ -291,6 +328,9 @@ const fr: TranslationKeys = {
       shortcutNote: "Créer une nouvelle note",
       startButton: "Commencer à utiliser Stellar",
     },
+    k_footnote_text: "Texte de note de bas de page",
+    k_code_placeholder: "Entrez le code ici",
+
   },
 
   // ============================================================
@@ -798,6 +838,28 @@ const fr: TranslationKeys = {
     k_4vgs8a: "Liens retour",
     k_e5u2bq: "PDF attaché",
     k_vn8gmj: "Aucun PDF attaché",
+    k_welcome_desc: "Sélectionnez des articles ou des notes dans la barre latérale,\nou ajoutez de nouveaux articles pour commencer vos recherches.",
+    k_detail_info: "Détails",
+    k_context_placeholder: "Panneau contextuel — à venir",
+    k_context_paper: "Sélection d'article : métadonnées, surlignages, notes liées",
+    k_context_note: "Sélection de note : liens, tags",
+
+    k_tag_filter: "Tags",
+    k_year_filter: "Année",
+    k_all_tags: "Tous les tags",
+    k_no_tags: "Aucun tag",
+    k_all_years: "Toutes les années",
+    k_confirm_delete: "Supprimer « ${title} » ?\nCette action est irréversible.",
+    k_add_label: "Ajouter",
+    k_attach_pdf: "Joindre PDF",
+    k_show_more_highlights: "Afficher ${count} de plus...",
+
+    k_error_title: "Une erreur inattendue s'est produite",
+    k_error_desc: "Quelque chose s'est mal passé.\nVous pouvez redémarrer l'application ou ignorer cette erreur.",
+    k_error_details: "Afficher les détails de l'erreur",
+    k_restart_app: "Redémarrer l'application",
+    k_dismiss_error: "Ignorer",
+
   },
 
   // ============================================================
@@ -813,12 +875,22 @@ const fr: TranslationKeys = {
     k_lmzev: "Sélectionné",
     k_gzdkqo: "${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}",
     k_k2tn: "Sans titre",
+    k_loading_engine: "Chargement du moteur de graphe…",
+    k_loading_data: "Chargement des données du graphe…",
+    k_load_failed: "Échec du chargement du graphe",
+    k_reload: "Recharger",
+    k_no_nodes: "Aucun nœud à afficher dans le graphe",
+    k_create_links_hint: "Créez des liens entre notes et articles pour afficher le graphe ici",
+    k_min_links: "Liens min.",
+    k_links_count: "${count} liens",
+
   },
 
   // ============================================================
   // Qualitatif
   // ============================================================
   qualitative: {
+    k_quick_actions: "Actions rapides",
     k_fas9: "État",
     k_m00g: "Organisation",
     k_e1ov: "Individu",
@@ -1076,12 +1148,32 @@ const fr: TranslationKeys = {
     k_hgc2: "Approximatif",
     k_e2jwl: "Année uniquement",
     k_fbsmp: "Jusqu'au mois",
+    k_select_placeholder: "Sélectionner",
+    k_select_project: "Sélectionner un projet",
+    k_no_codes: "Aucun code",
+    k_icr_desc: "Mesure l'accord inter-codeurs à l'aide du coefficient kappa de Cohen.",
+    k_formula: "Formule :",
+    k_main_codes: "Principal :",
+    k_imported_codes: "Importé :",
+    k_thematic: "Analyse thématique",
+    k_grounded: "Théorie ancrée",
+    k_content_analysis: "Analyse de contenu",
+    k_historical: "Analyse historique",
+    k_comparative: "Analyse politique comparée",
+    k_all_lanes: "Toutes les voies",
+    k_independent_var: "Variable indépendante",
+    k_dependent_var: "Variable dépendante",
+    k_control_var: "Variable de contrôle",
+
+    k_report_title_fmt: "Rapport d'analyse qualitative (${names})",
+
   },
 
   // ============================================================
   // Quantitatif
   // ============================================================
   quantitative: {
+    k_exec_datetime: "Ex\u00e9cut\u00e9 le",
     k_i0q6xb: "Statistiques descriptives",
     k_d192d7: "Statistiques inférentielles",
     k_bcmod8: "Analyse de régression",
@@ -1245,6 +1337,40 @@ const fr: TranslationKeys = {
     k_hhhlfi: "ex. Satisfaction",
     k_pgiqya: "Format de date",
     k_t6suhb: "ex. AAAA-MM-JJ",
+    k_rows_label: "${count} lignes",
+    k_select_project_ds: "Sélectionner un projet...",
+    k_all_papers: "Tous les articles",
+    k_method_label: "Méthode :",
+    k_vars_label: "Variables :",
+    k_data_rows_label: "Lignes de données :",
+    k_sig_level: "Significativité : α =",
+    k_format_label: "Format :",
+    k_likert_settings: "Paramètres Likert",
+    k_select_analysis: "Sélectionner une analyse...",
+    k_select_chart_analysis: "Sélectionner l'analyse du graphique...",
+    k_chart_will_insert: "Graphique : le graphique de ${name} sera inséré",
+    k_table_will_insert: "Le tableau ${tableType} de ${name} sera inséré",
+    k_date_label: "Date :",
+    k_dataset_label: "Jeu de données :",
+    k_median: "Médiane :",
+    k_mean: "Moyenne :",
+    k_outliers: "Valeurs aberrantes : ${count}",
+    k_group1_mean: "Moyenne groupe 1 :",
+    k_group2_mean: "Moyenne groupe 2 :",
+    k_t_stat: "Statistique t :",
+    k_df: "Degrés de liberté :",
+    k_p_value: "Valeur p :",
+    k_degree: "Degré :",
+    k_betweenness: "Intermédiarité :",
+    k_closeness: "Proximité :",
+    k_community: "Communauté :",
+    k_issues_not_numeric: "${count} valeurs ne peuvent pas être converties en nombres",
+    k_type_change_warning: "Changer le type de variable peut invalider les résultats d'analyse utilisant cette variable",
+
+    k_data_rows_count: "Lignes de données : ${count}",
+    k_chart_insert_desc: "Graphique : le graphique de ${name} sera inséré",
+    k_table_insert_desc: "Le tableau ${type} de ${name} sera inséré",
+
   },
 
   // ============================================================
@@ -1255,6 +1381,11 @@ const fr: TranslationKeys = {
     k_c4sqz: "Articles (${results.papers.length} éléments)",
     k_nd06pg: "Notes (${results.notes.length} éléments)",
     k_8aeu7e: "Surlignages (${results.highlights.length} éléments)",
+    k_tips_title: "Astuces de recherche :",
+    k_tip_shorter: "· Utilisez des mots-clés plus courts",
+    k_tip_different: "· Essayez d'autres expressions",
+    k_tip_all_tab: "· Passez à l'onglet « Tout »",
+
   },
 
   // ============================================================
@@ -1460,6 +1591,13 @@ const fr: TranslationKeys = {
     k_minutesAgo: "il y a ${n} min",
     k_hoursAgo: "il y a ${n} h",
     k_justNow: "A l'instant",
+    k_extension_steps: [
+      "1. Recherchez « Stellar Clipper » sur Chrome Web Store / Firefox Add-ons",
+      "2. Installez l'extension et épinglez-la à la barre d'outils",
+      "3. Lancez l'application Stellar (le serveur local démarre automatiquement)",
+      "4. Cliquez sur l'icône de l'extension sur une page d'article pour importer",
+    ],
+
   },
 
   // ============================================================

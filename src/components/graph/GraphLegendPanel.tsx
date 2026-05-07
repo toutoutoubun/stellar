@@ -120,7 +120,7 @@ export const GraphLegendPanel: React.FC<GraphLegendPanelProps> = ({
         >
           <span>{nodeCount} {useI18nStore.getState().t.quantResults.str_7dy1n}</span>
           <span>·</span>
-          <span>{linkCount} リンク</span>
+          <span>{useI18nStore.getState().t.graph.k_links_count.replace("${count}", String(linkCount))}</span>
         </div>
 
         {/* 全体表示ボタン */}

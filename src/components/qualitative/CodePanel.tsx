@@ -219,7 +219,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
             borderRadius: "4px",
           }}
         >
-          <option value="">プロジェクトを選択</option>
+          <option value="">{t.qualitative.k_select_project}</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -414,7 +414,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
             style={{ color: "var(--color-text-tertiary)" }}
           >
             <IconCodebook size={20} />
-            <span>コードなし</span>
+            <span>{t.qualitative.k_no_codes}</span>
           </div>
         ) : (
           codeTree.map((node) => (

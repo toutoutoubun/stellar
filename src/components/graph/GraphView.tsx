@@ -185,7 +185,7 @@ export const GraphView: React.FC = () => {
           >
             <path d="M21 12a9 9 0 1 1-6.219-8.56" />
           </svg>
-          <span className="text-sm">グラフデータを読み込み中…</span>
+          <span className="text-sm">{useI18nStore.getState().t.graph.k_loading_data}</span>
         </div>
       </div>
     );
@@ -214,7 +214,7 @@ export const GraphView: React.FC = () => {
             <line x1="12" y1="8" x2="12" y2="12" />
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
-          <span className="text-sm">グラフの読み込みに失敗しました</span>
+          <span className="text-sm">{useI18nStore.getState().t.graph.k_load_failed}</span>
           <button
             type="button"
             onClick={refetch}
@@ -226,7 +226,7 @@ export const GraphView: React.FC = () => {
               border: "1px solid var(--color-accent-primary)",
             }}
           >
-            再読み込み
+            {useI18nStore.getState().t.graph.k_reload}
           </button>
         </div>
       </div>
@@ -263,9 +263,9 @@ export const GraphView: React.FC = () => {
             <line x1="14.5" y1="14.5" x2="17.5" y2="17.5" />
           </svg>
           <div className="text-center">
-            <p className="text-sm mb-1">グラフに表示するノードがありません</p>
+            <p className="text-sm mb-1">{useI18nStore.getState().t.graph.k_no_nodes}</p>
             <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-              ノートと論文にリンクを作成すると、ここに関係図が表示されます
+              {useI18nStore.getState().t.graph.k_create_links_hint}
             </p>
           </div>
           {rawData && rawData.nodes.length > 0 && (

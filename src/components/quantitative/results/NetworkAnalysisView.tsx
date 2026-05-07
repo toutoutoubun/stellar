@@ -387,10 +387,10 @@ const GraphPanel: React.FC<{ network: NetworkAnalysisResult; analysisName: strin
           >
             <p className="text-xs font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>{tooltipData.node.label}</p>
             <div className="flex flex-col gap-0.5 text-xs" style={{ color: "var(--color-text-secondary)" }}>
-              <span>次数: {tooltipData.node.degree}</span>
-              <span>媒介中心性: {fmt(tooltipData.node.betweenness)}</span>
-              <span>近接中心性: {fmt(tooltipData.node.closeness)}</span>
-              <span>コミュニティ: {tooltipData.node.community + 1}</span>
+              <span>{t.quantitative.k_degree} {tooltipData.node.degree}</span>
+              <span>{t.quantitative.k_betweenness} {fmt(tooltipData.node.betweenness)}</span>
+              <span>{t.quantitative.k_closeness} {fmt(tooltipData.node.closeness)}</span>
+              <span>{t.quantitative.k_community} {tooltipData.node.community + 1}</span>
             </div>
           </div>
         )}

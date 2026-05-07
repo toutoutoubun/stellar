@@ -36,7 +36,7 @@ export const StaticSiteExportModal: React.FC<StaticSiteExportModalProps> = ({
   const [loadingNotes, setLoadingNotes] = useState(false);
 
   // ── ステップ2: サイト設定 ──
-  const [siteTitle, setSiteTitle] = useState(t.exportImport.k_defaultSiteTitle ?? "私の研究ノート");
+  const [siteTitle, setSiteTitle] = useState(t.exportImport.k_defaultSiteTitle);
   const [themeChoice, setThemeChoice] = useState<ThemeOption>("light");
   const [includeBacklinks, setIncludeBacklinks] = useState(true);
 
@@ -135,7 +135,7 @@ export const StaticSiteExportModal: React.FC<StaticSiteExportModalProps> = ({
       return;
     }
     if (!outputDir) {
-      toast.error(t.exportImport.k_selectOutputDir ?? "出力先を選択してください");
+      toast.error(t.exportImport.k_selectOutputDir);
       return;
     }
 
@@ -148,7 +148,7 @@ export const StaticSiteExportModal: React.FC<StaticSiteExportModalProps> = ({
         includeBacklinks,
         theme: themeChoice,
       });
-      toast.success(t.exportImport.k_siteGenerated ?? "サイトを生成しました");
+      toast.success(t.exportImport.k_siteGenerated);
       // フォルダを開く
       try {
         const { open: shellOpen } = await import("@tauri-apps/plugin-shell");
@@ -177,8 +177,8 @@ export const StaticSiteExportModal: React.FC<StaticSiteExportModalProps> = ({
   // ── ステップインジケータ ──
   const stepLabels = [
     t.exportImport.selectNotes,
-    t.exportImport.k_siteSettings ?? "サイト設定",
-    t.exportImport.k_outputAndGenerate ?? "出力＆生成",
+    t.exportImport.k_siteSettings,
+    t.exportImport.k_outputAndGenerate,
   ];
 
   return (
@@ -252,7 +252,7 @@ export const StaticSiteExportModal: React.FC<StaticSiteExportModalProps> = ({
               >
                 {generating
                   ? t.exportImport.exporting
-                  : (t.exportImport.k_generate ?? "生成する")}
+                  : (t.exportImport.k_generate)}
               </button>
             )}
           </div>
@@ -333,8 +333,8 @@ export const StaticSiteExportModal: React.FC<StaticSiteExportModalProps> = ({
               }}
             >
               {selectedIds.size === filteredNotes.length
-                ? (t.exportImport.k_deselectAll ?? "全解除")
-                : (t.exportImport.k_selectAll ?? "全選択")}
+                ? (t.exportImport.k_deselectAll)
+                : (t.exportImport.k_selectAll)}
             </button>
             <span
               className="text-xs font-medium px-2 py-0.5 shrink-0"
@@ -532,7 +532,7 @@ export const StaticSiteExportModal: React.FC<StaticSiteExportModalProps> = ({
                 className="text-xs mt-0.5"
                 style={{ color: "var(--color-text-tertiary)" }}
               >
-                {t.exportImport.k_backlinksDesc ?? "ノート間のバックリンクセクションを含めます"}
+                {t.exportImport.k_backlinksDesc}
               </p>
             </div>
             <button
@@ -592,7 +592,7 @@ export const StaticSiteExportModal: React.FC<StaticSiteExportModalProps> = ({
                   border: "1px solid var(--color-border-secondary)",
                 }}
               >
-                {outputDir || (t.exportImport.k_selectOutputDir ?? "フォルダを選択してください")}
+                {outputDir || (t.exportImport.k_selectOutputDir)}
               </div>
               <button
                 type="button"

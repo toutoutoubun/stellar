@@ -59,7 +59,7 @@ export const IcrCalculator: React.FC<IcrCalculatorProps> = ({ projectId }) => {
         storageKey="qual_icr"
         title={t.qualitative.k_azaeb7}
         paragraphs={[
-          "Cohen's kappa 係数を用いて、2人のコーダー間の一致度を測定します。",
+          t.qualitative.k_icr_desc,
           t.qualitative.k_tnw3me,
         ]}
         steps={[
@@ -238,7 +238,7 @@ export const IcrCalculator: React.FC<IcrCalculatorProps> = ({ projectId }) => {
               className="text-xs"
               style={{ color: "var(--color-text-secondary)", lineHeight: "1.8" }}
             >
-              <strong>計算式:</strong>
+              <strong>{t.qualitative.k_formula}</strong>
               <br />
               Po = 一致数 / 全セグメント数 = {result.agreements} / {result.totalSegments} ={" "}
               {result.percentAgreement.toFixed(4)}
@@ -276,9 +276,9 @@ export const IcrCalculator: React.FC<IcrCalculatorProps> = ({ projectId }) => {
                       {d.highlightId}
                     </div>
                     <div className="flex items-center gap-1" style={{ color: "var(--color-text-secondary)" }}>
-                      <span>メイン: [{d.mainCodes.join(", ")}]</span>
+                      <span>{t.qualitative.k_main_codes} [{d.mainCodes.join(", ")}]</span>
                       <span style={{ color: "var(--color-text-tertiary)" }}>|</span>
-                      <span>インポート: [{d.importedCodes.join(", ")}]</span>
+                      <span>{t.qualitative.k_imported_codes} [{d.importedCodes.join(", ")}]</span>
                     </div>
                   </div>
                 ))}
