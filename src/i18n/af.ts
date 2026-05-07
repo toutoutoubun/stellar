@@ -1258,6 +1258,49 @@ const af: TranslationKeys = {
   },
 
   // ============================================================
+  // Sitasienetwerk
+  // ============================================================
+  citationNetwork: {
+    title: "Sitasienetwerk",
+    readingStatus: "Leesstatus",
+    unread: "Ongelees",
+    reading: "Besig om te lees",
+    done: "Klaar",
+    revisit: "Herlees",
+    statusUpdated: "Leesstatus opgedateer",
+    statusUpdateFailed: "Kon nie leesstatus opdateer nie",
+    references: "Verwysings",
+    citedBy: "Aangehaal deur",
+    fetchCitations: "Haal sitasiedata op",
+    fetchingCitations: "Besig om sitasiedata op te haal…",
+    fetchFailed: "Kon nie sitasiedata ophaal nie",
+    cachedData: "Gekas (${date})",
+    noDoi: "Kan nie sitasies ophaal nie — DOI nie gestel nie",
+    recommendations: "Aanbevole artikels",
+    fetchRecommendations: "Haal aanbevelings op",
+    fetchingRecommendations: "Besig om aanbevelings op te haal…",
+    noRecommendations: "Geen aanbevelings gevind nie",
+    importToLibrary: "Voeg by biblioteek",
+    imported: "Ingevoer",
+    importSuccess: "Artikel by biblioteek gevoeg",
+    importFailed: "Kon nie artikel invoer nie",
+    citationGraph: "Sitasiegrafiek",
+    libraryPaper: "In biblioteek",
+    externalRef: "Eksterne verwysing",
+    exportBibtex: "Voer BibTeX uit",
+    exportRis: "Voer RIS uit",
+    exportSuccess: "Suksesvol uitgevoer",
+    exportFailed: "Uitvoer het misluk",
+    selectPapersToExport: "Kies artikels om uit te voer",
+    copied: "Na knipbord gekopieer",
+    paperCount: "${count} artikels",
+    relevanceScore: "Relevansie",
+    year: "Jaar",
+    authors: "Outeurs",
+    abstract: "Abstrak",
+  },
+
+  // ============================================================
   // Hooks
   // ============================================================
   hooks: {

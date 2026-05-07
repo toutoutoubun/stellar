@@ -34,6 +34,12 @@ fn get_migrations() -> Vec<Migration> {
             sql: include_str!("db/migrations/V003__quantitative.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 4,
+            description: "引用ネットワーク・読書ステータス・関連論文サジェスト",
+            sql: include_str!("db/migrations/V004__citation_network.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }
 
@@ -202,6 +208,18 @@ pub fn run() {
             // 量的分析コマンド — QDA 統合
             commands::quantitative::create_dataset_from_codes,
             commands::quantitative::create_dataset_from_highlights,
+            // 引用ネットワーク — 読書ステータス
+            commands::citation_network::update_reading_status,
+            commands::citation_network::get_reading_status_counts,
+            // 引用ネットワーク — Semantic Scholar 連携
+            commands::citation_network::fetch_citation_network,
+            commands::citation_network::fetch_recommendations,
+            commands::citation_network::get_recommendations,
+            commands::citation_network::import_recommendation,
+            commands::citation_network::get_citation_graph_data,
+            // 引用ネットワーク — エクスポート
+            commands::citation_network::export_bibtex,
+            commands::citation_network::export_ris,
         ])
         .run(tauri::generate_context!())
         .expect("Stellar の起動に失敗しました");

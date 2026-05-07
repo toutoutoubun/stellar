@@ -1258,6 +1258,49 @@ const en: TranslationKeys = {
   },
 
   // ============================================================
+  // Citation Network
+  // ============================================================
+  citationNetwork: {
+    title: "Citation Network",
+    readingStatus: "Reading Status",
+    unread: "Unread",
+    reading: "Reading",
+    done: "Done",
+    revisit: "Revisit",
+    statusUpdated: "Reading status updated",
+    statusUpdateFailed: "Failed to update reading status",
+    references: "References",
+    citedBy: "Cited By",
+    fetchCitations: "Fetch citation data",
+    fetchingCitations: "Fetching citation data…",
+    fetchFailed: "Failed to fetch citation data",
+    cachedData: "Cached (${date})",
+    noDoi: "Cannot fetch citations — DOI not set",
+    recommendations: "Recommended Papers",
+    fetchRecommendations: "Fetch recommendations",
+    fetchingRecommendations: "Fetching recommendations…",
+    noRecommendations: "No recommendations found",
+    importToLibrary: "Add to Library",
+    imported: "Imported",
+    importSuccess: "Paper added to library",
+    importFailed: "Failed to import paper",
+    citationGraph: "Citation Graph",
+    libraryPaper: "In Library",
+    externalRef: "External Reference",
+    exportBibtex: "Export BibTeX",
+    exportRis: "Export RIS",
+    exportSuccess: "Exported successfully",
+    exportFailed: "Export failed",
+    selectPapersToExport: "Select papers to export",
+    copied: "Copied to clipboard",
+    paperCount: "${count} papers",
+    relevanceScore: "Relevance",
+    year: "Year",
+    authors: "Authors",
+    abstract: "Abstract",
+  },
+
+  // ============================================================
   // Hooks
   // ============================================================
   hooks: {

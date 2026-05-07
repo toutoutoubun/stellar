@@ -1256,6 +1256,49 @@ const ja = {
   },
 
   // ============================================================
+  // citationNetwork — 引用ネットワーク・読書ステータス
+  // ============================================================
+  citationNetwork: {
+    title: "引用ネットワーク",
+    readingStatus: "読書ステータス",
+    unread: "未読",
+    reading: "読書中",
+    done: "読了",
+    revisit: "再読",
+    statusUpdated: "読書ステータスを更新しました",
+    statusUpdateFailed: "読書ステータスの更新に失敗しました",
+    references: "参照文献",
+    citedBy: "被引用文献",
+    fetchCitations: "引用データを取得",
+    fetchingCitations: "引用データを取得中…",
+    fetchFailed: "引用データの取得に失敗しました",
+    cachedData: "キャッシュ済み（${date}）",
+    noDoi: "DOI が未設定のため引用データを取得できません",
+    recommendations: "関連論文サジェスト",
+    fetchRecommendations: "関連論文を取得",
+    fetchingRecommendations: "関連論文を取得中…",
+    noRecommendations: "関連論文が見つかりません",
+    importToLibrary: "ライブラリに追加",
+    imported: "インポート済み",
+    importSuccess: "論文をライブラリに追加しました",
+    importFailed: "論文のインポートに失敗しました",
+    citationGraph: "引用グラフ",
+    libraryPaper: "ライブラリ内",
+    externalRef: "外部参照",
+    exportBibtex: "BibTeX エクスポート",
+    exportRis: "RIS エクスポート",
+    exportSuccess: "エクスポートしました",
+    exportFailed: "エクスポートに失敗しました",
+    selectPapersToExport: "エクスポートする論文を選択してください",
+    copied: "クリップボードにコピーしました",
+    paperCount: "${count}件の論文",
+    relevanceScore: "関連度",
+    year: "年",
+    authors: "著者",
+    abstract: "要旨",
+  },
+
+  // ============================================================
   // hooks
   // ============================================================
   hooks: {

@@ -917,3 +917,74 @@ export interface SaveAnalysisInput {
 
 /** Data Studio のタブ */
 export type DataStudioTab = 'import' | 'variables' | 'preview' | 'analysis';
+
+// ============================================================
+// 引用ネットワーク（Citation Network）
+// ============================================================
+
+/** 読書ステータス */
+export type ReadingStatus = 'unread' | 'reading' | 'done' | 'revisit';
+
+/** Semantic Scholar 引用エントリ */
+export interface CitationEntry {
+  ssPaperId: string | null;
+  title: string;
+  authors: string[];
+  year: number | null;
+  doi: string | null;
+  url: string | null;
+}
+
+/** 引用ネットワークデータ */
+export interface CitationNetworkData {
+  paperId: string;
+  references: CitationEntry[];
+  citedBy: CitationEntry[];
+  fetchedAt: string | null;
+}
+
+/** 関連論文レコメンデーション */
+export interface PaperRecommendation {
+  id: string;
+  paperId: string;
+  recommendedPaperId: string | null;
+  title: string;
+  authors: string;         // JSON string
+  year: number | null;
+  doi: string | null;
+  url: string | null;
+  abstract: string | null;
+  ssPaperId: string | null;
+  relevanceScore: number | null;
+  isImported: number;      // 0 | 1
+  createdAt: string;
+}
+
+/** 引用グラフノード */
+export interface CitationGraphNode {
+  id: string;
+  title: string;
+  type: 'library' | 'reference';
+  year: number | null;
+}
+
+/** 引用グラフエッジ */
+export interface CitationGraphEdge {
+  source: string;
+  target: string;
+  type: 'cites';
+}
+
+/** 引用グラフデータ */
+export interface CitationGraphData {
+  nodes: CitationGraphNode[];
+  edges: CitationGraphEdge[];
+}
+
+/** 読書ステータス件数 */
+export interface ReadingStatusCounts {
+  unread: number;
+  reading: number;
+  done: number;
+  revisit: number;
+}

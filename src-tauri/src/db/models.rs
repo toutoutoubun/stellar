@@ -1239,6 +1239,70 @@ pub struct FramingMatrix {
 }
 
 // ============================================================
+// 引用ネットワーク・読書ステータス・関連論文サジェスト
+// ============================================================
+
+/// Semantic Scholar 引用エントリ（references_json / cited_by_json の1要素）
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CitationEntry {
+    pub ss_paper_id: Option<String>,
+    pub title: String,
+    pub authors: Vec<String>,
+    pub year: Option<i32>,
+    pub doi: Option<String>,
+    pub url: Option<String>,
+}
+
+/// 関連論文レコメンデーション（paper_recommendations テーブル）
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PaperRecommendation {
+    pub id: String,
+    pub paper_id: String,
+    pub recommended_paper_id: Option<String>,
+    pub title: String,
+    pub authors: String, // JSON string
+    pub year: Option<i32>,
+    pub doi: Option<String>,
+    pub url: Option<String>,
+    pub r#abstract: Option<String>,
+    pub ss_paper_id: Option<String>,
+    pub relevance_score: Option<f64>,
+    pub is_imported: i64,
+    pub created_at: String,
+}
+
+/// 引用ネットワークデータ（フロントエンドへ返却）
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CitationNetworkData {
+    pub paper_id: String,
+    pub references: Vec<CitationEntry>,
+    pub cited_by: Vec<CitationEntry>,
+    pub fetched_at: Option<String>,
+}
+
+/// sqlx::SqliteRow → PaperRecommendation
+pub fn parse_recommendation(row: &sqlx::sqlite::SqliteRow) -> Result<PaperRecommendation, String> {
+    Ok(PaperRecommendation {
+        id: col_str(row, "id"),
+        paper_id: col_str(row, "paper_id"),
+        recommended_paper_id: col_opt_str(row, "recommended_paper_id"),
+        title: col_str(row, "title"),
+        authors: col_str(row, "authors"),
+        year: col_opt_i32(row, "year"),
+        doi: col_opt_str(row, "doi"),
+        url: col_opt_str(row, "url"),
+        r#abstract: col_opt_str(row, "abstract"),
+        ss_paper_id: col_opt_str(row, "ss_paper_id"),
+        relevance_score: row.try_get::<Option<f64>, _>("relevance_score").unwrap_or(None),
+        is_imported: col_i64(row, "is_imported"),
+        created_at: col_str(row, "created_at"),
+    })
+}
+
+// ============================================================
 // テスト
 // ============================================================
 

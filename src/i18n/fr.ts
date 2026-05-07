@@ -1258,6 +1258,49 @@ const fr: TranslationKeys = {
   },
 
   // ============================================================
+  // Réseau de citations
+  // ============================================================
+  citationNetwork: {
+    title: "Réseau de citations",
+    readingStatus: "Statut de lecture",
+    unread: "Non lu",
+    reading: "En cours",
+    done: "Terminé",
+    revisit: "À relire",
+    statusUpdated: "Statut de lecture mis à jour",
+    statusUpdateFailed: "Échec de la mise à jour du statut",
+    references: "Références",
+    citedBy: "Cité par",
+    fetchCitations: "Récupérer les citations",
+    fetchingCitations: "Récupération des citations…",
+    fetchFailed: "Échec de la récupération des citations",
+    cachedData: "En cache (${date})",
+    noDoi: "Impossible de récupérer les citations — DOI non défini",
+    recommendations: "Articles recommandés",
+    fetchRecommendations: "Récupérer les recommandations",
+    fetchingRecommendations: "Récupération des recommandations…",
+    noRecommendations: "Aucune recommandation trouvée",
+    importToLibrary: "Ajouter à la bibliothèque",
+    imported: "Importé",
+    importSuccess: "Article ajouté à la bibliothèque",
+    importFailed: "Échec de l'import de l'article",
+    citationGraph: "Graphe de citations",
+    libraryPaper: "Dans la bibliothèque",
+    externalRef: "Référence externe",
+    exportBibtex: "Exporter BibTeX",
+    exportRis: "Exporter RIS",
+    exportSuccess: "Exportation réussie",
+    exportFailed: "Échec de l'exportation",
+    selectPapersToExport: "Sélectionnez les articles à exporter",
+    copied: "Copié dans le presse-papiers",
+    paperCount: "${count} articles",
+    relevanceScore: "Pertinence",
+    year: "Année",
+    authors: "Auteurs",
+    abstract: "Résumé",
+  },
+
+  // ============================================================
   // Hooks
   // ============================================================
   hooks: {

@@ -36,3 +36,4 @@ sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
 indexmap = { version = "2", features = ["serde"] }
 encoding_rs = "0.8"
 csv = "1.3"
+urlencoding = "2.1"
