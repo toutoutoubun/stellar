@@ -1410,6 +1410,56 @@ const fr: TranslationKeys = {
     noPapersSelected: "Aucun article sélectionné",
     browserExtension: "Extension navigateur",
     clipperDescription: "Capturer les métadonnées d'articles depuis les pages web et les importer dans Stellar",
+
+    // Static Site Export
+    k_defaultSiteTitle: "Mes notes de recherche",
+    k_siteSettings: "Param. du site",
+    k_outputAndGenerate: "Sortie & Generation",
+    k_selectAll: "Tout selectionner",
+    k_deselectAll: "Tout deselectionner",
+    k_backlinksDesc: "Inclure les sections de retroliens entre les notes",
+    k_selectOutputDir: "Selectionnez un dossier",
+    k_generate: "Generer",
+    k_siteGenerated: "Site genere avec succes",
+    k_openFolder: "Ouvrir le dossier",
+
+    // Stellar Package
+    k_stellarPackage: "Paquet de recherche",
+    k_exportMode: "Exporter",
+    k_importMode: "Importer",
+    k_createPackage: "Creer le paquet",
+    k_import: "Importer",
+    k_pdfSizeWarning: "L'inclusion de fichiers PDF peut augmenter considerablement la taille du paquet",
+    k_selectFile: "Selectionnez un fichier .stellar",
+    k_noFileSelected: "Aucun fichier selectionne",
+    k_packageContents: "Contenu du paquet",
+    k_fileSize: "Taille du fichier",
+    k_skipDuplicates: "Ignorer les articles en double",
+    k_skipDuplicatesDesc: "Les articles avec un DOI correspondant seront ignores",
+    k_skipped: "Ignores",
+
+    // Library share/export dropdown
+    k_shareExport: "Partager & Exporter",
+    k_exportBibtex: "Exporter en BibTeX",
+    k_exportRis: "Exporter en RIS",
+    k_createStellarPackage: "Creer un paquet Stellar...",
+    k_generateStaticSite: "Generer un site statique...",
+
+    // NoteEditor share
+    k_shareSection: "Partager",
+    k_publishAsStaticSite: "Publier en site statique...",
+
+    // Browser Extension
+    k_browserIntegration: "Integration navigateur",
+    k_localServerRunning: "Serveur local en cours (port 57321)",
+    k_localServerWaiting: "En attente",
+    k_installGuide: "Guide d'installation",
+    k_installGuideDesc: "Voir les instructions d'installation de l'extension navigateur",
+    k_recentImports: "Importations recentes",
+    k_noRecentImports: "Aucune importation recente",
+    k_minutesAgo: "il y a ${n} min",
+    k_hoursAgo: "il y a ${n} h",
+    k_justNow: "A l'instant",
   },
 
   // ============================================================

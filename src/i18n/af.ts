@@ -1410,6 +1410,56 @@ const af: TranslationKeys = {
     noPapersSelected: "Geen artikels gekies nie",
     browserExtension: "Blaaieruitbreiding",
     clipperDescription: "Vang artikelmetadata van webbladsye en voer in Stellar in",
+
+    // Static Site Export
+    k_defaultSiteTitle: "My navorsingsnotas",
+    k_siteSettings: "Werfinstellings",
+    k_outputAndGenerate: "Uitvoer & Genereer",
+    k_selectAll: "Kies alles",
+    k_deselectAll: "Ontkies alles",
+    k_backlinksDesc: "Sluit terugskakelseksies tussen notas in",
+    k_selectOutputDir: "Kies 'n vouer",
+    k_generate: "Genereer",
+    k_siteGenerated: "Werf suksesvol gegenereer",
+    k_openFolder: "Maak vouer oop",
+
+    // Stellar Package
+    k_stellarPackage: "Navorsingspakket",
+    k_exportMode: "Uitvoer",
+    k_importMode: "Invoer",
+    k_createPackage: "Skep pakket",
+    k_import: "Invoer",
+    k_pdfSizeWarning: "Die insluiting van PDF-leers kan die pakketgrootte aansienlik vergroot",
+    k_selectFile: "Kies .stellar-leer",
+    k_noFileSelected: "Geen leer gekies nie",
+    k_packageContents: "Pakketinhoud",
+    k_fileSize: "Leergrootte",
+    k_skipDuplicates: "Slaan duplikaat artikels oor",
+    k_skipDuplicatesDesc: "Artikels met ooreenstemmende DOI sal oorgeslaan word",
+    k_skipped: "Oorgeslaan",
+
+    // Library share/export dropdown
+    k_shareExport: "Deel & Uitvoer",
+    k_exportBibtex: "Voer uit as BibTeX",
+    k_exportRis: "Voer uit as RIS",
+    k_createStellarPackage: "Skep Stellar-pakket...",
+    k_generateStaticSite: "Genereer statiese werf...",
+
+    // NoteEditor share
+    k_shareSection: "Deel",
+    k_publishAsStaticSite: "Publiseer as statiese werf...",
+
+    // Browser Extension
+    k_browserIntegration: "Blaaierintegrasie",
+    k_localServerRunning: "Plaaslike bediener loop (poort 57321)",
+    k_localServerWaiting: "Wag",
+    k_installGuide: "Installasiergids",
+    k_installGuideDesc: "Bekyk instruksies vir die installering van die blaaieruitbreiding",
+    k_recentImports: "Onlangse invoere",
+    k_noRecentImports: "Geen onlangse invoere nie",
+    k_minutesAgo: "${n} min gelede",
+    k_hoursAgo: "${n} uur gelede",
+    k_justNow: "Sopas",
   },
 
   // ============================================================

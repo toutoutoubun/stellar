@@ -3,11 +3,14 @@
 // 5タブ: 外観 / データ / ショートカット / 引用スタイル / 言語
 
 import type React from "react";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useThemeStore, THEMES } from "../../stores/useThemeStore";
 import { useI18nStore, useT } from "../../stores/useI18nStore";
 import { SUPPORTED_LOCALES, LOCALE_NATIVE_NAMES, LOCALE_FLAGS } from "../../i18n";
 import { ThemePreviewCard } from "./ThemePreviewCard";
+import { StellarPackageModal } from "../export/StellarPackageModal";
+import { invoke } from "../../lib/tauriShim";
+import type { Paper } from "../../types";
 import type {
   Theme,
   SettingsTab,
@@ -47,6 +50,13 @@ export const SettingsView: React.FC = () => {
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isBackingUp, setIsBackingUp] = useState(false);
+  const [stellarPackageModalOpen, setStellarPackageModalOpen] = useState(false);
+
+  // ブラウザ連携
+  const [extensionStatus, setExtensionStatus] = useState<"running" | "waiting" | "checking">("checking");
+  const [recentImports, setRecentImports] = useState<{ title: string; importedAt: string }[]>([]);
+  const [installGuideOpen, setInstallGuideOpen] = useState(false);
+  const installGuideRef = useRef<HTMLDivElement>(null);
 
   // 引用スタイル設定
   const [citationStyle, setCitationStyle] = useState<CitationStyle>("apa7");
@@ -154,6 +164,37 @@ export const SettingsView: React.FC = () => {
         .finally(() => setIsLoadingData(false));
     }
   }, [activeTab, t]);
+
+  // ブラウザ拡張ステータスチェック
+  useEffect(() => {
+    if (activeTab !== "data") return;
+    setExtensionStatus("checking");
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 1000);
+    fetch("http://localhost:57321/api/status", { signal: controller.signal })
+      .then((res) => {
+        clearTimeout(timer);
+        setExtensionStatus(res.ok ? "running" : "waiting");
+      })
+      .catch(() => {
+        clearTimeout(timer);
+        setExtensionStatus("waiting");
+      });
+
+    // 最近のインポートを取得
+    invoke<Paper[]>("get_papers", { page: 1, perPage: 100 })
+      .then((res: any) => {
+        const items: Paper[] = res?.items ?? res ?? [];
+        const recent = items
+          .filter((p: Paper) => p.url && p.url.length > 0)
+          .slice(0, 5)
+          .map((p: Paper) => ({ title: p.title, importedAt: p.createdAt }));
+        setRecentImports(recent);
+      })
+      .catch(() => setRecentImports([]));
+
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [activeTab]);
 
   // テーマ切替ハンドラ
   const handleThemeChange = useCallback(
@@ -409,6 +450,182 @@ export const SettingsView: React.FC = () => {
           {t.settings.data.exportNote}
         </p>
       </section>
+
+      {/* 研究パッケージ */}
+      <section>
+        <h3 className="text-base font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
+          {t.exportImport.k_stellarPackage}
+        </h3>
+        <p className="text-sm mb-4" style={{ color: "var(--color-text-tertiary)" }}>
+          {t.exportImport.exportStellarPackage}
+        </p>
+        <button
+          onClick={() => setStellarPackageModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 text-xs font-medium"
+          style={{
+            backgroundColor: "var(--color-bg-hover)",
+            color: "var(--color-text-primary)",
+            borderRadius: "var(--radius-button)",
+            border: "1px solid var(--color-border-primary)",
+            transition: "all var(--transition-fast)",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg-active)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg-hover)"; }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+            <line x1="12" y1="22.08" x2="12" y2="12" />
+          </svg>
+          {t.exportImport.k_stellarPackage}
+        </button>
+      </section>
+
+      {/* ブラウザ連携 */}
+      <section>
+        <h3 className="text-base font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
+          {t.exportImport.k_browserIntegration}
+        </h3>
+        <p className="text-sm mb-4" style={{ color: "var(--color-text-tertiary)" }}>
+          {t.exportImport.clipperDescription}
+        </p>
+
+        {/* ステータスバッジ */}
+        <div className="flex items-center gap-3 mb-4">
+          {extensionStatus === "running" ? (
+            <span
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium"
+              style={{
+                backgroundColor: "rgba(34, 197, 94, 0.12)",
+                color: "rgb(34, 197, 94)",
+                borderRadius: "var(--radius-tag)",
+              }}
+            >
+              <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "rgb(34, 197, 94)" }} />
+              {t.exportImport.k_localServerRunning}
+            </span>
+          ) : (
+            <span
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium"
+              style={{
+                backgroundColor: "var(--color-bg-tertiary)",
+                color: "var(--color-text-tertiary)",
+                borderRadius: "var(--radius-tag)",
+              }}
+            >
+              <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "var(--color-text-disabled)" }} />
+              {extensionStatus === "checking" ? t.common.loading : t.exportImport.k_localServerWaiting}
+            </span>
+          )}
+        </div>
+
+        {/* インストール手順 */}
+        <div className="relative mb-4" ref={installGuideRef}>
+          <button
+            onClick={() => setInstallGuideOpen((v) => !v)}
+            className="flex items-center gap-2 px-3 py-2 text-xs font-medium"
+            style={{
+              backgroundColor: "var(--color-bg-hover)",
+              color: "var(--color-text-primary)",
+              borderRadius: "var(--radius-button)",
+              border: "1px solid var(--color-border-primary)",
+              transition: "all var(--transition-fast)",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg-active)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg-hover)"; }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            {t.exportImport.k_installGuide}
+          </button>
+          {installGuideOpen && (
+            <div
+              className="mt-3 p-4 flex flex-col gap-3"
+              style={{
+                backgroundColor: "var(--color-bg-secondary)",
+                borderRadius: "var(--radius-input)",
+                border: "1px solid var(--color-border-secondary)",
+              }}
+            >
+              {[
+                "1. Chrome Web Store / Firefox Add-ons で「Stellar Clipper」を検索",
+                "2. 拡張機能をインストールし、ブラウザのツールバーにピン留め",
+                "3. Stellar デスクトップアプリを起動（ローカルサーバーが自動起動）",
+                "4. 論文ページで拡張機能アイコンをクリックしてインポート",
+              ].map((step, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <span
+                    className="shrink-0 flex items-center justify-center text-xs font-bold"
+                    style={{
+                      width: "18px", height: "18px", borderRadius: "50%",
+                      backgroundColor: "var(--color-accent-primary)",
+                      color: "var(--color-text-inverse)",
+                      fontSize: "10px", marginTop: "1px",
+                    }}
+                  >
+                    {i + 1}
+                  </span>
+                  <span className="text-xs" style={{ color: "var(--color-text-secondary)" }}>
+                    {step.replace(/^\d+\.\s*/, "")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 最近のインポート */}
+        <div>
+          <h4 className="text-xs font-semibold mb-2" style={{ color: "var(--color-text-secondary)" }}>
+            {t.exportImport.k_recentImports}
+          </h4>
+          {recentImports.length === 0 ? (
+            <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+              {t.exportImport.k_noRecentImports}
+            </p>
+          ) : (
+            <div
+              className="flex flex-col"
+              style={{
+                borderRadius: "var(--radius-input)",
+                border: "1px solid var(--color-border-secondary)",
+                overflow: "hidden",
+              }}
+            >
+              {recentImports.map((item, idx) => {
+                const diffMs = Date.now() - new Date(item.importedAt).getTime();
+                const diffMin = Math.floor(diffMs / 60000);
+                const diffHr = Math.floor(diffMin / 60);
+                const relTime = diffMin < 1
+                  ? (t.exportImport.k_justNow)
+                  : diffMin < 60
+                    ? (t.exportImport.k_minutesAgo).replace("${n}", String(diffMin))
+                    : (t.exportImport.k_hoursAgo).replace("${n}", String(diffHr));
+                return (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between px-3 py-2"
+                    style={{
+                      backgroundColor: "var(--color-bg-card)",
+                      borderBottom: idx < recentImports.length - 1 ? "1px solid var(--color-border-secondary)" : "none",
+                    }}
+                  >
+                    <span className="text-xs truncate flex-1" style={{ color: "var(--color-text-primary)" }}>
+                      {item.title}
+                    </span>
+                    <span className="text-xs shrink-0 ml-3" style={{ color: "var(--color-text-tertiary)" }}>
+                      {relTime}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 
@@ -638,6 +855,12 @@ export const SettingsView: React.FC = () => {
         {activeTab === "citation" && renderCitationTab()}
         {activeTab === "language" && renderLanguageTab()}
       </div>
+
+      {/* Stellar パッケージモーダル */}
+      <StellarPackageModal
+        open={stellarPackageModalOpen}
+        onClose={() => setStellarPackageModalOpen(false)}
+      />
     </div>
   );
 };

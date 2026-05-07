@@ -1408,6 +1408,56 @@ const ja = {
     noPapersSelected: "論文が選択されていません",
     browserExtension: "ブラウザ拡張機能",
     clipperDescription: "Web ページから論文メタデータを取得し、Stellar にインポート",
+
+    // Static Site Export
+    k_defaultSiteTitle: "私の研究ノート",
+    k_siteSettings: "サイト設定",
+    k_outputAndGenerate: "出力 & 生成",
+    k_selectAll: "全選択",
+    k_deselectAll: "全解除",
+    k_backlinksDesc: "ノート間のバックリンクセクションを含めます",
+    k_selectOutputDir: "フォルダを選択してください",
+    k_generate: "生成する",
+    k_siteGenerated: "サイトを生成しました",
+    k_openFolder: "フォルダを開く",
+
+    // Stellar Package
+    k_stellarPackage: "研究パッケージ",
+    k_exportMode: "エクスポート",
+    k_importMode: "インポート",
+    k_createPackage: "パッケージを作成",
+    k_import: "インポート",
+    k_pdfSizeWarning: "PDF ファイルを含めるとパッケージサイズが大きくなる場合があります",
+    k_selectFile: ".stellar ファイルを選択",
+    k_noFileSelected: "ファイルが選択されていません",
+    k_packageContents: "パッケージ内容",
+    k_fileSize: "ファイルサイズ",
+    k_skipDuplicates: "重複する論文はスキップ",
+    k_skipDuplicatesDesc: "DOI が一致する論文はインポートをスキップします",
+    k_skipped: "スキップ済み",
+
+    // Library share/export dropdown
+    k_shareExport: "共有・エクスポート",
+    k_exportBibtex: "BibTeX で出力",
+    k_exportRis: "RIS で出力",
+    k_createStellarPackage: "Stellar パッケージを作成...",
+    k_generateStaticSite: "静的サイトを生成...",
+
+    // NoteEditor share
+    k_shareSection: "共有",
+    k_publishAsStaticSite: "静的サイトとして公開...",
+
+    // Browser Extension
+    k_browserIntegration: "ブラウザ連携",
+    k_localServerRunning: "ローカルサーバー起動中（ポート 57321）",
+    k_localServerWaiting: "待機中",
+    k_installGuide: "インストール手順",
+    k_installGuideDesc: "ブラウザ拡張機能のインストール方法を確認します",
+    k_recentImports: "最近のインポート",
+    k_noRecentImports: "最近のインポートはありません",
+    k_minutesAgo: "${n}分前",
+    k_hoursAgo: "${n}時間前",
+    k_justNow: "たった今",
   },
 
   // ============================================================

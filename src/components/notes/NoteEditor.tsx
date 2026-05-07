@@ -18,6 +18,7 @@ import { countWords, estimateReadingTime } from "../../lib/exportMarkdown";
 import { exportMarkdownFile, exportPlainText, exportPdf, exportHtmlBlob, downloadBlob } from "../../lib/exportPdf";
 import { generateDocx } from "../../lib/exportDocx";
 import { useT } from "../../stores/useI18nStore";
+import { StaticSiteExportModal } from "../export/StaticSiteExportModal";
 
 interface NoteEditorProps {
   /** 表示するノートのID */
@@ -52,6 +53,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
   const [contextPanelOpen, setContextPanelOpen] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [staticSiteModalOpen, setStaticSiteModalOpen] = useState(false);
 
   /** ノートデータの取得 */
   useEffect(() => {
@@ -649,6 +651,47 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
                 style={{ height: "1px", backgroundColor: "var(--color-border-secondary)" }}
               />
 
+              {/* 共有セクション */}
+              <div
+                className="text-xs font-semibold uppercase tracking-wider px-3 py-1.5"
+                style={{ color: "var(--color-text-tertiary)", fontSize: "10px" }}
+              >
+                {t.exportImport.k_shareSection}
+              </div>
+
+              {/* 静的サイトとして公開 */}
+              <button
+                type="button"
+                className="flex items-center gap-2 w-full text-left text-xs px-3 py-2"
+                style={{
+                  color: "var(--color-text-secondary)",
+                  borderRadius: "6px",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--color-bg-tertiary)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
+                onClick={() => {
+                  setMenuOpen(false);
+                  setStaticSiteModalOpen(true);
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="2" y1="12" x2="22" y2="12" />
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                </svg>
+                {t.exportImport.k_publishAsStaticSite}
+              </button>
+
+              {/* セパレーター */}
+              <div
+                className="my-1"
+                style={{ height: "1px", backgroundColor: "var(--color-border-secondary)" }}
+              />
+
               {/* 削除 */}
               <button
                 type="button"
@@ -685,6 +728,13 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
           )}
         </div>
       </header>
+
+      {/* 静的サイトエクスポートモーダル */}
+      <StaticSiteExportModal
+        open={staticSiteModalOpen}
+        onClose={() => setStaticSiteModalOpen(false)}
+        initialNoteIds={activeNote ? [activeNote.id] : []}
+      />
 
       {/* メインコンテンツ: エディタ（左） + コンテキストパネル（右） */}
       <div className="flex flex-1 overflow-hidden">

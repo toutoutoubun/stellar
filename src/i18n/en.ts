@@ -1410,6 +1410,56 @@ const en: TranslationKeys = {
     noPapersSelected: "No papers selected",
     browserExtension: "Browser Extension",
     clipperDescription: "Capture paper metadata from web pages and import into Stellar",
+
+    // Static Site Export
+    k_defaultSiteTitle: "My Research Notes",
+    k_siteSettings: "Site Settings",
+    k_outputAndGenerate: "Output & Generate",
+    k_selectAll: "Select All",
+    k_deselectAll: "Deselect All",
+    k_backlinksDesc: "Include backlink sections between notes",
+    k_selectOutputDir: "Select a folder",
+    k_generate: "Generate",
+    k_siteGenerated: "Site generated successfully",
+    k_openFolder: "Open Folder",
+
+    // Stellar Package
+    k_stellarPackage: "Research Package",
+    k_exportMode: "Export",
+    k_importMode: "Import",
+    k_createPackage: "Create Package",
+    k_import: "Import",
+    k_pdfSizeWarning: "Including PDF files may result in a large package size",
+    k_selectFile: "Select .stellar file",
+    k_noFileSelected: "No file selected",
+    k_packageContents: "Package Contents",
+    k_fileSize: "File size",
+    k_skipDuplicates: "Skip duplicate papers",
+    k_skipDuplicatesDesc: "Papers with matching DOI will be skipped",
+    k_skipped: "Skipped",
+
+    // Library share/export dropdown
+    k_shareExport: "Share & Export",
+    k_exportBibtex: "Export as BibTeX",
+    k_exportRis: "Export as RIS",
+    k_createStellarPackage: "Create Stellar Package...",
+    k_generateStaticSite: "Generate Static Site...",
+
+    // NoteEditor share
+    k_shareSection: "Share",
+    k_publishAsStaticSite: "Publish as Static Site...",
+
+    // Browser Extension
+    k_browserIntegration: "Browser Integration",
+    k_localServerRunning: "Local server running (port 57321)",
+    k_localServerWaiting: "Waiting",
+    k_installGuide: "Installation Guide",
+    k_installGuideDesc: "View instructions for installing the browser extension",
+    k_recentImports: "Recent Imports",
+    k_noRecentImports: "No recent imports",
+    k_minutesAgo: "${n} min ago",
+    k_hoursAgo: "${n} hr ago",
+    k_justNow: "Just now",
   },
 
   // ============================================================
