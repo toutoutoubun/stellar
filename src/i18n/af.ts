@@ -330,9 +330,6 @@ const af: TranslationKeys = {
       shortcutNote: "Skep 'n nuwe nota",
       startButton: "Begin Stellar gebruik",
     },
-    k_footnote_text: "Voetnoot teks",
-    k_code_placeholder: "Voer kode hier in",
-
   },
 
   // ============================================================

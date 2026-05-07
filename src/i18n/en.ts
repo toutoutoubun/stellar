@@ -330,9 +330,6 @@ const en: TranslationKeys = {
       shortcutNote: "Create a new note",
       startButton: "Start Using Stellar",
     },
-    k_footnote_text: "Footnote text",
-    k_code_placeholder: "Enter code here",
-
   },
 
   // ============================================================

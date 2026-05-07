@@ -328,9 +328,6 @@ const ja = {
       shortcutNote: "新しいノートを作成",
       startButton: "Stellar を使い始める",
     },
-    k_footnote_text: "脚注テキスト",
-    k_code_placeholder: "コードをここに入力",
-
   },
 
   // ============================================================
