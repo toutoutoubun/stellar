@@ -80,8 +80,8 @@ export const NetworkAnalysisView: React.FC<Props> = ({ analysis }) => {
     return (
       <div className="flex items-center justify-center h-full" style={{ color: "var(--color-text-tertiary)" }}>
         <div className="text-center">
-          <p className="text-sm font-medium mb-1">{t.quantResults.str_lnds10}</p>
-          <p className="text-xs">{t.quantResults.str_1z6kp3}</p>
+          <p className="text-sm font-medium mb-1">{useI18nStore.getState().t.quantResults.str_lnds10}</p>
+          <p className="text-xs">{useI18nStore.getState().t.quantResults.str_1z6kp3}</p>
         </div>
       </div>
     );
@@ -347,7 +347,7 @@ const GraphPanel: React.FC<{ network: NetworkAnalysisResult; analysisName: strin
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: "spin 1s linear infinite" }}>
               <path d="M21 12a9 9 0 1 1-6.219-8.56" />
             </svg>
-            <span className="ml-2">{t.layout.loading}</span>
+            <span className="ml-2">{useI18nStore.getState().t.layout.loading}</span>
           </div>
         ) : (
           <FG2D
@@ -599,7 +599,7 @@ const RightPanel: React.FC<{ network: NetworkAnalysisResult }> = memo(({ network
       {/* Interpretation */}
       <div className="px-4 py-3" style={{ borderTop: "1px solid var(--color-border-primary)" }}>
         <div className="p-3" style={{ backgroundColor: "color-mix(in srgb, var(--color-accent-info) 6%, var(--color-bg-primary))", borderRadius: "var(--radius-md)", border: "1px solid color-mix(in srgb, var(--color-accent-info) 20%, var(--color-border-primary))" }}>
-          <p className="text-xs font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>{t.quantResults.str_o951}</p>
+          <p className="text-xs font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>{useI18nStore.getState().t.quantResults.str_o951}</p>
           <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-secondary)", fontSize: "10px" }}>
             {network.interpretation}
           </p>

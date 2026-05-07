@@ -142,7 +142,7 @@ const LazyPdfThumbnail: React.FC<{ pdfPath: string | null }> = ({
               className="text-xs"
               style={{ color: "var(--color-text-disabled)" }}
             >
-              {t.library.k_vn8gmj}
+              {useI18nStore.getState().t.library.k_vn8gmj}
             </span>
           </div>
         )
@@ -213,7 +213,7 @@ const PaperCardInner: React.FC<PaperCardProps> = ({
       const success = await copyCitationToClipboard(paper, style);
       if (success) {
         toast.success(
-          t.library.k_nd5w89,
+          useI18nStore.getState().t.library.k_nd5w89,
         );
       } else {
         toast.error(useI18nStore.getState().t.library.k_pytgr9);
@@ -308,7 +308,7 @@ const PaperCardInner: React.FC<PaperCardProps> = ({
         }}
         role="button"
         tabIndex={0}
-        aria-label={t.library.k_52o3ij}
+        aria-label={useI18nStore.getState().t.library.k_52o3ij}
       >
         {/* ── PDF サムネイル (IntersectionObserver 遅延読み込み) ── */}
         <LazyPdfThumbnail pdfPath={paper.pdfPath} />

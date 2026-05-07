@@ -6,7 +6,8 @@
 
 import type React from "react";
 import { useCallback, useState } from "react";
-import { useThemeStore, getNextTheme, getThemeMeta } from "../../stores/useThemeStore";
+import { useThemeStore, getThemeMeta } from "../../stores/useThemeStore";
+import { useI18nStore } from "../../stores/useI18nStore";
 
 /** テーマアイコン SVG コンポーネント */
 const ThemeIcon: React.FC<{ icon: string; size?: number }> = ({
@@ -100,8 +101,6 @@ export const ThemeToggleButton: React.FC = () => {
   const [isHovered, setIsHovered] = useState(false);
 
   const currentMeta = getThemeMeta(theme);
-  const nextTheme = getNextTheme(theme);
-  const nextMeta = getThemeMeta(nextTheme);
 
   const handleClick = useCallback(() => {
     // body に data-theme-transition を付与して 300ms 後に除去
@@ -124,7 +123,7 @@ export const ThemeToggleButton: React.FC = () => {
         backgroundColor: isHovered ? "var(--color-bg-hover)" : "transparent",
         transition: "all var(--transition-fast)",
       }}
-      title={t.layout.k_tlq9dl}
+      title={useI18nStore.getState().t.layout.k_tlq9dl}
     >
       <ThemeIcon icon={currentMeta.icon} size={14} />
     </button>

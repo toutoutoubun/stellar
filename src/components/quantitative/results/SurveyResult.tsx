@@ -107,7 +107,7 @@ const ExportButton = memo<{ containerRef: React.RefObject<HTMLDivElement | null>
                 onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg-hover)"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
               >
-                {f.toUpperCase()} {t.items.save}
+                {f.toUpperCase()} {useI18nStore.getState().t.common.save}
               </button>
             ))}
           </div>

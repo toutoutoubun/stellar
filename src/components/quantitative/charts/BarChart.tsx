@@ -4,6 +4,7 @@
 
 import { useRef, useEffect, useCallback, useMemo, memo } from "react";
 import * as d3 from "d3";
+import { useI18nStore } from "../../../stores/useI18nStore";
 import {
   getThemeColors,
   getCategoryColors,
@@ -77,7 +78,6 @@ export const BarChart: React.FC<BarChartProps> = memo(function BarChart({
     const catColors = getCategoryColors();
     const tooltip = createTooltip(containerRef.current);
 
-    const total = d3.sum(trimmed, (d) => d.value);
 
     if (horizontal) {
       // 水平棒グラフ
@@ -105,10 +105,9 @@ export const BarChart: React.FC<BarChartProps> = memo(function BarChart({
         .attr("fill", (d, i) => d.color ?? hexToRgba(catColors[i % catColors.length]!, 0.7))
         .attr("rx", 4)
         .attr("cursor", "pointer")
-        .on("mouseenter", function (event, d) {
+        .on("mouseenter", function (event) {
           d3.select(this).attr("opacity", 0.85);
-          const pct = total > 0 ? ((d.value / total) * 100).toFixed(1) : "0";
-          tooltip.show(t.quantCharts.k_43xnrq, event.offsetX, event.offsetY);
+          tooltip.show(useI18nStore.getState().t.quantCharts.k_43xnrq, event.offsetX, event.offsetY);
         })
         .on("mousemove", (event) => { tooltip.show(tooltip.el.innerHTML, event.offsetX, event.offsetY); })
         .on("mouseleave", function () {
@@ -172,10 +171,9 @@ export const BarChart: React.FC<BarChartProps> = memo(function BarChart({
         .attr("fill", (d, i) => d.color ?? hexToRgba(catColors[i % catColors.length]!, 0.7))
         .attr("rx", 3)
         .attr("cursor", "pointer")
-        .on("mouseenter", function (event, d) {
+        .on("mouseenter", function (event) {
           d3.select(this).attr("opacity", 0.85);
-          const pct = total > 0 ? ((d.value / total) * 100).toFixed(1) : "0";
-          tooltip.show(t.quantCharts.k_43xnrq, event.offsetX, event.offsetY);
+          tooltip.show(useI18nStore.getState().t.quantCharts.k_43xnrq, event.offsetX, event.offsetY);
         })
         .on("mousemove", (event) => { tooltip.show(tooltip.el.innerHTML, event.offsetX, event.offsetY); })
         .on("mouseleave", function () {

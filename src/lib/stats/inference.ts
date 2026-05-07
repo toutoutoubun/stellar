@@ -327,19 +327,16 @@ export function independentTTest(
   const ci95Upper = r((m1 - m2) + tCrit * se);
 
   // Japanese interpretation
-  const sigText = significant
-    ? t.stats.k_a2e9rv
-    : t.stats.k_vg77f5;
 
   const parts: string[] = [
-    t.stats.k_wc4pvp,
+    useI18nStore.getState().t.stats.k_wc4pvp,
     `効果量 Cohen's d=${r(d)}（${label}）。`,
-    t.stats.k_1iwabe,
+    useI18nStore.getState().t.stats.k_1iwabe,
   ];
 
   if (n1 < 30 || n2 < 30) {
     parts.push(
-      t.stats.k_r5jrsp,
+      useI18nStore.getState().t.stats.k_r5jrsp,
     );
   }
 
@@ -413,15 +410,15 @@ export function mannWhitneyU(
   // Effect size r = Z / sqrt(N)
   const effectR = r(Math.abs(z) / Math.sqrt(N));
 
-  const sigText = significant
+  const _sigText = significant
     ? useI18nStore.getState().t.stats.str_t61a6j
     : useI18nStore.getState().t.stats.str_wubo15;
 
   const interpretation =
-    t.stats.k_3mqqt4 +
-    t.stats.k_yqrrij +
-    `${sigText}（U=${r(U)}, p=${pValue}）。` +
-    t.stats.k_2781yo;
+    useI18nStore.getState().t.stats.k_3mqqt4 +
+    useI18nStore.getState().t.stats.k_yqrrij +
+    `${_sigText}（U=${r(U)}, p=${pValue}）。` +
+    useI18nStore.getState().t.stats.k_2781yo;
 
   return {
     targetVar: targetVarName,
@@ -483,10 +480,10 @@ export function chiSquareTest(
   const esLabel = cramersLabel(cramersV);
 
   const parts: string[] = [
-    t.stats.k_cl209p,
+    useI18nStore.getState().t.stats.k_cl209p,
     significant
-      ? t.stats.k_u3uf7v
-      : t.stats.k_1724gz,
+      ? useI18nStore.getState().t.stats.k_u3uf7v
+      : useI18nStore.getState().t.stats.k_1724gz,
     `Cramér's V=${cramersV}（効果量：${esLabel}）。`,
   ];
 
@@ -554,11 +551,10 @@ export function linearRegression(
     const tB = seB > 0 ? reg.m / seB : 0;
     const pB = r(tDistributionPValue(tB, n - 2), 6);
 
-    const sigText = fP < 0.05 ? useI18nStore.getState().t.quantResults.str_i23q : useI18nStore.getState().t.stats.str_avhzj9;
     const interpretation =
-      t.stats.k_z0cdlq +
+      useI18nStore.getState().t.stats.k_z0cdlq +
       `（F(1,${n - 2})=${r(fStat)}, p=${fP}）。` +
-      t.stats.k_3wlga0;
+      useI18nStore.getState().t.stats.k_3wlga0;
 
     return {
       type: "simple",
@@ -660,7 +656,6 @@ export function linearRegression(
     };
   });
 
-  const sigText = fP < 0.05 ? useI18nStore.getState().t.quantResults.str_i23q : useI18nStore.getState().t.stats.str_avhzj9;
   const sigVars = coefficients
     .filter((c) => c.significant)
     .map((c) => c.varName);
@@ -670,9 +665,9 @@ export function linearRegression(
       : useI18nStore.getState().t.stats.str_3p7bnb;
 
   const interpretation =
-    t.stats.k_uw6hot +
+    useI18nStore.getState().t.stats.k_uw6hot +
     `（F(${p},${n - pFull})=${r(fStat)}, p=${fP}）。` +
-    t.stats.k_3wlga0 +
+    useI18nStore.getState().t.stats.k_3wlga0 +
     sigVarsText;
 
   return {

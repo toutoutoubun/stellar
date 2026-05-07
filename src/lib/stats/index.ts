@@ -1,4 +1,5 @@
 // ============================================================================
+import { useI18nStore } from "../../stores/useI18nStore";
 // src/lib/stats/index.ts
 // Stellar — Public barrel file for the statistical computation layer.
 // Re-exports every type and function; provides convenience warnings helper.
@@ -60,7 +61,7 @@ export function getInterpretationWarning(
   switch (testType) {
     case "t-test":
       if (n < 30) {
-        return t.stats.k_qp8r7v;
+        return useI18nStore.getState().t.stats.k_qp8r7v;
       }
       return null;
 
@@ -71,7 +72,7 @@ export function getInterpretationWarning(
     case "regression": {
       const p = predictors ?? 1;
       if (n < 10 * p) {
-        return t.stats.k_o9muiv;
+        return useI18nStore.getState().t.stats.k_o9muiv;
       }
       return null;
     }

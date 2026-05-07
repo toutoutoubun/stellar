@@ -5,6 +5,7 @@
 import type React from "react";
 import { useCallback } from "react";
 import type { GraphFilters } from "../../types";
+import { useI18nStore } from "../../stores/useI18nStore";
 
 interface GraphFilterPanelProps {
   /** 現在のフィルタ設定 */
@@ -148,7 +149,7 @@ export const GraphFilterPanel: React.FC<GraphFilterPanelProps> = ({
             className="text-xs mb-3"
             style={{ color: "var(--color-text-tertiary)" }}
           >
-            表示中: {filteredNodes} / {totalNodes} {t.quantResults.str_7dy1n}
+            表示中: {filteredNodes} / {totalNodes} {useI18nStore.getState().t.quantResults.str_7dy1n}
           </div>
 
           {/* ── 表示タイプ ── */}
@@ -179,7 +180,7 @@ export const GraphFilterPanel: React.FC<GraphFilterPanelProps> = ({
                     display: "inline-block",
                   }}
                 />
-                {t.notes.title}
+                {useI18nStore.getState().t.notes.title}
               </span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
@@ -204,7 +205,7 @@ export const GraphFilterPanel: React.FC<GraphFilterPanelProps> = ({
                       "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
                   }}
                 />
-                {t.data.papers}
+                {useI18nStore.getState().t.settings.data.papers}
               </span>
             </label>
           </div>

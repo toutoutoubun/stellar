@@ -4,6 +4,7 @@
 
 import { useRef, useEffect, useCallback, useMemo, memo } from "react";
 import * as d3 from "d3";
+import { useI18nStore } from "../../../stores/useI18nStore";
 import {
   getThemeColors,
   getCategoryColors,
@@ -195,7 +196,7 @@ export const BoxPlot: React.FC<BoxPlotProps> = memo(function BoxPlot({
           .attr("fill", "transparent").attr("cursor", "pointer")
           .on("mouseenter", (event) => {
             tooltip.show(
-              t.quantCharts.k_54r3un,
+              useI18nStore.getState().t.quantCharts.k_54r3un,
               event.offsetX, event.offsetY,
             );
           })

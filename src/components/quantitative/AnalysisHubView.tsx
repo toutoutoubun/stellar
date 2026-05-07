@@ -15,7 +15,7 @@ import { TextAnalysisView } from "./results/TextAnalysisView";
 import { NetworkAnalysisView } from "./results/NetworkAnalysisView";
 import { ReportBuilder } from "./ReportBuilder";
 import type { Analysis } from "../../types";
-import { useT, useI18nStore } from "../../stores/useI18nStore";
+import { useI18nStore } from "../../stores/useI18nStore";
 
 // ── 分析カテゴリ定義 ──
 const ANALYSIS_GROUPS: {
@@ -131,21 +131,21 @@ function analysisToMarkdown(a: Analysis): string {
   const lines: string[] = [];
   lines.push(`## ${a.name}`);
   lines.push(``);
-  lines.push(t.quantitative.k_3qi8q5);
+  lines.push(useI18nStore.getState().t.quantitative.k_3qi8q5);
   lines.push(`- **実行日時:** ${new Date(a.createdAt).toLocaleString("ja-JP")}`);
   lines.push(``);
 
   const r = a.result as Record<string, unknown> | null;
   if (!r) {
-    lines.push(t.quantitative.k_qmu0l3);
+    lines.push(useI18nStore.getState().t.quantitative.k_qmu0l3);
     return lines.join("\n");
   }
 
   // 記述統計
   const descs = (r.descriptives as Array<Record<string, unknown>>) ?? [];
   if (descs.length > 0) {
-    lines.push(t.quantitative.k_52uat0);
-    lines.push(t.quantitative.k_u5jagh);
+    lines.push(useI18nStore.getState().t.quantitative.k_52uat0);
+    lines.push(useI18nStore.getState().t.quantitative.k_u5jagh);
     lines.push(`|---|---|---|---|---|---|`);
     for (const d of descs) {
       lines.push(`| ${d.variableName ?? d.variable} | ${d.n ?? d.count ?? "-"} | ${typeof d.mean === "number" ? d.mean.toFixed(3) : "-"} | ${typeof d.sd === "number" ? d.sd.toFixed(3) : "-"} | ${d.min ?? "-"} | ${d.max ?? "-"} |`);
@@ -156,7 +156,7 @@ function analysisToMarkdown(a: Analysis): string {
   // 推測統計 results 配列
   const results = (r.results as Array<Record<string, unknown>>) ?? [];
   if (results.length > 0) {
-    lines.push(t.quantitative.k_9ga6ex);
+    lines.push(useI18nStore.getState().t.quantitative.k_9ga6ex);
     for (const res of results) {
       const entries = Object.entries(res).filter(([k]) => k !== "interpretation");
       for (const [k, v] of entries) {
@@ -173,8 +173,8 @@ function analysisToMarkdown(a: Analysis): string {
   // 相関
   const correlations = (r.correlations as Array<Record<string, unknown>>) ?? [];
   if (correlations.length > 0) {
-    lines.push(t.quantitative.k_h51mw7);
-    lines.push(t.quantitative.k_5aijhf);
+    lines.push(useI18nStore.getState().t.quantitative.k_h51mw7);
+    lines.push(useI18nStore.getState().t.quantitative.k_5aijhf);
     lines.push(`|---|---|---|---|`);
     for (const c of correlations) {
       lines.push(`| ${c.var1Name} | ${c.var2Name} | ${typeof c.r === "number" ? c.r.toFixed(3) : c.r} | ${typeof c.pValue === "number" ? c.pValue.toFixed(4) : c.pValue} |`);
@@ -184,14 +184,14 @@ function analysisToMarkdown(a: Analysis): string {
 
   // 回帰
   if (r.r2 != null) {
-    lines.push(t.quantitative.k_bqxtd3);
+    lines.push(useI18nStore.getState().t.quantitative.k_bqxtd3);
     lines.push(`- **R²:** ${(r.r2 as number).toFixed(4)}`);
     if (r.fStatistic) lines.push(`- **F:** ${(r.fStatistic as number).toFixed(3)}`);
     if (r.fPValue != null) lines.push(`- **p(F):** ${(r.fPValue as number).toFixed(4)}`);
     const coefficients = (r.coefficients as Array<Record<string, unknown>>) ?? [];
     if (coefficients.length > 0) {
       lines.push(``);
-      lines.push(t.quantitative.k_oj4l51);
+      lines.push(useI18nStore.getState().t.quantitative.k_oj4l51);
       lines.push(`|---|---|---|---|---|`);
       for (const c of coefficients) {
         lines.push(`| ${c.varName} | ${(c.b as number).toFixed(3)} | ${(c.stdError as number).toFixed(3)} | ${(c.t as number).toFixed(3)} | ${(c.pValue as number).toFixed(4)} |`);
@@ -202,7 +202,7 @@ function analysisToMarkdown(a: Analysis): string {
 
   // interpretation
   if (typeof r.interpretation === "string") {
-    lines.push(t.quantitative.k_h54tz6);
+    lines.push(useI18nStore.getState().t.quantitative.k_h54tz6);
     lines.push(r.interpretation as string);
     lines.push(``);
   }
@@ -211,7 +211,6 @@ function analysisToMarkdown(a: Analysis): string {
 }
 
 export const AnalysisHubView: React.FC = () => {
-  const t = useT();
   const analyses = useQuantitativeStore((s) => s.analyses);
   const selectedDataset = useQuantitativeStore((s) => s.selectedDataset);
   const variables = useQuantitativeStore((s) => s.variables);
@@ -280,13 +279,12 @@ export const AnalysisHubView: React.FC = () => {
     if (!selectedDataset || analyses.length === 0) return;
     setExportingNote(true);
     try {
-      const now = new Date().toLocaleString("ja-JP");
       const mdParts: string[] = [
-        t.quantitative.k_lhours,
+        useI18nStore.getState().t.quantitative.k_lhours,
         ``,
-        t.quantitative.k_ofrjiz,
-        t.quantitative.k_cacerd,
-        t.quantitative.k_tfgi23,
+        useI18nStore.getState().t.quantitative.k_ofrjiz,
+        useI18nStore.getState().t.quantitative.k_cacerd,
+        useI18nStore.getState().t.quantitative.k_tfgi23,
         ``,
         `---`,
         ``,
@@ -297,19 +295,19 @@ export const AnalysisHubView: React.FC = () => {
         mdParts.push(``);
       }
       const md = mdParts.join("\n");
-      const tags = [t.quantitative.k_jf913u, t.qualitative.k_pbsye];
+      const tags = [useI18nStore.getState().t.quantitative.k_jf913u, useI18nStore.getState().t.qualitative.k_pbsye];
       const usedTypes = new Set(analyses.map((a) => a.analysisType));
       for (const tp of usedTypes) tags.push(`#${analysisTypeLabel(tp)}`);
 
-      const note = await createNote({
-        title: t.quantitative.k_t8dwwa,
+      await createNote({
+        title: useI18nStore.getState().t.quantitative.k_t8dwwa,
         content: md,
         tags,
       });
-      toast.success(t.qualitative.k_fpwqww);
+      toast.success(useI18nStore.getState().t.qualitative.k_fpwqww);
     } catch (err) {
-      console.error(t.qualitative.k_pszidi, err);
-      toast.error(t.notes.createFailed);
+      console.error(useI18nStore.getState().t.qualitative.k_pszidi, err);
+      toast.error(useI18nStore.getState().t.notes.createFailed);
     } finally {
       setExportingNote(false);
     }
@@ -498,7 +496,7 @@ export const AnalysisHubView: React.FC = () => {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
             </svg>
-            {exportingNote ? t.quantitative.k_ubac8u : t.quantitative.k_h6qfiq}
+            {exportingNote ? useI18nStore.getState().t.quantitative.k_ubac8u : useI18nStore.getState().t.quantitative.k_h6qfiq}
           </button>
           <button
             onClick={() => setReportOpen(true)}

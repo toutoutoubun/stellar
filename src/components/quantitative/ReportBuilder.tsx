@@ -144,13 +144,13 @@ function formatStat(key: string, value: number | string, style: CitationStyle): 
   if (!Number.isFinite(v)) return `${key} = ${value}`;
   const fmtP = (p: number) => p < .001 ? "< .001" : p.toFixed(3).replace(/^0/, "");
   if (style === "wabun") {
-    if (key === "t") return t.quantitative.k_psdes8;
-    if (key === "df") return t.quantitative.k_7d97mo;
-    if (key === "p") return t.quantitative.k_4r1gog;
-    if (key === "d" || key === "r" || key === "V") return t.quantitative.k_h8smxg;
-    if (key === "R²") return t.quantitative.k_wkddi2;
-    if (key === "F") return t.quantitative.k_9bfi1i;
-    if (key === "χ²") return t.quantitative.k_t658bz;
+    if (key === "t") return useI18nStore.getState().t.quantitative.k_psdes8;
+    if (key === "df") return useI18nStore.getState().t.quantitative.k_7d97mo;
+    if (key === "p") return useI18nStore.getState().t.quantitative.k_4r1gog;
+    if (key === "d" || key === "r" || key === "V") return useI18nStore.getState().t.quantitative.k_h8smxg;
+    if (key === "R²") return useI18nStore.getState().t.quantitative.k_wkddi2;
+    if (key === "F") return useI18nStore.getState().t.quantitative.k_9bfi1i;
+    if (key === "χ²") return useI18nStore.getState().t.quantitative.k_t658bz;
     return `${key}=${typeof value === "number" ? v.toFixed(3) : value}`;
   }
   // APA / MLA / Chicago (all very similar for stats)
@@ -212,7 +212,7 @@ function buildStatString(analysis: Analysis, style: CitationStyle): string {
   // Descriptive — just note count
   if (type === "descriptive") {
     const descs = (r.descriptives as Array<Record<string, unknown>>) ?? [];
-    return descs.length > 0 ? t.quantitative.k_j2vela : "";
+    return descs.length > 0 ? useI18nStore.getState().t.quantitative.k_j2vela : "";
   }
 
   return analysis.analysisType;
@@ -389,9 +389,9 @@ const SortableBlock: React.FC<SortableBlockProps> = memo(({ block, analyses, cit
                   width: "130px",
                 }}
               >
-                <option value="frequency">{t.quantitative.k_s253lt}</option>
-                <option value="contingency">{t.quantitative.k_cfa2k}</option>
-                <option value="coefficient">{t.quantitative.k_c6kai}</option>
+                <option value="frequency">{useI18nStore.getState().t.quantitative.k_s253lt}</option>
+                <option value="contingency">{useI18nStore.getState().t.quantitative.k_cfa2k}</option>
+                <option value="coefficient">{useI18nStore.getState().t.quantitative.k_c6kai}</option>
               </select>
             </div>
             {tableAnalysis && (
@@ -525,10 +525,10 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({ onClose }) => {
     // Header
     lines.push(`# ${title || useI18nStore.getState().t.quantitative.k_5zkqdc}`);
     lines.push("");
-    if (author) lines.push(t.quantitative.k_6osg6f);
-    lines.push(t.quantitative.k_4st9kc);
-    if (selectedDataset) lines.push(t.quantitative.k_iojhgy);
-    lines.push(t.quantitative.k_gn6b87);
+    if (author) lines.push(useI18nStore.getState().t.quantitative.k_6osg6f);
+    lines.push(useI18nStore.getState().t.quantitative.k_4st9kc);
+    if (selectedDataset) lines.push(useI18nStore.getState().t.quantitative.k_iojhgy);
+    lines.push(useI18nStore.getState().t.quantitative.k_gn6b87);
     lines.push("");
     lines.push("---");
     lines.push("");
@@ -540,7 +540,7 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({ onClose }) => {
           if (a) {
             lines.push(`## ${a.name}`);
             lines.push("");
-            lines.push(t.quantitative.k_91pdf);
+            lines.push(useI18nStore.getState().t.quantitative.k_91pdf);
             lines.push("");
             const interp = getInterpretation(a);
             if (interp) {
@@ -553,7 +553,7 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({ onClose }) => {
         case "chart": {
           const a = analyses.find((x) => x.id === block.chartAnalysisId);
           if (a) {
-            lines.push(t.quantitative.k_y4b0mh);
+            lines.push(useI18nStore.getState().t.quantitative.k_y4b0mh);
             lines.push("");
             lines.push(`![${a.name}](chart-${a.id}.png)`);
             lines.push("");
@@ -632,13 +632,13 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({ onClose }) => {
       );
       for (const t of usedTypes) tags.push(`#${t}`);
 
-      const note = await createNote({
+      await createNote({
         title: title || useI18nStore.getState().t.quantitative.k_5zkqdc,
         content: md,
         tags,
       });
 
-      toast.success(t.qualitative.k_fpwqww);
+      toast.success(useI18nStore.getState().t.qualitative.k_fpwqww);
     } catch (err) {
       toast.error(useI18nStore.getState().t.notes.createFailed);
       console.error(err);
@@ -725,7 +725,7 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({ onClose }) => {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium mb-1 block" style={{ color: "var(--color-text-secondary)" }}>{t.tabs.citation}</label>
+                <label className="text-xs font-medium mb-1 block" style={{ color: "var(--color-text-secondary)" }}>{useI18nStore.getState().t.settings.tabs.citation}</label>
                 <div className="flex gap-1">
                   {(Object.entries(CITATION_LABELS) as [CitationStyle, string][]).map(([key, label]) => (
                     <button

@@ -3,6 +3,7 @@
 // ノート（円）・論文（六角形）・リンク（線）の凡例 + 全体表示ボタン
 
 import type React from "react";
+import { useI18nStore } from "../../stores/useI18nStore";
 
 interface GraphLegendPanelProps {
   /** 全体表示（zoomToFit）を実行 */
@@ -55,7 +56,7 @@ export const GraphLegendPanel: React.FC<GraphLegendPanelProps> = ({
               className="text-xs"
               style={{ color: "var(--color-text-primary)" }}
             >
-              {t.notes.title}
+              {useI18nStore.getState().t.notes.title}
             </span>
           </div>
 
@@ -76,7 +77,7 @@ export const GraphLegendPanel: React.FC<GraphLegendPanelProps> = ({
               className="text-xs"
               style={{ color: "var(--color-text-primary)" }}
             >
-              {t.data.papers}
+              {useI18nStore.getState().t.settings.data.papers}
             </span>
           </div>
 
@@ -117,7 +118,7 @@ export const GraphLegendPanel: React.FC<GraphLegendPanelProps> = ({
           className="flex items-center gap-3 mb-3 text-xs"
           style={{ color: "var(--color-text-tertiary)", fontSize: "10px" }}
         >
-          <span>{nodeCount} {t.quantResults.str_7dy1n}</span>
+          <span>{nodeCount} {useI18nStore.getState().t.quantResults.str_7dy1n}</span>
           <span>·</span>
           <span>{linkCount} リンク</span>
         </div>

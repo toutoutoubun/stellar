@@ -11,7 +11,7 @@ import type {
   CreateHighlightInput,
 } from "../types";
 import { toast } from "../components/ui/Toast";
-import { useT } from "../stores/useI18nStore";
+import { useI18nStore } from "../stores/useI18nStore";
 
 /** debounce 用タイマーマップ（ハイライトID → タイマーID） */
 type TimerMap = Map<string, ReturnType<typeof setTimeout>>;
@@ -55,7 +55,6 @@ export interface UseHighlightsReturn {
  * @param paperId 対象論文のID
  */
 export function useHighlights(paperId: string): UseHighlightsReturn {
-  const t = useT();
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedHighlightIds, setSelectedHighlightIds] = useState<Set<string>>(
@@ -83,7 +82,7 @@ export function useHighlights(paperId: string): UseHighlightsReturn {
       );
       setHighlights(sorted);
     } catch (err) {
-      const message = typeof err === "string" ? err : t.hooks.k_15m56x;
+      const message = typeof err === "string" ? err : useI18nStore.getState().t.hooks.k_15m56x;
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -149,7 +148,7 @@ export function useHighlights(paperId: string): UseHighlightsReturn {
         // 失敗時は楽観的に追加したデータを削除
         setHighlights((prev) => prev.filter((h) => h.id !== tempId));
         const message =
-          typeof err === "string" ? err : t.hooks.k_9x4ym1;
+          typeof err === "string" ? err : useI18nStore.getState().t.hooks.k_9x4ym1;
         toast.error(message);
         return null;
       }
@@ -186,7 +185,7 @@ export function useHighlights(paperId: string): UseHighlightsReturn {
           });
         } catch (err) {
           const message =
-            typeof err === "string" ? err : t.hooks.k_jkw2ka;
+            typeof err === "string" ? err : useI18nStore.getState().t.hooks.k_jkw2ka;
           toast.error(message);
         } finally {
           // 保存中フラグを下ろす
@@ -213,11 +212,11 @@ export function useHighlights(paperId: string): UseHighlightsReturn {
 
     try {
       await invoke("delete_highlight", { id: highlightId });
-      toast.success(t.hooks.k_fr4nj7);
+      toast.success(useI18nStore.getState().t.hooks.k_fr4nj7);
     } catch (err) {
       // 削除失敗時は再読み込みで整合性を回復
       const message =
-        typeof err === "string" ? err : t.hooks.k_opvwls;
+        typeof err === "string" ? err : useI18nStore.getState().t.hooks.k_opvwls;
       toast.error(message);
       void fetchHighlights();
     }
@@ -247,7 +246,7 @@ export function useHighlights(paperId: string): UseHighlightsReturn {
   > => {
     const ids = Array.from(selectedHighlightIds);
     if (ids.length === 0) {
-      toast.info(t.hooks.k_vynamp);
+      toast.info(useI18nStore.getState().t.hooks.k_vynamp);
       return null;
     }
 
@@ -256,12 +255,12 @@ export function useHighlights(paperId: string): UseHighlightsReturn {
         highlightIds: ids,
         paperId,
       });
-      toast.success(t.hooks.k_hup4rp);
+      toast.success(useI18nStore.getState().t.hooks.k_hup4rp);
       setSelectedHighlightIds(new Set());
       return noteId;
     } catch (err) {
       const message =
-        typeof err === "string" ? err : t.notes.createFailed;
+        typeof err === "string" ? err : useI18nStore.getState().t.notes.createFailed;
       toast.error(message);
       return null;
     }

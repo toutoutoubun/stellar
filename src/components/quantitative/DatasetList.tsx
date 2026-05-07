@@ -133,8 +133,6 @@ export const DatasetList: React.FC = () => {
 
   // ── 自動名前サジェスト ──
   const getAutoName = useCallback((source: CreateSource): string => {
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     switch (source) {
       case "csv":
         return t.quantitative.k_ewifof;
@@ -165,11 +163,11 @@ export const DatasetList: React.FC = () => {
     try {
       if (createSource === "csv") {
         // CSV: まず空のデータセットを作成し、インポートタブに遷移
-        const ds = await createDatasetManually(name, datasetDesc);
+        await createDatasetManually(name, datasetDesc);
         setTab("import");
         toast.success(t.quantitative.k_7zq8nc);
       } else if (createSource === "manual") {
-        const ds = await createDatasetManually(name, datasetDesc);
+        await createDatasetManually(name, datasetDesc);
         setTab("variables");
         toast.success(t.quantitative.k_7zq8nc);
       } else if (createSource === "codes") {
@@ -177,13 +175,13 @@ export const DatasetList: React.FC = () => {
           toast.warning(t.quantitative.k_un0ypx);
           return;
         }
-        const ds = await createDatasetFromCodes(selectedProjectId, name);
+        await createDatasetFromCodes(selectedProjectId, name);
         setTab("preview");
         toast.success(
           t.quantitative.k_t1hi1i,
         );
       } else if (createSource === "highlights") {
-        const ds = await createDatasetFromHighlights(
+        await createDatasetFromHighlights(
           selectedPaperId || undefined,
         );
         setTab("preview");

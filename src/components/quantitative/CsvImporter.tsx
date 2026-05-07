@@ -9,7 +9,7 @@ import { useQuantitativeStore } from "../../stores/useQuantitativeStore";
 import { Button } from "../ui/Button";
 import { toast } from "../ui/Toast";
 import type { VariableType } from "../../types";
-import { useT, useI18nStore } from "../../stores/useI18nStore";
+import { useI18nStore } from "../../stores/useI18nStore";
 
 // ── 変数タイプアイコン定義 ──
 const VARIABLE_TYPE_OPTIONS: {
@@ -82,7 +82,7 @@ function parseCsv(
   }
 
   const colCount = allRows[0]?.length ?? 0;
-  const headers = Array.from({ length: colCount }, (_, i) => t.quantitative.k_1xvw56);
+  const headers = Array.from({ length: colCount }, (_) => useI18nStore.getState().t.quantitative.k_1xvw56);
   return { headers, rows: allRows };
 }
 
@@ -138,7 +138,6 @@ function formatFileSize(bytes: number): string {
 }
 
 export const CsvImporter: React.FC = () => {
-  const t = useT();
   const selectedDataset = useQuantitativeStore((s) => s.selectedDataset);
   const importCsv = useQuantitativeStore((s) => s.importCsv);
   const setTab = useQuantitativeStore((s) => s.setTab);
@@ -262,7 +261,7 @@ export const CsvImporter: React.FC = () => {
     try {
       await importCsv(selectedDataset.id, csvText, hasHeader, delimiter);
       toast.success(
-        t.quantitative.k_wrktw3,
+        useI18nStore.getState().t.quantitative.k_wrktw3,
       );
       setTab("preview");
     } catch {
@@ -280,7 +279,7 @@ export const CsvImporter: React.FC = () => {
   }, []);
 
   const delimiterLabel =
-    DELIMITERS.find((d) => d.value === delimiter)?.label ?? t.quantitative.k_7d7w6;
+    DELIMITERS.find((d) => d.value === delimiter)?.label ?? useI18nStore.getState().t.quantitative.k_7d7w6;
 
   return (
     <div className="h-full overflow-y-auto p-6 space-y-6">

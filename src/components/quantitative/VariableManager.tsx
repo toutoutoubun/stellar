@@ -9,7 +9,7 @@ import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { toast } from "../ui/Toast";
 import type { Variable, VariableType, LikertLabel } from "../../types";
-import { useT, useI18nStore } from "../../stores/useI18nStore";
+import { useI18nStore } from "../../stores/useI18nStore";
 
 // ── 変数タイプアイコン・ラベル ──
 const VARIABLE_TYPE_META: Record<
@@ -24,7 +24,6 @@ const VARIABLE_TYPE_META: Record<
 };
 
 export const VariableManager: React.FC = () => {
-  const t = useT();
   const variables = useQuantitativeStore((s) => s.variables);
   const updateVariable = useQuantitativeStore((s) => s.updateVariable);
   const selectedDataset = useQuantitativeStore((s) => s.selectedDataset);
@@ -36,10 +35,10 @@ export const VariableManager: React.FC = () => {
 
   // 自動検出（モック）
   const handleAutoDetect = useCallback(() => {
-    toast.info(t.quantitative.k_ljmr10);
+    toast.info(useI18nStore.getState().t.quantitative.k_ljmr10);
     // 実際のバックエンド呼び出しに置き換え
     setTimeout(() => {
-      toast.success(t.quantitative.k_mj4q1j);
+      toast.success(useI18nStore.getState().t.quantitative.k_mj4q1j);
     }, 800);
   }, []);
 
@@ -79,7 +78,7 @@ export const VariableManager: React.FC = () => {
             className="text-sm font-semibold"
             style={{ color: "var(--color-text-primary)" }}
           >
-            {t.quantitative.k_bnl1qu}
+            {useI18nStore.getState().t.quantitative.k_bnl1qu}
           </h3>
           <p
             className="text-[11px] mt-0.5"
@@ -381,7 +380,7 @@ const VariableCard: React.FC<{
               borderRadius: "4px",
             }}
           >
-            欠損 {variable.missingCount} {t.common.items}
+            欠損 {variable.missingCount} {useI18nStore.getState().t.common.items}
           </span>
         )}
 
@@ -498,7 +497,7 @@ const LikertEditor: React.FC<{
             <input
               value={existing?.label ?? ""}
               onChange={(e) => onChange(point, e.target.value)}
-              placeholder={t.quantitative.k_pbbqp}
+              placeholder={useI18nStore.getState().t.quantitative.k_pbbqp}
               className="flex-1 text-[11px] px-2 py-1 selectable"
               data-selectable="true"
               style={{
@@ -720,10 +719,10 @@ const VariableEditSheet: React.FC<{
           {/* アクション */}
           <div className="flex justify-end gap-2 pb-2">
             <Button variant="ghost" onClick={onClose}>
-              {t.common.cancel}
+              {useI18nStore.getState().t.common.cancel}
             </Button>
             <Button variant="primary" onClick={handleSave} loading={saving}>
-              {t.items.save}
+              {useI18nStore.getState().t.common.save}
             </Button>
           </div>
         </div>

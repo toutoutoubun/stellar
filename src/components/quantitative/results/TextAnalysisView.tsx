@@ -189,7 +189,7 @@ export const TextAnalysisView: React.FC<Props> = ({ analysis, variables, dataRow
   if (!activeResult) {
     return (
       <div className="flex items-center justify-center h-full" style={{ color: "var(--color-text-tertiary)" }}>
-        <p className="text-sm">{t.quantResults.str_jlq1le}</p>
+        <p className="text-sm">{useI18nStore.getState().t.quantResults.str_jlq1le}</p>
       </div>
     );
   }
@@ -212,9 +212,9 @@ export const TextAnalysisView: React.FC<Props> = ({ analysis, variables, dataRow
           )}
         </div>
         <div className="flex items-center gap-4 text-xs" style={{ color: "var(--color-text-secondary)" }}>
-          <span>{t.quantResults.str_diqhf} <strong style={{ color: "var(--color-text-primary)" }}>{varName}</strong></span>
-          <span>{t.quantResults.str_yjs3z2} <strong style={{ color: "var(--color-text-primary)" }}>{activeResult.totalTokens.toLocaleString()}</strong></span>
-          <span>{t.quantResults.str_b8n4m0} <strong style={{ color: "var(--color-text-primary)" }}>{activeResult.uniqueTokens.toLocaleString()}</strong></span>
+          <span>{useI18nStore.getState().t.quantResults.str_diqhf} <strong style={{ color: "var(--color-text-primary)" }}>{varName}</strong></span>
+          <span>{useI18nStore.getState().t.quantResults.str_yjs3z2} <strong style={{ color: "var(--color-text-primary)" }}>{activeResult.totalTokens.toLocaleString()}</strong></span>
+          <span>{useI18nStore.getState().t.quantResults.str_b8n4m0} <strong style={{ color: "var(--color-text-primary)" }}>{activeResult.uniqueTokens.toLocaleString()}</strong></span>
         </div>
       </div>
 
@@ -333,7 +333,7 @@ const WordsTab: React.FC<WordsTabProps> = memo(({ result, stopwords, swInput, se
       {/* WordCloud */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold" style={{ color: "var(--color-text-primary)" }}>{t.quantResults.str_5tfw1z}</h3>
+          <h3 className="text-sm font-semibold" style={{ color: "var(--color-text-primary)" }}>{useI18nStore.getState().t.quantResults.str_5tfw1z}</h3>
           <ExportMenu containerRef={wcRef} name={`wordcloud-${result.variableId}`} />
         </div>
         <div ref={wcRef} style={{ backgroundColor: "var(--color-bg-secondary)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border-primary)", padding: "16px" }}>
@@ -343,7 +343,7 @@ const WordsTab: React.FC<WordsTabProps> = memo(({ result, stopwords, swInput, se
 
       {/* Stopword manager */}
       <div style={{ backgroundColor: "var(--color-bg-secondary)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border-primary)", padding: "16px" }}>
-        <h3 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text-primary)" }}>{t.quantResults.str_fc1bcp}</h3>
+        <h3 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text-primary)" }}>{useI18nStore.getState().t.quantResults.str_fc1bcp}</h3>
         <div className="flex gap-2 mb-3">
           <input
             type="text"
@@ -622,7 +622,7 @@ const NetworkTab: React.FC<{ network: NetworkAnalysisResult }> = memo(({ network
           </div>
         ) : !FG2D ? (
           <div className="flex items-center justify-center h-full text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-            {t.common.loading}
+            {useI18nStore.getState().t.common.loading}
           </div>
         ) : filtered.nodes.length === 0 ? (
           <div className="flex items-center justify-center h-full text-xs" style={{ color: "var(--color-text-tertiary)" }}>
@@ -653,7 +653,7 @@ const NetworkTab: React.FC<{ network: NetworkAnalysisResult }> = memo(({ network
       {/* Community legend */}
       {commLegend.length > 0 && (
         <div style={{ backgroundColor: "var(--color-bg-secondary)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border-primary)", padding: "12px 16px" }}>
-          <h4 className="text-xs font-semibold mb-2" style={{ color: "var(--color-text-secondary)" }}>{t.quantResults.str_8ei7dd}</h4>
+          <h4 className="text-xs font-semibold mb-2" style={{ color: "var(--color-text-secondary)" }}>{useI18nStore.getState().t.quantResults.str_8ei7dd}</h4>
           <div className="flex flex-wrap gap-3">
             {commLegend.map((c) => (
               <div key={c.id} className="flex items-center gap-2 text-xs">
@@ -735,14 +735,14 @@ const StatsTab: React.FC<{
       {/* Bigrams table */}
       {bigrams.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text-primary)" }}>{t.quantResults.str_Top}</h3>
+          <h3 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text-primary)" }}>{useI18nStore.getState().t.quantResults.str_Top}</h3>
           <div style={{ border: "1px solid var(--color-border-primary)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
             <table className="w-full text-xs" style={{ borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ backgroundColor: "var(--color-bg-secondary)" }}>
-                  <th className="px-3 py-2 text-left font-medium" style={{ color: "var(--color-text-secondary)", borderBottom: "1px solid var(--color-border-primary)" }}>{t.quantResults.str_qakn}</th>
-                  <th className="px-3 py-2 text-left font-medium" style={{ color: "var(--color-text-secondary)", borderBottom: "1px solid var(--color-border-primary)" }}>{t.quantResults.str_8kqw}</th>
-                  <th className="px-3 py-2 text-left font-medium" style={{ color: "var(--color-text-secondary)", borderBottom: "1px solid var(--color-border-primary)" }}>{t.quantResults.str_cadibj}</th>
+                  <th className="px-3 py-2 text-left font-medium" style={{ color: "var(--color-text-secondary)", borderBottom: "1px solid var(--color-border-primary)" }}>{useI18nStore.getState().t.quantResults.str_qakn}</th>
+                  <th className="px-3 py-2 text-left font-medium" style={{ color: "var(--color-text-secondary)", borderBottom: "1px solid var(--color-border-primary)" }}>{useI18nStore.getState().t.quantResults.str_8kqw}</th>
+                  <th className="px-3 py-2 text-left font-medium" style={{ color: "var(--color-text-secondary)", borderBottom: "1px solid var(--color-border-primary)" }}>{useI18nStore.getState().t.quantResults.str_cadibj}</th>
                 </tr>
               </thead>
               <tbody>
@@ -763,7 +763,7 @@ const StatsTab: React.FC<{
       {perDocData.length > 1 && (
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold" style={{ color: "var(--color-text-primary)" }}>{t.quantResults.str_xlz9nt}</h3>
+            <h3 className="text-sm font-semibold" style={{ color: "var(--color-text-primary)" }}>{useI18nStore.getState().t.quantResults.str_xlz9nt}</h3>
             <ExportMenu containerRef={chartRef} name="token-counts" />
           </div>
           <div ref={chartRef} style={{ backgroundColor: "var(--color-bg-secondary)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border-primary)", padding: "16px" }}>
@@ -779,7 +779,7 @@ const StatsTab: React.FC<{
             <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
           </svg>
           <div>
-            <h4 className="text-xs font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>{t.quantResults.str_o951}</h4>
+            <h4 className="text-xs font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>{useI18nStore.getState().t.quantResults.str_o951}</h4>
             <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
               {activeResult.interpretation}
               {Number(ttr) < 0.3 && useI18nStore.getState().t.quantResults.k_h94lm5}

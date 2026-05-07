@@ -9,7 +9,6 @@ import {
   accentWithOpacity,
   styleAxis,
   createTooltip,
-  fmt,
 } from "./chartTheme";
 import { useI18nStore } from "../../../stores/useI18nStore";
 
@@ -101,11 +100,10 @@ export const Histogram: React.FC<HistogramProps> = memo(function Histogram({
       .attr("fill", fillColor)
       .attr("rx", 3)
       .attr("cursor", "pointer")
-      .on("mouseenter", function (event, d) {
+      .on("mouseenter", function (event) {
         d3.select(this).attr("fill", colors.accent).attr("opacity", 0.9);
-        const pct = values.length > 0 ? ((d.length / values.length) * 100).toFixed(1) : "0";
         tooltip.show(
-          t.quantCharts.k_5jzdhe,
+          useI18nStore.getState().t.quantCharts.k_5jzdhe,
           event.offsetX,
           event.offsetY,
         );

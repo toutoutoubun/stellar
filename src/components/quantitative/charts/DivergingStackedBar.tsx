@@ -5,6 +5,7 @@
 
 import { useRef, useEffect, useCallback, useMemo, memo } from "react";
 import * as d3 from "d3";
+import { useI18nStore } from "../../../stores/useI18nStore";
 import {
   getThemeColors,
   getLikertColors,
@@ -17,7 +18,7 @@ export interface DivergingStackedBarItem {
   label: string;
   /** 各レベルの件数（例: [10, 15, 30, 25, 20]） */
   counts: number[];
-  /** レベルラベル（例: [t.quantCharts.k_u9gy0p, t.quantCharts.k_e365rm, t.quantCharts.k_cv59ae, t.quantCharts.k_b02rrp, t.quantCharts.k_kpn4st]） */
+  /** レベルラベル（例: [useI18nStore.getState().t.quantCharts.k_u9gy0p, useI18nStore.getState().t.quantCharts.k_e365rm, useI18nStore.getState().t.quantCharts.k_cv59ae, useI18nStore.getState().t.quantCharts.k_b02rrp, useI18nStore.getState().t.quantCharts.k_kpn4st]） */
   labels: string[];
 }
 
@@ -185,7 +186,7 @@ export const DivergingStackedBar: React.FC<DivergingStackedBarProps> = memo(func
           .attr("cursor", "pointer")
           .on("mouseenter", (event) => {
             tooltip.show(
-              t.quantCharts.k_uy40n9,
+              useI18nStore.getState().t.quantCharts.k_uy40n9,
               event.offsetX, event.offsetY,
             );
           })

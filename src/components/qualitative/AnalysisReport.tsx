@@ -82,7 +82,7 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
         .map((k) => SECTION_LABELS_MAP[k] ?? k);
       const title = `質的分析レポート（${selectedNames.slice(0, 3).join(t.stats.k_9ob)}${selectedNames.length > 3 ? "…" : ""}）`;
       const tags = [t.qualitative.k_it0yjj, t.qualitative.k_pbsye];
-      const note = await createNote({ title, content: report, tags });
+      await createNote({ title, content: report, tags });
       toast.success(t.qualitative.k_fpwqww);
     } catch (err) {
       console.error(t.qualitative.k_pszidi, err);

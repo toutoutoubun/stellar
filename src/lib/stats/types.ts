@@ -64,7 +64,7 @@ export interface TTestResult {
   pValue: number;
   /** Cohen's d */
   effectSize: number;
-  /** t.stats.k_i6n | t.stats.k_ffx | t.stats.k_hlz etc. */
+  /** useI18nStore.getState().t.stats.k_i6n | useI18nStore.getState().t.stats.k_ffx | useI18nStore.getState().t.stats.k_hlz etc. */
   effectSizeLabel: string;
   mean1: number;
   mean2?: number;

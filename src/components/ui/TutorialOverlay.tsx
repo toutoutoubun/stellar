@@ -528,7 +528,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
                   transition: "opacity 150ms ease-out",
                 }}
               >
-                {t.common.start}
+                {t.onboarding.welcome.start}
               </button>
             )}
           </div>

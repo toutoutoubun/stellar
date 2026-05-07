@@ -222,13 +222,13 @@ export async function analyzeTextVariable(
   // ── Step 6: Interpretation ────────────────────────────────────────────
   const top5 = topWords.slice(0, 5).map((w) => w.token);
   const interpretation =
-    t.stats.k_n7ssx7 +
-    t.stats.k_5um8a4 +
+    useI18nStore.getState().t.stats.k_n7ssx7 +
+    useI18nStore.getState().t.stats.k_5um8a4 +
     `頻出語は「${top5.join(useI18nStore.getState().t.stats.str_8fq7)}」などです。` +
     (cooccurrenceNetwork.nodes.length > 0
-      ? t.stats.k_8vfq2c +
-        t.stats.k_cdvohy +
-        t.stats.k_gusnfq
+      ? useI18nStore.getState().t.stats.k_8vfq2c +
+        useI18nStore.getState().t.stats.k_cdvohy +
+        useI18nStore.getState().t.stats.k_gusnfq
       : useI18nStore.getState().t.stats.str_4bxlt9);
 
   return {

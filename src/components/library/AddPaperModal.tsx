@@ -159,7 +159,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
       applyMetadata({ ...data, url: urlInput.trim() });
       toast.success(useI18nStore.getState().t.library.k_2uf93e);
     } catch (e) {
-      toast.error(t.library.k_qr44fw);
+      toast.error(useI18nStore.getState().t.library.k_qr44fw);
     } finally {
       setFetching(false);
     }
@@ -181,7 +181,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
       applyMetadata({ ...data, doi: doiInput.trim() });
       toast.success(useI18nStore.getState().t.library.k_2uf93e);
     } catch (e) {
-      toast.error(t.library.k_qr44fw);
+      toast.error(useI18nStore.getState().t.library.k_qr44fw);
     } finally {
       setFetching(false);
     }
@@ -273,7 +273,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
       toast.success(useI18nStore.getState().t.library.k_9cffqr);
       handleClose();
     } catch (e) {
-      toast.error(t.library.k_w7nzmp);
+      toast.error(useI18nStore.getState().t.library.k_w7nzmp);
     } finally {
       setSaving(false);
     }
@@ -397,7 +397,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
           className="text-xs font-medium"
           style={{ color: "var(--color-text-secondary)" }}
         >
-          {t.library.k_hq997l}
+          {useI18nStore.getState().t.library.k_hq997l}
         </label>
         <textarea
           className="w-full text-sm selectable"
@@ -449,7 +449,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
       footer={
         <>
           <Button variant="ghost" onClick={handleClose} disabled={saving}>
-            {t.common.cancel}
+            {useI18nStore.getState().t.common.cancel}
           </Button>
           <Button
             variant="primary"
@@ -457,7 +457,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
             loading={saving}
             disabled={!form.title.trim()}
           >
-            {t.items.save}
+            {useI18nStore.getState().t.common.save}
           </Button>
         </>
       }

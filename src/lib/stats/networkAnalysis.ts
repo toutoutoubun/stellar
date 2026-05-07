@@ -217,7 +217,7 @@ export function analyzeNetwork(
   for (let cid = 0; cid < communityCount; cid++) {
     communities.push({
       id: cid,
-      label: t.stats.k_l758uj,
+      label: useI18nStore.getState().t.stats.k_l758uj,
       nodeCount: communityNodeCounts.get(cid) ?? 0,
       color: COMMUNITY_COLORS[cid % COMMUNITY_COLORS.length]!,
     });
@@ -227,12 +227,12 @@ export function analyzeNetwork(
 
   // -- 10. Japanese interpretation ----------------------------------------
   const interpretation =
-    t.stats.k_r9zil9 +
-    t.stats.k_driqes +
+    useI18nStore.getState().t.stats.k_r9zil9 +
+    useI18nStore.getState().t.stats.k_driqes +
     (topBetweennessNode
-      ? t.stats.k_7gp3x
+      ? useI18nStore.getState().t.stats.k_7gp3x
       : "") +
-    t.stats.k_68prw6;
+    useI18nStore.getState().t.stats.k_68prw6;
 
   return {
     nodes: resultNodes,

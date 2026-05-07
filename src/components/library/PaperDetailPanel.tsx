@@ -150,7 +150,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
       const success = await copyCitationToClipboard(paper, style);
       if (success) {
         toast.success(
-          t.library.k_nd5w89
+          useI18nStore.getState().t.library.k_nd5w89
         );
       } else {
         toast.error(useI18nStore.getState().t.library.k_pytgr9);
@@ -187,9 +187,9 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
           id: paper.id,
           input: { tags: [...paper.tags, tag] },
         });
-        toast.success(t.library.k_4ibxuc);
+        toast.success(useI18nStore.getState().t.library.k_4ibxuc);
       } catch (err) {
-        toast.error(t.library.k_wbna9r);
+        toast.error(useI18nStore.getState().t.library.k_wbna9r);
       }
       setNewTag("");
       setShowTagInput(false);
@@ -368,7 +368,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
               }
               onClick={() => setShowCitationDropdown((prev) => !prev)}
             >
-              {t.library.k_ezke84}
+              {useI18nStore.getState().t.library.k_ezke84}
             </Button>
 
             {/* 引用スタイルドロップダウン */}
@@ -427,7 +427,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
             onClick={() => onDelete(paper.id)}
             style={{ color: "var(--color-accent-danger)" }}
           >
-            {t.common.delete}
+            {useI18nStore.getState().t.common.delete}
           </Button>
         </div>
 
@@ -557,7 +557,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                     className="text-xs"
                     style={{ color: "var(--color-text-disabled)" }}
                   >
-                    {t.common.loading}
+                    {useI18nStore.getState().t.common.loading}
                   </span>
                 </div>
               ) : relatedNotes.length === 0 ? (
@@ -633,7 +633,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                     className="text-xs"
                     style={{ color: "var(--color-text-disabled)" }}
                   >
-                    {t.common.loading}
+                    {useI18nStore.getState().t.common.loading}
                   </span>
                 </div>
               ) : backlinks.length === 0 ? (
@@ -710,7 +710,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                     className="text-xs"
                     style={{ color: "var(--color-text-disabled)" }}
                   >
-                    {t.common.loading}
+                    {useI18nStore.getState().t.common.loading}
                   </span>
                 </div>
               ) : highlights.length === 0 ? (

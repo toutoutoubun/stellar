@@ -4,6 +4,7 @@
 
 import { useRef, useEffect, useCallback, useMemo, memo } from "react";
 import * as d3 from "d3";
+import { useI18nStore } from "../../../stores/useI18nStore";
 import {
   getCategoryColors,
   hexToRgba,
@@ -185,9 +186,8 @@ export const WordCloud: React.FC<WordCloudProps> = memo(function WordCloud({
       .text((d) => d.text)
       .on("mouseenter", function (event, d) {
         d3.select(this).attr("fill", d.color).attr("font-weight", "700");
-        const catLine = d.category ? t.quantCharts.k_8swmcg : "";
         tooltip.show(
-          t.quantCharts.k_jnurd9,
+          useI18nStore.getState().t.quantCharts.k_jnurd9,
           event.offsetX, event.offsetY,
         );
       })

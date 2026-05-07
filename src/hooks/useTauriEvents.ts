@@ -7,6 +7,7 @@ import { listen } from "../lib/tauriShim";
 import type { Paper } from "../types";
 import { useUIStore } from "../stores/useUIStore";
 import { toast } from "../components/ui/Toast";
+import { useI18nStore } from "../stores/useI18nStore";
 
 /** Tauri バックエンドから送信される論文インポートリクエストのペイロード */
 interface PaperImportPayload {
@@ -32,7 +33,7 @@ export function useTauriEvents(): void {
 
         // トースト通知
         toast.info(
-          t.hooks.k_87adpo,
+          useI18nStore.getState().t.hooks.k_87adpo,
         );
 
         // 楽観的追加: パース済みの論文データがあればすぐに開く
