@@ -30,6 +30,8 @@ export default defineConfig({
     port: 1420,
     strictPort: true,
     host: host || false,
+    // 外部プロキシ（Tauri dev / サンドボックス等）経由のアクセスを許可
+    allowedHosts: true,
     hmr: host
       ? {
           protocol: "ws",
