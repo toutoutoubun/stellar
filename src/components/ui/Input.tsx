@@ -34,8 +34,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         <div className="relative">
           {icon && (
             <span
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
-              style={{ color: "var(--color-text-tertiary)" }}
+              className="absolute top-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center"
+              style={{ color: "var(--color-text-tertiary)", left: "10px", width: "16px" }}
             >
               {icon}
             </span>
@@ -44,7 +44,6 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             className={clsx(
               "w-full text-sm transition-all",
-              icon ? "pl-8" : "pl-3",
               className
             )}
             style={{
@@ -55,6 +54,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                 : "1px solid var(--color-border-primary)",
               borderRadius: "var(--radius-input)",
               padding: "var(--space-2) var(--space-3)",
+              paddingLeft: icon ? "34px" : "var(--space-3)",
               fontSize: "var(--font-size-sm)",
               transition: "all var(--transition-fast)",
               outline: "none",
