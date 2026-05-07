@@ -192,6 +192,9 @@ export const useQuantitativeStore = create<QuantitativeState>((set, get) => ({
         description,
         sourceType: "manual",
       });
+      if (!dataset || !dataset.id) {
+        throw new Error("データセットの作成に失敗しました（空のレスポンス）");
+      }
       // 楽観的更新
       set((s) => ({
         datasets: [dataset, ...s.datasets],
@@ -219,6 +222,9 @@ export const useQuantitativeStore = create<QuantitativeState>((set, get) => ({
         projectId,
         name,
       });
+      if (!dataset || !dataset.id) {
+        throw new Error("コードからのデータセット生成に失敗しました（空のレスポンス）");
+      }
       set((s) => ({
         datasets: [dataset, ...s.datasets],
         selectedDataset: dataset,
@@ -249,6 +255,9 @@ export const useQuantitativeStore = create<QuantitativeState>((set, get) => ({
           paperId: paperId ?? null,
         },
       );
+      if (!dataset || !dataset.id) {
+        throw new Error("ハイライトからのデータセット生成に失敗しました（空のレスポンス）");
+      }
       set((s) => ({
         datasets: [dataset, ...s.datasets],
         selectedDataset: dataset,
@@ -324,6 +333,9 @@ export const useQuantitativeStore = create<QuantitativeState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const analysis = await invoke<Analysis>("save_analysis", { input });
+      if (!analysis || !analysis.id) {
+        throw new Error("分析の保存に失敗しました（空のレスポンス）");
+      }
       set((s) => ({
         analyses: [analysis, ...s.analyses],
       }));

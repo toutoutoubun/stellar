@@ -72,6 +72,9 @@ export const useQualitativeStore = create<QualitativeState>((set, get) => ({
       name,
       description: description ?? null,
     });
+    if (!project || !project.id) {
+      throw new Error("プロジェクトの作成に失敗しました（空のレスポンス）");
+    }
     set((s) => ({ projects: [project, ...s.projects] }));
     return project;
   },
@@ -117,6 +120,9 @@ export const useQualitativeStore = create<QualitativeState>((set, get) => ({
       color: color ?? "#6366f1",
       description: description ?? null,
     });
+    if (!code || !code.id) {
+      throw new Error("コードの作成に失敗しました（空のレスポンス）");
+    }
     set((s) => ({ codes: [...s.codes, code] }));
     return code;
   },

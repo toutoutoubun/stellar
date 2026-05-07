@@ -14,6 +14,11 @@ export const isTauri: boolean = !!(window as any).__TAURI_INTERNALS__;
 const mockStore: Record<string, any[]> = {
   notes: [],
   projects: [],
+  papers: [],
+  datasets: [],
+  analyses: [],
+  codes: [],
+  highlights: [],
 };
 let mockIdCounter = 1;
 function mockId(): string {
@@ -73,8 +78,10 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     return { handled: true, result: [...mockStore.projects] };
   }
   if (cmd === "create_project" || cmd === "create_qual_project") {
+    // args はトップレベルに name, description, methodType を持つ場合と、
+    // args.input にネストされている場合の両方に対応
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const input = (args?.input ?? {}) as any;
+    const input = (args?.input ?? args ?? {}) as any;
     const project = {
       id: mockId(),
       name: input.name ?? "新規プロジェクト",
@@ -91,31 +98,244 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     return { handled: true, result: undefined };
   }
 
+  // ── Papers (Library) ──
+  if (cmd === "get_papers") {
+    return { handled: true, result: { items: [...mockStore.papers], totalPages: 1, totalItems: mockStore.papers.length } };
+  }
+  if (cmd === "get_paper") {
+    const paper = mockStore.papers.find((p) => p.id === args?.id) ?? null;
+    return { handled: true, result: paper };
+  }
+  if (cmd === "create_paper") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const input = (args?.input ?? args ?? {}) as any;
+    const paper = {
+      id: mockId(),
+      title: input.title ?? "無題の論文",
+      authors: input.authors ?? [],
+      year: input.year ?? null,
+      journal: input.journal ?? null,
+      volume: input.volume ?? null,
+      issue: input.issue ?? null,
+      pages: input.pages ?? null,
+      doi: input.doi ?? null,
+      url: input.url ?? null,
+      abstract: input.abstract ?? null,
+      pdfPath: input.pdfPath ?? null,
+      tags: input.tags ?? [],
+      createdAt: now(),
+      updatedAt: now(),
+    };
+    mockStore.papers.unshift(paper);
+    return { handled: true, result: { ...paper } };
+  }
+  if (cmd === "update_paper") {
+    const idx = mockStore.papers.findIndex((p) => p.id === args?.id);
+    if (idx >= 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const input = (args?.input ?? {}) as any;
+      const updated = { ...mockStore.papers[idx], ...input, updatedAt: now() };
+      mockStore.papers[idx] = updated;
+      return { handled: true, result: { ...updated } };
+    }
+    return { handled: true, result: null };
+  }
+  if (cmd === "delete_paper") {
+    mockStore.papers = mockStore.papers.filter((p) => p.id !== args?.id);
+    return { handled: true, result: undefined };
+  }
+
+  // ── Datasets (Quantitative) ──
+  if (cmd === "get_datasets") {
+    return { handled: true, result: [...mockStore.datasets] };
+  }
+  if (cmd === "create_dataset") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const a = (args ?? {}) as any;
+    const ds = {
+      id: mockId(),
+      name: a.name ?? "新規データセット",
+      description: a.description ?? null,
+      sourceType: a.sourceType ?? "manual",
+      rowCount: 0,
+      createdAt: now(),
+      updatedAt: now(),
+    };
+    mockStore.datasets.unshift(ds);
+    return { handled: true, result: { ...ds } };
+  }
+  if (cmd === "create_dataset_from_codes") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const a = (args ?? {}) as any;
+    const ds = {
+      id: mockId(),
+      name: a.name ?? "コード集計データ",
+      description: null,
+      sourceType: "codes" as const,
+      rowCount: 0,
+      createdAt: now(),
+      updatedAt: now(),
+    };
+    mockStore.datasets.unshift(ds);
+    return { handled: true, result: { ...ds } };
+  }
+  if (cmd === "create_dataset_from_highlights") {
+    const ds = {
+      id: mockId(),
+      name: "ハイライト抽出データ",
+      description: null,
+      sourceType: "highlights" as const,
+      rowCount: 0,
+      createdAt: now(),
+      updatedAt: now(),
+    };
+    mockStore.datasets.unshift(ds);
+    return { handled: true, result: { ...ds } };
+  }
+  if (cmd === "delete_dataset") {
+    mockStore.datasets = mockStore.datasets.filter((d) => d.id !== args?.id);
+    // Also delete associated analyses
+    mockStore.analyses = mockStore.analyses.filter((a) => a.datasetId !== args?.id);
+    return { handled: true, result: undefined };
+  }
+
+  // ── Variables & Data Rows (Quantitative) ──
+  if (cmd === "get_variables") {
+    return { handled: true, result: [] };
+  }
+  if (cmd === "get_data_rows") {
+    return { handled: true, result: [] };
+  }
+  if (cmd === "import_csv") {
+    return { handled: true, result: undefined };
+  }
+  if (cmd === "update_variable") {
+    return { handled: true, result: undefined };
+  }
+
+  // ── Analyses (Quantitative) ──
+  if (cmd === "get_analyses") {
+    const datasetId = args?.datasetId as string | undefined;
+    const filtered = datasetId
+      ? mockStore.analyses.filter((a) => a.datasetId === datasetId)
+      : [...mockStore.analyses];
+    return { handled: true, result: filtered };
+  }
+  if (cmd === "save_analysis") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const input = (args?.input ?? args ?? {}) as any;
+    const analysis = {
+      id: mockId(),
+      datasetId: input.datasetId ?? "",
+      name: input.name ?? "新規分析",
+      analysisType: input.analysisType ?? "descriptive",
+      config: input.config ?? {},
+      result: input.result ?? null,
+      createdAt: now(),
+      updatedAt: now(),
+    };
+    mockStore.analyses.unshift(analysis);
+    return { handled: true, result: { ...analysis } };
+  }
+  if (cmd === "delete_analysis") {
+    mockStore.analyses = mockStore.analyses.filter((a) => a.id !== args?.id);
+    return { handled: true, result: undefined };
+  }
+
+  // ── Qualitative Codes ──
+  if (cmd === "get_codes" || cmd === "get_code_tree") {
+    const projectId = args?.projectId as string | undefined;
+    const filtered = projectId
+      ? mockStore.codes.filter((c) => c.projectId === projectId)
+      : [...mockStore.codes];
+    return { handled: true, result: filtered };
+  }
+  if (cmd === "create_code") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const a = (args ?? {}) as any;
+    const code = {
+      id: mockId(),
+      projectId: a.projectId ?? "",
+      parentId: a.parentId ?? null,
+      label: a.label ?? "新規コード",
+      color: a.color ?? "#6366f1",
+      description: a.description ?? null,
+      sortOrder: mockStore.codes.length,
+      createdAt: now(),
+      updatedAt: now(),
+    };
+    mockStore.codes.push(code);
+    return { handled: true, result: { ...code } };
+  }
+  if (cmd === "update_code") {
+    const idx = mockStore.codes.findIndex((c) => c.id === args?.id);
+    if (idx >= 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const a = (args ?? {}) as any;
+      const updated = { ...mockStore.codes[idx] };
+      if (a.label != null) updated.label = a.label;
+      if (a.color != null) updated.color = a.color;
+      if (a.description != null) updated.description = a.description;
+      if (a.parentId !== undefined) updated.parentId = a.parentId || null;
+      if (a.sortOrder != null) updated.sortOrder = a.sortOrder;
+      updated.updatedAt = now();
+      mockStore.codes[idx] = updated;
+    }
+    return { handled: true, result: undefined };
+  }
+  if (cmd === "delete_code") {
+    mockStore.codes = mockStore.codes.filter((c) => c.id !== args?.id);
+    return { handled: true, result: undefined };
+  }
+
+  // ── Highlights ──
+  if (cmd === "get_highlights") {
+    return { handled: true, result: [...mockStore.highlights] };
+  }
+  if (cmd === "get_highlights_by_code") {
+    const codeId = args?.codeId as string | undefined;
+    const filtered = codeId
+      ? mockStore.highlights.filter((h: any) => h.codeIds?.includes(codeId))
+      : [];
+    return { handled: true, result: filtered };
+  }
+  if (cmd === "create_highlight") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const a = (args ?? {}) as any;
+    const hl = {
+      id: mockId(),
+      paperId: a.paperId ?? "",
+      text: a.text ?? "",
+      color: a.color ?? "#ffeb3b",
+      comment: a.comment ?? null,
+      codeIds: a.codeIds ?? [],
+      pageNumber: a.pageNumber ?? null,
+      rects: a.rects ?? [],
+      createdAt: now(),
+      updatedAt: now(),
+    };
+    mockStore.highlights.push(hl);
+    return { handled: true, result: { ...hl } };
+  }
+
   return { handled: false };
 }
 
 // ── 静的フォールバック（動的ハンドラ非対応コマンド用）────
+// 動的ハンドラで処理されるコマンドはここに含めない。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const MOCK_RESPONSES: Record<string, any> = {
-  // Library
-  get_papers: { items: [], totalPages: 0, totalItems: 0 },
-  get_paper: null,
-  create_paper: null,
-  update_paper: null,
-  delete_paper: undefined,
+  // Library — PDF/metadata helpers
   attach_pdf: null,
   import_pdf: null,
   fetch_metadata_by_doi: {},
   fetch_metadata_from_url: {},
   get_recent_items: [],
 
-  // Notes — 動的ハンドラで処理するが、フォールバック用にも残す
+  // Notes — attachment helper
   save_note_attachment: null,
 
-  // Highlights
-  get_highlights: [],
-  get_highlights_by_code: [],
-  create_highlight: null,
+  // Highlights — helpers (main CRUD is in dynamic handler)
   update_highlight_comment: undefined,
   delete_highlight: undefined,
   create_note_from_highlights: "",
@@ -134,12 +354,7 @@ const MOCK_RESPONSES: Record<string, any> = {
   // Graph
   get_graph_data: { nodes: [], links: [] },
 
-  // Qualitative — Codes
-  get_codes: [],
-  get_code_tree: [],
-  create_code: null,
-  update_code: undefined,
-  delete_code: undefined,
+  // Qualitative — Coding Matrix
   get_coding_matrix: { rows: [], columns: [], cells: [] },
 
   // Qualitative — Source Critique
@@ -217,20 +432,6 @@ const MOCK_RESPONSES: Record<string, any> = {
   // Qualitative — Report
   generate_analysis_report: "",
   export_qca_csv: "",
-
-  // Quantitative
-  get_datasets: [],
-  get_variables: [],
-  get_data_rows: [],
-  get_analyses: [],
-  create_dataset: null,
-  create_dataset_from_codes: null,
-  create_dataset_from_highlights: null,
-  import_csv: undefined,
-  update_variable: undefined,
-  save_analysis: null,
-  delete_analysis: undefined,
-  delete_dataset: undefined,
 };
 
 /**

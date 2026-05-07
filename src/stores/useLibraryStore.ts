@@ -136,12 +136,18 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   createPaper: async (input) => {
     const paper = await invoke<Paper>("create_paper", { input });
+    if (!paper || !paper.id) {
+      throw new Error("論文の作成に失敗しました（空のレスポンス）");
+    }
     set((state) => ({ papers: [paper, ...state.papers] }));
     return paper;
   },
 
   updatePaper: async (id, input) => {
     const paper = await invoke<Paper>("update_paper", { id, input });
+    if (!paper || !paper.id) {
+      throw new Error("論文の更新に失敗しました（空のレスポンス）");
+    }
     set((state) => ({
       papers: state.papers.map((p) => (p.id === id ? paper : p)),
     }));
@@ -166,6 +172,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       id,
       input: { pdfPath },
     });
+    if (!paper || !paper.id) {
+      throw new Error("PDF添付に失敗しました（空のレスポンス）");
+    }
     set((state) => ({
       papers: state.papers.map((p) => (p.id === id ? paper : p)),
     }));
