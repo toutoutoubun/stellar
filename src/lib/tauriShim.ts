@@ -7,14 +7,94 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const isTauri: boolean = !!(window as any).__TAURI_INTERNALS__;
 
-// ── 安全な invoke ──────────────────────────────────
-// Tauri 環境 → 本物の invoke を呼ぶ
-// 非 Tauri 環境 → コマンド名に応じたデフォルト値を即座に返す
+// ── インメモリ CRUD ストア（非 Tauri 環境用）─────────
+// ブラウザプレビューでも create / get / update / delete が動作するように
+// メモリ上にデータを保持する軽量ストア。
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockStore: Record<string, any[]> = {
+  notes: [],
+  projects: [],
+};
+let mockIdCounter = 1;
+function mockId(): string {
+  return `mock-${String(mockIdCounter++).padStart(6, "0")}`;
+}
+function now(): string {
+  return new Date().toISOString();
+}
 
-// コマンド名 → デフォルト戻り値のマップ
-// 重要: 配列を返すべきコマンドは [] を、void 系は undefined を設定する。
-//       null を返すモックの結果に .id 等でアクセスするコードがあるため、
-//       create 系はダミーオブジェクトを返す。
+/**
+ * 動的にモック CRUD を処理するハンドラ。
+ * 対応するコマンドの場合は結果を返し、未対応なら undefined を返す。
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: true; result: any } | { handled: false } {
+  // ── Notes ──
+  if (cmd === "get_notes") {
+    return { handled: true, result: { items: [...mockStore.notes], totalPages: 1, totalItems: mockStore.notes.length } };
+  }
+  if (cmd === "get_note") {
+    const note = mockStore.notes.find((n) => n.id === args?.id) ?? null;
+    return { handled: true, result: note };
+  }
+  if (cmd === "create_note") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const input = (args?.input ?? {}) as any;
+    const note = {
+      id: mockId(),
+      title: input.title ?? "",
+      content: input.content ?? "",
+      tags: input.tags ?? [],
+      paperId: input.paperId ?? null,
+      createdAt: now(),
+      updatedAt: now(),
+    };
+    mockStore.notes.unshift(note);
+    return { handled: true, result: { ...note } };
+  }
+  if (cmd === "update_note") {
+    const idx = mockStore.notes.findIndex((n) => n.id === args?.id);
+    if (idx >= 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const input = (args?.input ?? {}) as any;
+      const updated = { ...mockStore.notes[idx], ...input, updatedAt: now() };
+      mockStore.notes[idx] = updated;
+      return { handled: true, result: { ...updated } };
+    }
+    return { handled: true, result: null };
+  }
+  if (cmd === "delete_note") {
+    mockStore.notes = mockStore.notes.filter((n) => n.id !== args?.id);
+    return { handled: true, result: undefined };
+  }
+
+  // ── Qualitative Projects ──
+  if (cmd === "get_projects" || cmd === "get_qual_projects") {
+    return { handled: true, result: [...mockStore.projects] };
+  }
+  if (cmd === "create_project" || cmd === "create_qual_project") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const input = (args?.input ?? {}) as any;
+    const project = {
+      id: mockId(),
+      name: input.name ?? "新規プロジェクト",
+      description: input.description ?? null,
+      methodType: input.methodType ?? "thematic",
+      createdAt: now(),
+      updatedAt: null,
+    };
+    mockStore.projects.unshift(project);
+    return { handled: true, result: { ...project } };
+  }
+  if (cmd === "delete_project" || cmd === "delete_qual_project") {
+    mockStore.projects = mockStore.projects.filter((p) => p.id !== args?.id);
+    return { handled: true, result: undefined };
+  }
+
+  return { handled: false };
+}
+
+// ── 静的フォールバック（動的ハンドラ非対応コマンド用）────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const MOCK_RESPONSES: Record<string, any> = {
   // Library
@@ -29,12 +109,7 @@ const MOCK_RESPONSES: Record<string, any> = {
   fetch_metadata_from_url: {},
   get_recent_items: [],
 
-  // Notes
-  get_notes: { items: [], totalPages: 0, totalItems: 0 },
-  get_note: null,
-  create_note: { id: `mock-${Date.now()}`, title: "", content: "", tags: [], paperId: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-  update_note: null,
-  delete_note: undefined,
+  // Notes — 動的ハンドラで処理するが、フォールバック用にも残す
   save_note_attachment: null,
 
   // Highlights
@@ -58,14 +133,6 @@ const MOCK_RESPONSES: Record<string, any> = {
 
   // Graph
   get_graph_data: { nodes: [], links: [] },
-
-  // Qualitative — Projects
-  get_qual_projects: [],
-  get_projects: [],
-  create_qual_project: null,
-  create_project: null,
-  delete_qual_project: undefined,
-  delete_project: undefined,
 
   // Qualitative — Codes
   get_codes: [],
@@ -175,14 +242,23 @@ export async function invoke<T>(
   args?: Record<string, unknown>,
 ): Promise<T> {
   if (!isTauri) {
-    // 非 Tauri 環境: モックレスポンスを返す
+    // 1) 動的ハンドラで処理を試みる（インメモリ CRUD）
+    const dynamic = handleDynamic(cmd, args);
+    if (dynamic.handled) {
+      // ディープコピーして返す（undefined はそのまま）
+      if (dynamic.result === undefined || dynamic.result === null) {
+        return dynamic.result as T;
+      }
+      return JSON.parse(JSON.stringify(dynamic.result)) as T;
+    }
+
+    // 2) 静的フォールバック
     const mock = MOCK_RESPONSES[cmd];
     if (mock !== undefined) {
-      // 参照共有を避けるためディープコピー
       return JSON.parse(JSON.stringify(mock)) as T;
     }
-    // 未登録コマンド: コマンド名パターンから安全なデフォルトを推測する
-    // get_* → 空配列, delete_*/update_* → undefined, create_* → null, その他 → null
+
+    // 3) 未登録コマンド: コマンド名パターンから安全なデフォルトを推測
     console.warn(`[tauriShim] Unknown command "${cmd}" — returning safe default`);
     if (cmd.startsWith("get_") || cmd.startsWith("list_")) {
       return [] as T;
