@@ -1360,6 +1360,18 @@ const en: TranslationKeys = {
     citationDeleteFailed: "Failed to delete citation",
     bibliographyFailed: "Failed to generate bibliography",
     syncFailed: "Failed to sync word count",
+    // UI additions
+    splitView: "Split View",
+    splitViewTooltip: "View paper and note side by side",
+    draftBadge: "Draft",
+    searchPapers: "Search papers…",
+    cite: "Cite",
+    pageRefPlaceholder: "e.g. p.42",
+    contextPanel: "Context",
+    resetRatio: "Reset ratio",
+    outlinePanel: "Outline",
+    chapterNum: "Ch. ${n}",
+    words: "words",
   },
 
   // ============================================================

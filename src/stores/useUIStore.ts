@@ -56,6 +56,10 @@ interface UIState {
   openQualitative: () => void;
   /** 量的分析ビューを開く（履歴に追加） */
   openQuantitative: () => void;
+  /** 草稿エディタを開く（履歴に追加） */
+  openDraft: (noteId: string) => void;
+  /** 分割ビューを開く（履歴に追加） */
+  openSplitView: (paperId: string, noteId: string) => void;
 
   /** ナビゲーション: 戻る */
   goBack: () => void;
@@ -204,6 +208,36 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({
       mainPaneContent: { type: "quantitative" },
       sidebarView: "quantitative",
+      navigationHistory: history,
+      navigationForward: [],
+      transitionDirection: "forward",
+    });
+  },
+
+  openDraft: (noteId) => {
+    const state = get();
+    const history = [
+      ...state.navigationHistory,
+      makeEntry(state),
+    ].slice(-MAX_HISTORY);
+    set({
+      mainPaneContent: { type: "draft", noteId },
+      sidebarView: "notes",
+      navigationHistory: history,
+      navigationForward: [],
+      transitionDirection: "forward",
+    });
+  },
+
+  openSplitView: (paperId, noteId) => {
+    const state = get();
+    const history = [
+      ...state.navigationHistory,
+      makeEntry(state),
+    ].slice(-MAX_HISTORY);
+    set({
+      mainPaneContent: { type: "split-view", paperId, noteId },
+      sidebarView: "notes",
       navigationHistory: history,
       navigationForward: [],
       transitionDirection: "forward",

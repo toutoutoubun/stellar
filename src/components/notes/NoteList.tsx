@@ -7,6 +7,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { useNoteStore } from "../../stores/useNoteStore";
 import { useUIStore } from "../../stores/useUIStore";
 import { useT } from "../../stores/useI18nStore";
+import { invoke } from "../../lib/tauriShim";
 import type { Note, NoteSortKey } from "../../types";
 import { Badge } from "../ui/Badge";
 import { toast } from "../ui/Toast";
@@ -59,6 +60,7 @@ export const NoteList: React.FC = () => {
   const setFilterQuery = useNoteStore((s) => s.setFilterQuery);
 
   const openNote = useUIStore((s) => s.openNote);
+  const openDraft = useUIStore((s) => s.openDraft);
   const mainPaneContent = useUIStore((s) => s.mainPaneContent);
 
   const [searchFocused, setSearchFocused] = useState(false);
@@ -113,9 +115,42 @@ export const NoteList: React.FC = () => {
     }
   }, [createNote, openNote]);
 
+  /** 新規草稿を作成 */
+  const handleCreateDraft = useCallback(async () => {
+    try {
+      const draft = await invoke<Note>("create_draft", {
+        title: t.draftMode.newDraft,
+      });
+      if (draft) {
+        // ノート一覧を再取得
+        void fetchNotes();
+        openDraft(draft.id);
+        toast.success(t.draftMode.draftCreated);
+      }
+    } catch {
+      toast.error(t.draftMode.createDraftFailed);
+    }
+  }, [fetchNotes, openDraft, t]);
+
   /** 現在選択中のノートID */
   const selectedNoteId =
-    mainPaneContent.type === "note" ? mainPaneContent.noteId : null;
+    mainPaneContent.type === "note"
+      ? mainPaneContent.noteId
+      : mainPaneContent.type === "draft"
+        ? mainPaneContent.noteId
+        : null;
+
+  /** ノートまたは草稿を開く */
+  const handleOpenNote = useCallback(
+    (note: Note) => {
+      if (note.isDraft === 1) {
+        openDraft(note.id);
+      } else {
+        openNote(note.id);
+      }
+    },
+    [openNote, openDraft],
+  );
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -144,40 +179,79 @@ export const NoteList: React.FC = () => {
             {notes.length > 0 ? `${notes.length}` : ""}
           </span>
         </div>
-        <button
-          type="button"
-          onClick={() => void handleCreateNote()}
-          className="flex items-center justify-center"
-          style={{
-            color: "var(--color-accent-primary)",
-            width: "28px",
-            height: "28px",
-            borderRadius: "8px",
-            backgroundColor: "transparent",
-            transition: "background-color 150ms ease-out",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "transparent";
-          }}
-          title={t.notes.createNote}
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+        <div className="flex items-center gap-1">
+          {/* 新規草稿ボタン */}
+          <button
+            type="button"
+            onClick={() => void handleCreateDraft()}
+            className="flex items-center justify-center"
+            style={{
+              color: "var(--color-accent-primary)",
+              width: "28px",
+              height: "28px",
+              borderRadius: "8px",
+              backgroundColor: "transparent",
+              transition: "background-color 150ms ease-out",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
+            title={t.draftMode.newDraft}
           >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-        </button>
+            {/* ペン + 紙アイコン */}
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+          </button>
+          {/* 新規ノートボタン */}
+          <button
+            type="button"
+            onClick={() => void handleCreateNote()}
+            className="flex items-center justify-center"
+            style={{
+              color: "var(--color-accent-primary)",
+              width: "28px",
+              height: "28px",
+              borderRadius: "8px",
+              backgroundColor: "transparent",
+              transition: "background-color 150ms ease-out",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
+            title={t.notes.createNote}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
+        </div>
       </header>
 
       {/* 検索バー */}
@@ -362,7 +436,7 @@ export const NoteList: React.FC = () => {
                 key={note.id}
                 note={note}
                 isSelected={selectedNoteId === note.id}
-                onClick={() => openNote(note.id)}
+                onClick={() => handleOpenNote(note)}
               />
             ))}
           </div>
@@ -423,6 +497,36 @@ const NoteListItem: React.FC<{
     >
       {/* タイトル行 */}
       <div className="flex items-center gap-2 mb-1" style={{ minWidth: 0 }}>
+        {note.isDraft === 1 && (
+          <span
+            className="shrink-0 flex items-center gap-0.5"
+            style={{
+              backgroundColor: "var(--color-accent-primary)",
+              color: "#fff",
+              padding: "0px 5px",
+              borderRadius: "999px",
+              fontSize: "9px",
+              fontWeight: 600,
+              lineHeight: "16px",
+            }}
+          >
+            {/* ペンアイコン */}
+            <svg
+              width="8"
+              height="8"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+            {t.draftMode.draftBadge}
+          </span>
+        )}
         <span
           className="text-sm font-medium truncate"
           style={{ color: "var(--color-text-primary)", minWidth: 0, display: "block" }}

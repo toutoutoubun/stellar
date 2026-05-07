@@ -11,6 +11,8 @@ import { NoteEditor } from "../notes/NoteEditor";
 import { NoteList } from "../notes/NoteList";
 import { SettingsView } from "../settings/SettingsView";
 import { GraphErrorBoundary } from "../graph/GraphErrorBoundary";
+import { DraftNoteEditor } from "../notes/DraftNoteEditor";
+import { SplitView } from "./SplitView";
 // GraphView は静的インポート:
 // React.lazy で別チャンクにすると、Safari WKWebView (Tauri) で
 // そのチャンクのモジュール評価が失敗する（"undefined is not an object"）。
@@ -175,10 +177,17 @@ export const MainPane: React.FC = () => {
           >
             <NoteList />
           </div>
-          {/* 右: ノートエディタ or 空状態 */}
+          {/* 右: ノートエディタ / 草稿エディタ / 空状態 */}
           <div className="flex-1 overflow-hidden">
             {mainPaneContent.type === "note" ? (
               <NoteEditor noteId={mainPaneContent.noteId} />
+            ) : mainPaneContent.type === "draft" ? (
+              <DraftNoteEditor noteId={mainPaneContent.noteId} />
+            ) : mainPaneContent.type === "split-view" ? (
+              <SplitView
+                paperId={mainPaneContent.paperId}
+                noteId={mainPaneContent.noteId}
+              />
             ) : (
               <div
                 className="flex flex-col items-center justify-center h-full gap-4"
@@ -217,6 +226,15 @@ export const MainPane: React.FC = () => {
         );
       case "note":
         return <NoteEditor noteId={mainPaneContent.noteId} />;
+      case "draft":
+        return <DraftNoteEditor noteId={mainPaneContent.noteId} />;
+      case "split-view":
+        return (
+          <SplitView
+            paperId={mainPaneContent.paperId}
+            noteId={mainPaneContent.noteId}
+          />
+        );
       case "graph":
         return (
           <GraphErrorBoundary>

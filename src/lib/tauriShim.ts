@@ -289,6 +289,31 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     return { handled: true, result: undefined };
   }
 
+  // ── Drafts ──
+  if (cmd === "create_draft") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const a = (args ?? {}) as any;
+    const draft = {
+      id: mockId(),
+      title: a.title ?? "New Draft",
+      content: "",
+      tags: [],
+      paperId: null,
+      isDraft: 1,
+      draftMeta: JSON.stringify({ chapters: [] }),
+      wordCount: 0,
+      readingTimeMin: 0,
+      createdAt: now(),
+      updatedAt: now(),
+    };
+    mockStore.notes.unshift(draft);
+    return { handled: true, result: { ...draft } };
+  }
+  if (cmd === "get_drafts") {
+    const drafts = mockStore.notes.filter((n: any) => n.isDraft === 1);
+    return { handled: true, result: [...drafts] };
+  }
+
   // ── Highlights ──
   if (cmd === "get_highlights") {
     return { handled: true, result: [...mockStore.highlights] };
@@ -434,9 +459,7 @@ const MOCK_RESPONSES: Record<string, any> = {
   generate_analysis_report: "",
   export_qca_csv: "",
 
-  // Draft Mode
-  create_draft: null,
-  get_drafts: [],
+  // Draft Mode (dynamic handler handles create_draft/get_drafts)
   get_draft_chapters: [],
   create_draft_chapter: null,
   update_draft_chapter: null,

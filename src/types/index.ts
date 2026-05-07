@@ -70,6 +70,51 @@ export interface Note {
   tags: string[];
   createdAt: string;
   updatedAt: string;
+  /** 下書きフラグ（1 = 草稿モード） */
+  isDraft?: number;
+  /** 下書きメタ情報（JSON） */
+  draftMeta?: DraftMeta;
+  /** 単語数 */
+  wordCount?: number;
+  /** 推定読了時間（分） */
+  readingTimeMin?: number;
+}
+
+/** 下書きメタ情報 */
+export interface DraftMeta {
+  chapters: DraftMetaChapter[];
+}
+
+/** 下書きメタ内の章要約 */
+export interface DraftMetaChapter {
+  id: string;
+  title: string;
+  order: number;
+  wordCount: number;
+}
+
+/** 下書き章（DB モデル） */
+export interface DraftChapter {
+  id: string;
+  noteId: string;
+  title: string;
+  orderIndex: number;
+  wordCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 下書き引用（DB モデル） */
+export interface DraftCitation {
+  id: string;
+  noteId: string;
+  paperId: string;
+  citationKey: string;
+  citationStyle: string;
+  inlineText: string;
+  bibliographyText: string;
+  pageRef: string | null;
+  createdAt: string;
 }
 
 /** ノート作成時の入力型 */
@@ -243,7 +288,9 @@ export type MainPaneContent =
   | { type: 'qualitative' }
   | { type: 'quantitative' }
   | { type: 'search' }
-  | { type: 'settings' };
+  | { type: 'settings' }
+  | { type: 'split-view'; paperId: string; noteId: string }
+  | { type: 'draft'; noteId: string };
 
 /** ソート方向 */
 export type SortDirection = 'asc' | 'desc';

@@ -1360,6 +1360,18 @@ const af: TranslationKeys = {
     citationDeleteFailed: "Kon nie sitasie verwyder nie",
     bibliographyFailed: "Kon nie bibliografie genereer nie",
     syncFailed: "Kon nie woordtelling sinkroniseer nie",
+    // UI additions
+    splitView: "Verdeelde aansig",
+    splitViewTooltip: "Wys artikel en nota langs mekaar",
+    draftBadge: "Konsep",
+    searchPapers: "Soek artikels…",
+    cite: "Siteer",
+    pageRefPlaceholder: "bv. p.42",
+    contextPanel: "Konteks",
+    resetRatio: "Herstel verhouding",
+    outlinePanel: "Oorsig",
+    chapterNum: "Hfst. ${n}",
+    words: "woorde",
   },
 
   // ============================================================

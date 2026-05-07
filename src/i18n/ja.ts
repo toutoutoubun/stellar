@@ -1358,6 +1358,18 @@ const ja = {
     citationDeleteFailed: "引用の削除に失敗しました",
     bibliographyFailed: "参考文献リストの生成に失敗しました",
     syncFailed: "文字数の同期に失敗しました",
+    // UI追加
+    splitView: "分割表示",
+    splitViewTooltip: "論文とノートを並べて表示",
+    draftBadge: "草稿",
+    searchPapers: "論文を検索…",
+    cite: "引用",
+    pageRefPlaceholder: "例: p.42",
+    contextPanel: "コンテキスト",
+    resetRatio: "比率をリセット",
+    outlinePanel: "アウトライン",
+    chapterNum: "第${n}章",
+    words: "語",
   },
 
   // ============================================================

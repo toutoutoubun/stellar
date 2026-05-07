@@ -1360,6 +1360,18 @@ const fr: TranslationKeys = {
     citationDeleteFailed: "Échec de la suppression de la citation",
     bibliographyFailed: "Échec de la génération de la bibliographie",
     syncFailed: "Échec de la synchronisation du nombre de mots",
+    // UI additions
+    splitView: "Vue divisée",
+    splitViewTooltip: "Afficher l'article et la note côte à côte",
+    draftBadge: "Brouillon",
+    searchPapers: "Rechercher des articles…",
+    cite: "Citer",
+    pageRefPlaceholder: "ex. p.42",
+    contextPanel: "Contexte",
+    resetRatio: "Réinitialiser le ratio",
+    outlinePanel: "Plan",
+    chapterNum: "Ch. ${n}",
+    words: "mots",
   },
 
   // ============================================================
