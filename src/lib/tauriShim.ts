@@ -434,6 +434,20 @@ const MOCK_RESPONSES: Record<string, any> = {
   generate_analysis_report: "",
   export_qca_csv: "",
 
+  // Draft Mode
+  create_draft: null,
+  get_drafts: [],
+  get_draft_chapters: [],
+  create_draft_chapter: null,
+  update_draft_chapter: null,
+  delete_draft_chapter: undefined,
+  reorder_draft_chapters: undefined,
+  insert_citation: null,
+  get_citations_for_note: [],
+  delete_citation: undefined,
+  generate_bibliography: "",
+  sync_word_count: undefined,
+
   // Citation Network
   update_reading_status: undefined,
   get_reading_status_counts: { unread: 0, reading: 0, done: 0, revisit: 0 },

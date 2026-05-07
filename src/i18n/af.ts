@@ -1301,6 +1301,68 @@ const af: TranslationKeys = {
   },
 
   // ============================================================
+  // draftMode — Konsep-modus / Langvorm skryfwerk / Hoofstukbestuur / Sitasies
+  // ============================================================
+  draftMode: {
+    title: "Konsep-modus",
+    newDraft: "Nuwe konsep",
+    drafts: "Konsepte",
+    noDrafts: "Geen konsepte nie",
+    createDraft: "Skep konsep",
+    deleteDraft: "Verwyder konsep",
+    wordCount: "Woordtelling",
+    readingTime: "Leestyd",
+    readingTimeMin: "${min} min",
+    // Hoofstukbestuur
+    chapters: "Hoofstukke",
+    addChapter: "Voeg hoofstuk by",
+    editChapter: "Wysig hoofstuk",
+    deleteChapter: "Verwyder hoofstuk",
+    reorderChapters: "Herrangskik hoofstukke",
+    chapterTitle: "Hoofstuk titel",
+    noChapters: "Geen hoofstukke nie",
+    // Sitasiebestuur
+    citations: "Sitasies",
+    insertCitation: "Voeg sitasie in",
+    deleteCitation: "Verwyder sitasie",
+    citationStyle: "Sitasiestyl",
+    citationStyles: {
+      apa7: "APA 7de uitgawe",
+      mla9: "MLA 9de uitgawe",
+      chicago17: "Chicago 17de uitgawe",
+      japanese: "Japannese styl",
+    },
+    inlineText: "In-teks sitasie",
+    bibliographyText: "Bibliografie-inskrywing",
+    generateBibliography: "Genereer bibliografie",
+    noCitations: "Geen sitasies nie",
+    pageRef: "Bladsyverwysing",
+    citationKey: "Sitasiesleutel",
+    // Operasie resultate
+    draftCreated: "Konsep geskep",
+    draftDeleted: "Konsep verwyder",
+    chapterCreated: "Hoofstuk bygevoeg",
+    chapterUpdated: "Hoofstuk opgedateer",
+    chapterDeleted: "Hoofstuk verwyder",
+    chaptersReordered: "Hoofstukke herrangskik",
+    citationInserted: "Sitasie ingevoeg",
+    citationDeleted: "Sitasie verwyder",
+    bibliographyGenerated: "Bibliografie gegenereer",
+    wordCountSynced: "Woordtelling gesinkroniseer",
+    // Foute
+    createDraftFailed: "Kon nie konsep skep nie",
+    fetchDraftsFailed: "Kon nie konsepte ophaal nie",
+    chapterCreateFailed: "Kon nie hoofstuk byvoeg nie",
+    chapterUpdateFailed: "Kon nie hoofstuk opdateer nie",
+    chapterDeleteFailed: "Kon nie hoofstuk verwyder nie",
+    reorderFailed: "Kon nie hoofstukke herrangskik nie",
+    citationInsertFailed: "Kon nie sitasie invoeg nie",
+    citationDeleteFailed: "Kon nie sitasie verwyder nie",
+    bibliographyFailed: "Kon nie bibliografie genereer nie",
+    syncFailed: "Kon nie woordtelling sinkroniseer nie",
+  },
+
+  // ============================================================
   // Hooks
   // ============================================================
   hooks: {

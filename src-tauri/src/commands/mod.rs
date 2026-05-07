@@ -3,6 +3,7 @@
 // 各サブモジュールがフロントエンドから呼び出し可能なコマンドを提供する
 
 pub mod citation_network;
+pub mod draft;
 pub mod highlights;
 pub mod links;
 pub mod metadata;

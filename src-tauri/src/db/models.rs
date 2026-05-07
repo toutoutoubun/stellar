@@ -1303,6 +1303,146 @@ pub fn parse_recommendation(row: &sqlx::sqlite::SqliteRow) -> Result<PaperRecomm
 }
 
 // ============================================================
+// 下書きモード — Draft・Chapter・Citation
+// ============================================================
+
+/// 下書きノートレスポンス（is_draft=1 のノート + 拡張フィールド）
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DraftResponse {
+    pub id: String,
+    pub title: String,
+    pub content: String,
+    pub paper_id: Option<String>,
+    pub tags: Vec<String>,
+    pub is_draft: i32,
+    pub draft_meta: String,
+    pub word_count: i32,
+    pub reading_time_min: i32,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// sqlx::SqliteRow → DraftResponse
+pub fn parse_draft(row: &sqlx::sqlite::SqliteRow) -> Result<DraftResponse, String> {
+    Ok(DraftResponse {
+        id: col_str(row, "id"),
+        title: col_str(row, "title"),
+        content: col_str(row, "content"),
+        paper_id: col_opt_str(row, "paper_id"),
+        tags: col_string_vec(row, "tags"),
+        is_draft: col_i32(row, "is_draft"),
+        draft_meta: col_str(row, "draft_meta"),
+        word_count: col_i32(row, "word_count"),
+        reading_time_min: col_i32(row, "reading_time_min"),
+        created_at: col_str(row, "created_at"),
+        updated_at: col_str(row, "updated_at"),
+    })
+}
+
+/// 下書き作成 DTO
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateDraftDto {
+    pub title: String,
+    #[serde(default)]
+    pub content: String,
+    pub paper_id: Option<String>,
+    #[serde(default)]
+    pub tags: Vec<String>,
+}
+
+/// 下書き章レスポンス
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DraftChapterResponse {
+    pub id: String,
+    pub note_id: String,
+    pub title: String,
+    pub order_index: i32,
+    pub word_count: i32,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// sqlx::SqliteRow → DraftChapterResponse
+pub fn parse_draft_chapter(row: &sqlx::sqlite::SqliteRow) -> Result<DraftChapterResponse, String> {
+    Ok(DraftChapterResponse {
+        id: col_str(row, "id"),
+        note_id: col_str(row, "note_id"),
+        title: col_str(row, "title"),
+        order_index: col_i32(row, "order_index"),
+        word_count: col_i32(row, "word_count"),
+        created_at: col_str(row, "created_at"),
+        updated_at: col_str(row, "updated_at"),
+    })
+}
+
+/// 下書き章作成 DTO
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateDraftChapterDto {
+    pub note_id: String,
+    pub title: String,
+    #[serde(default)]
+    pub order_index: i32,
+}
+
+/// 下書き章更新 DTO
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateDraftChapterDto {
+    pub title: Option<String>,
+    pub order_index: Option<i32>,
+    pub word_count: Option<i32>,
+}
+
+/// 下書き引用レスポンス
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DraftCitationResponse {
+    pub id: String,
+    pub note_id: String,
+    pub paper_id: String,
+    pub citation_key: String,
+    pub citation_style: String,
+    pub inline_text: String,
+    pub bibliography_text: String,
+    pub page_ref: Option<String>,
+    pub created_at: String,
+}
+
+/// sqlx::SqliteRow → DraftCitationResponse
+pub fn parse_draft_citation(row: &sqlx::sqlite::SqliteRow) -> Result<DraftCitationResponse, String> {
+    Ok(DraftCitationResponse {
+        id: col_str(row, "id"),
+        note_id: col_str(row, "note_id"),
+        paper_id: col_str(row, "paper_id"),
+        citation_key: col_str(row, "citation_key"),
+        citation_style: col_str(row, "citation_style"),
+        inline_text: col_str(row, "inline_text"),
+        bibliography_text: col_str(row, "bibliography_text"),
+        page_ref: col_opt_str(row, "page_ref"),
+        created_at: col_str(row, "created_at"),
+    })
+}
+
+/// 引用挿入 DTO
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InsertCitationDto {
+    pub note_id: String,
+    pub paper_id: String,
+    #[serde(default = "default_citation_style")]
+    pub citation_style: String,
+    pub page_ref: Option<String>,
+}
+
+fn default_citation_style() -> String {
+    "apa7".to_string()
+}
+
+// ============================================================
 // テスト
 // ============================================================
 

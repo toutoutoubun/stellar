@@ -1301,6 +1301,68 @@ const fr: TranslationKeys = {
   },
 
   // ============================================================
+  // draftMode — Mode brouillon / Rédaction longue / Gestion des chapitres / Citations
+  // ============================================================
+  draftMode: {
+    title: "Mode brouillon",
+    newDraft: "Nouveau brouillon",
+    drafts: "Brouillons",
+    noDrafts: "Aucun brouillon",
+    createDraft: "Créer un brouillon",
+    deleteDraft: "Supprimer le brouillon",
+    wordCount: "Nombre de mots",
+    readingTime: "Temps de lecture",
+    readingTimeMin: "${min} min",
+    // Gestion des chapitres
+    chapters: "Chapitres",
+    addChapter: "Ajouter un chapitre",
+    editChapter: "Modifier le chapitre",
+    deleteChapter: "Supprimer le chapitre",
+    reorderChapters: "Réordonner les chapitres",
+    chapterTitle: "Titre du chapitre",
+    noChapters: "Aucun chapitre",
+    // Gestion des citations
+    citations: "Citations",
+    insertCitation: "Insérer une citation",
+    deleteCitation: "Supprimer la citation",
+    citationStyle: "Style de citation",
+    citationStyles: {
+      apa7: "APA 7e édition",
+      mla9: "MLA 9e édition",
+      chicago17: "Chicago 17e édition",
+      japanese: "Style japonais",
+    },
+    inlineText: "Citation dans le texte",
+    bibliographyText: "Entrée bibliographique",
+    generateBibliography: "Générer la bibliographie",
+    noCitations: "Aucune citation",
+    pageRef: "Référence de page",
+    citationKey: "Clé de citation",
+    // Résultats des opérations
+    draftCreated: "Brouillon créé",
+    draftDeleted: "Brouillon supprimé",
+    chapterCreated: "Chapitre ajouté",
+    chapterUpdated: "Chapitre mis à jour",
+    chapterDeleted: "Chapitre supprimé",
+    chaptersReordered: "Chapitres réordonnés",
+    citationInserted: "Citation insérée",
+    citationDeleted: "Citation supprimée",
+    bibliographyGenerated: "Bibliographie générée",
+    wordCountSynced: "Nombre de mots synchronisé",
+    // Erreurs
+    createDraftFailed: "Échec de la création du brouillon",
+    fetchDraftsFailed: "Échec de la récupération des brouillons",
+    chapterCreateFailed: "Échec de l'ajout du chapitre",
+    chapterUpdateFailed: "Échec de la mise à jour du chapitre",
+    chapterDeleteFailed: "Échec de la suppression du chapitre",
+    reorderFailed: "Échec du réordonnement des chapitres",
+    citationInsertFailed: "Échec de l'insertion de la citation",
+    citationDeleteFailed: "Échec de la suppression de la citation",
+    bibliographyFailed: "Échec de la génération de la bibliographie",
+    syncFailed: "Échec de la synchronisation du nombre de mots",
+  },
+
+  // ============================================================
   // Hooks
   // ============================================================
   hooks: {

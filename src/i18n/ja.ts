@@ -1299,6 +1299,68 @@ const ja = {
   },
 
   // ============================================================
+  // draftMode — 下書きモード・長文執筆・章管理・引用挿入
+  // ============================================================
+  draftMode: {
+    title: "下書きモード",
+    newDraft: "新規下書き",
+    drafts: "下書き一覧",
+    noDrafts: "下書きはありません",
+    createDraft: "下書きを作成",
+    deleteDraft: "下書きを削除",
+    wordCount: "文字数",
+    readingTime: "読了時間",
+    readingTimeMin: "${min}分",
+    // 章管理
+    chapters: "章",
+    addChapter: "章を追加",
+    editChapter: "章を編集",
+    deleteChapter: "章を削除",
+    reorderChapters: "章の並び替え",
+    chapterTitle: "章タイトル",
+    noChapters: "章はありません",
+    // 引用管理
+    citations: "引用",
+    insertCitation: "引用を挿入",
+    deleteCitation: "引用を削除",
+    citationStyle: "引用スタイル",
+    citationStyles: {
+      apa7: "APA 第7版",
+      mla9: "MLA 第9版",
+      chicago17: "シカゴ 第17版",
+      japanese: "日本語スタイル",
+    },
+    inlineText: "本文中引用",
+    bibliographyText: "参考文献",
+    generateBibliography: "参考文献リストを生成",
+    noCitations: "引用はありません",
+    pageRef: "ページ参照",
+    citationKey: "引用キー",
+    // 操作結果
+    draftCreated: "下書きを作成しました",
+    draftDeleted: "下書きを削除しました",
+    chapterCreated: "章を追加しました",
+    chapterUpdated: "章を更新しました",
+    chapterDeleted: "章を削除しました",
+    chaptersReordered: "章の順序を変更しました",
+    citationInserted: "引用を挿入しました",
+    citationDeleted: "引用を削除しました",
+    bibliographyGenerated: "参考文献リストを生成しました",
+    wordCountSynced: "文字数を同期しました",
+    // エラー
+    createDraftFailed: "下書きの作成に失敗しました",
+    fetchDraftsFailed: "下書き一覧の取得に失敗しました",
+    chapterCreateFailed: "章の追加に失敗しました",
+    chapterUpdateFailed: "章の更新に失敗しました",
+    chapterDeleteFailed: "章の削除に失敗しました",
+    reorderFailed: "章の並び替えに失敗しました",
+    citationInsertFailed: "引用の挿入に失敗しました",
+    citationDeleteFailed: "引用の削除に失敗しました",
+    bibliographyFailed: "参考文献リストの生成に失敗しました",
+    syncFailed: "文字数の同期に失敗しました",
+  },
+
+  // ============================================================
   // hooks
   // ============================================================
   hooks: {

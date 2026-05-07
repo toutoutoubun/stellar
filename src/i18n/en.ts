@@ -1301,6 +1301,68 @@ const en: TranslationKeys = {
   },
 
   // ============================================================
+  // draftMode — Draft Mode / Long-form Writing / Chapter Management / Citations
+  // ============================================================
+  draftMode: {
+    title: "Draft Mode",
+    newDraft: "New Draft",
+    drafts: "Drafts",
+    noDrafts: "No drafts yet",
+    createDraft: "Create Draft",
+    deleteDraft: "Delete Draft",
+    wordCount: "Word Count",
+    readingTime: "Reading Time",
+    readingTimeMin: "${min} min",
+    // Chapter management
+    chapters: "Chapters",
+    addChapter: "Add Chapter",
+    editChapter: "Edit Chapter",
+    deleteChapter: "Delete Chapter",
+    reorderChapters: "Reorder Chapters",
+    chapterTitle: "Chapter Title",
+    noChapters: "No chapters yet",
+    // Citation management
+    citations: "Citations",
+    insertCitation: "Insert Citation",
+    deleteCitation: "Delete Citation",
+    citationStyle: "Citation Style",
+    citationStyles: {
+      apa7: "APA 7th Edition",
+      mla9: "MLA 9th Edition",
+      chicago17: "Chicago 17th Edition",
+      japanese: "Japanese Style",
+    },
+    inlineText: "In-text Citation",
+    bibliographyText: "Bibliography Entry",
+    generateBibliography: "Generate Bibliography",
+    noCitations: "No citations yet",
+    pageRef: "Page Reference",
+    citationKey: "Citation Key",
+    // Operation results
+    draftCreated: "Draft created",
+    draftDeleted: "Draft deleted",
+    chapterCreated: "Chapter added",
+    chapterUpdated: "Chapter updated",
+    chapterDeleted: "Chapter deleted",
+    chaptersReordered: "Chapters reordered",
+    citationInserted: "Citation inserted",
+    citationDeleted: "Citation deleted",
+    bibliographyGenerated: "Bibliography generated",
+    wordCountSynced: "Word count synced",
+    // Errors
+    createDraftFailed: "Failed to create draft",
+    fetchDraftsFailed: "Failed to fetch drafts",
+    chapterCreateFailed: "Failed to add chapter",
+    chapterUpdateFailed: "Failed to update chapter",
+    chapterDeleteFailed: "Failed to delete chapter",
+    reorderFailed: "Failed to reorder chapters",
+    citationInsertFailed: "Failed to insert citation",
+    citationDeleteFailed: "Failed to delete citation",
+    bibliographyFailed: "Failed to generate bibliography",
+    syncFailed: "Failed to sync word count",
+  },
+
+  // ============================================================
   // Hooks
   // ============================================================
   hooks: {

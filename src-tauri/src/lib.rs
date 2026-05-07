@@ -40,6 +40,12 @@ fn get_migrations() -> Vec<Migration> {
             sql: include_str!("db/migrations/V004__citation_network.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 5,
+            description: "下書きモード — 長文執筆・章管理・引用挿入",
+            sql: include_str!("db/migrations/V005__draft_mode.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }
 
@@ -220,6 +226,22 @@ pub fn run() {
             // 引用ネットワーク — エクスポート
             commands::citation_network::export_bibtex,
             commands::citation_network::export_ris,
+            // 下書きモード — Draft CRUD
+            commands::draft::create_draft,
+            commands::draft::get_drafts,
+            // 下書きモード — 章管理
+            commands::draft::get_draft_chapters,
+            commands::draft::create_draft_chapter,
+            commands::draft::update_draft_chapter,
+            commands::draft::delete_draft_chapter,
+            commands::draft::reorder_draft_chapters,
+            // 下書きモード — 引用管理
+            commands::draft::insert_citation,
+            commands::draft::get_citations_for_note,
+            commands::draft::delete_citation,
+            commands::draft::generate_bibliography,
+            // 下書きモード — ワードカウント同期
+            commands::draft::sync_word_count,
         ])
         .run(tauri::generate_context!())
         .expect("Stellar の起動に失敗しました");
