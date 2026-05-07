@@ -87,14 +87,9 @@ export const NoteList: React.FC = () => {
 
     // ソート
     result.sort((a, b) => {
-      let cmp = 0;
-      if (sortKey === "title") {
-        cmp = a.title.localeCompare(b.title, "ja");
-      } else {
-        const aVal = new Date(a[sortKey]).getTime();
-        const bVal = new Date(b[sortKey]).getTime();
-        cmp = aVal - bVal;
-      }
+      const cmp = sortKey === "title"
+        ? a.title.localeCompare(b.title, "ja")
+        : new Date(a[sortKey]).getTime() - new Date(b[sortKey]).getTime();
       return sortDirection === "asc" ? cmp : -cmp;
     });
 
@@ -460,7 +455,7 @@ const NoteListItem: React.FC<{
   const preview = useMemo(() => {
     const text = note.content
       .replace(/^#{1,6}\s+/gm, "") // 見出し
-      .replace(/[\*_~`>\-\[\]]/g, "") // 装飾
+      .replace(/[*_~`>\-[\]]/g, "") // 装飾
       .replace(/\n+/g, " ")          // 改行をスペースに
       .trim();
     return text.slice(0, 60) || "";

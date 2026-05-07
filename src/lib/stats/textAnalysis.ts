@@ -13,7 +13,7 @@ import { useI18nStore } from "../../stores/useI18nStore";
 // Kuromoji tokeniser singleton
 // ---------------------------------------------------------------------------
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type KuromojiTokenizer = { tokenize: (text: string) => KuromojiToken[] };
 
 interface KuromojiToken {
@@ -35,8 +35,9 @@ async function getTokenizer(): Promise<KuromojiTokenizer> {
 
   // kuromoji is CJS — use variable to prevent Vite static analysis from
   // detecting and pre-bundling the 18 MB dictionary module.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const modName = "kuromoji";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- kuromoji has no type declarations
   const kuromoji = (await import(/* @vite-ignore */ modName)) as any;
   const kuromojiMod = kuromoji.default ?? kuromoji;
 

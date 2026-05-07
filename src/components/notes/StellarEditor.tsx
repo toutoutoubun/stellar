@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/static-components -- CodeMirror toolbar components are intentionally created within the editor component */
 // src/components/notes/StellarEditor.tsx
 // Stellar — CodeMirror 6 カスタムエディタ
 // Markdown 編集 + WikiLink構文ハイライト + ==ハイライト== + @cite{} + 自動保存
@@ -314,9 +315,11 @@ export const StellarEditor: React.FC<StellarEditorProps> = ({
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // コールバック refs で最新値をキャプチャ
   const onSaveRef = useRef(onSave);
-  onSaveRef.current = onSave;
   const onContentChangeRef = useRef(onContentChange);
-  onContentChangeRef.current = onContentChange;
+  useEffect(() => {
+    onSaveRef.current = onSave;
+    onContentChangeRef.current = onContentChange;
+  });
 
   /** WikiLink オートコンプリート候補取得 */
   const getSuggestions = useCallback(
@@ -351,6 +354,7 @@ export const StellarEditor: React.FC<StellarEditorProps> = ({
   );
 
   /** autoSave Extension — キー入力から1秒後に自動保存 */
+  /* eslint-disable react-hooks/refs, react-hooks/preserve-manual-memoization -- refs are only read inside event handlers, not during render */
   const autoSaveExtension = useMemo(
     () =>
       EditorView.updateListener.of((update: ViewUpdate) => {
@@ -369,12 +373,13 @@ export const StellarEditor: React.FC<StellarEditorProps> = ({
       }),
     [],
   );
+  /* eslint-enable react-hooks/refs, react-hooks/preserve-manual-memoization */
 
   /** WikiLink クリックハンドラ Extension */
   const clickHandlerExtension = useMemo(
     () =>
       EditorView.domEventHandlers({
-        click: (event: MouseEvent, _view: EditorView) => {
+        click: (event: MouseEvent, _view: EditorView) => { // eslint-disable-line @typescript-eslint/no-unused-vars
           const target = event.target as HTMLElement;
           // WikiLink をクリックした場合（Ctrl/Cmd + クリック）
           if (

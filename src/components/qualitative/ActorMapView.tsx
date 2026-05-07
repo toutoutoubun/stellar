@@ -71,7 +71,7 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
   // アクターフォーム
   const [actorName, setActorName] = useState("");
   const [actorType, setActorType] = useState("state");
-  const [actorPosition, _setActorPosition] = useState("neutral");
+  const [actorPosition, _setActorPosition] = useState("neutral"); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [actorInfluence, setActorInfluence] = useState(3);
   const [actorDescription, setActorDescription] = useState("");
 
@@ -95,6 +95,7 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
   }, [projectId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
     void loadData();
   }, [loadData]);
 

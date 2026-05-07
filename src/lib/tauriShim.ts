@@ -310,7 +310,7 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     return { handled: true, result: { ...draft } };
   }
   if (cmd === "get_drafts") {
-    const drafts = mockStore.notes.filter((n: any) => n.isDraft === 1);
+    const drafts = mockStore.notes.filter((n: Record<string, unknown>) => n.isDraft === 1);
     return { handled: true, result: [...drafts] };
   }
 
@@ -321,7 +321,7 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
   if (cmd === "get_highlights_by_code") {
     const codeId = args?.codeId as string | undefined;
     const filtered = codeId
-      ? mockStore.highlights.filter((h: any) => h.codeIds?.includes(codeId))
+      ? mockStore.highlights.filter((h: Record<string, unknown>) => (h.codeIds as string[] | undefined)?.includes(codeId))
       : [];
     return { handled: true, result: filtered };
   }
@@ -527,7 +527,7 @@ export async function invoke<T>(
 }
 
 // ── 安全な listen ──────────────────────────────────
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type UnlistenFn = () => void;
 
 /**
@@ -568,7 +568,7 @@ export function convertFileSrc(filePath: string, protocol?: string): string {
 }
 
 // ── 安全な getCurrentWindow ────────────────────────
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 interface WindowHandle {
   minimize: () => Promise<void>;
   toggleMaximize: () => Promise<void>;

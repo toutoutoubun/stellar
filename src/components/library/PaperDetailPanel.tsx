@@ -192,7 +192,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
           input: { tags: [...paper.tags, tag] },
         });
         toast.success(useI18nStore.getState().t.library.k_4ibxuc);
-      } catch (err) {
+      } catch {
         toast.error(useI18nStore.getState().t.library.k_wbna9r);
       }
       setNewTag("");

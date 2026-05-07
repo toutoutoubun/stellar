@@ -152,6 +152,7 @@ export const SettingsView: React.FC = () => {
   // データサマリーの読み込み（実データ取得）
   useEffect(() => {
     if (activeTab === "data") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
       setIsLoadingData(true);
       dataApi.getSummary()
         .then((summary) => {
@@ -173,6 +174,7 @@ export const SettingsView: React.FC = () => {
   // ブラウザ拡張ステータスチェック
   useEffect(() => {
     if (activeTab !== "data") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
     setExtensionStatus("checking");
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 1000);
@@ -188,8 +190,8 @@ export const SettingsView: React.FC = () => {
 
     // 最近のインポートを取得
     invoke<Paper[]>("get_papers", { page: 1, perPage: 100 })
-      .then((res: any) => {
-        const items: Paper[] = res?.items ?? res ?? [];
+      .then((res: unknown) => {
+        const items: Paper[] = ((res as Record<string, unknown>)?.items ?? res ?? []) as Paper[];
         const recent = items
           .filter((p: Paper) => p.url && p.url.length > 0)
           .slice(0, 5)

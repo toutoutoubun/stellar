@@ -60,18 +60,20 @@ export const DraftNoteEditor: React.FC<DraftNoteEditorProps> = ({ noteId }) => {
   }, [noteId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
     void fetchChapters();
   }, [fetchChapters]);
 
   /** activeNote が読み込まれたらコンテンツを同期 */
   useEffect(() => {
     if (activeNote) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
       setEditorContent(activeNote.content);
     }
   }, [activeNote]);
 
   /** 章クリック — 該当位置へスクロール（将来拡張） */
-  const handleChapterClick = useCallback((_chapterId: string) => {
+  const handleChapterClick = useCallback((_chapterId: string) => { // eslint-disable-line @typescript-eslint/no-unused-vars
     // 将来: StellarEditor ref で該当見出しまでスクロール
   }, []);
 
@@ -115,7 +117,7 @@ export const DraftNoteEditor: React.FC<DraftNoteEditorProps> = ({ noteId }) => {
   );
 
   /** 見出しクリック（将来拡張） */
-  const handleHeadingClick = useCallback((_line: number) => {
+  const handleHeadingClick = useCallback((_line: number) => { // eslint-disable-line @typescript-eslint/no-unused-vars
     // 将来: StellarEditor ref で該当行へスクロール
   }, []);
 

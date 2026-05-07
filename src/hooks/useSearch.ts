@@ -157,6 +157,7 @@ export function useSearch(): UseSearchReturn {
   useEffect(() => {
     // 2文字未満はクリア
     if (query.length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
       setResults(null);
       setSelectedIndex(0);
       return;

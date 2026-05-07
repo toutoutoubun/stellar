@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 // src/components/ui/TutorialOverlay.tsx
 // Stellar — 使い方チュートリアル・インフォメーション オーバーレイ
 // アプリの主要機能を紹介するステップ型ガイド
@@ -249,6 +250,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
 
   // フェードイン on open
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
     if (open) setFadeState("in");
   }, [open]);
 

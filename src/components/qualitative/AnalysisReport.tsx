@@ -47,7 +47,6 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
   });
 
   const handleGenerate = useCallback(async () => {
-    const t = useT();
     setLoading(true);
     try {
       const sectionList = (Object.keys(sections) as (keyof ReportSections)[])
@@ -71,6 +70,20 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
       toast.success(t.qualitative.k_rexm4q);
     }
   }, [report]);
+
+  const SECTION_LABELS: { key: keyof ReportSections; label: string }[] = [
+    { key: "codebook", label: t.qualitative.k_7z1tpa },
+    { key: "matrix", label: t.qualitative.k_5l342g },
+    { key: "timeline", label: t.qualitative.k_3mh737 },
+    { key: "actors", label: t.qualitative.k_yybalk },
+    { key: "process_tracing", label: t.qualitative.k_vz7qeo },
+    { key: "comparative", label: t.qualitative.k_2mss8j },
+    { key: "framing", label: t.qualitative.k_37exdr },
+  ];
+
+  const SECTION_LABELS_MAP: Record<string, string> = Object.fromEntries(
+    SECTION_LABELS.map(({ key, label }) => [key, label]),
+  );
 
   /** レポートをノートに出力 */
   const handleExportToNote = useCallback(async () => {
@@ -110,19 +123,6 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
     });
   };
 
-  const SECTION_LABELS: { key: keyof ReportSections; label: string }[] = [
-    { key: "codebook", label: t.qualitative.k_7z1tpa },
-    { key: "matrix", label: t.qualitative.k_5l342g },
-    { key: "timeline", label: t.qualitative.k_3mh737 },
-    { key: "actors", label: t.qualitative.k_yybalk },
-    { key: "process_tracing", label: t.qualitative.k_vz7qeo },
-    { key: "comparative", label: t.qualitative.k_2mss8j },
-    { key: "framing", label: t.qualitative.k_37exdr },
-  ];
-
-  const SECTION_LABELS_MAP: Record<string, string> = Object.fromEntries(
-    SECTION_LABELS.map(({ key, label }) => [key, label]),
-  );
 
   return (
     <div className="p-6 h-full overflow-y-auto">

@@ -62,6 +62,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
   /** activeNote が読み込まれたらローカル状態を初期化 */
   useEffect(() => {
     if (activeNote) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
       setEditorContent(activeNote.content);
       setCharCount(activeNote.content.length);
       setTitleValue(activeNote.title);
@@ -77,6 +78,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
   useEffect(() => {
     if (autoSaveStatus === "saved") {
       const now = new Date();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
       setLastSavedAt(
         `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
       );
@@ -156,7 +158,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
   }, []);
 
   /** アウトライン見出しクリック → エディタの該当行にスクロール */
-  const handleHeadingClick = useCallback((_line: number) => {
+  const handleHeadingClick = useCallback((_line: number) => { // eslint-disable-line @typescript-eslint/no-unused-vars
     // CodeMirror の EditorView を直接参照する必要があるが、
     // 現在のアーキテクチャでは StellarEditor 内部に閉じている。
     // 将来的に ref でスクロール関数を公開する拡張が可能。

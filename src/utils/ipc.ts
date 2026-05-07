@@ -38,12 +38,12 @@ export async function invoke<T>(
   } catch (error: unknown) {
     // Tauri のエラーを文字列に正規化
     if (typeof error === "string") {
-      throw new Error(error);
+      throw new Error(error, { cause: error });
     }
     if (error instanceof Error) {
       throw error;
     }
-    throw new Error(String(error));
+    throw new Error(String(error), { cause: error });
   }
 }
 
@@ -258,7 +258,7 @@ export const dataApi = {
         URL.revokeObjectURL(url);
         return a.download;
       } catch (e) {
-        throw new Error(`Export failed: ${String(e)}`);
+        throw new Error(`Export failed: ${String(e)}`, { cause: e });
       }
     }
   },
@@ -310,7 +310,7 @@ export const dataApi = {
         URL.revokeObjectURL(url);
         return a.download;
       } catch (e) {
-        throw new Error(`Backup failed: ${String(e)}`);
+        throw new Error(`Backup failed: ${String(e)}`, { cause: e });
       }
     }
   },

@@ -359,7 +359,7 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
     (
       link: GraphLink,
       ctx: CanvasRenderingContext2D,
-      _globalScale: number,
+      _globalScale: number, // eslint-disable-line @typescript-eslint/no-unused-vars
     ) => {
       const sourceNode = link.source as unknown as GraphNodeExtended;
       const targetNode = link.target as unknown as GraphNodeExtended;

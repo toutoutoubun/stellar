@@ -408,6 +408,7 @@ const FrequencyCard = memo<{ freq: FrequencyTable }>(({ freq }) => {
 // ============================================================================
 // DescriptiveResult メインコンポーネント
 // ============================================================================
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const DescriptiveResult: React.FC<Props> = ({ analysis, variables: _variables, dataRows }) => {
   const result = analysis.result as {
     descriptives?: DescriptiveResultType[];
@@ -415,9 +416,7 @@ export const DescriptiveResult: React.FC<Props> = ({ analysis, variables: _varia
     correlations?: CorrelationResult[];
   } | null;
 
-  if (!result) return null;
-
-  const { descriptives = [], frequencies = [], correlations = [] } = result;
+  const { descriptives = [], frequencies = [], correlations = [] } = result ?? {};
 
   // 相関マトリクス用変数名
   const corrVarNames = useMemo(() => {
@@ -429,6 +428,8 @@ export const DescriptiveResult: React.FC<Props> = ({ analysis, variables: _varia
     }
     return [...names];
   }, [correlations]);
+
+  if (!result) return null;
 
   return (
     <div className="h-full overflow-y-auto p-6 scrollable-area">

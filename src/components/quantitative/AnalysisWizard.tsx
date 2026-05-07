@@ -188,7 +188,6 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
 
   // ── バリデーション警告 ──
   const warnings = useMemo(() => {
-    const t = useT();
     const w: string[] = [];
     if (!method) return w;
 
@@ -394,7 +393,7 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
         );
 
         let correlations: unknown[] = [];
-        let chiSquareResults: unknown[] = [];
+        const chiSquareResults: unknown[] = [];
 
         // スケール変数同士 → 相関
         if (scaleSelected.length >= 2) {

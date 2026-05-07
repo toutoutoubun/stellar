@@ -151,7 +151,7 @@ export const LibraryView: React.FC = () => {
       try {
         await deletePaper(id);
         toast.success(t.library.k_u38ovq);
-      } catch (e) {
+      } catch {
         toast.error(t.library.k_dtz2fv);
       }
     },
@@ -188,7 +188,7 @@ export const LibraryView: React.FC = () => {
     try {
       await updatePaper(id, input);
       toast.success(t.common.save);
-    } catch (e) {
+    } catch (e: unknown) {
       toast.error(String(e));
     }
   }, [updatePaper, t]);
@@ -217,7 +217,7 @@ export const LibraryView: React.FC = () => {
           }
           toast.success(t.library.k_uojkt0);
         }
-      } catch (e) {
+      } catch {
         toast.error(t.library.k_e12e0q);
       }
     },

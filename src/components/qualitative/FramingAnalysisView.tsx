@@ -40,7 +40,6 @@ export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({
   const [treatmentRecommendation, setTreatmentRecommendation] = useState("");
 
   const loadData = useCallback(async () => {
-    const t = useT();
     setLoading(true);
     try {
       const [frameList, matrixData] = await Promise.all([
@@ -57,6 +56,7 @@ export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({
   }, [projectId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
     void loadData();
   }, [loadData]);
 

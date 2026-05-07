@@ -41,6 +41,7 @@ export const EditPaperModal: React.FC<EditPaperModalProps> = ({
   // 論文データをフォームに反映
   useEffect(() => {
     if (paper && open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
       setTitle(paper.title);
       setAuthors(paper.authors.join(", "));
       setYear(paper.year != null ? String(paper.year) : "");

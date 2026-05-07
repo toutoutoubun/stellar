@@ -832,6 +832,7 @@ const RegressionResultCard = memo<{
 // ============================================================================
 // InferentialResult メインコンポーネント
 // ============================================================================
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const InferentialResult: React.FC<Props> = ({ analysis, variables: _variables, dataRows }) => {
   const result = analysis.result as Record<string, unknown> | null;
   const config = (analysis.config as Record<string, unknown>) ?? {};

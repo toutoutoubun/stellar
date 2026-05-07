@@ -53,6 +53,7 @@ export const StaticSiteExportModal: React.FC<StaticSiteExportModalProps> = ({
   // ── ノート取得 ──
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
     setLoadingNotes(true);
     invoke<{ items: Note[] }>("get_notes", { page: 1, perPage: 9999 })
       .then((res) => {
@@ -69,6 +70,7 @@ export const StaticSiteExportModal: React.FC<StaticSiteExportModalProps> = ({
   // リセット
   useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
       setStep(1);
       setSelectedIds(new Set(initialNoteIds));
       setNoteSearch("");

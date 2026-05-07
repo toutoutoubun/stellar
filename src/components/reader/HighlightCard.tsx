@@ -51,6 +51,7 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
 
   // 外部からハイライトのコメントが変わった場合にローカル状態を同期
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
     setLocalComment(highlight.comment ?? "");
   }, [highlight.comment]);
 

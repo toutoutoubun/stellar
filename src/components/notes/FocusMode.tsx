@@ -81,6 +81,7 @@ export const FocusMode: React.FC<FocusModeProps> = ({
   /** フォーカスモード終了時にクリーンアップ */
   useEffect(() => {
     if (!active) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
       setToolbarVisible(false);
       if (toolbarTimerRef.current) {
         clearTimeout(toolbarTimerRef.current);

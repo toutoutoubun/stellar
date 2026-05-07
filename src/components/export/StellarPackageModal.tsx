@@ -65,6 +65,7 @@ export const StellarPackageModal: React.FC<StellarPackageModalProps> = ({
   // ── データ取得 ──
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
     setLoadingData(true);
     Promise.all([
       invoke<{ items: Paper[] }>("get_papers", { page: 1, perPage: 9999 }),
@@ -88,6 +89,7 @@ export const StellarPackageModal: React.FC<StellarPackageModalProps> = ({
   // リセット
   useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
       setMode("export");
       setExportResult(null);
       setImportFilePath("");

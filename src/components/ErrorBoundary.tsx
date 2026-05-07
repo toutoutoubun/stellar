@@ -54,6 +54,8 @@ export class ErrorBoundary extends React.Component<
     }
 
     const { error, errorInfo } = this.state;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ErrorBoundary fallback for when i18n is unavailable
+    const stellarT = (window as any).__STELLAR_T__ as Record<string, Record<string, string>> | undefined;
 
     return (
       <div
@@ -110,7 +112,7 @@ export class ErrorBoundary extends React.Component<
               color: "var(--color-text-primary, #1a1a2e)",
             }}
           >
-            {(window as any).__STELLAR_T__?.layout?.k_error_title ?? "An unexpected error occurred"}
+            {stellarT?.layout?.k_error_title ?? "An unexpected error occurred"}
           </h1>
 
           {/* 説明文 */}
@@ -122,7 +124,7 @@ export class ErrorBoundary extends React.Component<
               marginBottom: "24px",
             }}
           >
-            {((window as any).__STELLAR_T__?.layout?.k_error_desc ?? "Something went wrong.\nYou can restart the app or dismiss this error.").split("\n").map((line: string, i: number) => (
+            {(stellarT?.layout?.k_error_desc ?? "Something went wrong.\nYou can restart the app or dismiss this error.").split("\n").map((line: string, i: number) => (
               <span key={i}>{line}{i === 0 && <br />}</span>
             ))}
           </p>
@@ -144,7 +146,7 @@ export class ErrorBoundary extends React.Component<
                   userSelect: "none",
                 }}
               >
-                {(window as any).__STELLAR_T__?.layout?.k_error_details ?? "Show error details"}
+                {stellarT?.layout?.k_error_details ?? "Show error details"}
               </summary>
               <div
                 style={{
@@ -223,7 +225,7 @@ export class ErrorBoundary extends React.Component<
                 <polyline points="23 4 23 10 17 10" />
                 <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
               </svg>
-              {(window as any).__STELLAR_T__?.layout?.k_restart_app ?? "Restart app"}
+              {stellarT?.layout?.k_restart_app ?? "Restart app"}
             </button>
 
             <button
@@ -249,7 +251,7 @@ export class ErrorBoundary extends React.Component<
                 (e.target as HTMLButtonElement).style.opacity = "1";
               }}
             >
-              {(window as any).__STELLAR_T__?.layout?.k_dismiss_error ?? "Dismiss"}
+              {stellarT?.layout?.k_dismiss_error ?? "Dismiss"}
             </button>
           </div>
         </div>

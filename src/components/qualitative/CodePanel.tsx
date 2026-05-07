@@ -30,7 +30,7 @@ function flattenTree(nodes: CodeNode[]): CodeNode[] {
 const CodePanel: React.FC<CodePanelProps> = ({
   highlights,
   selectedHighlightIds,
-  paperId: _paperId,
+  paperId: _paperId, // eslint-disable-line @typescript-eslint/no-unused-vars
   currentProjectId,
 }) => {
   const t = useT();
@@ -77,6 +77,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
   }, [projectId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
     void loadCodeTree();
   }, [loadCodeTree]);
 
@@ -103,6 +104,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
   }, [projectId, codeTree]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
     void loadHighlightCodes();
   }, [loadHighlightCodes]);
 

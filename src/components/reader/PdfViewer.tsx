@@ -144,7 +144,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
       position: ScaledPosition,
       content: { text?: string; image?: string },
       hideTipAndSelection: () => void,
-      _transformSelection: () => void,
+      _transformSelection: () => void, // eslint-disable-line @typescript-eslint/no-unused-vars
     ): ReactElement | null => {
       const text = content.text ?? "";
       if (!text.trim()) return null;

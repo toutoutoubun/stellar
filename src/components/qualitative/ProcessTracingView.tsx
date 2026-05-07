@@ -52,7 +52,6 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
   const [evTestType, setEvTestType] = useState("hoop");
 
   const loadData = useCallback(async () => {
-    const t = useT();
     setLoading(true);
     try {
       const [data, sum] = await Promise.all([
@@ -69,6 +68,7 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
   }, [projectId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
     void loadData();
   }, [loadData]);
 

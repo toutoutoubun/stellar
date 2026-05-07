@@ -190,13 +190,9 @@ export const useCitationStore = create<CitationState>((set, get) => ({
   },
 
   importRecommendation: async (recommendationId, paperId) => {
-    try {
-      await invoke("import_recommendation", { recommendationId });
-      // レコメンデーションリストを更新（is_imported フラグが変わる）
-      void get().getRecommendations(paperId);
-    } catch (e) {
-      throw e;
-    }
+    await invoke("import_recommendation", { recommendationId });
+    // レコメンデーションリストを更新（is_imported フラグが変わる）
+    void get().getRecommendations(paperId);
   },
 
   // ────────────────────────────────────────────
@@ -250,9 +246,12 @@ export const useCitationStore = create<CitationState>((set, get) => ({
   clearCache: (paperId) => {
     if (paperId) {
       set((s) => {
-        const { [paperId]: _c, ...restCitation } = s.citationData;
-        const { [paperId]: _r, ...restRecs } = s.recommendations;
-        const { [paperId]: _s, ...restStatuses } = s.readingStatuses;
+        const { [paperId]: _removedCitation, ...restCitation } = s.citationData;
+        void _removedCitation;
+        const { [paperId]: _removedRecs, ...restRecs } = s.recommendations;
+        void _removedRecs;
+        const { [paperId]: _removedStatuses, ...restStatuses } = s.readingStatuses;
+        void _removedStatuses;
         return {
           citationData: restCitation,
           recommendations: restRecs,

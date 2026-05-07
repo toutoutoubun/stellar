@@ -75,9 +75,9 @@ function regularisedIncompleteBeta(x: number, a: number, b: number): number {
 function betaCf(x: number, a: number, b: number): number {
   const maxIter = 200;
   const eps = 1e-14;
-  let qab = a + b;
-  let qap = a + 1;
-  let qam = a - 1;
+  const qab = a + b;
+  const qap = a + 1;
+  const qam = a - 1;
   let c = 1;
   let d = 1 - qab * x / qap;
   if (Math.abs(d) < eps) d = eps;
@@ -111,8 +111,8 @@ function betaCf(x: number, a: number, b: number): number {
 /** Lanczos approximation of ln Γ(x). */
 function lnGamma(x: number): number {
   const cof = [
-    76.18009172947146, -86.50532032941677, 24.01409824083091,
-    -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5,
+    76.18009172947146, -86.50532032941678, 24.01409824083091,
+    -1.231739572450155, 0.00120865097386618, -0.000005395239385,
   ];
   let y = x;
   let tmp = x + 5.5;
@@ -122,7 +122,7 @@ function lnGamma(x: number): number {
     y += 1;
     ser += cof[j]! / y;
   }
-  return -tmp + Math.log((2.5066282746310005 * ser) / x);
+  return -tmp + Math.log((2.506628274631001 * ser) / x);
 }
 
 // ---------------------------------------------------------------------------

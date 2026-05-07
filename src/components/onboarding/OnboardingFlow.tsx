@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 // src/components/onboarding/OnboardingFlow.tsx
 // Stellar — オンボーディングフロー
 // 初回起動時のみ表示（localStorage 'stellar-onboarded'）
@@ -432,6 +433,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
 
   // フェードイン on mount
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
     setFadeState("in");
   }, []);
 

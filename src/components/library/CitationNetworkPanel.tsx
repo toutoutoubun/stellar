@@ -112,7 +112,7 @@ const RecommendationRow: React.FC<{
   const importRecommendation = useCitationStore((s) => s.importRecommendation);
   const fetchPapers = useLibraryStore((s) => s.fetchPapers);
 
-  let parsedAuthors: string[] = [];
+  let parsedAuthors: string[];
   try {
     parsedAuthors = JSON.parse(rec.authors);
   } catch {

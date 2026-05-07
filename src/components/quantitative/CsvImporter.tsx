@@ -83,7 +83,7 @@ function parseCsv(
   }
 
   const colCount = allRows[0]?.length ?? 0;
-  const headers = Array.from({ length: colCount }, (_) => useI18nStore.getState().t.quantitative.k_1xvw56);
+  const headers = Array.from({ length: colCount }, () => useI18nStore.getState().t.quantitative.k_1xvw56);
   return { headers, rows: allRows };
 }
 

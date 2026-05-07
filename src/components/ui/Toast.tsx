@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 // src/components/ui/Toast.tsx
 // Stellar — トースト通知コンポーネント
 // 操作結果のフィードバック（成功・エラー・情報）を画面右下に表示する

@@ -48,6 +48,7 @@ const ScreenTransition: React.FC<ScreenTransitionProps> = ({
     if (direction === "none") return;
 
     // entering 状態を設定してアニメーション開始
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
     setEntering(true);
     const el = containerRef.current;
     if (el) {

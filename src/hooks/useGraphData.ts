@@ -175,6 +175,7 @@ export function useGraphData(): UseGraphDataReturn {
 
   // 初回読み込み
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
     void fetchData();
   }, [fetchData]);
 

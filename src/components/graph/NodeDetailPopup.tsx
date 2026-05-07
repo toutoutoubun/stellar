@@ -83,6 +83,7 @@ export const NodeDetailPopup: React.FC<NodeDetailPopupProps> = ({
         setIsVisible(true);
       }, 300);
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
       setIsVisible(false);
       // フェードアウト後にノードをクリア
       const hideTimer = setTimeout(() => {

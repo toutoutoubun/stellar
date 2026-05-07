@@ -158,7 +158,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
       );
       applyMetadata({ ...data, url: urlInput.trim() });
       toast.success(useI18nStore.getState().t.library.k_2uf93e);
-    } catch (e) {
+    } catch {
       toast.error(useI18nStore.getState().t.library.k_qr44fw);
     } finally {
       setFetching(false);
@@ -180,7 +180,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
       );
       applyMetadata({ ...data, doi: doiInput.trim() });
       toast.success(useI18nStore.getState().t.library.k_2uf93e);
-    } catch (e) {
+    } catch {
       toast.error(useI18nStore.getState().t.library.k_qr44fw);
     } finally {
       setFetching(false);
@@ -272,7 +272,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
       await onSave(finalForm);
       toast.success(useI18nStore.getState().t.library.k_9cffqr);
       handleClose();
-    } catch (e) {
+    } catch {
       toast.error(useI18nStore.getState().t.library.k_w7nzmp);
     } finally {
       setSaving(false);

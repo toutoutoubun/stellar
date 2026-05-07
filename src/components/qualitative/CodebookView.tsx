@@ -36,6 +36,7 @@ export const CodebookView: React.FC<CodebookViewProps> = ({ projectId }) => {
     }
   }, [projectId]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
   useEffect(() => { void loadCodeTree(); }, [loadCodeTree]);
 
   const loadHighlights = useCallback(async (codeId: string) => {
@@ -48,6 +49,7 @@ export const CodebookView: React.FC<CodebookViewProps> = ({ projectId }) => {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
     if (selectedCodeId) { void loadHighlights(selectedCodeId); } else { setHighlights([]); }
   }, [selectedCodeId, loadHighlights]);
 

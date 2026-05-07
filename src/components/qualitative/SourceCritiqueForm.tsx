@@ -46,7 +46,6 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
 
   useEffect(() => {
     const load = async () => {
-      const t = useT();
       setLoading(true);
       try {
         const [paperResult, critiqueList] = await Promise.all([

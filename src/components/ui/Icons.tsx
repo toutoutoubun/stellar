@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 // src/components/ui/Icons.tsx
 // Stellar — 独自 SVG アイコンライブラリ
 // システム絵文字を排除し、全てのアイコンを統一された SVG で提供する
