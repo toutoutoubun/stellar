@@ -1375,6 +1375,44 @@ const fr: TranslationKeys = {
   },
 
   // ============================================================
+  // exportImport — Export / Import / Extension navigateur
+  // ============================================================
+  exportImport: {
+    exportStaticSite: "Exporter en site statique",
+    exportStellarPackage: "Exporter le paquet Stellar",
+    importStellarPackage: "Importer le paquet Stellar",
+    exportBibtexBundle: "Exporter le lot BibTeX",
+    siteTitle: "Titre du site",
+    includeBacklinks: "Inclure les rétroliens",
+    includePdfs: "Inclure les fichiers PDF",
+    theme: "Thème",
+    themeLight: "Clair",
+    themeDark: "Sombre",
+    themeAuto: "Auto",
+    outputDir: "Répertoire de sortie",
+    outputPath: "Chemin du fichier de sortie",
+    selectNotes: "Sélectionner les notes à exporter",
+    selectPapers: "Sélectionner les articles à exporter",
+    exporting: "Exportation en cours...",
+    importing: "Importation en cours...",
+    exportSuccess: "Exportation terminée avec succès",
+    importSuccess: "Importation terminée avec succès",
+    exportFailed: "Échec de l'exportation",
+    importFailed: "Échec de l'importation",
+    papersImported: "${count} articles importés",
+    notesImported: "${count} notes importées",
+    highlightsImported: "${count} surlignages importés",
+    linksImported: "${count} liens importés",
+    pdfsExtracted: "${count} PDF extraits",
+    conflicts: "Conflits",
+    doiConflict: "Conflit DOI",
+    noNotesSelected: "Aucune note sélectionnée",
+    noPapersSelected: "Aucun article sélectionné",
+    browserExtension: "Extension navigateur",
+    clipperDescription: "Capturer les métadonnées d'articles depuis les pages web et les importer dans Stellar",
+  },
+
+  // ============================================================
   // Hooks
   // ============================================================
   hooks: {

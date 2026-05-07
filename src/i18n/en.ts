@@ -1375,6 +1375,44 @@ const en: TranslationKeys = {
   },
 
   // ============================================================
+  // exportImport — Export / Import / Browser Extension
+  // ============================================================
+  exportImport: {
+    exportStaticSite: "Export as Static Site",
+    exportStellarPackage: "Export Stellar Package",
+    importStellarPackage: "Import Stellar Package",
+    exportBibtexBundle: "Export BibTeX Bundle",
+    siteTitle: "Site Title",
+    includeBacklinks: "Include backlinks",
+    includePdfs: "Include PDF files",
+    theme: "Theme",
+    themeLight: "Light",
+    themeDark: "Dark",
+    themeAuto: "Auto",
+    outputDir: "Output directory",
+    outputPath: "Output file path",
+    selectNotes: "Select notes to export",
+    selectPapers: "Select papers to export",
+    exporting: "Exporting...",
+    importing: "Importing...",
+    exportSuccess: "Export completed successfully",
+    importSuccess: "Import completed successfully",
+    exportFailed: "Export failed",
+    importFailed: "Import failed",
+    papersImported: "${count} papers imported",
+    notesImported: "${count} notes imported",
+    highlightsImported: "${count} highlights imported",
+    linksImported: "${count} links imported",
+    pdfsExtracted: "${count} PDFs extracted",
+    conflicts: "Conflicts",
+    doiConflict: "DOI conflict",
+    noNotesSelected: "No notes selected",
+    noPapersSelected: "No papers selected",
+    browserExtension: "Browser Extension",
+    clipperDescription: "Capture paper metadata from web pages and import into Stellar",
+  },
+
+  // ============================================================
   // Hooks
   // ============================================================
   hooks: {

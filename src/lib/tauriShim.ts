@@ -471,6 +471,11 @@ const MOCK_RESPONSES: Record<string, any> = {
   generate_bibliography: "",
   sync_word_count: undefined,
 
+  // Export / Import
+  export_static_site: "/mock/export/static-site",
+  export_stellar_package: "/mock/export/package.stellar",
+  import_stellar_package: { papersImported: 0, notesImported: 0, highlightsImported: 0, linksImported: 0, pdfsExtracted: 0, conflicts: [] },
+
   // Citation Network
   update_reading_status: undefined,
   get_reading_status_counts: { unread: 0, reading: 0, done: 0, revisit: 0 },

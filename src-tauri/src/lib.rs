@@ -6,6 +6,7 @@
 mod commands;
 mod db;
 mod models;
+mod server;
 mod utils;
 
 use db::AppDb;
@@ -44,6 +45,12 @@ fn get_migrations() -> Vec<Migration> {
             version: 5,
             description: "下書きモード — 長文執筆・章管理・引用挿入",
             sql: include_str!("db/migrations/V005__draft_mode.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 6,
+            description: "エクスポート設定 — 静的サイト・パッケージ・BibTeX",
+            sql: include_str!("db/migrations/V006__export.sql"),
             kind: MigrationKind::Up,
         },
     ]
@@ -92,6 +99,12 @@ pub fn run() {
                 window.open_devtools();
             }
             window.show().unwrap();
+
+            // HTTP サーバーを起動（ブラウザ拡張機能との通信用）
+            let server_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                server::start_server(server_handle).await;
+            });
 
             log::info!("Stellar が起動しました");
             Ok(())
@@ -242,6 +255,10 @@ pub fn run() {
             commands::draft::generate_bibliography,
             // 下書きモード — ワードカウント同期
             commands::draft::sync_word_count,
+            // エクスポート・インポート
+            commands::export::export_static_site,
+            commands::export::export_stellar_package,
+            commands::export::import_stellar_package,
         ])
         .run(tauri::generate_context!())
         .expect("Stellar の起動に失敗しました");

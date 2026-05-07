@@ -57,6 +57,7 @@ async fn run_migrations(pool: &SqlitePool) -> Result<(), Box<dyn std::error::Err
         (3, "V003__quantitative", include_str!("migrations/V003__quantitative.sql")),
         (4, "V004__citation_network", include_str!("migrations/V004__citation_network.sql")),
         (5, "V005__draft_mode", include_str!("migrations/V005__draft_mode.sql")),
+        (6, "V006__export", include_str!("migrations/V006__export.sql")),
     ];
 
     for (version, name, sql) in &migrations {

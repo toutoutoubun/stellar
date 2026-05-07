@@ -10,7 +10,6 @@ import type {
   CitationGraphData,
 } from "../types";
 import { invoke } from "../lib/tauriShim";
-import { useI18nStore } from "./useI18nStore";
 
 /** 引用ネットワークストアの状態型 */
 interface CitationState {

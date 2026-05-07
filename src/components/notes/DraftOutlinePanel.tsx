@@ -102,7 +102,8 @@ export const DraftOutlinePanel: React.FC<DraftOutlinePanelProps> = ({
     if (dragItem.current === dragOverItem.current) return;
 
     const reordered = [...chapters];
-    const [removed] = reordered.splice(dragItem.current, 1);
+    const removed = reordered.splice(dragItem.current, 1)[0];
+    if (!removed) return;
     reordered.splice(dragOverItem.current, 0, removed);
 
     const orderedIds = reordered.map((c) => c.id);

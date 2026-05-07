@@ -117,8 +117,8 @@ export const DraftCitationPanel: React.FC<DraftCitationPanelProps> = ({
   /** 著者名の短縮表示 */
   const shortAuthors = (authors: string[]): string => {
     if (authors.length === 0) return "";
-    if (authors.length === 1) return authors[0];
-    return `${authors[0]} et al.`;
+    if (authors.length === 1) return authors[0] ?? "";
+    return `${authors[0] ?? ""} et al.`;
   };
 
   if (loading) {

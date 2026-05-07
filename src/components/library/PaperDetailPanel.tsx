@@ -13,6 +13,8 @@ import { copyCitationToClipboard } from "../../utils/citation";
 import { toast } from "../ui/Toast";
 import { invoke } from "../../lib/tauriShim";
 import { useI18nStore } from "../../stores/useI18nStore";
+import { ReadingStatusBadge } from "./ReadingStatusBadge";
+import { CitationNetworkPanel } from "./CitationNetworkPanel";
 
 interface PaperDetailPanelProps {
   paper: Paper;

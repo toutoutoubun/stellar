@@ -4,6 +4,7 @@
 
 pub mod citation_network;
 pub mod draft;
+pub mod export;
 pub mod highlights;
 pub mod links;
 pub mod metadata;

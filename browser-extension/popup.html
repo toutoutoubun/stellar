@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stellar Clipper</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 360px;
+      font-family: "Inter", "Noto Sans JP", -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #fafafa;
+      color: #1a1a2e;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: #4361ee;
+      color: #fff;
+    }
+
+    .header-icon {
+      width: 24px;
+      height: 24px;
+    }
+
+    .header h1 {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: #f0f0f5;
+      border-bottom: 1px solid #e0e0e0;
+      font-size: 12px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .status-dot.connected { background: #22c55e; }
+    .status-dot.disconnected { background: #ef4444; }
+    .status-dot.checking { background: #f59e0b; animation: pulse 1s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .status-text {
+      color: #666;
+    }
+
+    .paper-card {
+      padding: 16px;
+    }
+
+    .paper-card.hidden { display: none; }
+
+    .field {
+      margin-bottom: 10px;
+    }
+
+    .field-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+
+    .field-value {
+      font-size: 13px;
+      color: #1a1a2e;
+      word-break: break-word;
+    }
+
+    .field-value.empty {
+      color: #bbb;
+      font-style: italic;
+    }
+
+    .authors-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .author-tag {
+      background: #e8eaf6;
+      color: #3949ab;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+
+    .doi-link {
+      color: #4361ee;
+      text-decoration: none;
+      font-size: 12px;
+    }
+
+    .doi-link:hover { text-decoration: underline; }
+
+    .actions {
+      padding: 12px 16px;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .actions.hidden { display: none; }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #555;
+    }
+
+    .checkbox-row input[type="checkbox"] {
+      width: 14px;
+      height: 14px;
+      accent-color: #4361ee;
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: #4361ee;
+      color: #fff;
+    }
+
+    .btn-primary:hover:not(:disabled) { background: #3a0ca3; }
+
+    .btn-secondary {
+      background: #e8eaf6;
+      color: #3949ab;
+    }
+
+    .btn-secondary:hover:not(:disabled) { background: #c5cae9; }
+
+    .btn-icon {
+      width: 16px;
+      height: 16px;
+    }
+
+    .message {
+      padding: 8px 16px;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .message.success { color: #16a34a; background: #f0fdf4; }
+    .message.error { color: #dc2626; background: #fef2f2; }
+
+    .disconnected-msg {
+      padding: 24px 16px;
+      text-align: center;
+      color: #888;
+    }
+
+    .disconnected-msg p {
+      margin-bottom: 8px;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #fff;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </svg>
+    <h1>Stellar Clipper</h1>
+  </div>
+
+  <div class="status-bar" id="statusBar">
+    <span class="status-dot checking" id="statusDot"></span>
+    <span class="status-text" id="statusText">接続確認中...</span>
+  </div>
+
+  <div class="paper-card hidden" id="paperCard">
+    <div class="field">
+      <div class="field-label">Title</div>
+      <div class="field-value" id="paperTitle"></div>
+    </div>
+    <div class="field">
+      <div class="field-label">Authors</div>
+      <div class="field-value authors-list" id="paperAuthors"></div>
+    </div>
+    <div class="field">
+      <div class="field-label">Year / Journal</div>
+      <div class="field-value" id="paperYearJournal"></div>
+    </div>
+    <div class="field">
+      <div class="field-label">DOI</div>
+      <div class="field-value" id="paperDoi"></div>
+    </div>
+    <div class="field">
+      <div class="field-label">Abstract</div>
+      <div class="field-value" id="paperAbstract"></div>
+    </div>
+  </div>
+
+  <div class="actions hidden" id="actions">
+    <div class="checkbox-row">
+      <input type="checkbox" id="includePdf">
+      <label for="includePdf">PDF も一緒にダウンロード</label>
+    </div>
+    <button class="btn btn-secondary" id="enrichBtn" disabled>
+      <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+      </svg>
+      CrossRef で補完
+    </button>
+    <button class="btn btn-primary" id="saveBtn" disabled>
+      <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+        <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+      </svg>
+      Stellar に保存
+    </button>
+  </div>
+
+  <div class="message hidden" id="message"></div>
+
+  <div class="disconnected-msg hidden" id="disconnectedMsg">
+    <p>Stellar デスクトップアプリに接続できません。</p>
+    <p>Stellar を起動してから再度お試しください。</p>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

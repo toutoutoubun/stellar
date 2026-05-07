@@ -1375,6 +1375,44 @@ const af: TranslationKeys = {
   },
 
   // ============================================================
+  // exportImport — Uitvoer / Invoer / Blaaieruitbreiding
+  // ============================================================
+  exportImport: {
+    exportStaticSite: "Voer uit as statiese werf",
+    exportStellarPackage: "Voer Stellar-pakket uit",
+    importStellarPackage: "Voer Stellar-pakket in",
+    exportBibtexBundle: "Voer BibTeX-bundel uit",
+    siteTitle: "Werftitel",
+    includeBacklinks: "Sluit terugskakels in",
+    includePdfs: "Sluit PDF-lêers in",
+    theme: "Tema",
+    themeLight: "Lig",
+    themeDark: "Donker",
+    themeAuto: "Outo",
+    outputDir: "Uitvoergids",
+    outputPath: "Uitvoerlêerpad",
+    selectNotes: "Kies notas om uit te voer",
+    selectPapers: "Kies artikels om uit te voer",
+    exporting: "Besig om uit te voer...",
+    importing: "Besig om in te voer...",
+    exportSuccess: "Uitvoer suksesvol voltooi",
+    importSuccess: "Invoer suksesvol voltooi",
+    exportFailed: "Uitvoer het misluk",
+    importFailed: "Invoer het misluk",
+    papersImported: "${count} artikels ingevoer",
+    notesImported: "${count} notas ingevoer",
+    highlightsImported: "${count} uitligtings ingevoer",
+    linksImported: "${count} skakels ingevoer",
+    pdfsExtracted: "${count} PDF's onttrek",
+    conflicts: "Konflikte",
+    doiConflict: "DOI-konflik",
+    noNotesSelected: "Geen notas gekies nie",
+    noPapersSelected: "Geen artikels gekies nie",
+    browserExtension: "Blaaieruitbreiding",
+    clipperDescription: "Vang artikelmetadata van webbladsye en voer in Stellar in",
+  },
+
+  // ============================================================
   // Hooks
   // ============================================================
   hooks: {

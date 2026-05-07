@@ -1373,6 +1373,44 @@ const ja = {
   },
 
   // ============================================================
+  // exportImport — エクスポート・インポート・ブラウザ拡張
+  // ============================================================
+  exportImport: {
+    exportStaticSite: "静的サイトとしてエクスポート",
+    exportStellarPackage: "Stellar パッケージをエクスポート",
+    importStellarPackage: "Stellar パッケージをインポート",
+    exportBibtexBundle: "BibTeX バンドルをエクスポート",
+    siteTitle: "サイトタイトル",
+    includeBacklinks: "バックリンクを含める",
+    includePdfs: "PDF ファイルを含める",
+    theme: "テーマ",
+    themeLight: "ライト",
+    themeDark: "ダーク",
+    themeAuto: "自動",
+    outputDir: "出力先ディレクトリ",
+    outputPath: "出力ファイルパス",
+    selectNotes: "エクスポートするノートを選択",
+    selectPapers: "エクスポートする論文を選択",
+    exporting: "エクスポート中...",
+    importing: "インポート中...",
+    exportSuccess: "エクスポートが完了しました",
+    importSuccess: "インポートが完了しました",
+    exportFailed: "エクスポートに失敗しました",
+    importFailed: "インポートに失敗しました",
+    papersImported: "${count} 件の論文をインポート",
+    notesImported: "${count} 件のノートをインポート",
+    highlightsImported: "${count} 件のハイライトをインポート",
+    linksImported: "${count} 件のリンクをインポート",
+    pdfsExtracted: "${count} 件の PDF を展開",
+    conflicts: "競合",
+    doiConflict: "DOI 重複",
+    noNotesSelected: "ノートが選択されていません",
+    noPapersSelected: "論文が選択されていません",
+    browserExtension: "ブラウザ拡張機能",
+    clipperDescription: "Web ページから論文メタデータを取得し、Stellar にインポート",
+  },
+
+  // ============================================================
   // hooks
   // ============================================================
   hooks: {

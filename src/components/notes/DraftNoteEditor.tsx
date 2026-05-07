@@ -13,7 +13,6 @@ import { NoteEditor } from "./NoteEditor";
 import { DraftOutlinePanel } from "./DraftOutlinePanel";
 import { DraftCitationPanel } from "./DraftCitationPanel";
 import { NoteContextPanel } from "./NoteContextPanel";
-import { toast } from "../ui/Toast";
 import { useT } from "../../stores/useI18nStore";
 import type { NodeType } from "../../types";
 
