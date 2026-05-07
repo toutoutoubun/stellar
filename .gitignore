@@ -47,3 +47,4 @@ package-lock.json
 *.tar.gz
 *.zip
 core
+serve-dist.cjs

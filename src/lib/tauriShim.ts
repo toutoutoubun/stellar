@@ -52,8 +52,11 @@ const MOCK_RESPONSES: Record<string, any> = {
 
   // Qualitative
   get_qual_projects: [],
+  get_projects: [],
   create_qual_project: null,
+  create_project: null,
   delete_qual_project: undefined,
+  delete_project: undefined,
   get_codes: [],
   create_code: null,
   update_code: undefined,
