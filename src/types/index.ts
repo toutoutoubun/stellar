@@ -221,10 +221,10 @@ export type Theme = 'white' | 'ivory' | 'dark-blue' | 'black';
 
 /** テーマ表示名（日本語） */
 export const THEME_LABELS: Record<Theme, string> = {
-  'white': {t.themes.white},
-  'ivory': {t.themes.ivory},
-  'dark-blue': {t.stores.k_1txb7w},
-  'black': {t.themes.black},
+  'white': 'White',
+  'ivory': 'Ivory',
+  'dark-blue': 'Dark Blue',
+  'black': 'Black',
 };
 
 // ============================================================
@@ -294,7 +294,7 @@ export const CITATION_STYLE_LABELS: Record<CitationStyle, string> = {
   'apa7': 'APA 7th',
   'mla9': 'MLA 9th',
   'chicago17': 'Chicago 17th',
-  'hitotsubashi': {t.common.k_ymwmg5},
+  'hitotsubashi': 'Hitotsubashi Style',
 };
 
 // ============================================================
@@ -404,7 +404,7 @@ export const DEFAULT_APPEARANCE_SETTINGS: AppearanceSettings = {
 
 /** エディタフォント選択肢 */
 export const EDITOR_FONTS: { value: string; label: string }[] = [
-  { value: 'system-ui', label: {t.common.k_8bddzv} },
+  { value: 'system-ui', label: 'System Font' },
   { value: '"Noto Sans JP", sans-serif', label: 'Noto Sans JP' },
   { value: '"Noto Serif JP", serif', label: 'Noto Serif JP' },
   { value: '"Source Code Pro", monospace', label: 'Source Code Pro' },

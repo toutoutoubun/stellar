@@ -15,7 +15,7 @@ document.documentElement.setAttribute("data-theme", "white");
 
 const rootEl = document.getElementById("root");
 if (!rootEl) {
-  throw new Error({t.common.k_xtkx2v});
+  throw new Error("Root element not found: #root");
 }
 
 ReactDOM.createRoot(rootEl).render(
