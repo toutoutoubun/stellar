@@ -213,7 +213,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
         errorMessage={
           <div
             className="flex items-center justify-center h-full"
-            style={{ color: "var(--color-danger)" }}
+            style={{ color: "var(--color-accent-danger)" }}
           >
             <div className="flex flex-col items-center gap-3">
               <svg

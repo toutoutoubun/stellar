@@ -535,7 +535,7 @@ export const MermaidDiagramModal: React.FC<MermaidDiagramModalProps> = ({
             ) : error ? (
               <div
                 className="flex flex-col items-center gap-2 text-center p-4"
-                style={{ color: "var(--color-danger)" }}
+                style={{ color: "var(--color-accent-danger)" }}
               >
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" />

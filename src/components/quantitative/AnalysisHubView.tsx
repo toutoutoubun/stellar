@@ -5,6 +5,8 @@
 import type React from "react";
 import { useState, useCallback, useMemo } from "react";
 import { useQuantitativeStore } from "../../stores/useQuantitativeStore";
+import { useNoteStore } from "../../stores/useNoteStore";
+import { toast } from "../ui/Toast";
 import { AnalysisWizard } from "./AnalysisWizard";
 import { DescriptiveResult } from "./results/DescriptiveResult";
 import { InferentialResult } from "./results/InferentialResult";
@@ -121,15 +123,101 @@ function analysisTypeLabel(t: string): string {
 }
 
 // ── メインコンポーネント ──
+/** 分析結果を簡易Markdownに変換（AI不使用） */
+function analysisToMarkdown(a: Analysis): string {
+  const lines: string[] = [];
+  lines.push(`## ${a.name}`);
+  lines.push(``);
+  lines.push(`- **分析タイプ:** ${analysisTypeLabel(a.analysisType)}`);
+  lines.push(`- **実行日時:** ${new Date(a.createdAt).toLocaleString("ja-JP")}`);
+  lines.push(``);
+
+  const r = a.result as Record<string, unknown> | null;
+  if (!r) {
+    lines.push(`*結果データなし*`);
+    return lines.join("\n");
+  }
+
+  // 記述統計
+  const descs = (r.descriptives as Array<Record<string, unknown>>) ?? [];
+  if (descs.length > 0) {
+    lines.push(`### 記述統計`);
+    lines.push(`| 変数 | N | 平均 | 標準偏差 | 最小 | 最大 |`);
+    lines.push(`|---|---|---|---|---|---|`);
+    for (const d of descs) {
+      lines.push(`| ${d.variableName ?? d.variable} | ${d.n ?? d.count ?? "-"} | ${typeof d.mean === "number" ? d.mean.toFixed(3) : "-"} | ${typeof d.sd === "number" ? d.sd.toFixed(3) : "-"} | ${d.min ?? "-"} | ${d.max ?? "-"} |`);
+    }
+    lines.push(``);
+  }
+
+  // 推測統計 results 配列
+  const results = (r.results as Array<Record<string, unknown>>) ?? [];
+  if (results.length > 0) {
+    lines.push(`### 検定結果`);
+    for (const res of results) {
+      const entries = Object.entries(res).filter(([k]) => k !== "interpretation");
+      for (const [k, v] of entries) {
+        lines.push(`- **${k}:** ${typeof v === "number" ? v.toFixed(4) : v}`);
+      }
+      if (typeof res.interpretation === "string") {
+        lines.push(``);
+        lines.push(`> ${res.interpretation}`);
+      }
+      lines.push(``);
+    }
+  }
+
+  // 相関
+  const correlations = (r.correlations as Array<Record<string, unknown>>) ?? [];
+  if (correlations.length > 0) {
+    lines.push(`### 相関`);
+    lines.push(`| 変数1 | 変数2 | r | p |`);
+    lines.push(`|---|---|---|---|`);
+    for (const c of correlations) {
+      lines.push(`| ${c.var1Name} | ${c.var2Name} | ${typeof c.r === "number" ? c.r.toFixed(3) : c.r} | ${typeof c.pValue === "number" ? c.pValue.toFixed(4) : c.pValue} |`);
+    }
+    lines.push(``);
+  }
+
+  // 回帰
+  if (r.r2 != null) {
+    lines.push(`### 回帰分析`);
+    lines.push(`- **R²:** ${(r.r2 as number).toFixed(4)}`);
+    if (r.fStatistic) lines.push(`- **F:** ${(r.fStatistic as number).toFixed(3)}`);
+    if (r.fPValue != null) lines.push(`- **p(F):** ${(r.fPValue as number).toFixed(4)}`);
+    const coefficients = (r.coefficients as Array<Record<string, unknown>>) ?? [];
+    if (coefficients.length > 0) {
+      lines.push(``);
+      lines.push(`| 変数 | B | SE | t | p |`);
+      lines.push(`|---|---|---|---|---|`);
+      for (const c of coefficients) {
+        lines.push(`| ${c.varName} | ${(c.b as number).toFixed(3)} | ${(c.stdError as number).toFixed(3)} | ${(c.t as number).toFixed(3)} | ${(c.pValue as number).toFixed(4)} |`);
+      }
+    }
+    lines.push(``);
+  }
+
+  // interpretation
+  if (typeof r.interpretation === "string") {
+    lines.push(`### 解釈`);
+    lines.push(r.interpretation as string);
+    lines.push(``);
+  }
+
+  return lines.join("\n");
+}
+
 export const AnalysisHubView: React.FC = () => {
   const analyses = useQuantitativeStore((s) => s.analyses);
   const selectedDataset = useQuantitativeStore((s) => s.selectedDataset);
   const variables = useQuantitativeStore((s) => s.variables);
   const dataRows = useQuantitativeStore((s) => s.dataRows);
+  const createNote = useNoteStore((s) => s.createNote);
 
   const [selectedAnalysisId, setSelectedAnalysisId] = useState<string | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [exportingNote, setExportingNote] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   // グループ化された分析一覧
@@ -182,6 +270,46 @@ export const AnalysisHubView: React.FC = () => {
     },
     [selectedDataset, selectedAnalysisId],
   );
+
+  /** 全分析結果をノートに出力（AI不使用） */
+  const handleExportAllToNote = useCallback(async () => {
+    if (!selectedDataset || analyses.length === 0) return;
+    setExportingNote(true);
+    try {
+      const now = new Date().toLocaleString("ja-JP");
+      const mdParts: string[] = [
+        `# 量的分析結果`,
+        ``,
+        `- **データセット:** ${selectedDataset.name}`,
+        `- **分析数:** ${analyses.length}`,
+        `- **出力日時:** ${now}`,
+        ``,
+        `---`,
+        ``,
+      ];
+      for (const a of analyses) {
+        mdParts.push(analysisToMarkdown(a));
+        mdParts.push(`---`);
+        mdParts.push(``);
+      }
+      const md = mdParts.join("\n");
+      const tags = ["#量的研究", "#分析レポート"];
+      const usedTypes = new Set(analyses.map((a) => a.analysisType));
+      for (const t of usedTypes) tags.push(`#${analysisTypeLabel(t)}`);
+
+      const note = await createNote({
+        title: `量的分析: ${selectedDataset.name}（${analyses.length}件）`,
+        content: md,
+        tags,
+      });
+      toast.success(`ノート「${note.title}」を作成しました`);
+    } catch (err) {
+      console.error("ノート出力エラー:", err);
+      toast.error("ノートの作成に失敗しました");
+    } finally {
+      setExportingNote(false);
+    }
+  }, [selectedDataset, analyses, createNote]);
 
   // ── 分析結果レンダリング ──
   const renderResult = () => {
@@ -338,6 +466,35 @@ export const AnalysisHubView: React.FC = () => {
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
             新しい分析
+          </button>
+          <button
+            onClick={() => void handleExportAllToNote()}
+            disabled={!selectedDataset || analyses.length === 0 || exportingNote}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium"
+            style={{
+              color: selectedDataset && analyses.length > 0 ? "#fff" : "var(--color-text-disabled)",
+              backgroundColor: selectedDataset && analyses.length > 0
+                ? "var(--color-accent-secondary)"
+                : "var(--color-bg-hover)",
+              border: "none",
+              borderRadius: "var(--radius-md)",
+              cursor: selectedDataset && analyses.length > 0 && !exportingNote ? "pointer" : "not-allowed",
+              transition: "all var(--transition-fast)",
+              opacity: selectedDataset && analyses.length > 0 && !exportingNote ? 1 : 0.5,
+            }}
+            onMouseEnter={(e) => {
+              if (selectedDataset && analyses.length > 0 && !exportingNote) {
+                e.currentTarget.style.filter = "brightness(1.1)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.filter = "none";
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+            </svg>
+            {exportingNote ? "出力中..." : "分析結果をノートに出力"}
           </button>
           <button
             onClick={() => setReportOpen(true)}

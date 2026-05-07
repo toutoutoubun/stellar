@@ -6,6 +6,8 @@ import React, { useState, useCallback } from "react";
 import { invoke } from "../../lib/tauriShim";
 import { HelpTooltip } from "./HelpTooltip";
 import { IconReport, IconCopy } from "./icons/QualIcons";
+import { useNoteStore } from "../../stores/useNoteStore";
+import { toast } from "../ui/Toast";
 
 interface AnalysisReportProps {
   projectId: string;
@@ -30,6 +32,8 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
 }) => {
   const [report, setReport] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [exportingNote, setExportingNote] = useState(false);
+  const createNote = useNoteStore((s) => s.createNote);
   const [sections, setSections] = useState<ReportSections>({
     codebook: true,
     matrix: true,
@@ -61,8 +65,29 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
   const handleCopy = useCallback(() => {
     if (report) {
       void navigator.clipboard.writeText(report);
+      toast.success("Markdownをクリップボードにコピーしました");
     }
   }, [report]);
+
+  /** レポートをノートに出力 */
+  const handleExportToNote = useCallback(async () => {
+    if (!report) return;
+    setExportingNote(true);
+    try {
+      const selectedNames = (Object.keys(sections) as (keyof ReportSections)[])
+        .filter((k) => sections[k])
+        .map((k) => SECTION_LABELS_MAP[k] ?? k);
+      const title = `質的分析レポート（${selectedNames.slice(0, 3).join("・")}${selectedNames.length > 3 ? "…" : ""}）`;
+      const tags = ["#質的研究", "#分析レポート"];
+      const note = await createNote({ title, content: report, tags });
+      toast.success(`ノート「${note.title}」を作成しました`);
+    } catch (err) {
+      console.error("ノート出力エラー:", err);
+      toast.error("ノートの作成に失敗しました");
+    } finally {
+      setExportingNote(false);
+    }
+  }, [report, sections, createNote]);
 
   const toggleSection = (key: keyof ReportSections) => {
     setSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -91,6 +116,10 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
     { key: "comparative", label: "比較デザイン" },
     { key: "framing", label: "フレーミング分析" },
   ];
+
+  const SECTION_LABELS_MAP: Record<string, string> = Object.fromEntries(
+    SECTION_LABELS.map(({ key, label }) => [key, label]),
+  );
 
   return (
     <div className="p-6 h-full overflow-y-auto">
@@ -209,21 +238,43 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
             >
               生成されたレポート
             </h4>
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="text-xs px-3 py-1 inline-flex items-center gap-1"
-              style={{
-                backgroundColor: "var(--color-bg-tertiary)",
-                color: "var(--color-text-secondary)",
-                border: "1px solid var(--color-border-secondary)",
-                borderRadius: "6px",
-                cursor: "pointer",
-              }}
-            >
-              <IconCopy size={11} />
-              Markdownをコピー
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void handleExportToNote()}
+                disabled={exportingNote}
+                className="text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
+                style={{
+                  backgroundColor: "var(--color-accent-primary)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: exportingNote ? "not-allowed" : "pointer",
+                  opacity: exportingNote ? 0.6 : 1,
+                  transition: "opacity 150ms",
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                </svg>
+                {exportingNote ? "作成中..." : "ノートに出力"}
+              </button>
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="text-xs px-3 py-1.5 inline-flex items-center gap-1"
+                style={{
+                  backgroundColor: "var(--color-bg-tertiary)",
+                  color: "var(--color-text-secondary)",
+                  border: "1px solid var(--color-border-secondary)",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                }}
+              >
+                <IconCopy size={11} />
+                コピー
+              </button>
+            </div>
           </div>
 
           {/* Markdown プレビュー（プレーンテキスト表示） */}

@@ -512,6 +512,7 @@ export const SettingsView: React.FC = () => {
             {dataSummary?.dataPath ?? "~/Stellar"}
           </div>
           <button
+            type="button"
             onClick={handleChangeDataPath}
             className="px-3 py-2 text-xs font-medium"
             style={{
@@ -686,7 +687,7 @@ export const SettingsView: React.FC = () => {
                     </span>
                     <div className="flex items-center gap-1">
                       {shortcut.keys.split("+").map((key, ki) => (
-                        <span key={ki}>
+                        <span key={`${shortcut.keys}-${key.trim()}`}>
                           {ki > 0 && (
                             <span
                               className="mx-0.5 text-xs"

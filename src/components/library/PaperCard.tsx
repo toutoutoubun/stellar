@@ -282,9 +282,14 @@ const PaperCardInner: React.FC<PaperCardProps> = ({
           backgroundColor: "var(--color-bg-card)",
           borderRadius: "var(--radius-card)",
           boxShadow: "var(--shadow-card)",
-          border: selected
-            ? "2px solid var(--color-accent-primary)"
-            : "1px solid var(--color-border-secondary)",
+          border: "1px solid",
+          borderColor: selected
+            ? "var(--color-accent-primary)"
+            : "var(--color-border-secondary)",
+          outline: selected
+            ? "1px solid var(--color-accent-primary)"
+            : "none",
+          outlineOffset: "-1px",
           transition: "all var(--transition-fast)",
           animation: `card-stagger-in 200ms ease-out ${animationDelay}ms both`,
         }}

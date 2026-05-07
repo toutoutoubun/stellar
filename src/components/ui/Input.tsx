@@ -53,8 +53,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                 ? "1px solid var(--color-border-error)"
                 : "1px solid var(--color-border-primary)",
               borderRadius: "var(--radius-input)",
-              padding: "var(--space-2) var(--space-3)",
+              padding: "6px var(--space-3)",
               paddingLeft: icon ? "34px" : "var(--space-3)",
+              height: "32px",
               fontSize: "var(--font-size-sm)",
               transition: "all var(--transition-fast)",
               outline: "none",

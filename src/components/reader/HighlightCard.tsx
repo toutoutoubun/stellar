@@ -395,7 +395,7 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
             type="button"
             className="flex items-center gap-2 w-full text-left text-xs px-3 py-2"
             style={{
-              color: "var(--color-danger)",
+              color: "var(--color-accent-danger)",
               borderRadius: "6px",
             }}
             onMouseEnter={(e) => {

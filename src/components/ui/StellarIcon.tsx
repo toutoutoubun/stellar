@@ -1,13 +1,14 @@
 // src/components/ui/StellarIcon.tsx
-// Stellar — 統一アプリアイコン（星型）
+// Stellar — 統一アプリアイコン（幾何学的星型）
 // Titlebar, Onboarding, Tutorial, Sidebar 等すべてで共通使用
+// 影・グラデーション不使用 / フラットな幾何学デザイン
 
 import type React from "react";
 
 interface StellarIconProps {
   /** アイコンの幅・高さ (px) */
   size?: number;
-  /** 色を指定（デフォルト: --color-accent-primary） */
+  /** メインカラー（デフォルト: --color-accent-primary） */
   color?: string;
   /** className を追加 */
   className?: string;
@@ -17,37 +18,44 @@ interface StellarIconProps {
 
 /**
  * Stellar 統一星型アイコン
- * グラデーション付きの星型 SVG。すべての場所で同じアイコンを使用する。
+ * フラットな幾何学デザイン。影・グラデーション不使用。
+ * 六芒星ベースの星に中央の円を組み合わせた学術的デザイン。
  */
 export const StellarIcon: React.FC<StellarIconProps> = ({
   size = 18,
   color,
   className,
   style,
-}) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 48 48"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={className}
-    style={style}
-  >
-    <defs>
-      <linearGradient id="stellar-icon-grad" x1="24" y1="2" x2="24" y2="46" gradientUnits="userSpaceOnUse">
-        <stop offset="0%" stopColor={color || "var(--color-accent-primary)"} />
-        <stop offset="100%" stopColor={color || "var(--color-accent-secondary, var(--color-accent-primary))"} />
-      </linearGradient>
-    </defs>
-    <polygon
-      points="24,2 30.18,16.52 46,18.54 34,28.28 36.36,44.02 24,37.54 11.64,44.02 14,28.28 2,18.54 17.82,16.52"
-      fill="url(#stellar-icon-grad)"
-    />
-    <polygon
-      points="24,8 28.36,18.12 39.2,19.6 31.2,26.8 32.72,37.56 24,32.54 15.28,37.56 16.8,26.8 8.8,19.6 19.64,18.12"
-      fill="white"
-      fillOpacity="0.2"
-    />
-  </svg>
-);
+}) => {
+  const main = color || "var(--color-accent-primary)";
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 48 48"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      style={style}
+    >
+      {/* 外側の八芒星 — 2つの正方形を45°回転して重ね合わせ */}
+      <rect x="10" y="10" width="28" height="28" rx="2" fill={main} />
+      <rect
+        x="10"
+        y="10"
+        width="28"
+        height="28"
+        rx="2"
+        fill={main}
+        transform="rotate(45 24 24)"
+      />
+      {/* 中心の白い円 — 知のシンボル */}
+      <circle cx="24" cy="24" r="9" fill="white" />
+      {/* 中心の星 — 小さな四芒星 */}
+      <path
+        d="M24 17 L25.8 22.2 L31 24 L25.8 25.8 L24 31 L22.2 25.8 L17 24 L22.2 22.2 Z"
+        fill={main}
+      />
+    </svg>
+  );
+};
