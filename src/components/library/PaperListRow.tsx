@@ -8,6 +8,7 @@ import { useCallback } from "react";
 import type { Paper } from "../../types";
 import { Badge } from "../ui/Badge";
 import { useT } from "../../stores/useI18nStore";
+import { ReadingStatusBadge } from "./ReadingStatusBadge";
 
 interface PaperListRowProps {
   paper: Paper;
@@ -192,6 +193,15 @@ export const PaperListRow: React.FC<PaperListRowProps> = ({
             —
           </span>
         )}
+      </div>
+
+      {/* ── 読書ステータス ── */}
+      <div
+        className="shrink-0 flex items-center"
+        style={{ width: "70px" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <ReadingStatusBadge paperId={paper.id} compact />
       </div>
 
       {/* ── PDF有無アイコン ── */}

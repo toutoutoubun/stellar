@@ -799,6 +799,9 @@ export const LibraryView: React.FC = () => {
                   ジャーナル
                 </div>
                 <div style={{ width: "140px" }}>タグ</div>
+                <div style={{ width: "70px", textAlign: "left" }}>
+                  {t.citationNetwork.readingStatus}
+                </div>
                 <div style={{ width: "28px", textAlign: "center" }}>PDF</div>
               </div>
               {/* リスト行 */}

@@ -433,6 +433,17 @@ const MOCK_RESPONSES: Record<string, any> = {
   // Qualitative — Report
   generate_analysis_report: "",
   export_qca_csv: "",
+
+  // Citation Network
+  update_reading_status: undefined,
+  get_reading_status_counts: { unread: 0, reading: 0, done: 0, revisit: 0 },
+  fetch_citation_network: { paperId: "", references: [], citedBy: [], fetchedAt: null },
+  fetch_recommendations: [],
+  get_recommendations: [],
+  import_recommendation: null,
+  get_citation_graph_data: { nodes: [], edges: [] },
+  export_bibtex: "",
+  export_ris: "",
 };
 
 /**

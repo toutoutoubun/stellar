@@ -265,6 +265,11 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
           {paper.title}
         </h2>
 
+        {/* 読書ステータスバッジ */}
+        <div className="mb-2">
+          <ReadingStatusBadge paperId={paper.id} />
+        </div>
+
         {/* 著者 · 年 · ジャーナル */}
         <p
           className="text-xs mb-1"
@@ -772,6 +777,9 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
             </div>
           )}
         </div>
+
+        {/* ── 引用ネットワーク（参照・被引用・レコメンデーション・エクスポート） ── */}
+        <CitationNetworkPanel paper={paper} />
       </div>
     </aside>
   );

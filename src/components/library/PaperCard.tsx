@@ -11,6 +11,7 @@ import { Badge } from "../ui/Badge";
 import { copyCitationToClipboard } from "../../utils/citation";
 import { toast } from "../ui/Toast";
 import { useI18nStore } from "../../stores/useI18nStore";
+import { ReadingStatusBadge } from "./ReadingStatusBadge";
 
 interface PaperCardProps {
   paper: Paper;
@@ -353,6 +354,11 @@ const PaperCardInner: React.FC<PaperCardProps> = ({
             {paper.journal ?? ""}
             {!paper.year && !paper.journal && "\u2014"}
           </p>
+
+          {/* 読書ステータスバッジ */}
+          <div style={{ marginTop: "2px" }}>
+            <ReadingStatusBadge paperId={paper.id} compact />
+          </div>
 
           {/* タグバッジ */}
           {paper.tags.length > 0 && (
