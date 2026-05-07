@@ -11,16 +11,17 @@ import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { toast } from "../ui/Toast";
 import { invoke } from "../../lib/tauriShim";
+import { useI18nStore } from "../../stores/useI18nStore";
 
 /** タブの種別 */
 type AddPaperTab = "pdf" | "url" | "doi" | "manual";
 
 /** タブ定義 */
 const TABS: { key: AddPaperTab; label: string }[] = [
-  { key: "pdf", label: "PDFから追加" },
-  { key: "url", label: "URLから追加" },
-  { key: "doi", label: "DOIから追加" },
-  { key: "manual", label: "手動入力" },
+  { key: "pdf", label: useI18nStore.getState().t.library.k_69gmr7 },
+  { key: "url", label: useI18nStore.getState().t.library.k_fc9gz4 },
+  { key: "doi", label: useI18nStore.getState().t.library.k_mjxfup },
+  { key: "manual", label: useI18nStore.getState().t.library.k_cqu9fk },
 ];
 
 interface AddPaperModalProps {
@@ -98,6 +99,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
 
   // ── フォームリセット ──
   const resetForm = useCallback(() => {
+
     setForm({ ...EMPTY_FORM });
     setAuthorsText("");
     setTagsText("");
@@ -144,7 +146,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
   // ── URLからメタデータ取得 ──
   const handleFetchFromUrl = useCallback(async () => {
     if (!urlInput.trim()) {
-      toast.warning("URLを入力してください");
+      toast.warning(useI18nStore.getState().t.library.k_svpfs8);
       return;
     }
     setFetching(true);
@@ -155,7 +157,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
         { url: urlInput.trim() }
       );
       applyMetadata({ ...data, url: urlInput.trim() });
-      toast.success("メタデータを取得しました");
+      toast.success(useI18nStore.getState().t.library.k_2uf93e);
     } catch (e) {
       toast.error(`メタデータの取得に失敗しました: ${String(e)}`);
     } finally {
@@ -166,7 +168,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
   // ── DOIからメタデータ取得 ──
   const handleFetchFromDoi = useCallback(async () => {
     if (!doiInput.trim()) {
-      toast.warning("DOIを入力してください");
+      toast.warning(useI18nStore.getState().t.library.k_kgo94p);
       return;
     }
     setFetching(true);
@@ -177,7 +179,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
         { doi: doiInput.trim() }
       );
       applyMetadata({ ...data, doi: doiInput.trim() });
-      toast.success("メタデータを取得しました");
+      toast.success(useI18nStore.getState().t.library.k_2uf93e);
     } catch (e) {
       toast.error(`メタデータの取得に失敗しました: ${String(e)}`);
     } finally {
@@ -239,12 +241,12 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
             { pdfPath: selected }
           );
           applyMetadata({ ...data, pdfPath: selected });
-          toast.success("PDFからメタデータを抽出しました");
+          toast.success(useI18nStore.getState().t.library.k_lc058i);
         } catch {
           // メタデータ抽出が失敗してもファイルパスは保持
           const titleFromFile = name.replace(/\.pdf$/i, "").replace(/[_-]/g, " ");
           applyMetadata({ title: titleFromFile, pdfPath: selected });
-          toast.info("PDFのメタデータ抽出に失敗しました。手動で入力してください。");
+          toast.info(useI18nStore.getState().t.library.k_eqyro1);
         } finally {
           setFetching(false);
         }
@@ -257,7 +259,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
   // ── 保存 ──
   const handleSave = useCallback(async () => {
     if (!form.title.trim()) {
-      toast.warning("タイトルは必須です");
+      toast.warning(useI18nStore.getState().t.library.k_2mde7w);
       return;
     }
     // PDFタブでpdfPathが未設定の場合、選択済みパスを反映
@@ -268,7 +270,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
     setSaving(true);
     try {
       await onSave(finalForm);
-      toast.success("論文を追加しました");
+      toast.success(useI18nStore.getState().t.library.k_9cffqr);
       handleClose();
     } catch (e) {
       toast.error(`論文の追加に失敗しました: ${String(e)}`);
@@ -282,19 +284,19 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
     <div className="flex flex-col gap-3">
       {/* タイトル */}
       <Input
-        label="タイトル *"
+        label={useI18nStore.getState().t.library.k_3n500e}
         value={form.title}
         onChange={(e) => updateField("title", e.target.value)}
-        placeholder="論文のタイトル"
+        placeholder={useI18nStore.getState().t.library.k_nqxsud}
         fullWidth
       />
 
       {/* 著者（カンマ区切り） */}
       <Input
-        label="著者（カンマ区切り）"
+        label={useI18nStore.getState().t.library.k_tm1buw}
         value={authorsText}
         onChange={(e) => handleAuthorsChange(e.target.value)}
-        placeholder="著者1, 著者2, 著者3"
+        placeholder={useI18nStore.getState().t.library.k_y8v2ho}
         fullWidth
       />
 
@@ -302,7 +304,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
       <div className="flex gap-3">
         <div style={{ width: "100px" }}>
           <Input
-            label="出版年"
+            label={useI18nStore.getState().t.library.k_ck7ty}
             type="number"
             value={form.year !== null && form.year !== undefined ? String(form.year) : ""}
             onChange={(e) => {
@@ -315,12 +317,12 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
         </div>
         <div className="flex-1">
           <Input
-            label="ジャーナル / 雑誌名"
+            label={useI18nStore.getState().t.library.k_f45ryr}
             value={form.journal ?? ""}
             onChange={(e) =>
               updateField("journal", e.target.value || null)
             }
-            placeholder="雑誌名"
+            placeholder={useI18nStore.getState().t.library.k_mra1e}
             fullWidth
           />
         </div>
@@ -330,7 +332,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
       <div className="flex gap-3">
         <div style={{ flex: 1 }}>
           <Input
-            label="巻"
+            label={useI18nStore.getState().t.library.k_ikb}
             value={form.volume ?? ""}
             onChange={(e) =>
               updateField("volume", e.target.value || null)
@@ -341,7 +343,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
         </div>
         <div style={{ flex: 1 }}>
           <Input
-            label="号"
+            label={useI18nStore.getState().t.library.k_gl3}
             value={form.issue ?? ""}
             onChange={(e) =>
               updateField("issue", e.target.value || null)
@@ -352,7 +354,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
         </div>
         <div style={{ flex: 1 }}>
           <Input
-            label="ページ"
+            label={useI18nStore.getState().t.library.k_7e6xi}
             value={form.pages ?? ""}
             onChange={(e) =>
               updateField("pages", e.target.value || null)
@@ -416,7 +418,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
           onChange={(e) =>
             updateField("abstract", e.target.value || null)
           }
-          placeholder="論文の概要..."
+          placeholder={useI18nStore.getState().t.library.k_palb1q}
           data-selectable="true"
           onFocus={(e) => {
             e.currentTarget.style.borderColor = "var(--color-border-focus)";
@@ -429,10 +431,10 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
 
       {/* タグ（カンマ区切り） */}
       <Input
-        label="タグ（カンマ区切り）"
+        label={useI18nStore.getState().t.library.k_f41763}
         value={tagsText}
         onChange={(e) => handleTagsChange(e.target.value)}
-        placeholder="認知科学, 心理学, メタ分析"
+        placeholder={useI18nStore.getState().t.library.k_stzku}
         fullWidth
       />
     </div>
@@ -442,7 +444,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
     <Modal
       open={open}
       onClose={handleClose}
-      title="論文を追加"
+      title={useI18nStore.getState().t.library.k_cdnwe4}
       width="600px"
       footer={
         <>
@@ -588,7 +590,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
                   e.currentTarget.style.backgroundColor = "transparent";
                   e.currentTarget.style.color = "var(--color-text-tertiary)";
                 }}
-                title="ファイルを変更"
+                title={useI18nStore.getState().t.library.k_4vb94m}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" />
@@ -621,7 +623,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
           <div className="flex gap-2 items-end">
             <div className="flex-1">
               <Input
-                label="論文のURL"
+                label={useI18nStore.getState().t.library.k_t833la}
                 value={urlInput}
                 onChange={(e) => setUrlInput(e.target.value)}
                 placeholder="https://..."

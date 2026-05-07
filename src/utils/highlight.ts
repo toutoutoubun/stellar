@@ -4,6 +4,7 @@
 // React ノードに変換し、ヒット箇所を <mark> で強調する
 
 import { createElement, type ReactNode, Fragment } from "react";
+import { useI18nStore } from "../stores/useI18nStore";
 
 /**
  * [[match]] 形式のスニペットを解析して React ノード配列に変換する
@@ -84,7 +85,7 @@ export function formatRelativeTime(isoStr: string): string {
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
-  if (seconds < 60) return "たった今";
+  if (seconds < 60) return useI18nStore.getState().t.notes.justNow;
   if (minutes < 60) return `${minutes}分前`;
   if (hours < 24) return `${hours}時間前`;
   if (days < 7) return `${days}日前`;

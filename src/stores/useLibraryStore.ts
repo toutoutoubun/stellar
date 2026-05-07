@@ -12,6 +12,7 @@ import type {
   LibraryViewMode,
 } from "../types";
 import { invoke } from "../lib/tauriShim";
+import { useI18nStore } from "./useI18nStore";
 
 /** ライブラリストアの状態型 */
 interface LibraryState {
@@ -137,7 +138,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   createPaper: async (input) => {
     const paper = await invoke<Paper>("create_paper", { input });
     if (!paper || !paper.id) {
-      throw new Error("論文の作成に失敗しました（空のレスポンス）");
+      throw new Error(useI18nStore.getState().t.stores.str_eea50g);
     }
     set((state) => ({ papers: [paper, ...state.papers] }));
     return paper;
@@ -146,7 +147,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   updatePaper: async (id, input) => {
     const paper = await invoke<Paper>("update_paper", { id, input });
     if (!paper || !paper.id) {
-      throw new Error("論文の更新に失敗しました（空のレスポンス）");
+      throw new Error(useI18nStore.getState().t.stores.str_1m3aco);
     }
     set((state) => ({
       papers: state.papers.map((p) => (p.id === id ? paper : p)),
@@ -173,7 +174,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       input: { pdfPath },
     });
     if (!paper || !paper.id) {
-      throw new Error("PDF添付に失敗しました（空のレスポンス）");
+      throw new Error(useI18nStore.getState().t.stores.PDF);
     }
     set((state) => ({
       papers: state.papers.map((p) => (p.id === id ? paper : p)),

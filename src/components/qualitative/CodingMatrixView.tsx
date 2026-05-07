@@ -7,6 +7,7 @@ import { invoke } from "../../lib/tauriShim";
 import type { CodingMatrix } from "../../types";
 import { HelpTooltip } from "./HelpTooltip";
 import { IconRefresh, IconMatrix } from "./icons/QualIcons";
+import { useT } from "../../stores/useI18nStore";
 
 interface CodingMatrixViewProps {
   projectId: string;
@@ -15,6 +16,7 @@ interface CodingMatrixViewProps {
 export const CodingMatrixView: React.FC<CodingMatrixViewProps> = ({
   projectId,
 }) => {
+  const t = useT();
   const [matrix, setMatrix] = useState<CodingMatrix | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -26,7 +28,7 @@ export const CodingMatrixView: React.FC<CodingMatrixViewProps> = ({
       });
       setMatrix(result);
     } catch (err) {
-      console.error("マトリクス取得エラー:", err);
+      console.error(t.qualitative.k_1375ii, err);
     } finally {
       setLoading(false);
     }
@@ -75,15 +77,15 @@ export const CodingMatrixView: React.FC<CodingMatrixViewProps> = ({
     <div className="p-4 overflow-auto h-full">
       <HelpTooltip
         storageKey="qual_matrix"
-        title="コーディングマトリクスの見方"
+        title={t.qualitative.k_kzkkwk}
         paragraphs={[
-          "コードと論文のクロス集計表です。各セルはコードが論文に何回割り当てられたかを示します。",
-          "色の濃さは相対的な頻度を表しています。",
+          t.qualitative.k_4hffby,
+          t.qualitative.k_ljwbuo,
         ]}
         steps={[
-          "PDFリーダーでハイライトを作成し、コードブックでコードを割り当てます",
-          "マトリクスが自動的に更新されます",
-          "更新ボタンで最新データを取得できます",
+          t.qualitative.k_izwtz2,
+          t.qualitative.k_z53boi,
+          t.qualitative.k_bm792r,
         ]}
       />
 

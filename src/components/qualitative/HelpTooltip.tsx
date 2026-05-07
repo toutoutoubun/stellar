@@ -4,6 +4,7 @@
 
 import React, { useState, useCallback } from "react";
 import { IconInfo, IconClose } from "./icons/QualIcons";
+import { useT } from "../../stores/useI18nStore";
 
 interface HelpTooltipProps {
   /** localStorage に保存するキー */
@@ -22,6 +23,7 @@ export const HelpTooltip: React.FC<HelpTooltipProps> = ({
   paragraphs,
   steps,
 }) => {
+  const t = useT();
   const lsKey = `stellar_help_dismissed_${storageKey}`;
   const [dismissed, setDismissed] = useState(() => {
     try {
@@ -51,7 +53,7 @@ export const HelpTooltip: React.FC<HelpTooltipProps> = ({
       <button
         type="button"
         onClick={handleReset}
-        title="ヘルプを表示"
+        title={t.qualitative.k_9awj7k}
         style={{
           background: "none",
           border: "none",
@@ -112,7 +114,7 @@ export const HelpTooltip: React.FC<HelpTooltipProps> = ({
         <button
           type="button"
           onClick={handleDismiss}
-          title="閉じる（アイコンから再表示可）"
+          title={t.qualitative.k_erv6ml}
           style={{
             background: "none",
             border: "none",

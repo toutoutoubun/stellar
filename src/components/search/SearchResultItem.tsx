@@ -7,6 +7,7 @@ import { useRef, useEffect } from "react";
 import type { SearchResultItem as SearchResultItemType } from "../../types";
 import { parseSnippet } from "../../utils/highlight";
 import { IconPaper, IconNote, IconHighlightDot, highlightColorToHex } from "../ui/Icons";
+import { useT } from "../../stores/useI18nStore";
 
 interface SearchResultItemProps {
   /** 検索結果アイテム */
@@ -21,6 +22,7 @@ interface SearchResultItemProps {
 
 /** アイテム種別に応じたアイコンを返す */
 function getItemIcon(item: SearchResultItemType): React.ReactNode {
+
   if (item.itemType === "paper") return <IconPaper size={14} />;
   if (item.itemType === "note") return <IconNote size={14} />;
   // ハイライトは色に応じたSVGドット
@@ -33,6 +35,7 @@ export const SearchResultCard: React.FC<SearchResultItemProps> = ({
   onClick,
   onMouseEnter,
 }) => {
+  const t = useT();
   const ref = useRef<HTMLButtonElement>(null);
 
   // 選択時に自動スクロール
@@ -89,7 +92,7 @@ export const SearchResultCard: React.FC<SearchResultItemProps> = ({
               lineHeight: "1.4",
             }}
           >
-            {item.title || "無題"}
+            {item.title || t.graph.k_k2tn}
           </span>
           {item.meta && (
             <span

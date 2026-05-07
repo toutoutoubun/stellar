@@ -4,6 +4,7 @@
 // 日本語論文・英語論文の両方をサポートする
 
 import type { Paper, CitationStyle } from "../types";
+import { useI18nStore } from "../stores/useI18nStore";
 
 // ============================================================
 // 著者名フォーマット補助関数
@@ -277,8 +278,8 @@ const formatHitotsubashi = (paper: Paper): string => {
   }
 
   // 最後の要素を「。」で結び読点で区切る
-  const result = parts.join("、");
-  return result.endsWith("。") ? result : `${result}。`;
+  const result = parts.join(useI18nStore.getState().t.stats.k_9hd);
+  return result.endsWith(useI18nStore.getState().t.stats.k_9he) ? result : `${result}。`;
 };
 
 // ============================================================

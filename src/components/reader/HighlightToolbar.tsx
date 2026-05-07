@@ -9,6 +9,7 @@ import {
   HIGHLIGHT_COLOR_LIST,
   HIGHLIGHT_COLORS,
 } from "../../utils/highlightColors";
+import { useT } from "../../stores/useI18nStore";
 
 /** ズームプリセット値（%） */
 const ZOOM_PRESETS = [50, 75, 100, 125, 150] as const;
@@ -45,6 +46,7 @@ export const HighlightToolbar: React.FC<HighlightToolbarProps> = ({
   onToggleSearch,
   paperTitle,
 }) => {
+  const t = useT();
   /** 前のページへ移動 */
   const goToPrevPage = useCallback(() => {
     if (currentPage > 1) {
@@ -79,7 +81,7 @@ export const HighlightToolbar: React.FC<HighlightToolbarProps> = ({
 
   /** 現在のズーム表示テキスト */
   const zoomDisplayText =
-    zoomValue === "page-width" ? "幅に合わせ" : `${zoomValue}%`;
+    zoomValue === "page-width" ? t.reader.str_jw4qi6 : `${zoomValue}%`;
 
   return (
     <header
@@ -130,8 +132,8 @@ export const HighlightToolbar: React.FC<HighlightToolbarProps> = ({
             opacity: currentPage <= 1 ? 0.3 : 1,
             cursor: currentPage <= 1 ? "not-allowed" : "pointer",
           }}
-          title="前のページ（←）"
-          aria-label="前のページ"
+          title={t.reader.str_ui6cdo}
+          aria-label={t.reader.str_r1odzf}
         >
           <svg
             width="14"
@@ -167,8 +169,8 @@ export const HighlightToolbar: React.FC<HighlightToolbarProps> = ({
             opacity: currentPage >= totalPages ? 0.3 : 1,
             cursor: currentPage >= totalPages ? "not-allowed" : "pointer",
           }}
-          title="次のページ（→）"
-          aria-label="次のページ"
+          title={t.reader.str_uwj0fe}
+          aria-label={t.reader.str_1004jb}
         >
           <svg
             width="14"
@@ -206,8 +208,8 @@ export const HighlightToolbar: React.FC<HighlightToolbarProps> = ({
             borderRadius: "6px",
             color: "var(--color-text-secondary)",
           }}
-          title="ズームアウト"
-          aria-label="ズームアウト"
+          title={t.settings.shortcuts.items.zoomOut}
+          aria-label={t.settings.shortcuts.items.zoomOut}
         >
           <svg
             width="14"
@@ -238,7 +240,7 @@ export const HighlightToolbar: React.FC<HighlightToolbarProps> = ({
             border: "1px solid var(--color-border-secondary)",
             backgroundColor: "var(--color-bg-primary)",
           }}
-          title="ズーム切替（幅に合わせ / パーセント）"
+          title={t.reader.str_hkiz09}
         >
           {zoomDisplayText}
         </button>
@@ -253,8 +255,8 @@ export const HighlightToolbar: React.FC<HighlightToolbarProps> = ({
             borderRadius: "6px",
             color: "var(--color-text-secondary)",
           }}
-          title="ズームイン"
-          aria-label="ズームイン"
+          title={t.settings.shortcuts.items.zoomIn}
+          aria-label={t.settings.shortcuts.items.zoomIn}
         >
           <svg
             width="14"
@@ -335,8 +337,8 @@ export const HighlightToolbar: React.FC<HighlightToolbarProps> = ({
           borderRadius: "6px",
           color: "var(--color-text-secondary)",
         }}
-        title="テキスト検索（Ctrl+F）"
-        aria-label="テキスト検索"
+        title={t.reader.Ctrl_F}
+        aria-label={t.reader.str_6n944}
       >
         <svg
           width="14"

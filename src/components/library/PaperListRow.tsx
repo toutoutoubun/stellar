@@ -7,6 +7,7 @@ import type React from "react";
 import { useCallback } from "react";
 import type { Paper } from "../../types";
 import { Badge } from "../ui/Badge";
+import { useT } from "../../stores/useI18nStore";
 
 interface PaperListRowProps {
   paper: Paper;
@@ -21,6 +22,7 @@ interface PaperListRowProps {
 
 /** 著者を短縮表示する（2名以上は et al.） */
 const formatAuthorsCompact = (authors: string[]): string => {
+
   if (authors.length === 0) return "—";
   if (authors.length === 1) return authors[0] ?? "—";
   return `${authors[0]} et al.`;
@@ -35,6 +37,7 @@ export const PaperListRow: React.FC<PaperListRowProps> = ({
   onDoubleClick,
   onToggleCheck,
 }) => {
+  const t = useT();
   const handleCheckboxClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -195,7 +198,7 @@ export const PaperListRow: React.FC<PaperListRowProps> = ({
       <div
         className="shrink-0 flex items-center justify-center"
         style={{ width: "28px" }}
-        title={paper.pdfPath ? "PDF添付済み" : "PDF未添付"}
+        title={paper.pdfPath ? t.library.k_e5u2bq : t.library.k_vn8gmj}
       >
         {paper.pdfPath ? (
           <svg

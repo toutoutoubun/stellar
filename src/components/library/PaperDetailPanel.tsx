@@ -12,6 +12,7 @@ import { Button } from "../ui/Button";
 import { copyCitationToClipboard } from "../../utils/citation";
 import { toast } from "../ui/Toast";
 import { invoke } from "../../lib/tauriShim";
+import { useI18nStore } from "../../stores/useI18nStore";
 
 interface PaperDetailPanelProps {
   paper: Paper;
@@ -105,6 +106,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
     let cancelled = false;
 
     const fetchRelatedData = async () => {
+
       setLoadingRelated(true);
       try {
         // 並列で関連ノート・バックリンク・ハイライトを取得
@@ -151,7 +153,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
           `${CITATION_STYLE_LABELS[style]} 形式で引用をコピーしました`
         );
       } else {
-        toast.error("クリップボードへのコピーに失敗しました");
+        toast.error(useI18nStore.getState().t.library.k_pytgr9);
       }
       setShowCitationDropdown(false);
     },
@@ -231,7 +233,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = "transparent";
           }}
-          aria-label="パネルを閉じる"
+          aria-label={useI18nStore.getState().t.layout.str_tq8rjt}
         >
           <svg
             width="14"
@@ -271,13 +273,13 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
             lineHeight: "var(--line-height-relaxed)",
           }}
         >
-          {paper.authors.join(", ") || "著者不明"}
+          {paper.authors.join(", ") || useI18nStore.getState().t.library.k_h81ga7}
         </p>
         <p
           className="text-xs mb-3"
           style={{ color: "var(--color-text-tertiary)" }}
         >
-          {paper.year ?? "年不明"}
+          {paper.year ?? useI18nStore.getState().t.library.k_e7vv9}
           {paper.journal && ` · ${paper.journal}`}
           {paper.volume && `, Vol. ${paper.volume}`}
           {paper.issue && `(${paper.issue})`}
@@ -464,7 +466,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                   setShowTagInput(false);
                   setNewTag("");
                 }}
-                placeholder="タグ名..."
+                placeholder={useI18nStore.getState().t.library.k_sgs5u}
                 autoFocus
               />
             ) : (
@@ -512,7 +514,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
         {/* ── アブストラクト（折りたたみ可能） ── */}
         <div className="py-1">
           <SectionHeader
-            title="アブストラクト"
+            title={useI18nStore.getState().t.library.k_hq997l}
             expanded={abstractExpanded}
             onToggle={() => setAbstractExpanded((v) => !v)}
           />
@@ -526,7 +528,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                 lineHeight: "var(--line-height-relaxed)",
               }}
             >
-              {paper.abstract ?? "アブストラクトはありません"}
+              {paper.abstract ?? useI18nStore.getState().t.library.k_h0cdlq}
             </div>
           )}
         </div>
@@ -536,7 +538,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
         {/* ── 関連ノート ── */}
         <div className="py-1">
           <SectionHeader
-            title="関連ノート"
+            title={useI18nStore.getState().t.library.k_z75cmx}
             count={relatedNotes.length}
             expanded={notesExpanded}
             onToggle={() => setNotesExpanded((v) => !v)}
@@ -612,7 +614,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
         {/* ── バックリンク ── */}
         <div className="py-1">
           <SectionHeader
-            title="バックリンク"
+            title={useI18nStore.getState().t.library.k_4vgs8a}
             count={backlinks.length}
             expanded={backlinksExpanded}
             onToggle={() => setBacklinksExpanded((v) => !v)}
@@ -666,7 +668,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                       <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                     </svg>
                     <span className="truncate">
-                      {link.sourceType === "note" ? "ノート" : "論文"}:{" "}
+                      {link.sourceType === "note" ? useI18nStore.getState().t.notes.title : useI18nStore.getState().t.settings.data.papers}:{" "}
                       {link.sourceId.slice(0, 8)}...
                     </span>
                     {link.context && (
@@ -689,7 +691,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
         {/* ── ハイライト ── */}
         <div className="py-1">
           <SectionHeader
-            title="ハイライト"
+            title={useI18nStore.getState().t.settings.data.highlights}
             count={highlights.length}
             expanded={highlightsExpanded}
             onToggle={() => setHighlightsExpanded((v) => !v)}

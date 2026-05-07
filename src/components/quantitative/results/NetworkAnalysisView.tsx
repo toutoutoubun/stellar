@@ -13,6 +13,7 @@ import React, {
 } from "react";
 import type { Analysis, Variable, DataRow } from "../../../types";
 import type { NetworkAnalysisResult } from "../../../lib/stats/types";
+import { useI18nStore } from "../../../stores/useI18nStore";
 
 // ── Force graph dynamic loader ──
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -21,6 +22,7 @@ let _fg: FG2D | null = null;
 let _fgErr: Error | null = null;
 let _fgP: Promise<FG2D> | null = null;
 function loadFG(): Promise<FG2D> {
+
   if (_fg) return Promise.resolve(_fg);
   if (_fgErr) return Promise.reject(_fgErr);
   if (_fgP) return _fgP;
@@ -432,24 +434,24 @@ const RightPanel: React.FC<{ network: NetworkAnalysisResult }> = memo(({ network
 
   const METRIC_CARDS: { label: string; value: string; tooltip: string }[] = [
     {
-      label: "密度",
+      label: useI18nStore.getState().t.quantResults.str_g4o0,
       value: fmt(metrics.density),
-      tooltip: "ネットワーク内の実際の接続数と理論上の最大接続数の比率。1に近いほど密なネットワーク。",
+      tooltip: useI18nStore.getState().t.quantResults.str_e3b3so,
     },
     {
-      label: "平均次数",
+      label: useI18nStore.getState().t.quantResults.str_ca5vhf,
       value: fmt(metrics.avgDegree, 2),
-      tooltip: "各ノードが平均して接続しているエッジの数。",
+      tooltip: useI18nStore.getState().t.quantResults.str_ukwvs6,
     },
     {
-      label: "平均クラスタリング係数",
+      label: useI18nStore.getState().t.quantResults.str_87227z,
       value: fmt(metrics.avgClustering),
-      tooltip: "あるノードの隣接ノード同士がどの程度つながっているかの平均。三角形の割合。",
+      tooltip: useI18nStore.getState().t.quantResults.str_pzcgr8,
     },
     {
-      label: "モジュラリティ",
+      label: useI18nStore.getState().t.quantResults.str_f9weib,
       value: fmt(metrics.modularity),
-      tooltip: "コミュニティ構造の強さ。0.3以上で明確なコミュニティが存在するとされる。",
+      tooltip: useI18nStore.getState().t.quantResults.str_0_3,
     },
   ];
 
@@ -504,7 +506,7 @@ const RightPanel: React.FC<{ network: NetworkAnalysisResult }> = memo(({ network
           <table className="w-full" style={{ borderCollapse: "collapse", fontSize: "10px" }}>
             <thead>
               <tr style={{ backgroundColor: "var(--color-bg-primary)" }}>
-                {["ノード", "次数", "媒介", "近接"].map((h) => (
+                {[useI18nStore.getState().t.quantResults.str_7dy1n, useI18nStore.getState().t.quantResults.str_is1b, useI18nStore.getState().t.quantResults.str_fu61, useI18nStore.getState().t.quantResults.str_p0c4].map((h) => (
                   <th key={h} className="px-2 py-1.5 text-left font-medium" style={{ color: "var(--color-text-tertiary)", borderBottom: "1px solid var(--color-border-primary)" }}>
                     {h}
                   </th>

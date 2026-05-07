@@ -3,6 +3,7 @@
 // 4色のハイライトカラー設定（意味別ラベル・CSS変数・アイコン）
 
 import type { HighlightColor } from "../types";
+import { useI18nStore } from "../stores/useI18nStore";
 
 /** 各ハイライト色の詳細設定 */
 export interface HighlightColorConfig {
@@ -30,7 +31,7 @@ export interface HighlightColorConfig {
 export const HIGHLIGHT_COLORS: Record<HighlightColor, HighlightColorConfig> = {
   yellow: {
     key: "yellow",
-    label: "重要",
+    label: useI18nStore.getState().t.utils.str_pjys,
     bg: "rgba(255, 235, 59, 0.3)",
     bgSolid: "rgba(255, 235, 59, 0.5)",
     textColor: "#f57f17",
@@ -41,7 +42,7 @@ export const HIGHLIGHT_COLORS: Record<HighlightColor, HighlightColorConfig> = {
   },
   blue: {
     key: "blue",
-    label: "引用",
+    label: useI18nStore.getState().t.utils.str_gtdf,
     bg: "rgba(66, 165, 245, 0.3)",
     bgSolid: "rgba(66, 165, 245, 0.5)",
     textColor: "#1565c0",
@@ -52,7 +53,7 @@ export const HIGHLIGHT_COLORS: Record<HighlightColor, HighlightColorConfig> = {
   },
   green: {
     key: "green",
-    label: "反論",
+    label: useI18nStore.getState().t.utils.str_f0kp,
     bg: "rgba(102, 187, 106, 0.3)",
     bgSolid: "rgba(102, 187, 106, 0.5)",
     textColor: "#2e7d32",
@@ -63,7 +64,7 @@ export const HIGHLIGHT_COLORS: Record<HighlightColor, HighlightColorConfig> = {
   },
   pink: {
     key: "pink",
-    label: "定義",
+    label: useI18nStore.getState().t.utils.str_ga4v,
     bg: "rgba(240, 98, 146, 0.3)",
     bgSolid: "rgba(240, 98, 146, 0.5)",
     textColor: "#c2185b",

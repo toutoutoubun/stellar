@@ -5,6 +5,7 @@
 
 import type React from "react";
 import { useRef, useEffect } from "react";
+import { useT } from "../../stores/useI18nStore";
 
 interface SearchInputProps {
   /** 検索クエリ */
@@ -26,6 +27,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   onKeyDown,
   onEnter,
 }) => {
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
 
   // マウント時に自動フォーカス
@@ -94,7 +96,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="論文、ノート、ハイライトを検索..."
+        placeholder={t.search.k_bu5fmx}
         className="flex-1 text-sm outline-none user-select-text"
         style={{
           backgroundColor: "transparent",
@@ -128,7 +130,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
             e.currentTarget.style.backgroundColor = "transparent";
             e.currentTarget.style.color = "var(--color-text-tertiary)";
           }}
-          aria-label="検索をクリア"
+          aria-label={t.notes.clearSearch}
         >
           <svg
             width="14"

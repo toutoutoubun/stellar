@@ -14,28 +14,30 @@ import type {
 } from "../../types";
 import { HelpTooltip } from "./HelpTooltip";
 import { IconPlus, IconDelete, IconClose, IconProcessTracing } from "./icons/QualIcons";
+import { useT, useI18nStore } from "../../stores/useI18nStore";
 
 interface ProcessTracingViewProps {
   projectId: string;
 }
 
 const TEST_TYPES = [
-  { value: "hoop", label: "フープテスト", desc: "必要条件。通過しなければ仮説を棄却" },
-  { value: "smoking_gun", label: "スモーキングガン", desc: "十分条件。通過すれば仮説を強く支持" },
-  { value: "straw", label: "ストローインザウィンド", desc: "弱い証拠。方向性を示唆" },
-  { value: "doubly_decisive", label: "決定的テスト", desc: "必要十分条件。仮説を確定または棄却" },
+  { value: "hoop", label: useI18nStore.getState().t.qualitative.k_84pxfp, desc: useI18nStore.getState().t.qualitative.k_qy2o4n },
+  { value: "smoking_gun", label: useI18nStore.getState().t.qualitative.k_ye20bm, desc: useI18nStore.getState().t.qualitative.k_hxu62r },
+  { value: "straw", label: useI18nStore.getState().t.qualitative.k_1vm6u4, desc: useI18nStore.getState().t.qualitative.k_je7x0m },
+  { value: "doubly_decisive", label: useI18nStore.getState().t.qualitative.k_pt491t, desc: useI18nStore.getState().t.qualitative.k_nsauh6 },
 ];
 
 const RESULT_OPTIONS = [
-  { value: "pending", label: "未実施", color: "#94a3b8" },
-  { value: "pass", label: "通過", color: "#22c55e" },
-  { value: "fail", label: "不通過", color: "#ef4444" },
-  { value: "partial", label: "部分的", color: "#f59e0b" },
+  { value: "pending", label: useI18nStore.getState().t.qualitative.k_fk4h4, color: "#94a3b8" },
+  { value: "pass", label: useI18nStore.getState().t.qualitative.k_pawk, color: "#22c55e" },
+  { value: "fail", label: useI18nStore.getState().t.qualitative.k_c4v29, color: "#ef4444" },
+  { value: "partial", label: useI18nStore.getState().t.qualitative.k_lmoti, color: "#f59e0b" },
 ];
 
 export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
   projectId,
 }) => {
+  const t = useT();
   const [ptData, setPtData] = useState<PtData | null>(null);
   const [summary, setSummary] = useState<PtSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,6 +52,7 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
   const [evTestType, setEvTestType] = useState("hoop");
 
   const loadData = useCallback(async () => {
+    const t = useT();
     setLoading(true);
     try {
       const [data, sum] = await Promise.all([
@@ -59,7 +62,7 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
       setPtData(data);
       setSummary(sum);
     } catch (err) {
-      console.error("PT取得エラー:", err);
+      console.error(t.qualitative.k_gfgo1w, err);
     } finally {
       setLoading(false);
     }
@@ -84,19 +87,19 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
       setShowHypForm(false);
       void loadData();
     } catch (err) {
-      console.error("仮説作成エラー:", err);
+      console.error(t.qualitative.k_i92jnz, err);
     }
   }, [hypTitle, hypDesc, hypIsMain, projectId, loadData]);
 
   const handleDeleteHypothesis = useCallback(
     async (id: string) => {
-      const ok = await swalConfirm("仮説削除", "この仮説と関連する証拠をすべて削除しますか？");
+      const ok = await swalConfirm(t.qualitative.k_aj428o, t.qualitative.k_fd8s26);
       if (!ok) return;
       try {
         await invoke("delete_pt_hypothesis", { id });
         void loadData();
       } catch (err) {
-        console.error("仮説削除エラー:", err);
+        console.error(t.qualitative.k_qsij1l, err);
       }
     },
     [loadData]
@@ -116,7 +119,7 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
         setAddEvidenceFor(null);
         void loadData();
       } catch (err) {
-        console.error("証拠追加エラー:", err);
+        console.error(t.qualitative.k_z8szae, err);
       }
     },
     [evDesc, evTestType, loadData]
@@ -128,7 +131,7 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
         await invoke("update_pt_evidence_result", { id: evidenceId, result });
         void loadData();
       } catch (err) {
-        console.error("結果更新エラー:", err);
+        console.error(t.qualitative.k_ozup4p, err);
       }
     },
     [loadData]
@@ -140,7 +143,7 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
         await invoke("delete_pt_evidence", { id });
         void loadData();
       } catch (err) {
-        console.error("証拠削除エラー:", err);
+        console.error(t.qualitative.k_46v5c3, err);
       }
     },
     [loadData]
@@ -158,15 +161,15 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
     <div className="p-4 h-full overflow-y-auto">
       <HelpTooltip
         storageKey="qual_process_tracing"
-        title="プロセストレーシングの使い方"
+        title={t.qualitative.k_3247oq}
         paragraphs={[
-          "因果メカニズムを検証するための手法です。仮説を立て、各種テスト（フープ、スモーキングガン等）で証拠を評価します。",
-          "Beach & Pedersen (2013) のフレームワークに基づいた4種類の証拠テストに対応しています。",
+          t.qualitative.k_kaoh2k,
+          t.qualitative.k_ew6l2u,
         ]}
         steps={[
-          "仮説を追加し、主仮説かどうかを設定します",
-          "各仮説に対して証拠とテスト種別を追加します",
-          "証拠の結果（通過/不通過/部分的）を更新するとサマリーが自動計算されます",
+          t.qualitative.k_13u2zy,
+          t.qualitative.k_53m2o9,
+          t.qualitative.k_qbn6uz,
         ]}
       />
 
@@ -193,7 +196,7 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
             <div>
               <div className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>スモーキングガン</div>
               <div className="text-lg font-bold" style={{ color: summary.hasSmokingGun ? "#22c55e" : "#94a3b8" }}>
-                {summary.hasSmokingGun ? "発見" : "未発見"}
+                {summary.hasSmokingGun ? t.qualitative.k_kwnl : t.qualitative.k_fovzv}
               </div>
             </div>
             <div>
@@ -229,7 +232,7 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
             type="text"
             value={hypTitle}
             onChange={(e) => setHypTitle(e.target.value)}
-            placeholder="仮説タイトル"
+            placeholder={t.qualitative.k_t6h1ye}
             className="w-full text-xs px-2 py-1.5 mb-2"
             style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "6px", outline: "none" }}
             onKeyDown={(e) => { if (e.key === "Enter") void handleCreateHypothesis(); }}
@@ -238,7 +241,7 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
           <textarea
             value={hypDesc}
             onChange={(e) => setHypDesc(e.target.value)}
-            placeholder="説明（任意）"
+            placeholder={t.qualitative.k_knmvip}
             rows={2}
             className="w-full text-xs px-2 py-1.5 mb-2"
             style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "6px", outline: "none", resize: "vertical" }}
@@ -307,7 +310,7 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
                   <button
                     type="button"
                     onClick={() => void handleDeleteHypothesis(hyp.id)}
-                    title="削除"
+                    title={t.common.delete}
                     style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer", display: "flex", padding: "2px" }}
                   >
                     <IconDelete size={12} />
@@ -322,7 +325,7 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
                     type="text"
                     value={evDesc}
                     onChange={(e) => setEvDesc(e.target.value)}
-                    placeholder="証拠の説明"
+                    placeholder={t.qualitative.k_f2fb9w}
                     className="w-full text-xs px-2 py-1 mb-1"
                     style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "4px", outline: "none" }}
                     autoFocus
@@ -381,7 +384,7 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
                           type="button"
                           onClick={() => void handleDeleteEvidence(ev.id)}
                           className="opacity-0 group-hover:opacity-100"
-                          title="削除"
+                          title={t.common.delete}
                           style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer", display: "flex", padding: "2px" }}
                         >
                           <IconDelete size={11} />

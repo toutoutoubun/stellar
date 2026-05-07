@@ -11,6 +11,7 @@ import {
   createTooltip,
   fmt,
 } from "./chartTheme";
+import { useI18nStore } from "../../../stores/useI18nStore";
 
 export interface HistogramProps {
   /** 数値データ配列 */
@@ -36,7 +37,7 @@ export const Histogram: React.FC<HistogramProps> = memo(function Histogram({
   bins,
   showNormalCurve = true,
   xLabel,
-  yLabel = "度数",
+  yLabel = useI18nStore.getState().t.quantCharts.str_gnm2,
   width: fixedWidth,
   height: fixedHeight = 220,
   className,

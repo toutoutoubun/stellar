@@ -17,6 +17,7 @@ import { swalConfirm } from "../../lib/swal";
 import { countWords, estimateReadingTime } from "../../lib/exportMarkdown";
 import { exportMarkdownFile, exportPlainText, exportPdf, exportHtmlBlob, downloadBlob } from "../../lib/exportPdf";
 import { generateDocx } from "../../lib/exportDocx";
+import { useT } from "../../stores/useI18nStore";
 
 interface NoteEditorProps {
   /** 表示するノートのID */
@@ -24,6 +25,7 @@ interface NoteEditorProps {
 }
 
 export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
+  const t = useT();
   // ストア
   const activeNote = useNoteStore((s) => s.activeNote);
   const loading = useNoteStore((s) => s.loading);
@@ -125,7 +127,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
       try {
         await updateNote(activeNote.id, { title: trimmed });
       } catch {
-        toast.error("タイトルの保存に失敗しました");
+        toast.error(t.notes.k_6pg9i7);
       }
     }
     setTitleEditing(false);
@@ -134,14 +136,14 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
   /** ノート削除 */
   const handleDelete = useCallback(async () => {
     if (!activeNote) return;
-    const ok = await swalConfirm("ノートの削除", `「${activeNote.title}」を削除しますか？この操作は取り消せません。`);
+    const ok = await swalConfirm(t.notes.k_4t9g8e, `「${activeNote.title}」を削除しますか？この操作は取り消せません。`);
     if (ok) {
       try {
         await deleteNote(activeNote.id);
         handleBack();
-        toast.success("ノートを削除しました");
+        toast.success(t.notes.k_qe545b);
       } catch {
-        toast.error("ノートの削除に失敗しました");
+        toast.error(t.notes.k_h67n9q);
       }
     }
     setMenuOpen(false);
@@ -169,7 +171,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
       if (!activeNote) return;
       setMenuOpen(false);
 
-      const title = activeNote.title || "無題のノート";
+      const title = activeNote.title || t.notes.untitled;
 
       try {
         switch (format) {
@@ -192,7 +194,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
 
           case "pdf":
             exportPdf(editorContent, title);
-            toast.info("印刷ダイアログで『PDF に保存』を選択してください");
+            toast.info(t.notes.k_cuig0f);
             break;
 
           case "docx": {
@@ -203,7 +205,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
           }
         }
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "書き出しに失敗しました";
+        const msg = err instanceof Error ? err.message : t.notes.k_jp7lg2;
         toast.error(msg);
       }
     },
@@ -319,13 +321,13 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
   const statusText = (() => {
     switch (autoSaveStatus) {
       case "saving":
-        return "保存中…";
+        return t.notes.k_agdrec;
       case "saved":
-        return lastSavedAt ? `最終保存: ${lastSavedAt}` : "保存済み";
+        return lastSavedAt ? `最終保存: ${lastSavedAt}` : t.notes.k_agj9oy;
       case "error":
-        return "保存エラー";
+        return t.notes.k_v5y7ts;
       default:
-        return isModified ? "未保存" : lastSavedAt ? `最終保存: ${lastSavedAt}` : "";
+        return isModified ? t.notes.k_fi2f9 : lastSavedAt ? `最終保存: ${lastSavedAt}` : "";
     }
   })();
 
@@ -351,8 +353,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
             borderRadius: "6px",
             color: "var(--color-text-secondary)",
           }}
-          title="一覧に戻る"
-          aria-label="一覧に戻る"
+          title={t.notes.k_wlr8oc}
+          aria-label={t.notes.k_wlr8oc}
         >
           <svg
             width="16"
@@ -403,9 +405,9 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
               padding: "4px 8px",
               borderRadius: "6px",
             }}
-            title="クリックでタイトルを編集"
+            title={t.notes.k_pfeeg}
           >
-            {activeNote.title || "無題のノート"}
+            {activeNote.title || t.notes.untitled}
           </button>
         )}
 
@@ -420,8 +422,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
             borderRadius: "6px",
             color: "var(--color-text-secondary)",
           }}
-          title="フォーカスモード（Cmd+Shift+F）"
-          aria-label="フォーカスモード"
+          title={t.notes.k_fjb0lo}
+          aria-label={t.notes.k_6ztl6h}
         >
           <svg
             width="14"
@@ -450,8 +452,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
               ? "var(--color-accent-primary)"
               : "var(--color-text-secondary)",
           }}
-          title="コンテキストパネル"
-          aria-label="コンテキストパネル"
+          title={t.notes.k_halrrt}
+          aria-label={t.notes.k_halrrt}
         >
           <svg
             width="14"
@@ -480,8 +482,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
               borderRadius: "6px",
               color: "var(--color-text-secondary)",
             }}
-            title="メニュー"
-            aria-label="メニュー"
+            title={t.notes.k_6dbq69}
+            aria-label={t.notes.k_6dbq69}
           >
             <svg
               width="14"

@@ -20,6 +20,7 @@ import type {
   ChiSquareResult,
   RegressionResult,
 } from "./types";
+import { useI18nStore } from "../../stores/useI18nStore";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -34,18 +35,18 @@ function r(v: number, dp = 4): number {
 /** Cohen's d effect-size label (Japanese). */
 function cohensLabel(d: number): string {
   const abs = Math.abs(d);
-  if (abs < 0.2) return "小（無視できる）";
-  if (abs < 0.5) return "小";
-  if (abs < 0.8) return "中";
-  return "大";
+  if (abs < 0.2) return useI18nStore.getState().t.stats.str_l2qy0e;
+  if (abs < 0.5) return useI18nStore.getState().t.stats.k_i6n;
+  if (abs < 0.8) return useI18nStore.getState().t.stats.k_ffx;
+  return useI18nStore.getState().t.stats.k_hlz;
 }
 
 /** Cramér's V effect-size label (Japanese). */
 function cramersLabel(v: number): string {
-  if (v < 0.1) return "ほぼない";
-  if (v < 0.3) return "小〜中程度";
-  if (v < 0.5) return "中〜大";
-  return "強い";
+  if (v < 0.1) return useI18nStore.getState().t.stats.str_6bgvuj;
+  if (v < 0.3) return useI18nStore.getState().t.stats.str_b70maj;
+  if (v < 0.5) return useI18nStore.getState().t.stats.str_bow3c;
+  return useI18nStore.getState().t.stats.str_ggkt;
 }
 
 /**
@@ -413,8 +414,8 @@ export function mannWhitneyU(
   const effectR = r(Math.abs(z) / Math.sqrt(N));
 
   const sigText = significant
-    ? "統計的に有意な差が認められました"
-    : "統計的に有意な差は認められませんでした";
+    ? useI18nStore.getState().t.stats.str_t61a6j
+    : useI18nStore.getState().t.stats.str_wubo15;
 
   const interpretation =
     `ノンパラメトリック検定（Mann-Whitney U検定）の結果、` +
@@ -491,7 +492,7 @@ export function chiSquareTest(
 
   if (lowExpected) {
     parts.push(
-      "注意：期待度数が5未満のセルがあります。Fisherの正確確率検定の使用を検討してください。",
+      useI18nStore.getState().t.stats.str_5Fisher,
     );
   }
 
@@ -553,7 +554,7 @@ export function linearRegression(
     const tB = seB > 0 ? reg.m / seB : 0;
     const pB = r(tDistributionPValue(tB, n - 2), 6);
 
-    const sigText = fP < 0.05 ? "有意" : "有意でない";
+    const sigText = fP < 0.05 ? useI18nStore.getState().t.quantResults.str_i23q : useI18nStore.getState().t.stats.str_avhzj9;
     const interpretation =
       `単回帰分析の結果、モデル全体は統計的に${sigText}でした` +
       `（F(1,${n - 2})=${r(fStat)}, p=${fP}）。` +
@@ -613,7 +614,7 @@ export function linearRegression(
       fPValue: NaN,
       rmse: NaN,
       interpretation:
-        "計画行列が特異（線形従属な変数の可能性）のため、回帰係数を推定できませんでした。",
+        useI18nStore.getState().t.stats.str_q7nsoj,
     };
   }
 
@@ -659,14 +660,14 @@ export function linearRegression(
     };
   });
 
-  const sigText = fP < 0.05 ? "有意" : "有意でない";
+  const sigText = fP < 0.05 ? useI18nStore.getState().t.quantResults.str_i23q : useI18nStore.getState().t.stats.str_avhzj9;
   const sigVars = coefficients
     .filter((c) => c.significant)
     .map((c) => c.varName);
   const sigVarsText =
     sigVars.length > 0
-      ? `有意な予測変数は${sigVars.join("、")}です。`
-      : "個々の予測変数はいずれも有意ではありませんでした。";
+      ? `有意な予測変数は${sigVars.join(useI18nStore.getState().t.stats.k_9hd)}です。`
+      : useI18nStore.getState().t.stats.str_3p7bnb;
 
   const interpretation =
     `重回帰分析の結果、モデル全体は統計的に${sigText}でした` +

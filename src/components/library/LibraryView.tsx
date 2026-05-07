@@ -17,6 +17,7 @@ import { Badge } from "../ui/Badge";
 import { toast } from "../ui/Toast";
 import type { CreatePaperInput } from "../../types";
 import { swalConfirm } from "../../lib/swal";
+import { useT } from "../../stores/useI18nStore";
 
 /** フィルタードロップダウンの共通スタイル */
 const dropdownStyle: React.CSSProperties = {
@@ -43,6 +44,7 @@ const dropdownItemBase: React.CSSProperties = {
 };
 
 export const LibraryView: React.FC = () => {
+  const t = useT();
   // ── ストアから状態とアクションを取得 ──
   const papers = useLibraryStore((s) => s.papers);
   const loading = useLibraryStore((s) => s.loading);
@@ -125,12 +127,12 @@ export const LibraryView: React.FC = () => {
   const handleDeletePaper = useCallback(
     async (id: string) => {
       const paper = papers.find((p) => p.id === id);
-      const title = paper?.title ?? "この論文";
-      const confirmed = await swalConfirm("論文の削除", `「${title}」を削除しますか？\nこの操作は取り消せません。`);
+      const title = paper?.title ?? t.library.k_6b6q7g;
+      const confirmed = await swalConfirm(t.library.k_cdyrih, `「${title}」を削除しますか？\nこの操作は取り消せません。`);
       if (!confirmed) return;
       try {
         await deletePaper(id);
-        toast.success("論文を削除しました");
+        toast.success(t.library.k_u38ovq);
       } catch (e) {
         toast.error(`削除に失敗しました: ${String(e)}`);
       }
@@ -156,7 +158,7 @@ export const LibraryView: React.FC = () => {
 
   // ── 編集（現時点ではトースト通知のみ） ──
   const handleEditPaper = useCallback((_id: string) => {
-    toast.info("編集機能は今後実装予定です");
+    toast.info(t.library.k_obwo3j);
   }, []);
 
   // ── PDF添付（ファイルダイアログ→バックエンド保存） ──
@@ -181,7 +183,7 @@ export const LibraryView: React.FC = () => {
             // import_pdfが未実装の場合は元パスで保存
             await attachPdf(paperId, selected);
           }
-          toast.success("PDFを添付しました");
+          toast.success(t.library.k_uojkt0);
         }
       } catch (e) {
         toast.error(`PDFの添付に失敗しました: ${String(e)}`);
@@ -265,7 +267,7 @@ export const LibraryView: React.FC = () => {
               <Input
                 value={filterQuery}
                 onChange={(e) => setFilterQuery(e.target.value)}
-                placeholder="検索..."
+                placeholder={t.layout.str_kn3fs}
                 icon={
                   <svg
                     width="15"
@@ -446,8 +448,8 @@ export const LibraryView: React.FC = () => {
                 PDFあり{" "}
                 {filterHasPdf !== null
                   ? filterHasPdf
-                    ? "(はい)"
-                    : "(なし)"
+                    ? t.library.k_8152k
+                    : t.library.k_811tg
                   : "▼"}
               </Button>
               {showPdfDropdown && (
@@ -558,7 +560,7 @@ export const LibraryView: React.FC = () => {
                   transition: "all var(--transition-fast)",
                 }}
                 onClick={() => setViewMode("grid")}
-                title="グリッド表示"
+                title={t.library.k_9nrs3y}
               >
                 <svg
                   width="14"
@@ -599,7 +601,7 @@ export const LibraryView: React.FC = () => {
                   transition: "all var(--transition-fast)",
                 }}
                 onClick={() => setViewMode("list")}
-                title="リスト表示"
+                title={t.library.k_fh7179}
               >
                 <svg
                   width="14"

@@ -3,6 +3,7 @@
 // テーマカラー連動 + 日本語デフォルト
 
 import Swal from "sweetalert2";
+import { useI18nStore } from "../stores/useI18nStore";
 
 /** テーマ変数からカラーを取得 */
 function css(varName: string, fallback: string): string {
@@ -47,8 +48,8 @@ export async function swalConfirm(
     text,
     icon: options?.icon ?? "warning",
     showCancelButton: true,
-    confirmButtonText: options?.confirmText ?? "はい",
-    cancelButtonText: options?.cancelText ?? "キャンセル",
+    confirmButtonText: options?.confirmText ?? useI18nStore.getState().t.utils.str_8i45,
+    cancelButtonText: options?.cancelText ?? useI18nStore.getState().t.common.cancel,
     reverseButtons: true,
     focusCancel: true,
   });
@@ -111,10 +112,10 @@ export async function swalPrompt(
     inputValue: options?.inputValue ?? "",
     showCancelButton: true,
     confirmButtonText: options?.confirmText ?? "OK",
-    cancelButtonText: "キャンセル",
+    cancelButtonText: useI18nStore.getState().t.common.cancel,
     reverseButtons: true,
     inputValidator: (value: string) => {
-      if (!value.trim()) return "入力してください";
+      if (!value.trim()) return useI18nStore.getState().t.utils.str_hjbvut;
       return null;
     },
   });

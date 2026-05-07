@@ -6,6 +6,7 @@
 
 import { Component } from "react";
 import type { ReactNode, ErrorInfo } from "react";
+import { useI18nStore } from "../../stores/useI18nStore";
 
 interface Props {
   children: ReactNode;
@@ -38,9 +39,9 @@ export class GraphErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("[GraphErrorBoundary] グラフビューでエラーが発生:", error);
-    console.error("[GraphErrorBoundary] エラースタック:", error?.stack);
-    console.error("[GraphErrorBoundary] コンポーネントスタック:", errorInfo.componentStack);
+    console.error(useI18nStore.getState().t.graph.k_xubm19, error);
+    console.error(useI18nStore.getState().t.graph.k_wb4mep, error?.stack);
+    console.error(useI18nStore.getState().t.graph.k_5m6z53, errorInfo.componentStack);
     this.setState({
       componentStack: errorInfo.componentStack ?? null,
     });

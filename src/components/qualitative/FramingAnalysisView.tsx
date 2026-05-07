@@ -14,6 +14,7 @@ import {
   IconPanelLeft,
   IconFraming,
 } from "./icons/QualIcons";
+import { useT, useI18nStore } from "../../stores/useI18nStore";
 
 interface FramingAnalysisViewProps {
   projectId: string;
@@ -22,6 +23,7 @@ interface FramingAnalysisViewProps {
 export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({
   projectId,
 }) => {
+  const t = useT();
   const [frames, setFrames] = useState<Frame[]>([]);
   const [matrix, setMatrix] = useState<FramingMatrix | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,6 +40,7 @@ export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({
   const [treatmentRecommendation, setTreatmentRecommendation] = useState("");
 
   const loadData = useCallback(async () => {
+    const t = useT();
     setLoading(true);
     try {
       const [frameList, matrixData] = await Promise.all([
@@ -47,7 +50,7 @@ export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({
       setFrames(frameList);
       setMatrix(matrixData);
     } catch (err) {
-      console.error("フレーミング取得エラー:", err);
+      console.error(t.qualitative.k_ak5uvd, err);
     } finally {
       setLoading(false);
     }
@@ -78,7 +81,7 @@ export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({
       setShowForm(false);
       void loadData();
     } catch (err) {
-      console.error("フレーム作成エラー:", err);
+      console.error(t.qualitative.k_r15nny, err);
     }
   }, [
     name,
@@ -93,14 +96,14 @@ export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({
 
   const handleDeleteFrame = useCallback(
     async (id: string) => {
-      const ok = await swalConfirm("フレーム削除", "このフレームを削除しますか？");
+      const ok = await swalConfirm(t.qualitative.k_7wrncl, t.qualitative.k_szt8i8);
       if (!ok) return;
       try {
         await invoke("delete_frame", { id });
         if (selectedFrame?.id === id) setSelectedFrame(null);
         void loadData();
       } catch (err) {
-        console.error("フレーム削除エラー:", err);
+        console.error(t.qualitative.k_ihpoac, err);
       }
     },
     [selectedFrame, loadData]
@@ -163,7 +166,7 @@ export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({
           <button
             type="button"
             onClick={() => setListCollapsed(!listCollapsed)}
-            title={listCollapsed ? "展開" : "折りたたむ"}
+            title={listCollapsed ? t.qualitative.k_gixi : t.qualitative.k_yczceq}
             style={{
               background: "none",
               border: "none",
@@ -204,7 +207,7 @@ export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="フレーム名"
+                    placeholder={t.qualitative.k_fs863y}
                     className="flex-1 text-xs px-2 py-1"
                     style={{
                       backgroundColor: "var(--color-bg-primary)",
@@ -224,7 +227,7 @@ export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({
                   <textarea
                     value={problemDefinition}
                     onChange={(e) => setProblemDefinition(e.target.value)}
-                    placeholder="問題定義"
+                    placeholder={t.qualitative.k_be42r0}
                     rows={2}
                     className="w-full text-xs px-2 py-1"
                     style={{
@@ -239,7 +242,7 @@ export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({
                   <textarea
                     value={causalInterpretation}
                     onChange={(e) => setCausalInterpretation(e.target.value)}
-                    placeholder="因果解釈"
+                    placeholder={t.qualitative.k_bebda9}
                     rows={2}
                     className="w-full text-xs px-2 py-1"
                     style={{
@@ -254,7 +257,7 @@ export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({
                   <textarea
                     value={moralEvaluation}
                     onChange={(e) => setMoralEvaluation(e.target.value)}
-                    placeholder="道徳的評価"
+                    placeholder={t.qualitative.k_8mm75c}
                     rows={2}
                     className="w-full text-xs px-2 py-1"
                     style={{
@@ -269,7 +272,7 @@ export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({
                   <textarea
                     value={treatmentRecommendation}
                     onChange={(e) => setTreatmentRecommendation(e.target.value)}
-                    placeholder="処方提案"
+                    placeholder={t.qualitative.k_ar98i3}
                     rows={2}
                     className="w-full text-xs px-2 py-1"
                     style={{
@@ -301,7 +304,7 @@ export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowForm(false)}
-                    title="キャンセル"
+                    title={t.common.cancel}
                     style={{
                       background: "transparent",
                       color: "var(--color-text-tertiary)",
@@ -353,7 +356,7 @@ export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({
                       void handleDeleteFrame(frame.id);
                     }}
                     className="opacity-0 group-hover:opacity-100"
-                    title="削除"
+                    title={t.common.delete}
                     style={{
                       color: "var(--color-text-tertiary)",
                       background: "none",
@@ -386,15 +389,15 @@ export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({
       <div className="flex-1 overflow-y-auto p-4">
         <HelpTooltip
           storageKey="qual_framing"
-          title="フレーミング分析の使い方"
+          title={t.qualitative.k_e3yflz}
           paragraphs={[
-            "Entman (1993) のフレーム理論に基づき、メディアや言説のフレーミングを分析します。",
-            "各フレームには問題定義、因果解釈、道徳的評価、処方提案の4要素を記録できます。",
+            t.qualitative.k_gxvbch,
+            t.qualitative.k_ul553w,
           ]}
           steps={[
-            "左パネルでフレームを追加し、4つの構成要素を入力します",
-            "フレームを選択すると詳細が右側に表示されます",
-            "コーディングデータがあればフレーミングマトリクスが自動生成されます",
+            t.qualitative.k_ng8zoa,
+            t.qualitative.k_gbjiq0,
+            t.qualitative.k_tu63fb,
           ]}
         />
 
@@ -419,19 +422,19 @@ export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({
 
             <div className="grid grid-cols-2 gap-4 mb-6">
               <DetailCard
-                label="問題定義"
+                label={t.qualitative.k_be42r0}
                 value={selectedFrame.problemDefinition}
               />
               <DetailCard
-                label="因果解釈"
+                label={t.qualitative.k_bebda9}
                 value={selectedFrame.causalInterpretation}
               />
               <DetailCard
-                label="道徳的評価"
+                label={t.qualitative.k_8mm75c}
                 value={selectedFrame.moralEvaluation}
               />
               <DetailCard
-                label="処方提案"
+                label={t.qualitative.k_ar98i3}
                 value={selectedFrame.treatmentRecommendation}
               />
             </div>
@@ -596,7 +599,7 @@ const DetailCard: React.FC<{ label: string; value: string | null }> = ({
         lineHeight: "1.5",
       }}
     >
-      {value || "未設定"}
+      {value || useI18nStore.getState().t.qualitative.k_frzjr}
     </p>
   </div>
 );

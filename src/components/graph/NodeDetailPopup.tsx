@@ -5,6 +5,7 @@
 import type React from "react";
 import { useState, useEffect, useRef } from "react";
 import type { GraphNodeExtended } from "../../types";
+import { useI18nStore } from "../../stores/useI18nStore";
 
 /**
  * ローカル Badge コンポーネント。
@@ -49,6 +50,7 @@ interface NodeDetailPopupProps {
 
 /** 日付フォーマット */
 function formatDate(isoStr: string): string {
+
   if (!isoStr) return "—";
   const d = new Date(isoStr);
   if (Number.isNaN(d.getTime())) return "—";
@@ -166,7 +168,7 @@ export const NodeDetailPopup: React.FC<NodeDetailPopupProps> = ({
               wordBreak: "break-all",
             }}
           >
-            {visibleNode.name || "無題"}
+            {visibleNode.name || useI18nStore.getState().t.graph.k_k2tn}
           </span>
         </div>
 

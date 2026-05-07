@@ -15,6 +15,7 @@ import type {
 import { BoxPlot, ScatterPlot } from "../charts";
 import { fmt } from "../charts/chartTheme";
 import { downloadSVG, downloadPNG } from "../../../lib/utils/exportChart";
+import { useI18nStore } from "../../../stores/useI18nStore";
 
 interface Props {
   analysis: Analysis;
@@ -24,6 +25,7 @@ interface Props {
 
 // ── ヘルパー ──
 function fmtP(p: number): string {
+
   if (!Number.isFinite(p)) return "—";
   if (p < 0.001) return "p < .001";
   return `p = ${p.toFixed(3)}`;
@@ -150,7 +152,7 @@ const VerdictBadge = memo<{ significant: boolean }>(({ significant }) => (
         : "color-mix(in srgb, var(--color-text-tertiary) 15%, transparent)"}`,
     }}
   >
-    {significant ? "有意差あり" : "有意差なし"}
+    {significant ? useI18nStore.getState().t.quantResults.str_aoty40 : useI18nStore.getState().t.quantResults.str_aotx6z}
   </span>
 ));
 
@@ -226,8 +228,8 @@ const TTestResultCard = memo<{
     const parts = (result.groupVar ?? "").includes(" vs ")
       ? (result.groupVar ?? "").split(" vs ")
       : categories;
-    const l1 = parts[0] ?? "群1";
-    const l2 = parts[1] ?? "群2";
+    const l1 = parts[0] ?? useI18nStore.getState().t.quantResults.str_lpn1;
+    const l2 = parts[1] ?? useI18nStore.getState().t.quantResults.str_lpn2;
 
     for (const row of dataRows) {
       const gVal = String(row.values[config.groupVar as string] ?? "");
@@ -274,9 +276,9 @@ const TTestResultCard = memo<{
       {/* 統計量行 */}
       <div className="grid grid-cols-5 gap-2 mb-4">
         {[
-          { label: "t値", value: fmt(result.t, 3) },
+          { label: useI18nStore.getState().t.quantResults.str_ils, value: fmt(result.t, 3) },
           { label: "df", value: fmt(result.df, 1) },
-          { label: "p値", value: fmtP(result.pValue) },
+          { label: useI18nStore.getState().t.quantResults.str_iic, value: fmtP(result.pValue) },
           { label: "Cohen's d", value: fmt(result.effectSize, 3) },
           { label: "95% CI", value: `[${fmt(result.ci95Lower)}, ${fmt(result.ci95Upper)}]` },
         ].map((item) => (
@@ -357,7 +359,7 @@ const TTestResultCard = memo<{
         onMouseLeave={(e) => { e.currentTarget.style.color = "var(--color-text-tertiary)"; }}
       >
         <ChevronIcon open={showDetails} />
-        {showDetails ? "詳細を隠す" : "数値の詳細を表示"}
+        {showDetails ? useI18nStore.getState().t.quantResults.str_awn1pu : useI18nStore.getState().t.quantResults.str_beqkrx}
       </button>
 
       {showDetails && (
@@ -405,9 +407,9 @@ const MannWhitneyResultCard = memo<{ result: MannWhitneyResult }>(({ result }) =
 
     <div className="grid grid-cols-3 gap-2 mb-4">
       {[
-        { label: "U値", value: fmt(result.U) },
-        { label: "p値", value: fmtP(result.pValue) },
-        { label: "効果量 r", value: fmt(result.effectSizeR, 3) },
+        { label: useI18nStore.getState().t.quantResults.str_hv3, value: fmt(result.U) },
+        { label: useI18nStore.getState().t.quantResults.str_iic, value: fmtP(result.pValue) },
+        { label: useI18nStore.getState().t.quantResults.str_i1s4ua, value: fmt(result.effectSizeR, 3) },
       ].map((item) => (
         <div
           key={item.label}
@@ -424,7 +426,7 @@ const MannWhitneyResultCard = memo<{ result: MannWhitneyResult }>(({ result }) =
       ))}
     </div>
 
-    <EffectSizeBar value={result.effectSizeR} max={1} label="効果量 r" />
+    <EffectSizeBar value={result.effectSizeR} max={1} label={useI18nStore.getState().t.quantResults.str_i1s4ua} />
 
     <div
       className="mt-4 p-3 text-xs leading-relaxed"
@@ -461,9 +463,9 @@ const ChiSquareResultCard = memo<{ result: ChiSquareResult }>(({ result }) => (
 
     <div className="grid grid-cols-4 gap-2 mb-4">
       {[
-        { label: "カイ二乗値", value: fmt(result.chi2, 3) },
+        { label: useI18nStore.getState().t.quantResults.str_gc4mo0, value: fmt(result.chi2, 3) },
         { label: "df", value: String(result.df) },
-        { label: "p値", value: fmtP(result.pValue) },
+        { label: useI18nStore.getState().t.quantResults.str_iic, value: fmtP(result.pValue) },
         { label: "Cramer's V", value: fmt(result.cramersV, 3) },
       ].map((item) => (
         <div
@@ -632,7 +634,7 @@ const RegressionResultCard = memo<{
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2.5">
           <span className="text-sm font-semibold" style={{ color: "var(--color-text-primary)" }}>
-            {result.type === "simple" ? "単回帰分析" : "重回帰分析"}
+            {result.type === "simple" ? useI18nStore.getState().t.quantResults.str_hxj9ho : useI18nStore.getState().t.quantResults.str_d6izvt}
           </span>
           <span
             className="text-xs px-1.5 py-0.5"
@@ -646,7 +648,7 @@ const RegressionResultCard = memo<{
               fontWeight: 600,
             }}
           >
-            {result.fPValue < 0.05 ? "モデル有意" : "モデル非有意"}
+            {result.fPValue < 0.05 ? useI18nStore.getState().t.quantResults.str_flhjas : useI18nStore.getState().t.quantResults.str_dwt61q}
           </span>
         </div>
         <ExportButton containerRef={chartRef} name={`regression_${result.dependentVar}`} />
@@ -678,7 +680,7 @@ const RegressionResultCard = memo<{
         <table className="w-full text-xs" style={{ borderCollapse: "collapse" }}>
           <thead>
             <tr>
-              {["変数名", "係数", "標準誤差", "p値", "有意性"].map((h) => (
+              {[useI18nStore.getState().t.qualitative.k_dj71i, useI18nStore.getState().t.quantitative.k_e4fi, useI18nStore.getState().t.quantResults.str_dum6g7, useI18nStore.getState().t.quantResults.str_iic, useI18nStore.getState().t.quantResults.str_fkc75].map((h) => (
                 <th
                   key={h}
                   className="py-2 px-2 text-left font-medium"
@@ -790,7 +792,7 @@ const RegressionResultCard = memo<{
                 type="number"
                 value={predictorValues[varName] ?? ""}
                 onChange={(e) => handlePredictorChange(varName, e.target.value)}
-                placeholder="値を入力"
+                placeholder={useI18nStore.getState().t.quantResults.str_abedl0}
                 className="px-2 py-1.5 text-xs"
                 style={{
                   width: "100px",

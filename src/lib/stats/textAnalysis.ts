@@ -7,6 +7,7 @@
 
 import type { TextAnalysisResult, NetworkAnalysisResult } from "./types";
 import { analyzeNetwork } from "./networkAnalysis";
+import { useI18nStore } from "../../stores/useI18nStore";
 
 // ---------------------------------------------------------------------------
 // Kuromoji tokeniser singleton
@@ -61,26 +62,26 @@ async function getTokenizer(): Promise<KuromojiTokenizer> {
 
 const DEFAULT_STOPWORDS = new Set([
   // Particles
-  "の", "に", "は", "を", "た", "が", "で", "て", "と", "し", "れ", "さ",
-  "ある", "いる", "も", "する", "から", "な", "こと", "として", "い", "や",
-  "れる", "など", "なっ", "ない", "この", "ため", "その", "あっ", "よう",
-  "また", "もの", "という", "あり", "まで", "られ", "なる", "へ", "か",
-  "だ", "これ", "によって", "により", "おり", "より", "による", "ず", "なり",
-  "られる", "において", "ば", "なかっ", "なく", "しかし", "について",
-  "せ", "だっ", "それ", "ほど", "とき", "よる", "そして", "ところ",
+  useI18nStore.getState().t.stats.k_9ke, useI18nStore.getState().t.stats.k_9kb, useI18nStore.getState().t.stats.k_9kf, useI18nStore.getState().t.stats.k_9le, useI18nStore.getState().t.stats.k_9jz, useI18nStore.getState().t.stats.k_9jg, useI18nStore.getState().t.stats.k_9k7, useI18nStore.getState().t.stats.k_9k6, useI18nStore.getState().t.stats.k_9k8, useI18nStore.getState().t.stats.k_9jr, useI18nStore.getState().t.stats.k_9l8, useI18nStore.getState().t.stats.k_9jp,
+  useI18nStore.getState().t.stats.str_8h3d, useI18nStore.getState().t.stats.str_8h53, useI18nStore.getState().t.stats.k_9ky, useI18nStore.getState().t.stats.str_8hn6, useI18nStore.getState().t.quantitative.k_8hb2, useI18nStore.getState().t.stats.k_9ka, useI18nStore.getState().t.stats.str_8hh1, useI18nStore.getState().t.stats.str_7bqdz, useI18nStore.getState().t.stats.k_9j8, useI18nStore.getState().t.stats.k_9l0,
+  useI18nStore.getState().t.stats.str_8iv3, useI18nStore.getState().t.stats.str_8i0v, useI18nStore.getState().t.stats.str_8i0p, useI18nStore.getState().t.stats.str_8hzu, useI18nStore.getState().t.stats.str_8hh7, useI18nStore.getState().t.stats.str_8hs2, useI18nStore.getState().t.stats.str_8hpt, useI18nStore.getState().t.stats.str_8h29, useI18nStore.getState().t.stats.str_8ipq,
+  useI18nStore.getState().t.stats.str_8iht, useI18nStore.getState().t.stats.str_8ilo, useI18nStore.getState().t.stats.str_7bpwq, useI18nStore.getState().t.stats.str_8h3c, useI18nStore.getState().t.stats.str_8ii1, useI18nStore.getState().t.stats.str_8isj, useI18nStore.getState().t.stats.str_8i1t, useI18nStore.getState().t.stats.k_9ko, useI18nStore.getState().t.stats.k_9jf,
+  useI18nStore.getState().t.stats.k_9k0, useI18nStore.getState().t.stats.str_8hi1, useI18nStore.getState().t.stats.str_6b6wtc, useI18nStore.getState().t.stats.str_7btt9, useI18nStore.getState().t.stats.str_8ha8, useI18nStore.getState().t.stats.str_8irm, useI18nStore.getState().t.stats.str_7btta, useI18nStore.getState().t.stats.k_9ju, useI18nStore.getState().t.stats.str_8i1s,
+  useI18nStore.getState().t.stats.str_7cg5k, useI18nStore.getState().t.stats.str_6b5m3l, useI18nStore.getState().t.stats.k_9kg, useI18nStore.getState().t.stats.str_7brky, useI18nStore.getState().t.stats.str_8i05, useI18nStore.getState().t.stats.str_7bdhf, useI18nStore.getState().t.stats.str_6b65dn,
+  useI18nStore.getState().t.stats.k_9jv, useI18nStore.getState().t.stats.str_8hs3, useI18nStore.getState().t.stats.str_8hqn, useI18nStore.getState().t.stats.str_8ifi, useI18nStore.getState().t.stats.str_8hyd, useI18nStore.getState().t.stats.str_8irn, useI18nStore.getState().t.stats.str_7bi8c, useI18nStore.getState().t.stats.str_7bqbm,
   // Common verbs in base forms that are too generic
-  "できる", "なる", "ある", "いう", "行う", "思う", "見る", "言う",
+  useI18nStore.getState().t.stats.str_7bpfp, useI18nStore.getState().t.stats.str_8i1t, useI18nStore.getState().t.stats.str_8h3d, useI18nStore.getState().t.stats.str_8h36, useI18nStore.getState().t.stats.str_ng56, useI18nStore.getState().t.stats.str_gm2x, useI18nStore.getState().t.stats.str_nnts, useI18nStore.getState().t.stats.str_nqkm,
   // Symbols & numbers that slip through
-  "、", "。", "・", "「", "」", "（", "）", "『", "』",
-  "-", "ー", "〜", "…", "!", "?", " ", "　",
+  useI18nStore.getState().t.stats.k_9hd, useI18nStore.getState().t.stats.k_9he, useI18nStore.getState().t.stats.k_9ob, useI18nStore.getState().t.stats.k_9ho, useI18nStore.getState().t.stats.k_9hp, useI18nStore.getState().t.stats.k_1edk, useI18nStore.getState().t.stats.k_1edl, useI18nStore.getState().t.stats.k_9hq, useI18nStore.getState().t.stats.k_9hr,
+  "-", useI18nStore.getState().t.stats.k_9oc, useI18nStore.getState().t.stats.k_9i4, "…", "!", "?", " ", useI18nStore.getState().t.stats.k_9hc,
 ]);
 
 /** POS tags we keep: nouns (名詞), verbs (動詞), adjectives (形容詞). */
-const ALLOWED_POS = new Set(["名詞", "動詞", "形容詞"]);
+const ALLOWED_POS = new Set([useI18nStore.getState().t.quantResults.str_f20h, useI18nStore.getState().t.quantResults.str_eujt, useI18nStore.getState().t.stats.str_efb8n]);
 
 /** Noun sub-categories to exclude (too grammatical). */
 const EXCLUDED_NOUN_DETAILS = new Set([
-  "非自立", "代名詞", "数", "接尾", "特殊",
+  useI18nStore.getState().t.stats.str_msxdr, useI18nStore.getState().t.stats.str_bz0us, useI18nStore.getState().t.stats.k_k1c, useI18nStore.getState().t.stats.str_hge1, useI18nStore.getState().t.stats.str_k27l,
 ]);
 
 // ---------------------------------------------------------------------------
@@ -126,7 +127,7 @@ export async function analyzeTextVariable(
     for (const tok of tokens) {
       if (!ALLOWED_POS.has(tok.pos)) {
         // Sentence boundary on 。
-        if (tok.surface_form === "。" && sentBuf.length > 0) {
+        if (tok.surface_form === useI18nStore.getState().t.stats.k_9he && sentBuf.length > 0) {
           sentenceTokens.push([...sentBuf]);
           sentBuf = [];
         }
@@ -134,7 +135,7 @@ export async function analyzeTextVariable(
       }
 
       // Exclude certain noun subcategories
-      if (tok.pos === "名詞" && EXCLUDED_NOUN_DETAILS.has(tok.pos_detail_1)) {
+      if (tok.pos === useI18nStore.getState().t.quantResults.str_f20h && EXCLUDED_NOUN_DETAILS.has(tok.pos_detail_1)) {
         continue;
       }
 
@@ -144,7 +145,7 @@ export async function analyzeTextVariable(
           ? tok.basic_form
           : tok.surface_form;
 
-      if (form.length < 2 && tok.pos !== "名詞") continue; // skip single-char verbs/adj
+      if (form.length < 2 && tok.pos !== useI18nStore.getState().t.quantResults.str_f20h) continue; // skip single-char verbs/adj
       if (customStops.has(form)) continue;
 
       docList.push(form);
@@ -212,7 +213,7 @@ export async function analyzeTextVariable(
     token,
     frequency,
     tfidf: round(avgTfIdf.get(token) ?? 0, 4),
-    pos: posMap.get(token) ?? "不明",
+    pos: posMap.get(token) ?? useI18nStore.getState().t.stats.unknown,
   }));
 
   // ── Step 5: Co-occurrence network ─────────────────────────────────────
@@ -223,12 +224,12 @@ export async function analyzeTextVariable(
   const interpretation =
     `テキスト${N}件を形態素解析した結果、合計${totalTokenCount}トークン（` +
     `異なり語数${uniqueTokens}）が抽出されました。` +
-    `頻出語は「${top5.join("」「")}」などです。` +
+    `頻出語は「${top5.join(useI18nStore.getState().t.stats.str_8fq7)}」などです。` +
     (cooccurrenceNetwork.nodes.length > 0
       ? `共起ネットワーク（${cooccurrenceNetwork.nodes.length}ノード・` +
         `${cooccurrenceNetwork.edges.length}エッジ）を構築しました。` +
         `${cooccurrenceNetwork.communities.length}個のトピッククラスタが検出されました。`
-      : "共起ネットワークの構築に十分な共起ペアがありませんでした。");
+      : useI18nStore.getState().t.stats.str_4bxlt9);
 
   return {
     variableId,
@@ -303,7 +304,7 @@ export function buildCooccurrenceNetwork(
       edges: [],
       communities: [],
       globalMetrics: { density: 0, avgDegree: 0, avgClustering: 0, modularity: 0 },
-      interpretation: "共起ネットワークの構築に十分な共起ペアがありませんでした。",
+      interpretation: useI18nStore.getState().t.stats.str_4bxlt9,
     };
   }
 

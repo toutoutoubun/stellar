@@ -18,6 +18,7 @@ import { HighlightToolbar } from "./HighlightToolbar";
 import { HighlightPanel } from "./HighlightPanel";
 import { PdfViewer } from "./PdfViewer";
 import type { PdfHighlight } from "./PdfViewer";
+import { useT } from "../../stores/useI18nStore";
 
 interface ReaderViewProps {
   /** 表示する論文のID */
@@ -25,6 +26,7 @@ interface ReaderViewProps {
 }
 
 export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
+  const t = useT();
   // 論文データ
   const [paper, setPaper] = useState<Paper | null>(null);
   const [paperLoading, setPaperLoading] = useState(true);
@@ -76,7 +78,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
       } catch (err) {
         if (!cancelled) {
           const message =
-            typeof err === "string" ? err : "論文の取得に失敗しました";
+            typeof err === "string" ? err : t.reader.str_f6z3i6;
           toast.error(message);
         }
       } finally {
@@ -393,7 +395,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
               </svg>
               <input
                 type="text"
-                placeholder="PDF内を検索…"
+                placeholder={t.reader.PDF_4}
                 autoFocus
                 className="text-sm"
                 style={{
@@ -413,7 +415,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
                 type="button"
                 onClick={() => setSearchOpen(false)}
                 style={{ color: "var(--color-text-tertiary)" }}
-                aria-label="検索を閉じる"
+                aria-label={t.reader.str_ohq0c0}
               >
                 <svg
                   width="14"

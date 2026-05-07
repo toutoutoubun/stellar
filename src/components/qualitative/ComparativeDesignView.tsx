@@ -11,21 +11,23 @@ import type {
 } from "../../types";
 import { HelpTooltip } from "./HelpTooltip";
 import { IconPlus, IconDelete, IconClose, IconCopy, IconExport, IconComparative } from "./icons/QualIcons";
+import { useT, useI18nStore } from "../../stores/useI18nStore";
 
 interface ComparativeDesignViewProps {
   projectId: string;
 }
 
 const DESIGN_TYPES = [
-  { value: "MSSD", label: "MSSD（最類似事例法）" },
-  { value: "MDSD", label: "MDSD（最相違事例法）" },
-  { value: "QCA", label: "QCA（質的比較分析）" },
-  { value: "other", label: "その他" },
+  { value: "MSSD", label: useI18nStore.getState().t.qualitative.k_a347nj },
+  { value: "MDSD", label: useI18nStore.getState().t.qualitative.k_jj3dfz },
+  { value: "QCA", label: useI18nStore.getState().t.qualitative.k_55t8w3 },
+  { value: "other", label: useI18nStore.getState().t.notes.k_7bosl },
 ];
 
 export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
   projectId,
 }) => {
+  const t = useT();
   const [design, setDesign] = useState<ComparativeDesignFull | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -45,7 +47,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
       );
       setDesign(result);
     } catch (err) {
-      console.error("比較デザイン取得エラー:", err);
+      console.error(t.qualitative.k_tnbwfn, err);
     } finally {
       setLoading(false);
     }
@@ -68,7 +70,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
       setShowCreateForm(false);
       void loadDesign();
     } catch (err) {
-      console.error("デザイン作成エラー:", err);
+      console.error(t.qualitative.k_2lbhyn, err);
     }
   }, [newTitle, newDesignType, projectId, loadDesign]);
 
@@ -82,7 +84,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
       setNewCaseName("");
       void loadDesign();
     } catch (err) {
-      console.error("ケース追加エラー:", err);
+      console.error(t.qualitative.k_v6m7o0, err);
     }
   }, [design, newCaseName, loadDesign]);
 
@@ -97,19 +99,19 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
       setNewVarName("");
       void loadDesign();
     } catch (err) {
-      console.error("変数追加エラー:", err);
+      console.error(t.qualitative.k_i6p9zd, err);
     }
   }, [design, newVarName, newVarType, loadDesign]);
 
   const handleDeleteCase = useCallback(
     async (id: string) => {
-      const ok = await swalConfirm("ケース削除", "このケースを削除しますか？");
+      const ok = await swalConfirm(t.qualitative.k_gblvnc, t.qualitative.k_v6c3t9);
       if (!ok) return;
       try {
         await invoke("delete_comparative_case", { id });
         void loadDesign();
       } catch (err) {
-        console.error("ケース削除エラー:", err);
+        console.error(t.qualitative.k_etpon, err);
       }
     },
     [loadDesign]
@@ -117,13 +119,13 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
 
   const handleDeleteVariable = useCallback(
     async (id: string) => {
-      const ok2 = await swalConfirm("変数削除", "この変数を削除しますか？");
+      const ok2 = await swalConfirm(t.qualitative.k_bnjl7l, t.qualitative.k_xb8ix0);
       if (!ok2) return;
       try {
         await invoke("delete_comparative_variable", { id });
         void loadDesign();
       } catch (err) {
-        console.error("変数削除エラー:", err);
+        console.error(t.qualitative.k_l8yun4, err);
       }
     },
     [loadDesign]
@@ -140,7 +142,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
         });
         void loadDesign();
       } catch (err) {
-        console.error("セル更新エラー:", err);
+        console.error(t.qualitative.k_e3xksr, err);
       }
     },
     [loadDesign]
@@ -154,7 +156,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
       });
       setCsvOutput(csv);
     } catch (err) {
-      console.error("CSVエクスポートエラー:", err);
+      console.error(t.qualitative.k_lqt8hw, err);
     }
   }, [design]);
 
@@ -189,16 +191,16 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
       <div className="p-6">
         <HelpTooltip
           storageKey="qual_comparative"
-          title="比較デザインの使い方"
+          title={t.qualitative.k_z4o1zn}
           paragraphs={[
-            "比較政治学で用いられるMSSD（最類似事例法）、MDSD（最相違事例法）、QCA（質的比較分析）のデザインを管理します。",
-            "ケースと変数のマトリクスを作成し、QCA CSV形式でエクスポートできます。",
+            t.qualitative.k_t9gc7s,
+            t.qualitative.k_sqni8i,
           ]}
           steps={[
-            "デザインの種別を選択して作成します",
-            "ケース（事例）と変数（独立/従属/統制/結果）を追加します",
-            "各セルに値を入力してマトリクスを完成させます",
-            "QCA CSV エクスポートで外部ツールに渡せます",
+            t.qualitative.k_zawdmq,
+            t.qualitative.k_bg69ys,
+            t.qualitative.k_qs4arb,
+            t.qualitative.k_oolk2k,
           ]}
         />
 
@@ -222,7 +224,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
               type="text"
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="デザインタイトル"
+              placeholder={t.qualitative.k_x6q83e}
               className="w-full text-xs px-2 py-1.5 mb-2"
               style={{
                 backgroundColor: "var(--color-bg-primary)",
@@ -317,14 +319,14 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
     <div className="p-4 h-full overflow-y-auto">
       <HelpTooltip
         storageKey="qual_comparative"
-        title="比較デザインの使い方"
+        title={t.qualitative.k_z4o1zn}
         paragraphs={[
-          "ケースと変数のマトリクスを編集し、QCA CSV形式でエクスポートできます。",
+          t.qualitative.k_ajycwo,
         ]}
         steps={[
-          "ケースと変数を追加してマトリクスを構築します",
-          "各セルに値を直接入力できます（0/1またはテキスト）",
-          "QCA CSV エクスポートでfsQCA等の外部ツールに渡せます",
+          t.qualitative.k_uvu9ih,
+          t.qualitative.k_nm5vlw,
+          t.qualitative.k_lrs9hd,
         ]}
       />
 
@@ -369,7 +371,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
             type="text"
             value={newCaseName}
             onChange={(e) => setNewCaseName(e.target.value)}
-            placeholder="ケース名"
+            placeholder={t.qualitative.k_6ci90f}
             className="text-xs px-2 py-1"
             style={{
               backgroundColor: "var(--color-bg-primary)",
@@ -404,7 +406,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
             type="text"
             value={newVarName}
             onChange={(e) => setNewVarName(e.target.value)}
-            placeholder="変数名"
+            placeholder={t.qualitative.k_dj71i}
             className="text-xs px-2 py-1"
             style={{
               backgroundColor: "var(--color-bg-primary)",
@@ -490,17 +492,17 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
                       <span>{v.name}</span>
                       <span style={{ fontSize: "9px", opacity: 0.6 }}>
                         ({v.varType === "dependent"
-                          ? "従属"
+                          ? t.qualitative.k_grhn
                           : v.varType === "outcome"
-                          ? "結果"
+                          ? t.qualitative.k_lvt8
                           : v.varType === "control"
-                          ? "統制"
-                          : "独立"})
+                          ? t.qualitative.k_lsdh
+                          : t.qualitative.k_k7z3})
                       </span>
                       <button
                         type="button"
                         onClick={() => void handleDeleteVariable(v.id)}
-                        title="削除"
+                        title={t.common.delete}
                         style={{
                           color: "var(--color-text-tertiary)",
                           background: "none",
@@ -533,7 +535,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
                       <button
                         type="button"
                         onClick={() => void handleDeleteCase(c.id)}
-                        title="削除"
+                        title={t.common.delete}
                         style={{
                           color: "var(--color-text-tertiary)",
                           background: "none",
@@ -586,10 +588,10 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
           style={{ color: "var(--color-text-tertiary)" }}
         >
           {design.cases.length === 0 && design.variables.length === 0
-            ? "ケースと変数を追加してマトリクスを作成してください"
+            ? t.qualitative.k_so9vwy
             : design.cases.length === 0
-            ? "ケースを追加してください"
-            : "変数を追加してください"}
+            ? t.qualitative.k_itvviu
+            : t.qualitative.k_xv5pr1}
         </div>
       )}
 

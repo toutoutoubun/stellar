@@ -4,6 +4,7 @@
 
 import type React from "react";
 import { clsx } from "clsx";
+import { useT } from "../../stores/useI18nStore";
 
 interface BadgeProps {
   /** バッジのテキスト */
@@ -25,6 +26,7 @@ export const Badge: React.FC<BadgeProps> = ({
   className,
   style,
 }) => {
+  const t = useT();
   return (
     <span
       className={clsx(
@@ -64,7 +66,7 @@ export const Badge: React.FC<BadgeProps> = ({
           onMouseLeave={(e) => {
             e.currentTarget.style.opacity = "0.6";
           }}
-          aria-label="タグを削除"
+          aria-label={t.ui.str_g5a39h}
         >
           <svg
             width="10"

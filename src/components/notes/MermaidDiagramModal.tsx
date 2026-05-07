@@ -6,6 +6,7 @@
 import type React from "react";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Modal } from "../ui/Modal";
+import { useT, useI18nStore } from "../../stores/useI18nStore";
 
 // ============================================================
 // テンプレート定義
@@ -21,7 +22,7 @@ interface MermaidTemplate {
 const MERMAID_TEMPLATES: MermaidTemplate[] = [
   {
     id: "flowchart",
-    label: "フローチャート",
+    label: useI18nStore.getState().t.notes.k_wflnpu,
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="18" height="5" rx="1" />
@@ -38,7 +39,7 @@ const MERMAID_TEMPLATES: MermaidTemplate[] = [
   },
   {
     id: "sequence",
-    label: "シーケンス図",
+    label: useI18nStore.getState().t.notes.k_639uzj,
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <line x1="6" y1="3" x2="6" y2="21" />
@@ -60,7 +61,7 @@ const MERMAID_TEMPLATES: MermaidTemplate[] = [
   },
   {
     id: "class",
-    label: "クラス図",
+    label: useI18nStore.getState().t.notes.k_6cglis,
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -87,7 +88,7 @@ const MERMAID_TEMPLATES: MermaidTemplate[] = [
   },
   {
     id: "gantt",
-    label: "ガントチャート",
+    label: useI18nStore.getState().t.notes.k_xwvvz,
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <line x1="4" y1="6" x2="20" y2="6" />
@@ -109,7 +110,7 @@ const MERMAID_TEMPLATES: MermaidTemplate[] = [
   },
   {
     id: "mindmap",
-    label: "マインドマップ",
+    label: useI18nStore.getState().t.notes.k_c85hii,
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3" />
@@ -133,7 +134,7 @@ const MERMAID_TEMPLATES: MermaidTemplate[] = [
   },
   {
     id: "state",
-    label: "状態遷移図",
+    label: useI18nStore.getState().t.notes.k_z7gmmy,
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="8" cy="12" r="4" />
@@ -152,7 +153,7 @@ const MERMAID_TEMPLATES: MermaidTemplate[] = [
   },
   {
     id: "er",
-    label: "ER図",
+    label: useI18nStore.getState().t.notes.k_1yau,
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="3" width="8" height="6" rx="1" />
@@ -185,7 +186,7 @@ const MERMAID_TEMPLATES: MermaidTemplate[] = [
   },
   {
     id: "pie",
-    label: "円グラフ",
+    label: useI18nStore.getState().t.notes.k_ahjbli,
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
@@ -193,11 +194,11 @@ const MERMAID_TEMPLATES: MermaidTemplate[] = [
       </svg>
     ),
     code: `pie title 研究時間の内訳
-    "文献調査" : 30
-    "実験" : 25
-    "分析" : 20
-    "論文執筆" : 15
-    "その他" : 10`,
+    t.notes.k_dajeg3 : 30
+    t.notes.k_gfh0 : 25
+    t.notes.k_eiq2 : 20
+    t.notes.k_hxpffk : 15
+    t.notes.k_7bosl : 10`,
   },
 ];
 
@@ -239,7 +240,7 @@ async function loadMermaid(): Promise<MermaidAPI> {
     return m;
   } catch {
     throw new Error(
-      "Mermaid の読み込みに失敗しました。インターネット接続を確認してください。",
+      useI18nStore.getState().t.notes.k_gpxfp7,
     );
   }
 }
@@ -264,6 +265,7 @@ export const MermaidDiagramModal: React.FC<MermaidDiagramModalProps> = ({
   onClose,
   onInsert,
 }) => {
+  const t = useT();
   const [code, setCode] = useState(MERMAID_TEMPLATES[0]?.code ?? "");
   const [selectedTemplate, setSelectedTemplate] = useState<string>("flowchart");
   const [previewSvg, setPreviewSvg] = useState<string>("");
@@ -290,7 +292,7 @@ export const MermaidDiagramModal: React.FC<MermaidDiagramModalProps> = ({
       setError(null);
     } catch (e) {
       setPreviewSvg("");
-      const msg = e instanceof Error ? e.message : "レンダリングエラー";
+      const msg = e instanceof Error ? e.message : t.notes.k_uwv1vx;
       // Mermaid のエラーメッセージを短く整形
       const shortMsg = String(msg.split("\n")[0] ?? "").slice(0, 200);
       setError(shortMsg);
@@ -342,7 +344,7 @@ export const MermaidDiagramModal: React.FC<MermaidDiagramModalProps> = ({
     <Modal
       open={open}
       onClose={onClose}
-      title="ダイアグラムを作成"
+      title={t.notes.k_luos0t}
       width="880px"
       footer={
         <div className="flex items-center gap-2 w-full">

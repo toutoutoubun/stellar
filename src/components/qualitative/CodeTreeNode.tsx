@@ -4,6 +4,7 @@
 import React, { useState, useCallback } from "react";
 import type { CodeNode } from "../../types";
 import { IconChevronRight, IconEdit, IconDelete, IconCheck, IconClose } from "./icons/QualIcons";
+import { useT } from "../../stores/useI18nStore";
 
 interface CodeTreeNodeProps {
   node: CodeNode;
@@ -24,6 +25,7 @@ export const CodeTreeNode: React.FC<CodeTreeNodeProps> = ({
   onDelete,
   onDrop,
 }) => {
+  const t = useT();
   const [expanded, setExpanded] = useState(true);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(node.name);
@@ -184,7 +186,7 @@ export const CodeTreeNode: React.FC<CodeTreeNodeProps> = ({
                   setEditColor(node.color);
                   setEditing(true);
                 }}
-                title="編集"
+                title={t.common.edit}
                 style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer", padding: "2px", display: "flex" }}
               >
                 <IconEdit size={11} />
@@ -192,7 +194,7 @@ export const CodeTreeNode: React.FC<CodeTreeNodeProps> = ({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onDelete(node.id); }}
-                title="削除"
+                title={t.common.delete}
                 style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer", padding: "2px", display: "flex" }}
               >
                 <IconDelete size={11} />

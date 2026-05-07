@@ -5,6 +5,7 @@
 
 import type React from "react";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useT } from "../../stores/useI18nStore";
 
 interface FocusModeProps {
   /** フォーカスモードのON/OFF */
@@ -29,6 +30,7 @@ export const FocusMode: React.FC<FocusModeProps> = ({
   lastSavedAt,
   children,
 }) => {
+  const t = useT();
   const [toolbarVisible, setToolbarVisible] = useState(false);
   const toolbarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -124,7 +126,7 @@ export const FocusMode: React.FC<FocusModeProps> = ({
             }}
             data-tauri-drag-region
           >
-            {noteTitle || "無題のノート"}
+            {noteTitle || t.notes.untitled}
           </span>
         </div>
 
@@ -201,7 +203,7 @@ export const FocusMode: React.FC<FocusModeProps> = ({
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = "transparent";
             }}
-            title="最小化"
+            title={t.layout.str_fj8br}
           >
             <svg width="12" height="12" viewBox="0 0 12 12">
               <rect x="2" y="5.5" width="8" height="1" fill="currentColor" rx="0.5" />
@@ -229,7 +231,7 @@ export const FocusMode: React.FC<FocusModeProps> = ({
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = "transparent";
             }}
-            title="最大化"
+            title={t.layout.str_fiqj3}
           >
             <svg width="12" height="12" viewBox="0 0 12 12">
               <rect x="2" y="2" width="8" height="8" fill="none" stroke="currentColor" strokeWidth="1" rx="1" />
@@ -259,7 +261,7 @@ export const FocusMode: React.FC<FocusModeProps> = ({
               e.currentTarget.style.backgroundColor = "transparent";
               e.currentTarget.style.color = "var(--color-text-secondary)";
             }}
-            title="閉じる"
+            title={t.common.close}
           >
             <svg width="12" height="12" viewBox="0 0 12 12">
               <line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />

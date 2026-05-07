@@ -15,6 +15,7 @@ import { TextAnalysisView } from "./results/TextAnalysisView";
 import { NetworkAnalysisView } from "./results/NetworkAnalysisView";
 import { ReportBuilder } from "./ReportBuilder";
 import type { Analysis } from "../../types";
+import { useT, useI18nStore } from "../../stores/useI18nStore";
 
 // ── 分析カテゴリ定義 ──
 const ANALYSIS_GROUPS: {
@@ -25,7 +26,7 @@ const ANALYSIS_GROUPS: {
 }[] = [
   {
     key: "descriptive",
-    label: "記述統計",
+    label: useI18nStore.getState().t.quantitative.k_i0q6xb,
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <line x1="18" y1="20" x2="18" y2="10" />
@@ -37,7 +38,7 @@ const ANALYSIS_GROUPS: {
   },
   {
     key: "inferential",
-    label: "推測統計",
+    label: useI18nStore.getState().t.quantitative.k_d192d7,
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
@@ -47,7 +48,7 @@ const ANALYSIS_GROUPS: {
   },
   {
     key: "regression",
-    label: "回帰分析",
+    label: useI18nStore.getState().t.quantitative.k_bcmod8,
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <line x1="2" y1="20" x2="22" y2="4" />
@@ -61,7 +62,7 @@ const ANALYSIS_GROUPS: {
   },
   {
     key: "network",
-    label: "ネットワーク",
+    label: useI18nStore.getState().t.quantitative.k_3grzn4,
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="5" r="3" />
@@ -75,7 +76,7 @@ const ANALYSIS_GROUPS: {
   },
   {
     key: "text",
-    label: "テキスト",
+    label: useI18nStore.getState().t.quantitative.k_6ctu6u,
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -100,6 +101,7 @@ const GROUP_COLORS: Record<string, string> = {
 
 /** 分析タイプからカテゴリキーを引く */
 function getGroupKey(analysisType: string): string {
+
   for (const g of ANALYSIS_GROUPS) {
     if (g.types.includes(analysisType)) return g.key;
   }
@@ -107,19 +109,20 @@ function getGroupKey(analysisType: string): string {
 }
 
 /** 分析タイプの日本語ラベル */
-function analysisTypeLabel(t: string): string {
+function analysisTypeLabel(type: string): string {
+  const i18n = useI18nStore.getState().t;
   const map: Record<string, string> = {
-    descriptive: "記述統計",
-    correlation: "相関分析",
-    "t-test": "t検定",
-    "mann-whitney": "Mann-Whitney U検定",
-    "chi-square": "カイ二乗検定",
-    regression: "回帰分析",
-    network: "ネットワーク分析",
-    text: "テキスト分析",
-    survey: "調査集計",
+    descriptive: i18n.quantitative.k_i0q6xb,
+    correlation: i18n.quantitative.k_fmiflg,
+    "t-test": i18n.quantitative.k_krqq,
+    "mann-whitney": i18n.quantitative.k_4acw4g,
+    "chi-square": i18n.quantitative.k_982dum,
+    regression: i18n.quantitative.k_bcmod8,
+    network: i18n.quantitative.k_7kpm6e,
+    text: i18n.quantitative.k_6raqo,
+    survey: i18n.quantitative.k_hxyfxa,
   };
-  return map[t] ?? t;
+  return map[type] ?? type;
 }
 
 // ── メインコンポーネント ──
@@ -208,6 +211,7 @@ function analysisToMarkdown(a: Analysis): string {
 }
 
 export const AnalysisHubView: React.FC = () => {
+  const t = useT();
   const analyses = useQuantitativeStore((s) => s.analyses);
   const selectedDataset = useQuantitativeStore((s) => s.selectedDataset);
   const variables = useQuantitativeStore((s) => s.variables);
@@ -293,9 +297,9 @@ export const AnalysisHubView: React.FC = () => {
         mdParts.push(``);
       }
       const md = mdParts.join("\n");
-      const tags = ["#量的研究", "#分析レポート"];
+      const tags = [t.quantitative.k_jf913u, t.qualitative.k_pbsye];
       const usedTypes = new Set(analyses.map((a) => a.analysisType));
-      for (const t of usedTypes) tags.push(`#${analysisTypeLabel(t)}`);
+      for (const tp of usedTypes) tags.push(`#${analysisTypeLabel(tp)}`);
 
       const note = await createNote({
         title: `量的分析: ${selectedDataset.name}（${analyses.length}件）`,
@@ -304,8 +308,8 @@ export const AnalysisHubView: React.FC = () => {
       });
       toast.success(`ノート「${note.title}」を作成しました`);
     } catch (err) {
-      console.error("ノート出力エラー:", err);
-      toast.error("ノートの作成に失敗しました");
+      console.error(t.qualitative.k_pszidi, err);
+      toast.error(t.notes.createFailed);
     } finally {
       setExportingNote(false);
     }
@@ -494,7 +498,7 @@ export const AnalysisHubView: React.FC = () => {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
             </svg>
-            {exportingNote ? "出力中..." : "分析結果をノートに出力"}
+            {exportingNote ? t.quantitative.k_ubac8u : t.quantitative.k_h6qfiq}
           </button>
           <button
             onClick={() => setReportOpen(true)}

@@ -31,6 +31,7 @@ import { useQuantitativeStore } from "../../stores/useQuantitativeStore";
 import { useNoteStore } from "../../stores/useNoteStore";
 import { toast } from "../ui/Toast";
 import type { Analysis } from "../../types";
+import { useI18nStore } from "../../stores/useI18nStore";
 // exportChart utilities available if needed
 // import { downloadPNG } from "../../lib/utils/exportChart";
 
@@ -39,8 +40,8 @@ type CitationStyle = "apa" | "mla" | "chicago" | "wabun";
 const CITATION_LABELS: Record<CitationStyle, string> = {
   apa: "APA",
   mla: "MLA",
-  chicago: "シカゴ",
-  wabun: "和文スタイル",
+  chicago: useI18nStore.getState().t.quantitative.k_7df1c,
+  wabun: useI18nStore.getState().t.quantitative.k_3g5rx4,
 };
 
 // ── Block types ──
@@ -117,15 +118,16 @@ const NoteIcon = () => (
 
 // ── Block type definitions for add-menu ──
 const BLOCK_TYPES: { type: BlockType; label: string; icon: React.ReactNode; color: string }[] = [
-  { type: "analysis", label: "分析結果ブロック", icon: <AnalysisIcon />, color: "var(--color-accent-primary)" },
-  { type: "chart", label: "チャートブロック", icon: <ChartIcon />, color: "var(--color-accent-secondary)" },
-  { type: "text", label: "テキストブロック", icon: <TextIcon />, color: "#a78bfa" },
-  { type: "table", label: "統計表ブロック", icon: <TableIcon />, color: "var(--color-accent-warning)" },
-  { type: "divider", label: "区切り線", icon: <DividerIcon />, color: "var(--color-text-tertiary)" },
+  { type: "analysis", label: useI18nStore.getState().t.quantitative.k_tw441z, icon: <AnalysisIcon />, color: "var(--color-accent-primary)" },
+  { type: "chart", label: useI18nStore.getState().t.quantitative.k_1tmwen, icon: <ChartIcon />, color: "var(--color-accent-secondary)" },
+  { type: "text", label: useI18nStore.getState().t.quantitative.k_sa606x, icon: <TextIcon />, color: "#a78bfa" },
+  { type: "table", label: useI18nStore.getState().t.quantitative.k_6me2ks, icon: <TableIcon />, color: "var(--color-accent-warning)" },
+  { type: "divider", label: useI18nStore.getState().t.quantitative.k_au5vml, icon: <DividerIcon />, color: "var(--color-text-tertiary)" },
 ];
 
 let blockCounter = 0;
 function newBlockId(): string {
+
   return `block_${Date.now()}_${++blockCounter}`;
 }
 
@@ -339,7 +341,7 @@ const SortableBlock: React.FC<SortableBlockProps> = memo(({ block, analyses, cit
           <textarea
             value={block.textContent ?? ""}
             onChange={(e) => onUpdate(block.id, { textContent: e.target.value })}
-            placeholder="Markdown テキストを入力..."
+            placeholder={useI18nStore.getState().t.quantitative.k_se4z4d}
             rows={4}
             className="w-full px-3 py-2 text-xs"
             style={{
@@ -395,7 +397,7 @@ const SortableBlock: React.FC<SortableBlockProps> = memo(({ block, analyses, cit
             {tableAnalysis && (
               <div className="flex items-center gap-2 p-2 text-xs" style={{ backgroundColor: "var(--color-bg-primary)", borderRadius: "var(--radius-sm)", border: "1px dashed var(--color-border-primary)", color: "var(--color-text-tertiary)" }}>
                 <TableIcon />
-                <span>{tableAnalysis.name} の{block.tableType === "frequency" ? "度数分布" : block.tableType === "contingency" ? "分割表" : "係数"}表が挿入されます</span>
+                <span>{tableAnalysis.name} の{block.tableType === "frequency" ? useI18nStore.getState().t.quantitative.k_cd0slj : block.tableType === "contingency" ? useI18nStore.getState().t.quantitative.k_cfa2k : useI18nStore.getState().t.quantitative.k_e4fi}表が挿入されます</span>
               </div>
             )}
           </div>
@@ -521,7 +523,7 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({ onClose }) => {
     const lines: string[] = [];
 
     // Header
-    lines.push(`# ${title || "無題のレポート"}`);
+    lines.push(`# ${title || useI18nStore.getState().t.quantitative.k_5zkqdc}`);
     lines.push("");
     if (author) lines.push(`**著者:** ${author}`);
     lines.push(`**日付:** ${today}`);
@@ -567,7 +569,7 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({ onClose }) => {
         case "table": {
           const a = analyses.find((x) => x.id === block.tableAnalysisId);
           if (a) {
-            lines.push(`### ${a.name} — ${block.tableType === "frequency" ? "度数分布表" : block.tableType === "contingency" ? "分割表" : "係数表"}`);
+            lines.push(`### ${a.name} — ${block.tableType === "frequency" ? useI18nStore.getState().t.quantitative.k_s253lt : block.tableType === "contingency" ? useI18nStore.getState().t.quantitative.k_cfa2k : useI18nStore.getState().t.quantitative.k_c6kai}`);
             lines.push("");
             lines.push(generateTableMarkdown(a, block.tableType ?? "frequency"));
             lines.push("");
@@ -589,9 +591,9 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({ onClose }) => {
     try {
       const md = generateMarkdown();
       await navigator.clipboard.writeText(md);
-      toast.success("Markdownをクリップボードにコピーしました");
+      toast.success(useI18nStore.getState().t.qualitative.k_rexm4q);
     } catch {
-      toast.error("コピーに失敗しました");
+      toast.error(useI18nStore.getState().t.quantitative.k_czy3x7);
     }
   }, [generateMarkdown]);
 
@@ -606,9 +608,9 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({ onClose }) => {
       a.download = `${title || "report"}.md`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("Markdownファイルを保存しました");
+      toast.success(useI18nStore.getState().t.quantitative.k_3qxq6y);
     } catch {
-      toast.error("保存に失敗しました");
+      toast.error(useI18nStore.getState().t.quantitative.k_r6tyd);
     }
   }, [generateMarkdown, title]);
 
@@ -619,7 +621,7 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({ onClose }) => {
       const md = generateMarkdown();
 
       // Build tags
-      const tags = ["#量的研究"];
+      const tags = [useI18nStore.getState().t.quantitative.k_jf913u];
       const usedTypes = new Set(
         blocks
           .map((b) => {
@@ -631,14 +633,14 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({ onClose }) => {
       for (const t of usedTypes) tags.push(`#${t}`);
 
       const note = await createNote({
-        title: title || "無題のレポート",
+        title: title || useI18nStore.getState().t.quantitative.k_5zkqdc,
         content: md,
         tags,
       });
 
       toast.success(`ノート「${note.title}」を作成しました`);
     } catch (err) {
-      toast.error("ノートの作成に失敗しました");
+      toast.error(useI18nStore.getState().t.notes.createFailed);
       console.error(err);
     } finally {
       setExporting(false);
@@ -694,7 +696,7 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({ onClose }) => {
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="レポートタイトルを入力..."
+                  placeholder={useI18nStore.getState().t.quantitative.k_cndyfp}
                   className="w-full px-3 py-2 text-xs"
                   style={{
                     backgroundColor: "var(--color-bg-secondary)",
@@ -711,7 +713,7 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({ onClose }) => {
                   type="text"
                   value={author}
                   onChange={(e) => setAuthor(e.target.value)}
-                  placeholder="著者名..."
+                  placeholder={useI18nStore.getState().t.quantitative.k_1rui8f}
                   className="w-full px-3 py-2 text-xs"
                   style={{
                     backgroundColor: "var(--color-bg-secondary)",
@@ -879,7 +881,7 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({ onClose }) => {
                 opacity: exporting ? 0.6 : 1,
               }}
             >
-              <NoteIcon /> {exporting ? "作成中..." : "ノートに追加"}
+              <NoteIcon /> {exporting ? useI18nStore.getState().t.qualitative.k_2zb0kr : useI18nStore.getState().t.quantitative.k_4tjifo}
             </button>
             <button
               onClick={() => void handleCopyMarkdown()}
@@ -908,19 +910,19 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({ onClose }) => {
 // ====================================================================
 function generateTableMarkdown(analysis: Analysis, tableType: string): string {
   const r = analysis.result as Record<string, unknown> | null;
-  if (!r) return "*データなし*";
+  if (!r) return useI18nStore.getState().t.quantitative.k_lbqwcj;
 
   if (tableType === "frequency") {
     // Look for frequency tables
     const freqs = (r.frequencies as Array<Record<string, unknown>>) ?? [];
-    if (freqs.length === 0) return "*度数分布データなし*";
+    if (freqs.length === 0) return useI18nStore.getState().t.quantitative.k_stosas;
     const lines: string[] = [];
     for (const freq of freqs) {
-      const name = freq.variableName as string ?? "変数";
+      const name = freq.variableName as string ?? useI18nStore.getState().t.quantitative.k_fp8n;
       const rows = (freq.rows as Array<Record<string, unknown>>) ?? [];
       lines.push(`**${name}**`);
       lines.push("");
-      lines.push("| 値 | 度数 | 割合(%) | 累積(%) |");
+      lines.push(useI18nStore.getState().t.quantitative.k_wh35ei);
       lines.push("|---|---|---|---|");
       for (const row of rows) {
         lines.push(`| ${row.value} | ${row.count} | ${(row.percent as number ?? 0).toFixed(1)} | ${(row.cumPercent as number ?? 0).toFixed(1)} |`);
@@ -932,7 +934,7 @@ function generateTableMarkdown(analysis: Analysis, tableType: string): string {
 
   if (tableType === "contingency") {
     const chiResults = (r.chiSquareResults as Array<Record<string, unknown>>) ?? [];
-    if (chiResults.length === 0) return "*分割表データなし*";
+    if (chiResults.length === 0) return useI18nStore.getState().t.quantitative.k_morh23;
     const lines: string[] = [];
     for (const chi of chiResults) {
       const rowLabels = (chi.rowLabels as string[]) ?? [];
@@ -954,7 +956,7 @@ function generateTableMarkdown(analysis: Analysis, tableType: string): string {
     const coefficients = (r.coefficients as Array<Record<string, unknown>>) ?? [];
     if (coefficients.length > 0) {
       const lines: string[] = [];
-      lines.push("| 変数 | B | SE | t | p |");
+      lines.push(useI18nStore.getState().t.quantitative.k_oj4l51);
       lines.push("|---|---|---|---|---|");
       for (const coef of coefficients) {
         lines.push(`| ${coef.varName} | ${(coef.b as number).toFixed(3)} | ${(coef.stdError as number).toFixed(3)} | ${(coef.t as number).toFixed(2)} | ${(coef.pValue as number).toFixed(3)} |`);
@@ -965,15 +967,15 @@ function generateTableMarkdown(analysis: Analysis, tableType: string): string {
     const correlations = (r.correlations as Array<Record<string, unknown>>) ?? [];
     if (correlations.length > 0) {
       const lines: string[] = [];
-      lines.push("| 変数1 | 変数2 | r | p |");
+      lines.push(useI18nStore.getState().t.quantitative.k_5aijhf);
       lines.push("|---|---|---|---|");
       for (const corr of correlations) {
         lines.push(`| ${corr.var1Name} | ${corr.var2Name} | ${(corr.r as number).toFixed(3)} | ${(corr.pValue as number).toFixed(3)} |`);
       }
       return lines.join("\n");
     }
-    return "*係数データなし*";
+    return useI18nStore.getState().t.quantitative.k_x8sr4l;
   }
 
-  return "*対応していない表タイプ*";
+  return useI18nStore.getState().t.quantitative.k_jq1vax;
 }

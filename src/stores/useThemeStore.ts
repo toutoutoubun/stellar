@@ -5,6 +5,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Theme } from "../types";
+import { useI18nStore } from "./useI18nStore";
 
 // ============================================================
 // テーマメタデータ定数
@@ -34,8 +35,8 @@ export interface ThemeMeta {
 export const THEMES: ThemeMeta[] = [
   {
     id: "white",
-    label: "ホワイト",
-    description: "清潔感のある純白ベース",
+    label: useI18nStore.getState().t.themes.white,
+    description: useI18nStore.getState().t.themes.whiteDesc,
     icon: "sun",
     previewBg: "#ffffff",
     previewText: "#1a1a2e",
@@ -44,8 +45,8 @@ export const THEMES: ThemeMeta[] = [
   },
   {
     id: "ivory",
-    label: "アイボリー",
-    description: "温かみのあるアイボリーベース",
+    label: useI18nStore.getState().t.themes.ivory,
+    description: useI18nStore.getState().t.themes.ivoryDesc,
     icon: "sunrise",
     previewBg: "#faf8f5",
     previewText: "#2c2416",
@@ -54,8 +55,8 @@ export const THEMES: ThemeMeta[] = [
   },
   {
     id: "dark-blue",
-    label: "ダークブルー",
-    description: "落ち着いたダークブルー",
+    label: useI18nStore.getState().t.stores.k_1txb7w,
+    description: useI18nStore.getState().t.stores.k_e19fm3,
     icon: "moon",
     previewBg: "#1a1f2e",
     previewText: "#e0e4ec",
@@ -64,8 +65,8 @@ export const THEMES: ThemeMeta[] = [
   },
   {
     id: "black",
-    label: "ブラック",
-    description: "真の黒ベース（OLED対応）",
+    label: useI18nStore.getState().t.themes.black,
+    description: useI18nStore.getState().t.themes.blackDesc,
     icon: "circle",
     previewBg: "#0a0a0a",
     previewText: "#e8e8e8",

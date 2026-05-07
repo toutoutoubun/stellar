@@ -8,6 +8,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import type { Highlight } from "../../types";
 import { HIGHLIGHT_COLORS } from "../../utils/highlightColors";
 import { toast } from "../ui/Toast";
+import { useT } from "../../stores/useI18nStore";
 
 interface HighlightCardProps {
   /** ハイライトデータ */
@@ -38,6 +39,7 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
   onDelete,
   onToggleSelect,
 }) => {
+  const t = useT();
   const colorConfig = HIGHLIGHT_COLORS[highlight.color];
   const [localComment, setLocalComment] = useState(highlight.comment ?? "");
   const [contextMenu, setContextMenu] = useState<{
@@ -103,9 +105,9 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
   const handleCopyQuote = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(highlight.text);
-      toast.success("引用テキストをコピーしました");
+      toast.success(t.reader.str_vakekh);
     } catch {
-      toast.error("コピーに失敗しました");
+      toast.error(t.quantitative.k_czy3x7);
     }
     closeContextMenu();
   }, [highlight.text, closeContextMenu]);
@@ -196,7 +198,7 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
               checked={isSelected}
               onChange={() => onToggleSelect(highlight.id)}
               className="sr-only"
-              aria-label="ハイライトを選択"
+              aria-label={t.reader.str_zblg00}
             />
             <div
               className="flex items-center justify-center"
@@ -255,7 +257,7 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
           <textarea
             value={localComment}
             onChange={handleCommentChange}
-            placeholder="コメントを追加…"
+            placeholder={t.reader.str_cf0uz0}
             rows={2}
             className="w-full text-xs resize-none"
             style={{
@@ -345,7 +347,7 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
               <line x1="16" y1="13" x2="8" y2="13" />
               <line x1="16" y1="17" x2="8" y2="17" />
             </svg>
-            {isSelected ? "選択解除" : "ノート変換用に選択"}
+            {isSelected ? t.reader.str_in3h53 : t.reader.str_hjicln}
           </button>
 
           {/* 引用コピー */}

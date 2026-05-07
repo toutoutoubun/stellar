@@ -14,6 +14,7 @@ import type {
 } from "../../types";
 import { SearchResultCard } from "./SearchResultItem";
 import { IconItemType } from "../ui/Icons";
+import { useI18nStore } from "../../stores/useI18nStore";
 
 interface SearchResultsProps {
   /** 検索クエリ */
@@ -42,10 +43,10 @@ interface SearchResultsProps {
 
 /** タブ定義 */
 const TABS: { key: SearchTab; label: string }[] = [
-  { key: "all", label: "すべて" },
-  { key: "paper", label: "論文" },
-  { key: "note", label: "ノート" },
-  { key: "highlight", label: "ハイライト" },
+  { key: "all", label: useI18nStore.getState().t.quantResults.str_7bg2u },
+  { key: "paper", label: useI18nStore.getState().t.settings.data.papers },
+  { key: "note", label: useI18nStore.getState().t.notes.title },
+  { key: "highlight", label: useI18nStore.getState().t.settings.data.highlights },
 ];
 
 /** 仮想スクロールを有効にする閾値 */
@@ -56,6 +57,7 @@ function getTabCount(
   results: GroupedSearchResults | null,
   tab: SearchTab,
 ): number {
+
   if (!results) return 0;
   switch (tab) {
     case "paper":

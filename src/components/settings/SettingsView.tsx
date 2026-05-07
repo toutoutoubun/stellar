@@ -173,7 +173,7 @@ export const SettingsView: React.FC = () => {
       const { open } = await import("@tauri-apps/plugin-dialog");
       const selected = await open({ directory: true, multiple: false });
       if (selected) {
-        console.warn("change_data_path は未実装です", selected);
+        console.warn(t.settings.k_dbvkig, selected);
       }
     } catch {
       // キャンセルまたはエラー
@@ -184,7 +184,7 @@ export const SettingsView: React.FC = () => {
   const handleExport = useCallback(async () => {
     setIsExporting(true);
     try {
-      console.warn("export_data は未実装です");
+      console.warn(t.settings.k_6yb0wy);
     } catch {
       // エラー
     } finally {
@@ -196,7 +196,7 @@ export const SettingsView: React.FC = () => {
   const handleBackup = useCallback(async () => {
     setIsBackingUp(true);
     try {
-      console.warn("create_backup は未実装です");
+      console.warn(t.settings.k_13z8tu);
     } catch {
       // エラー
     } finally {

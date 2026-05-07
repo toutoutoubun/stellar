@@ -20,6 +20,7 @@ import type {
 import { WordCloud } from "../charts";
 import { BarChart } from "../charts";
 import { downloadSVG, downloadPNG } from "../../../lib/utils/exportChart";
+import { useI18nStore } from "../../../stores/useI18nStore";
 
 // ── Force graph dynamic loader (same pattern as main graph view) ──
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -28,6 +29,7 @@ let _fg: FG2D | null = null;
 let _fgErr: Error | null = null;
 let _fgP: Promise<FG2D> | null = null;
 function loadFG(): Promise<FG2D> {
+
   if (_fg) return Promise.resolve(_fg);
   if (_fgErr) return Promise.reject(_fgErr);
   if (_fgP) return _fgP;
@@ -111,14 +113,14 @@ interface Props {
 // ── Tab types ──
 type TabKey = "words" | "network" | "stats";
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
-  { key: "words", label: "頻出語", icon: <WordIcon /> },
-  { key: "network", label: "共起ネットワーク", icon: <NetworkIcon /> },
-  { key: "stats", label: "テキスト統計", icon: <StatsIcon /> },
+  { key: "words", label: useI18nStore.getState().t.quantResults.str_mpeu7, icon: <WordIcon /> },
+  { key: "network", label: useI18nStore.getState().t.quantResults.str_w9a52i, icon: <NetworkIcon /> },
+  { key: "stats", label: useI18nStore.getState().t.quantResults.str_6jq2b, icon: <StatsIcon /> },
 ];
 
 // ── POS filter presets ──
 type PosFilter = "noun" | "noun_verb" | "all";
-const POS_LABELS: Record<PosFilter, string> = { noun: "名詞のみ", noun_verb: "名詞+動詞", all: "すべて" };
+const POS_LABELS: Record<PosFilter, string> = { noun: useI18nStore.getState().t.quantResults.str_b658qq, noun_verb: useI18nStore.getState().t.quantResults.str_91xmnx, all: useI18nStore.getState().t.quantResults.str_7bg2u };
 
 // ── Community colors (fallbacks) ──
 const COMM_COLORS = ["#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14f", "#edc948", "#b07aa1", "#ff9da7", "#9c755f", "#bab0ac", "#4dc9f6", "#8b5cf6"];
@@ -193,7 +195,7 @@ export const TextAnalysisView: React.FC<Props> = ({ analysis, variables, dataRow
   }
 
   const varObj = variables.find((v) => v.id === activeResult.variableId);
-  const varName = varObj?.name ?? "テキスト変数";
+  const varName = varObj?.name ?? useI18nStore.getState().t.quantResults.str_6q483;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -285,7 +287,7 @@ const WordsTab: React.FC<WordsTabProps> = memo(({ result, stopwords, swInput, se
           <table className="w-full text-xs" style={{ borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ backgroundColor: "var(--color-bg-secondary)" }}>
-                {["順位", "語", "品詞", "頻度", "TF-IDF スコア"].map((h, i) => (
+                {[useI18nStore.getState().t.quantResults.str_qakn, useI18nStore.getState().t.quantResults.k_rdq, useI18nStore.getState().t.quantResults.str_f6bh, useI18nStore.getState().t.quantResults.str_qevf, useI18nStore.getState().t.quantResults.TF_IDF].map((h, i) => (
                   <th key={h} className="px-3 py-2 text-left font-medium" style={{ color: "var(--color-text-secondary)", borderBottom: "1px solid var(--color-border-primary)", width: i === 4 ? "200px" : "auto" }}>
                     {h}
                   </th>
@@ -303,8 +305,8 @@ const WordsTab: React.FC<WordsTabProps> = memo(({ result, stopwords, swInput, se
                   <td className="px-3 py-1.5">
                     <span className="px-1.5 py-0.5" style={{
                       fontSize: "10px",
-                      color: w.pos === "名詞" ? "var(--color-accent-primary)" : w.pos === "動詞" ? "var(--color-accent-warning)" : "#a78bfa",
-                      backgroundColor: w.pos === "名詞" ? "color-mix(in srgb, var(--color-accent-primary) 10%, transparent)" : w.pos === "動詞" ? "color-mix(in srgb, var(--color-accent-warning) 10%, transparent)" : "color-mix(in srgb, #a78bfa 10%, transparent)",
+                      color: w.pos === useI18nStore.getState().t.quantResults.str_f20h ? "var(--color-accent-primary)" : w.pos === useI18nStore.getState().t.quantResults.str_eujt ? "var(--color-accent-warning)" : "#a78bfa",
+                      backgroundColor: w.pos === useI18nStore.getState().t.quantResults.str_f20h ? "color-mix(in srgb, var(--color-accent-primary) 10%, transparent)" : w.pos === useI18nStore.getState().t.quantResults.str_eujt ? "color-mix(in srgb, var(--color-accent-warning) 10%, transparent)" : "color-mix(in srgb, #a78bfa 10%, transparent)",
                       borderRadius: "var(--radius-sm)",
                     }}>
                       {w.pos}
@@ -348,7 +350,7 @@ const WordsTab: React.FC<WordsTabProps> = memo(({ result, stopwords, swInput, se
             value={swInput}
             onChange={(e) => setSwInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") addStopword(); }}
-            placeholder="除外語を追加..."
+            placeholder={useI18nStore.getState().t.quantResults.str_4eh4kb}
             className="flex-1 px-3 py-1.5 text-xs"
             style={{
               backgroundColor: "var(--color-bg-primary)",
@@ -390,7 +392,7 @@ const WordsTab: React.FC<WordsTabProps> = memo(({ result, stopwords, swInput, se
           }}
         >
           <RefreshIcon />
-          {reanalyzing ? "再分析中..." : "再分析（ドラフト）"}
+          {reanalyzing ? useI18nStore.getState().t.quantResults.str_eycy4o : useI18nStore.getState().t.quantResults.str_gk62n9}
         </button>
       </div>
     </div>
@@ -718,9 +720,9 @@ const StatsTab: React.FC<{
       {/* Stats cards */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "平均トークン数/テキスト", value: avgTokens.toLocaleString(), desc: "各テキストエントリの平均単語数" },
-          { label: "TTR (Type-Token Ratio)", value: ttr, desc: "語彙の豊かさの指標（0〜1）" },
-          { label: "テキスト数", value: perDocData.length.toLocaleString(), desc: "分析対象のテキスト件数" },
+          { label: useI18nStore.getState().t.quantResults.str_68dq8v, value: avgTokens.toLocaleString(), desc: useI18nStore.getState().t.quantResults.str_3oovm7 },
+          { label: "TTR (Type-Token Ratio)", value: ttr, desc: useI18nStore.getState().t.quantResults.str_01 },
+          { label: useI18nStore.getState().t.quantResults.str_g1mm06, value: perDocData.length.toLocaleString(), desc: useI18nStore.getState().t.quantResults.str_wqhlfz },
         ].map((card) => (
           <div key={card.label} style={{ backgroundColor: "var(--color-bg-secondary)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border-primary)", padding: "16px" }}>
             <p className="text-xs mb-1" style={{ color: "var(--color-text-secondary)" }}>{card.label}</p>
@@ -765,7 +767,7 @@ const StatsTab: React.FC<{
             <ExportMenu containerRef={chartRef} name="token-counts" />
           </div>
           <div ref={chartRef} style={{ backgroundColor: "var(--color-bg-secondary)", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border-primary)", padding: "16px" }}>
-            <BarChart data={perDocData.slice(0, 50)} horizontal={false} yLabel="トークン数" height={280} />
+            <BarChart data={perDocData.slice(0, 50)} horizontal={false} yLabel={useI18nStore.getState().t.quantResults.str_fz4r8o} height={280} />
           </div>
         </div>
       )}
@@ -780,9 +782,9 @@ const StatsTab: React.FC<{
             <h4 className="text-xs font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>解釈</h4>
             <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
               {activeResult.interpretation}
-              {Number(ttr) < 0.3 && " TTRが低い（0.3未満）ため、同じ語が繰り返し使用されている傾向があります。"}
-              {Number(ttr) > 0.7 && " TTRが高い（0.7超）ため、多様な語彙が使用されています。"}
-              {avgTokens < 10 && " 各テキストのトークン数が少ないため、共起分析の精度が低くなる可能性があります。"}
+              {Number(ttr) < 0.3 && useI18nStore.getState().t.quantResults.k_h94lm5}
+              {Number(ttr) > 0.7 && useI18nStore.getState().t.quantResults.k_j99ahs}
+              {avgTokens < 10 && useI18nStore.getState().t.quantResults.k_r7m3yg}
             </p>
           </div>
         </div>

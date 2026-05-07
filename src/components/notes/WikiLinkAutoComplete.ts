@@ -5,6 +5,7 @@
 
 import type { CompletionContext, CompletionResult } from "@codemirror/autocomplete";
 import type { LinkSuggestion } from "../../types";
+import { useI18nStore } from "../../stores/useI18nStore";
 
 /**
  * WikiLink オートコンプリートの CompletionSource を生成する
@@ -46,11 +47,11 @@ export function wikiLinkCompletionSource(
         to: context.pos,
         options: suggestions.map((s) => ({
           label: s.title,
-          detail: s.detail ?? (s.type === "paper" ? "論文" : "ノート"),
+          detail: s.detail ?? (s.type === "paper" ? useI18nStore.getState().t.settings.data.papers : useI18nStore.getState().t.notes.title),
           type: s.type === "paper" ? "class" : "text",
           // 補完確定時に [[タイトル]] を挿入（[[ は既に入力済み、]] を付加）
           apply: `${s.title}]]`,
-          info: s.type === "paper" ? "[ ] 論文" : "[=] ノート",
+          info: s.type === "paper" ? useI18nStore.getState().t.notes.k_re2tdz : useI18nStore.getState().t.notes.k_glszmd,
           boost: s.type === "note" ? 1 : 0,
         })),
         filter: true,

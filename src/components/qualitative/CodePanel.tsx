@@ -7,6 +7,7 @@ import { invoke } from "../../lib/tauriShim";
 import type { Highlight, QualProject, CodeNode } from "../../types";
 import { CodeTreeNode } from "./CodeTreeNode";
 import { IconPlus, IconAssignCode, IconRemoveCode, IconCodebook } from "./icons/QualIcons";
+import { useT } from "../../stores/useI18nStore";
 
 interface CodePanelProps {
   highlights: Highlight[];
@@ -17,6 +18,7 @@ interface CodePanelProps {
 
 /** ツリーをフラットに展開 */
 function flattenTree(nodes: CodeNode[]): CodeNode[] {
+
   const result: CodeNode[] = [];
   for (const n of nodes) {
     result.push(n);
@@ -31,6 +33,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
   paperId: _paperId,
   currentProjectId,
 }) => {
+  const t = useT();
   const [projects, setProjects] = useState<QualProject[]>([]);
   const [projectId, setProjectId] = useState<string>(currentProjectId ?? "");
   const [codeTree, setCodeTree] = useState<CodeNode[]>([]);
@@ -53,7 +56,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
           setProjectId(result[0].id);
         }
       } catch (err) {
-        console.error("プロジェクト取得エラー:", err);
+        console.error(t.qualitative.k_wvi2ea, err);
       }
     };
     void load();
@@ -67,7 +70,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
       const tree = await invoke<CodeNode[]>("get_code_tree", { projectId });
       setCodeTree(tree);
     } catch (err) {
-      console.error("コードツリー取得エラー:", err);
+      console.error(t.qualitative.k_89eley, err);
     } finally {
       setLoading(false);
     }
@@ -116,7 +119,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
       setNewCodeName("");
       void loadCodeTree();
     } catch (err) {
-      console.error("コード作成エラー:", err);
+      console.error(t.qualitative.k_t2xyvh, err);
     }
   }, [newCodeName, newCodeColor, projectId, loadCodeTree]);
 
@@ -132,7 +135,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
           return next;
         });
       } catch (err) {
-        console.error("コード割り当てエラー:", err);
+        console.error(t.qualitative.k_2ph86u, err);
       }
     },
     []
@@ -151,7 +154,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
           return next;
         });
       } catch (err) {
-        console.error("コード割り当て解除エラー:", err);
+        console.error(t.qualitative.k_fmx0x7, err);
       }
     },
     []
@@ -163,7 +166,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
         await invoke("update_code", { id, input: { name, color } });
         void loadCodeTree();
       } catch (err) {
-        console.error("コード更新エラー:", err);
+        console.error(t.qualitative.k_3my69n, err);
       }
     },
     [loadCodeTree]
@@ -175,7 +178,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
         await invoke("delete_code", { id });
         void loadCodeTree();
       } catch (err) {
-        console.error("コード削除エラー:", err);
+        console.error(t.qualitative.k_xeq3q1, err);
       }
     },
     [loadCodeTree]
@@ -190,7 +193,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
         });
         void loadCodeTree();
       } catch (err) {
-        console.error("コード移動エラー:", err);
+        console.error(t.qualitative.k_y8ung9, err);
       }
     },
     [loadCodeTree]
@@ -356,7 +359,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
           type="text"
           value={newCodeName}
           onChange={(e) => setNewCodeName(e.target.value)}
-          placeholder="新しいコード"
+          placeholder={t.qualitative.k_jbwvc3}
           className="flex-1 text-xs px-1 py-0.5"
           style={{
             backgroundColor: "var(--color-bg-primary)",
@@ -372,7 +375,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
         <button
           type="button"
           onClick={() => void handleCreateCode()}
-          title="コードを追加"
+          title={t.qualitative.k_7ymuaz}
           style={{
             backgroundColor: "var(--color-accent-primary)",
             color: "#fff",

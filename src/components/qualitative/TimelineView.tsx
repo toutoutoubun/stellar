@@ -8,6 +8,7 @@ import { swalConfirm } from "../../lib/swal";
 import type { TimelineEvent, CreateTimelineEventInput } from "../../types";
 import { HelpTooltip } from "./HelpTooltip";
 import { IconPlus, IconDelete, IconClose, IconFilter, IconApproximate, IconTimeline } from "./icons/QualIcons";
+import { useT, useI18nStore } from "../../stores/useI18nStore";
 
 interface TimelineViewProps {
   projectId: string;
@@ -15,6 +16,7 @@ interface TimelineViewProps {
 
 /** 日付をパースしてYYYY-MM-DD形式に正規化 */
 function parseDateInput(input: string): { date: string; dateType: string } {
+
   const trimmed = input.trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
     return { date: trimmed, dateType: "exact" };
@@ -34,16 +36,17 @@ function parseDateInput(input: string): { date: string; dateType: string } {
 
 const IMPORTANCE_COLORS = ["#94a3b8", "#60a5fa", "#f59e0b", "#ef4444", "#dc2626"];
 const EVENT_TYPES = [
-  { value: "political", label: "政治" },
-  { value: "economic", label: "経済" },
-  { value: "social", label: "社会" },
-  { value: "military", label: "軍事" },
-  { value: "cultural", label: "文化" },
-  { value: "diplomatic", label: "外交" },
-  { value: "other", label: "その他" },
+  { value: "political", label: useI18nStore.getState().t.qualitative.k_htgc },
+  { value: "economic", label: useI18nStore.getState().t.qualitative.k_lwzg },
+  { value: "social", label: useI18nStore.getState().t.qualitative.k_l21o },
+  { value: "military", label: useI18nStore.getState().t.qualitative.k_opy6 },
+  { value: "cultural", label: useI18nStore.getState().t.qualitative.k_hq3z },
+  { value: "diplomatic", label: useI18nStore.getState().t.qualitative.k_fl1q },
+  { value: "other", label: useI18nStore.getState().t.notes.k_7bosl },
 ];
 
 export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
+  const t = useT();
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [lanes, setLanes] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,7 +70,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
       setEvents(eventList);
       setLanes(laneList);
     } catch (err) {
-      console.error("タイムライン取得エラー:", err);
+      console.error(t.qualitative.k_cf40rh, err);
     } finally {
       setLoading(false);
     }
@@ -99,19 +102,19 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
       setShowForm(false);
       void loadEvents();
     } catch (err) {
-      console.error("イベント作成エラー:", err);
+      console.error(t.qualitative.k_hv8kd, err);
     }
   }, [title, description, dateInput, eventType, importance, lane, projectId, loadEvents]);
 
   const handleDelete = useCallback(
     async (id: string) => {
-      const ok = await swalConfirm("イベント削除", "このイベントを削除しますか？");
+      const ok = await swalConfirm(t.qualitative.k_fl25x8, t.qualitative.k_s63uzj);
       if (!ok) return;
       try {
         await invoke("delete_timeline_event", { id });
         void loadEvents();
       } catch (err) {
-        console.error("イベント削除エラー:", err);
+        console.error(t.qualitative.k_81kqt9, err);
       }
     },
     [loadEvents]
@@ -133,15 +136,15 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
     <div className="p-4 h-full overflow-y-auto">
       <HelpTooltip
         storageKey="qual_timeline"
-        title="タイムラインの使い方"
+        title={t.qualitative.k_4hz4rn}
         paragraphs={[
-          "歴史的イベントを時系列で管理します。日付は柔軟に入力でき、YYYY, YYYY-MM, YYYY-MM-DD, circa YYYY などの形式に対応しています。",
-          "レーンを使ってイベントをカテゴリ別に分類できます。",
+          t.qualitative.k_ozqu7r,
+          t.qualitative.k_kaa8vx,
         ]}
         steps={[
-          "イベント追加ボタンからイベントを登録します",
-          "日付、種別、重要度、レーンを設定してください",
-          "レーンフィルタで表示を絞り込めます",
+          t.qualitative.k_bi9eok,
+          t.qualitative.k_ck6sbu,
+          t.qualitative.k_9s00cq,
         ]}
       />
 
@@ -219,7 +222,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
                 type="text"
                 value={dateInput}
                 onChange={(e) => setDateInput(e.target.value)}
-                placeholder="例: 1945, 1945-08, circa 1920"
+                placeholder={t.qualitative.k_3wgn3i}
                 className="w-full text-xs px-2 py-1.5"
                 style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "6px", outline: "none" }}
               />
@@ -266,7 +269,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
                 type="text"
                 value={lane}
                 onChange={(e) => setLane(e.target.value)}
-                placeholder="国内, 国際, ..."
+                placeholder={t.qualitative.k_g611b4}
                 className="w-full text-xs px-2 py-1.5"
                 style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "6px", outline: "none" }}
               />
@@ -364,7 +367,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
                           }}
                         >
                           <IconApproximate size={8} color="#f59e0b" />
-                          {event.dateType === "approximate" ? "推定" : event.dateType === "year" ? "年のみ" : "月まで"}
+                          {event.dateType === "approximate" ? t.qualitative.k_hgc2 : event.dateType === "year" ? t.qualitative.k_e2jwl : t.qualitative.k_fbsmp}
                         </span>
                       )}
                     </div>
@@ -382,7 +385,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
                     type="button"
                     onClick={() => void handleDelete(event.id)}
                     className="opacity-0 group-hover:opacity-100 shrink-0"
-                    title="削除"
+                    title={t.common.delete}
                     style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer", display: "flex", padding: "2px" }}
                   >
                     <IconDelete size={12} />

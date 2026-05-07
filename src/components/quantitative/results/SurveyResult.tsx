@@ -9,6 +9,7 @@ import type { Analysis, Variable, DataRow } from "../../../types";
 import { DivergingStackedBar } from "../charts";
 import { fmt } from "../charts/chartTheme";
 import { downloadSVG, downloadPNG } from "../../../lib/utils/exportChart";
+import { useI18nStore } from "../../../stores/useI18nStore";
 
 interface Props {
   analysis: Analysis;
@@ -44,6 +45,7 @@ const GridIcon = () => (
 
 const EmptyIcon = () => (
   <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.35 }}>
+
     <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
     <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
   </svg>
@@ -304,7 +306,7 @@ const CrossTabResult = memo<{
                 fontSize: "10px",
               }}
             >
-              {chiSquareResult.significant ? "有意" : "非有意"}
+              {chiSquareResult.significant ? useI18nStore.getState().t.quantResults.str_i23q : useI18nStore.getState().t.quantResults.str_mo7pg}
             </span>
             <span className="text-xs" style={{ color: "var(--color-text-secondary)" }}>
               X2({chiSquareResult.df}) = {fmt(chiSquareResult.chi2, 2)}, p = {chiSquareResult.pValue < 0.001 ? "< .001" : fmt(chiSquareResult.pValue, 3)}, V = {fmt(chiSquareResult.cramersV, 3)}
@@ -468,7 +470,7 @@ export const SurveyResult: React.FC<Props> = ({ analysis, variables, dataRows })
               <table className="w-full text-xs" style={{ borderCollapse: "collapse" }}>
                 <thead>
                   <tr>
-                    {["項目", "n", "平均", "SD", "肯定率"].map((h) => (
+                    {[useI18nStore.getState().t.quantResults.str_qidl, "n", useI18nStore.getState().t.quantResults.str_gjlg, "SD", useI18nStore.getState().t.quantResults.str_jardo].map((h) => (
                       <th
                         key={h}
                         className="py-1.5 px-2 text-left font-medium"

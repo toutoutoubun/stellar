@@ -24,28 +24,29 @@ import {
   IconArrowBoth,
   IconActorMap,
 } from "./icons/QualIcons";
+import { useT, useI18nStore } from "../../stores/useI18nStore";
 
 interface ActorMapViewProps {
   projectId: string;
 }
 
 const ACTOR_TYPES = [
-  { value: "state", label: "国家" },
-  { value: "organization", label: "組織" },
-  { value: "individual", label: "個人" },
-  { value: "group", label: "集団" },
-  { value: "institution", label: "制度" },
-  { value: "other", label: "その他" },
+  { value: "state", label: useI18nStore.getState().t.qualitative.k_fas9 },
+  { value: "organization", label: useI18nStore.getState().t.qualitative.k_m00g },
+  { value: "individual", label: useI18nStore.getState().t.qualitative.k_e1ov },
+  { value: "group", label: useI18nStore.getState().t.qualitative.k_q4f1 },
+  { value: "institution", label: useI18nStore.getState().t.qualitative.k_ei40 },
+  { value: "other", label: useI18nStore.getState().t.notes.k_7bosl },
 ];
 
 const RELATION_TYPES = [
-  { value: "alliance", label: "同盟" },
-  { value: "conflict", label: "対立" },
-  { value: "cooperation", label: "協力" },
-  { value: "dependency", label: "依存" },
-  { value: "influence", label: "影響" },
-  { value: "negotiation", label: "交渉" },
-  { value: "other", label: "その他" },
+  { value: "alliance", label: useI18nStore.getState().t.qualitative.k_ey4z },
+  { value: "conflict", label: useI18nStore.getState().t.qualitative.k_gbkd },
+  { value: "cooperation", label: useI18nStore.getState().t.qualitative.k_emkn },
+  { value: "dependency", label: useI18nStore.getState().t.qualitative.k_e1jv },
+  { value: "influence", label: useI18nStore.getState().t.qualitative.k_h2ge },
+  { value: "negotiation", label: useI18nStore.getState().t.qualitative.k_dzad },
+  { value: "other", label: useI18nStore.getState().t.notes.k_7bosl },
 ];
 
 const RELATION_COLORS: Record<string, string> = {
@@ -59,6 +60,7 @@ const RELATION_COLORS: Record<string, string> = {
 };
 
 export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
+  const t = useT();
   const [actors, setActors] = useState<Actor[]>([]);
   const [relations, setRelations] = useState<ActorRelation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,7 +88,7 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
       setActors(data.actors);
       setRelations(data.relations);
     } catch (err) {
-      console.error("アクターマップ取得エラー:", err);
+      console.error(t.qualitative.k_2ssr3c, err);
     } finally {
       setLoading(false);
     }
@@ -113,19 +115,19 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
       setShowActorForm(false);
       void loadData();
     } catch (err) {
-      console.error("アクター作成エラー:", err);
+      console.error(t.qualitative.k_toxtwd, err);
     }
   }, [actorName, actorType, actorPosition, actorInfluence, actorDescription, projectId, loadData]);
 
   const handleDeleteActor = useCallback(
     async (id: string) => {
-      const ok = await swalConfirm("アクター削除", "このアクターを削除しますか？");
+      const ok = await swalConfirm(t.qualitative.k_h74we4, t.qualitative.k_sqto2n);
       if (!ok) return;
       try {
         await invoke("delete_actor", { id });
         void loadData();
       } catch (err) {
-        console.error("アクター削除エラー:", err);
+        console.error(t.qualitative.k_l5huir, err);
       }
     },
     [loadData]
@@ -147,7 +149,7 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
       setShowRelationForm(false);
       void loadData();
     } catch (err) {
-      console.error("関係作成エラー:", err);
+      console.error(t.qualitative.k_be3j59, err);
     }
   }, [relFrom, relTo, relType, relDescription, loadData]);
 
@@ -157,7 +159,7 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
         await invoke("delete_actor_relation", { id });
         void loadData();
       } catch (err) {
-        console.error("関係削除エラー:", err);
+        console.error(t.qualitative.k_jxjiiv, err);
       }
     },
     [loadData]
@@ -223,7 +225,7 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
           <button
             type="button"
             onClick={() => setActorPanelCollapsed(!actorPanelCollapsed)}
-            title={actorPanelCollapsed ? "展開" : "折りたたむ"}
+            title={actorPanelCollapsed ? t.qualitative.k_gixi : t.qualitative.k_yczceq}
             style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-tertiary)", padding: "4px", display: "flex" }}
           >
             <IconPanelLeft size={13} />
@@ -238,7 +240,7 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
                   type="text"
                   value={actorName}
                   onChange={(e) => setActorName(e.target.value)}
-                  placeholder="アクター名"
+                  placeholder={t.qualitative.k_gldv4t}
                   className="w-full text-xs px-2 py-1 mb-1"
                   style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "4px", outline: "none" }}
                   onKeyDown={(e) => { if (e.key === "Enter") void handleCreateActor(); }}
@@ -259,14 +261,14 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
                 <textarea
                   value={actorDescription}
                   onChange={(e) => setActorDescription(e.target.value)}
-                  placeholder="説明（任意）"
+                  placeholder={t.qualitative.k_knmvip}
                   rows={2}
                   className="w-full text-xs px-2 py-1 mb-1"
                   style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "4px", outline: "none", resize: "vertical" }}
                 />
                 <div className="flex gap-1">
                   <button type="button" onClick={() => void handleCreateActor()} className="flex-1 text-xs py-1" style={{ backgroundColor: "var(--color-accent-primary)", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>追加</button>
-                  <button type="button" onClick={() => setShowActorForm(false)} title="キャンセル" style={{ background: "transparent", color: "var(--color-text-tertiary)", border: "1px solid var(--color-border-secondary)", borderRadius: "4px", cursor: "pointer", display: "flex", alignItems: "center", padding: "4px 8px" }}>
+                  <button type="button" onClick={() => setShowActorForm(false)} title={t.common.cancel} style={{ background: "transparent", color: "var(--color-text-tertiary)", border: "1px solid var(--color-border-secondary)", borderRadius: "4px", cursor: "pointer", display: "flex", alignItems: "center", padding: "4px 8px" }}>
                     <IconClose size={10} />
                   </button>
                 </div>
@@ -295,7 +297,7 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
                       type="button"
                       onClick={() => void handleDeleteActor(actor.id)}
                       className="opacity-0 group-hover:opacity-100"
-                      title="削除"
+                      title={t.common.delete}
                       style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer", display: "flex", padding: "2px" }}
                     >
                       <IconDelete size={11} />
@@ -342,15 +344,15 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
         <div className="flex-1 overflow-y-auto p-3">
           <HelpTooltip
             storageKey="qual_actor_map"
-            title="アクターマップの使い方"
+            title={t.qualitative.k_cfq70y}
             paragraphs={[
-              "政治・歴史分析におけるアクター（行為者）とその関係性を管理します。",
-              "左パネルでアクターを追加し、右パネルで関係性を定義してください。",
+              t.qualitative.k_q1y7l5,
+              t.qualitative.k_l0laf9,
             ]}
             steps={[
-              "アクター名、種別、影響力を設定して追加します",
-              "2つ以上のアクターがあれば関係性を追加できます",
-              "同盟/対立/協力/依存/影響/交渉などの関係種別から選択します",
+              t.qualitative.k_daj0e,
+              t.qualitative.k_q66x06,
+              t.qualitative.k_ceo538,
             ]}
           />
 
@@ -375,7 +377,7 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
               <select value={relType} onChange={(e) => setRelType(e.target.value)} className="w-full text-xs px-2 py-1 mb-2" style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "4px" }}>
                 {RELATION_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
-              <input type="text" value={relDescription} onChange={(e) => setRelDescription(e.target.value)} placeholder="説明（任意）" className="w-full text-xs px-2 py-1 mb-2" style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "4px", outline: "none" }} />
+              <input type="text" value={relDescription} onChange={(e) => setRelDescription(e.target.value)} placeholder={t.qualitative.k_knmvip} className="w-full text-xs px-2 py-1 mb-2" style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "4px", outline: "none" }} />
               <div className="flex gap-1">
                 <button type="button" onClick={() => void handleCreateRelation()} className="text-xs px-3 py-1" style={{ backgroundColor: "var(--color-accent-primary)", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer" }}>追加</button>
                 <button type="button" onClick={() => setShowRelationForm(false)} className="text-xs px-2 py-1 inline-flex items-center gap-1" style={{ background: "transparent", color: "var(--color-text-tertiary)", border: "1px solid var(--color-border-secondary)", borderRadius: "4px", cursor: "pointer" }}>
@@ -388,7 +390,7 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
 
           {relations.length === 0 ? (
             <div className="text-center py-12 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-              関係性なし。{actors.length < 2 ? "2つ以上のアクターを追加してください。" : "上のボタンで追加してください。"}
+              関係性なし。{actors.length < 2 ? t.qualitative.k_gfmofz : t.qualitative.k_ajt591}
             </div>
           ) : (
             <div className="flex flex-col gap-2">
@@ -431,7 +433,7 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
                       type="button"
                       onClick={() => void handleDeleteRelation(rel.id)}
                       className="opacity-0 group-hover:opacity-100 shrink-0"
-                      title="削除"
+                      title={t.common.delete}
                       style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer", display: "flex", padding: "2px" }}
                     >
                       <IconDelete size={11} />

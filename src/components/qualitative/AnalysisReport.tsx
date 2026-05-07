@@ -8,6 +8,7 @@ import { HelpTooltip } from "./HelpTooltip";
 import { IconReport, IconCopy } from "./icons/QualIcons";
 import { useNoteStore } from "../../stores/useNoteStore";
 import { toast } from "../ui/Toast";
+import { useT } from "../../stores/useI18nStore";
 
 interface AnalysisReportProps {
   projectId: string;
@@ -30,6 +31,7 @@ interface ReportSections {
 export const AnalysisReport: React.FC<AnalysisReportProps> = ({
   projectId,
 }) => {
+  const t = useT();
   const [report, setReport] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [exportingNote, setExportingNote] = useState(false);
@@ -45,6 +47,7 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
   });
 
   const handleGenerate = useCallback(async () => {
+    const t = useT();
     setLoading(true);
     try {
       const sectionList = (Object.keys(sections) as (keyof ReportSections)[])
@@ -55,8 +58,8 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
       });
       setReport(result);
     } catch (err) {
-      console.error("レポート生成エラー:", err);
-      setReport(`エラー: ${typeof err === "string" ? err : "レポート生成に失敗しました"}`);
+      console.error(t.qualitative.k_8gkv65, err);
+      setReport(`エラー: ${typeof err === "string" ? err : t.qualitative.k_xbkqi6}`);
     } finally {
       setLoading(false);
     }
@@ -65,7 +68,7 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
   const handleCopy = useCallback(() => {
     if (report) {
       void navigator.clipboard.writeText(report);
-      toast.success("Markdownをクリップボードにコピーしました");
+      toast.success(t.qualitative.k_rexm4q);
     }
   }, [report]);
 
@@ -77,13 +80,13 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
       const selectedNames = (Object.keys(sections) as (keyof ReportSections)[])
         .filter((k) => sections[k])
         .map((k) => SECTION_LABELS_MAP[k] ?? k);
-      const title = `質的分析レポート（${selectedNames.slice(0, 3).join("・")}${selectedNames.length > 3 ? "…" : ""}）`;
-      const tags = ["#質的研究", "#分析レポート"];
+      const title = `質的分析レポート（${selectedNames.slice(0, 3).join(t.stats.k_9ob)}${selectedNames.length > 3 ? "…" : ""}）`;
+      const tags = [t.qualitative.k_it0yjj, t.qualitative.k_pbsye];
       const note = await createNote({ title, content: report, tags });
       toast.success(`ノート「${note.title}」を作成しました`);
     } catch (err) {
-      console.error("ノート出力エラー:", err);
-      toast.error("ノートの作成に失敗しました");
+      console.error(t.qualitative.k_pszidi, err);
+      toast.error(t.notes.createFailed);
     } finally {
       setExportingNote(false);
     }
@@ -108,13 +111,13 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
   };
 
   const SECTION_LABELS: { key: keyof ReportSections; label: string }[] = [
-    { key: "codebook", label: "コードブック" },
-    { key: "matrix", label: "コーディングマトリクス" },
-    { key: "timeline", label: "タイムライン" },
-    { key: "actors", label: "アクターマップ" },
-    { key: "process_tracing", label: "プロセストレーシング" },
-    { key: "comparative", label: "比較デザイン" },
-    { key: "framing", label: "フレーミング分析" },
+    { key: "codebook", label: t.qualitative.k_7z1tpa },
+    { key: "matrix", label: t.qualitative.k_5l342g },
+    { key: "timeline", label: t.qualitative.k_3mh737 },
+    { key: "actors", label: t.qualitative.k_yybalk },
+    { key: "process_tracing", label: t.qualitative.k_vz7qeo },
+    { key: "comparative", label: t.qualitative.k_2mss8j },
+    { key: "framing", label: t.qualitative.k_37exdr },
   ];
 
   const SECTION_LABELS_MAP: Record<string, string> = Object.fromEntries(
@@ -125,15 +128,15 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
     <div className="p-6 h-full overflow-y-auto">
       <HelpTooltip
         storageKey="qual_report"
-        title="分析レポートの使い方"
+        title={t.qualitative.k_q58qfh}
         paragraphs={[
-          "プロジェクトに蓄積された分析データからMarkdown形式のレポートを自動生成します。",
-          "含めるセクションを選択して生成ボタンを押してください。生成されたMarkdownはコピーして外部ツールで利用できます。",
+          t.qualitative.k_bjnjkr,
+          t.qualitative.k_t3hwr2,
         ]}
         steps={[
-          "レポートに含めるセクションをチェックボックスで選択します",
-          "生成ボタンを押すとバックエンドでレポートが作成されます",
-          "生成後、コピーボタンでMarkdownをクリップボードにコピーできます",
+          t.qualitative.k_pi9sj2,
+          t.qualitative.k_3zwdi0,
+          t.qualitative.k_izm5ys,
         ]}
       />
 
@@ -181,7 +184,7 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
               cursor: "pointer",
             }}
           >
-            {allSelected ? "全解除" : "全選択"}
+            {allSelected ? t.qualitative.k_clj61 : t.qualitative.k_cmd8u}
           </button>
         </div>
 
@@ -225,7 +228,7 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
         }}
       >
         <IconReport size={14} color="#fff" />
-        {loading ? "生成中..." : "レポートを生成"}
+        {loading ? t.qualitative.k_s41ylu : t.qualitative.k_7aumh2}
       </button>
 
       {/* レポート表示 */}
@@ -257,7 +260,7 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
                 </svg>
-                {exportingNote ? "作成中..." : "ノートに出力"}
+                {exportingNote ? t.qualitative.k_2zb0kr : t.qualitative.k_4t8ype}
               </button>
               <button
                 type="button"

@@ -18,6 +18,7 @@ import {
   chiSquareTest,
   linearRegression,
 } from "../../lib/stats";
+import { useT, useI18nStore } from "../../stores/useI18nStore";
 
 // ── 分析手法定義 ──
 type MethodKey =
@@ -40,8 +41,8 @@ interface MethodDef {
 const METHODS: MethodDef[] = [
   {
     key: "descriptive",
-    label: "記述統計",
-    description: "平均・中央値・標準偏差などの基本統計量を算出",
+    label: useI18nStore.getState().t.quantitative.k_i0q6xb,
+    description: useI18nStore.getState().t.quantitative.k_nzfrkt,
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <line x1="18" y1="20" x2="18" y2="10" />
@@ -53,8 +54,8 @@ const METHODS: MethodDef[] = [
   },
   {
     key: "t-test",
-    label: "t検定 / Mann-Whitney",
-    description: "2群間の平均値差を検定（パラメトリック/ノンパラメトリック）",
+    label: useI18nStore.getState().t.quantitative.k_11tcgk,
+    description: useI18nStore.getState().t.quantitative.k_g9yn6a,
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
@@ -64,8 +65,8 @@ const METHODS: MethodDef[] = [
   },
   {
     key: "correlation",
-    label: "相関 / カイ二乗",
-    description: "変数間の関連性を検定（Pearson/Spearman/カイ二乗）",
+    label: useI18nStore.getState().t.quantitative.k_d3lzp,
+    description: useI18nStore.getState().t.quantitative.k_s1cpsa,
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="7" cy="17" r="1.5" />
@@ -79,8 +80,8 @@ const METHODS: MethodDef[] = [
   },
   {
     key: "regression",
-    label: "回帰",
-    description: "変数間の因果関係をモデル化（単回帰・重回帰）",
+    label: useI18nStore.getState().t.quantitative.k_faj6,
+    description: useI18nStore.getState().t.quantitative.k_ar8whr,
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <line x1="2" y1="20" x2="22" y2="4" />
@@ -94,8 +95,8 @@ const METHODS: MethodDef[] = [
   },
   {
     key: "network",
-    label: "ネットワーク",
-    description: "共起関係やカテゴリの関係構造を可視化",
+    label: useI18nStore.getState().t.quantitative.k_3grzn4,
+    description: useI18nStore.getState().t.quantitative.k_jxpexd,
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="5" r="3" />
@@ -109,8 +110,8 @@ const METHODS: MethodDef[] = [
   },
   {
     key: "text",
-    label: "テキスト",
-    description: "テキストデータの頻度分析・共起ネットワーク",
+    label: useI18nStore.getState().t.quantitative.k_6ctu6u,
+    description: useI18nStore.getState().t.quantitative.k_3s44i,
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -123,8 +124,8 @@ const METHODS: MethodDef[] = [
   },
   {
     key: "survey",
-    label: "調査データ",
-    description: "リッカート尺度の集計・クロス集計・カイ二乗検定",
+    label: useI18nStore.getState().t.quantitative.k_cflff6,
+    description: useI18nStore.getState().t.quantitative.k_ole19n,
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
@@ -146,6 +147,7 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
   onClose,
   onComplete,
 }) => {
+  const t = useT();
   const variables = useQuantitativeStore((s) => s.variables);
   const dataRows = useQuantitativeStore((s) => s.dataRows);
   const selectedDataset = useQuantitativeStore((s) => s.selectedDataset);
@@ -186,12 +188,13 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
 
   // ── バリデーション警告 ──
   const warnings = useMemo(() => {
+    const t = useT();
     const w: string[] = [];
     if (!method) return w;
 
     if (method === "t-test") {
       if (!groupVarId) {
-        w.push("グループ変数を選択してください");
+        w.push(t.quantitative.k_n87r1m);
       } else {
         const gv = variables.find((v) => v.id === groupVarId);
         if (gv) {
@@ -204,34 +207,34 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
         }
       }
       if (selectedVarIds.length === 0) {
-        w.push("検定対象のスケール変数を少なくとも1つ選択してください");
+        w.push(t.quantitative.k_of65ep);
       }
     }
 
     if (method === "descriptive" && selectedVarIds.length === 0) {
-      w.push("分析対象の変数を少なくとも1つ選択してください");
+      w.push(t.quantitative.k_skg9n2);
     }
 
     if (method === "correlation") {
       if (selectedVarIds.length < 2) {
-        w.push("相関分析には少なくとも2つの変数が必要です");
+        w.push(t.quantitative.k_2p1du7);
       }
     }
 
     if (method === "regression") {
       if (!dependentVarId) {
-        w.push("従属変数を選択してください");
+        w.push(t.quantitative.k_rmakzv);
       }
       if (selectedVarIds.length === 0) {
-        w.push("独立変数を少なくとも1つ選択してください");
+        w.push(t.quantitative.k_j8zr04);
       }
       if (dependentVarId && selectedVarIds.includes(dependentVarId)) {
-        w.push("従属変数と独立変数に同じ変数を選択できません");
+        w.push(t.quantitative.k_do1ewq);
       }
     }
 
     if (method === "text" && selectedVarIds.length === 0) {
-      w.push("分析対象のテキスト変数を選択してください");
+      w.push(t.quantitative.k_s19ryv);
     }
 
     return w;
@@ -340,11 +343,11 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
       if (method === "t-test") {
         analysisType = useNonParametric ? "mann-whitney" : "t-test";
         const gv = variables.find((v) => v.id === groupVarId);
-        if (!gv) throw new Error("グループ変数が見つかりません");
+        if (!gv) throw new Error(t.quantitative.k_z376z3);
 
         const groupValues = dataRows.map((r) => r.values[gv.name]);
         const categories = [...new Set(groupValues.filter((v) => v != null))];
-        if (categories.length !== 2) throw new Error("グループ変数は2カテゴリである必要があります");
+        if (categories.length !== 2) throw new Error(t.quantitative.k_45sx7w);
 
         const results: unknown[] = [];
         for (const tv of selectedVariables) {
@@ -445,7 +448,7 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
       // ─── 回帰分析 ───
       if (method === "regression") {
         const depVar = variables.find((v) => v.id === dependentVarId);
-        if (!depVar) throw new Error("従属変数が見つかりません");
+        if (!depVar) throw new Error(t.quantitative.k_zah2ak);
 
         const indepVars = selectedVariables.filter(
           (v) => v.id !== dependentVarId,
@@ -517,7 +520,7 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
         analysisType = "survey";
       }
 
-      if (!result) throw new Error("分析結果が空です");
+      if (!result) throw new Error(t.quantitative.k_tnsgkq);
 
       // ─── 結果保存 ───
       const input: SaveAnalysisInput = {
@@ -541,7 +544,7 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
       toast.success(`分析「${analysisName}」を完了しました`);
       onComplete(saved.id);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "分析の実行に失敗しました";
+      const msg = err instanceof Error ? err.message : t.quantitative.k_rpdz75;
       toast.error(msg);
       console.error("Analysis execution failed:", err);
     } finally {
@@ -557,11 +560,11 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
   // ── 変数タイプバッジ ──
   const VarBadge: React.FC<{ v: Variable }> = ({ v }) => {
     const typeMap: Record<string, { label: string; color: string }> = {
-      scale: { label: "スケール", color: "var(--color-accent-primary)" },
-      nominal: { label: "名義", color: "var(--color-accent-warning)" },
-      ordinal: { label: "順序", color: "#a78bfa" },
-      text: { label: "テキスト", color: "#f472b6" },
-      date: { label: "日付", color: "var(--color-accent-info)" },
+      scale: { label: t.quantitative.k_6clnyf, color: "var(--color-accent-primary)" },
+      nominal: { label: t.quantitative.k_ezwc, color: "var(--color-accent-warning)" },
+      ordinal: { label: t.quantitative.k_qdl5, color: "#a78bfa" },
+      text: { label: t.quantitative.k_6ctu6u, color: "#f472b6" },
+      date: { label: t.quantitative.k_hrir, color: "var(--color-accent-info)" },
     };
     const info = typeMap[v.variableType] ?? { label: v.variableType, color: "gray" };
     return (
@@ -1016,7 +1019,7 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
             type="text"
             value={analysisName}
             onChange={(e) => setAnalysisName(e.target.value)}
-            placeholder={suggestedName || "分析の名前を入力"}
+            placeholder={suggestedName || t.quantitative.k_q21yxw}
             className="w-full px-3 py-2 text-xs"
             style={{
               backgroundColor: "var(--color-bg-primary)",
@@ -1299,7 +1302,7 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
               cursor: isRunning ? "not-allowed" : "pointer",
             }}
           >
-            {step === 1 ? "キャンセル" : "戻る"}
+            {step === 1 ? t.common.cancel : t.common.back}
           </button>
 
           {step < 3 ? (

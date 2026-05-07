@@ -18,6 +18,7 @@ import {
 } from "react";
 import type { ForceGraphMethods } from "react-force-graph-2d";
 import type { GraphNodeExtended, GraphLink } from "../../types";
+import { useT, useI18nStore } from "../../stores/useI18nStore";
 
 // ============================================================
 // ForceGraph2D の動的ロード
@@ -36,6 +37,7 @@ let _loadPromise: Promise<ForceGraph2DComponent> | null = null;
  * エラーを捕捉してフォールバック UI を表示する。
  */
 function loadForceGraph2D(): Promise<ForceGraph2DComponent> {
+
   if (_cachedForceGraph2D) return Promise.resolve(_cachedForceGraph2D);
   if (_loadError) return Promise.reject(_loadError);
   if (_loadPromise) return _loadPromise;
@@ -47,7 +49,7 @@ function loadForceGraph2D(): Promise<ForceGraph2DComponent> {
     })
     .catch((err) => {
       _loadError = err instanceof Error ? err : new Error(String(err));
-      console.error("[ForceGraph] react-force-graph-2d ロード失敗:", _loadError);
+      console.error(useI18nStore.getState().t.graph.k_wnpdzs, _loadError);
       throw _loadError;
     });
 
@@ -131,6 +133,7 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
   height,
   onGraphReady,
 }) => {
+  const t = useT();
   const graphRef = useRef<ForceGraphMethods<GraphNodeExtended, GraphLink>>(undefined);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const lastClickRef = useRef<{ nodeId: string; time: number } | null>(null);
@@ -214,7 +217,7 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
         (link as { distance: (v: number) => void }).distance(80);
       }
     } catch (e) {
-      console.error("[ForceGraph] d3Force 設定エラー:", e);
+      console.error(t.graph.k_i4xtrj, e);
     }
 
     // 初回レンダリング後にフィット表示
@@ -222,7 +225,7 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
       try {
         fg.zoomToFit(400, 60);
       } catch (e) {
-        console.error("[ForceGraph] zoomToFit エラー:", e);
+        console.error(t.graph.k_6u2gub, e);
       }
     }, 500);
   }, [nodes.length, ForceGraph2D]);

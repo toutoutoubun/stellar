@@ -23,6 +23,7 @@ import type {
   FrequencyTable,
   CorrelationResult,
 } from "./types";
+import { useI18nStore } from "../../stores/useI18nStore";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -219,7 +220,7 @@ export function computeDescriptive(
   );
   if (Number.isFinite(_skew) && Math.abs(_skew) > 1) {
     parts.push(
-      "分布が大きく歪んでいるため、中央値の使用を推奨します。",
+      useI18nStore.getState().t.stats.str_jitigq,
     );
   }
   if (Number.isFinite(_cv) && _cv > 30) {
@@ -288,10 +289,10 @@ export function computeFrequencyTable(
 
 /** Strength label for |r|. */
 function corrStrengthLabel(absR: number): string {
-  if (absR >= 0.7) return "強い";
-  if (absR >= 0.4) return "中程度の";
-  if (absR >= 0.2) return "弱い";
-  return "ほぼない";
+  if (absR >= 0.7) return useI18nStore.getState().t.stats.str_ggkt;
+  if (absR >= 0.4) return useI18nStore.getState().t.stats.str_adaop2;
+  if (absR >= 0.2) return useI18nStore.getState().t.stats.str_ggfn;
+  return useI18nStore.getState().t.stats.str_6bgvuj;
 }
 
 /**
@@ -334,14 +335,14 @@ export function buildCorrelationMatrix(
       const df = n - 2;
       const pVal = r(tDistributionPValue(tStat, df), 6);
 
-      const direction = rVal >= 0 ? "正" : "負";
+      const direction = rVal >= 0 ? useI18nStore.getState().t.stats.k_l7n : useI18nStore.getState().t.stats.k_rs0;
       const strength = corrStrengthLabel(Math.abs(rVal));
 
       const interp =
         `${nameA}と${nameB}の間に${strength}${direction}の相関（${method === "spearman" ? "Spearman" : "Pearson"} r=${rVal}, p=${pVal}）` +
         (pVal < 0.05
-          ? "が認められました。"
-          : "が見られましたが、統計的に有意ではありませんでした。");
+          ? useI18nStore.getState().t.stats.str_ac26qp
+          : useI18nStore.getState().t.stats.str_t33524);
 
       results.push({
         var1Id: nameA,

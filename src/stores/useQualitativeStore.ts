@@ -9,6 +9,7 @@ import type {
   QualCode,
   QualitativeTab,
 } from "../types";
+import { useI18nStore } from "./useI18nStore";
 
 interface QualitativeState {
   /** 全プロジェクト一覧 */
@@ -73,7 +74,7 @@ export const useQualitativeStore = create<QualitativeState>((set, get) => ({
       description: description ?? null,
     });
     if (!project || !project.id) {
-      throw new Error("プロジェクトの作成に失敗しました（空のレスポンス）");
+      throw new Error(useI18nStore.getState().t.stores.str_x02tnx);
     }
     set((s) => ({ projects: [project, ...s.projects] }));
     return project;
@@ -121,7 +122,7 @@ export const useQualitativeStore = create<QualitativeState>((set, get) => ({
       description: description ?? null,
     });
     if (!code || !code.id) {
-      throw new Error("コードの作成に失敗しました（空のレスポンス）");
+      throw new Error(useI18nStore.getState().t.stores.str_h0s8vl);
     }
     set((s) => ({ codes: [...s.codes, code] }));
     return code;

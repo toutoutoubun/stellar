@@ -10,12 +10,14 @@ import { ThemeToggleButton } from "./ThemeToggleButton";
 import { HelpButton } from "../ui/TutorialOverlay";
 import { StellarIcon } from "../ui/StellarIcon";
 import { getCurrentWindow } from "../../lib/tauriShim";
+import { useT } from "../../stores/useI18nStore";
 
 interface TitlebarProps {
   onOpenTutorial?: () => void;
 }
 
 export const Titlebar: React.FC<TitlebarProps> = ({ onOpenTutorial }) => {
+  const t = useT();
   const toggleSearchModal = useUIStore((s) => s.toggleSearchModal);
 
   // getCurrentWindow() は tauriShim 経由で安全に呼び出す
@@ -137,7 +139,7 @@ export const Titlebar: React.FC<TitlebarProps> = ({ onOpenTutorial }) => {
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = "transparent";
           }}
-          title="最小化"
+          title={t.layout.str_fj8br}
         >
           <svg width="12" height="12" viewBox="0 0 12 12">
             <rect
@@ -166,7 +168,7 @@ export const Titlebar: React.FC<TitlebarProps> = ({ onOpenTutorial }) => {
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = "transparent";
           }}
-          title="最大化"
+          title={t.layout.str_fiqj3}
         >
           <svg width="12" height="12" viewBox="0 0 12 12">
             <rect
@@ -199,7 +201,7 @@ export const Titlebar: React.FC<TitlebarProps> = ({ onOpenTutorial }) => {
             e.currentTarget.style.backgroundColor = "transparent";
             e.currentTarget.style.color = "var(--color-text-secondary)";
           }}
-          title="閉じる"
+          title={t.common.close}
         >
           <svg width="12" height="12" viewBox="0 0 12 12">
             <line

@@ -5,8 +5,10 @@
 
 import type React from "react";
 import { useUIStore } from "../../stores/useUIStore";
+import { useT } from "../../stores/useI18nStore";
 
 export const ContextPanel: React.FC = () => {
+  const t = useT();
   const contextPanelOpen = useUIStore((s) => s.contextPanelOpen);
   const toggleContextPanel = useUIStore((s) => s.toggleContextPanel);
 
@@ -52,7 +54,7 @@ export const ContextPanel: React.FC = () => {
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = "transparent";
           }}
-          title="パネルを閉じる"
+          title={t.layout.str_tq8rjt}
         >
           <svg
             width="14"

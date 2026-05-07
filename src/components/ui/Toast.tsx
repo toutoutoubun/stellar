@@ -6,6 +6,7 @@
 import type React from "react";
 import { useState, useEffect, useCallback } from "react";
 import { clsx } from "clsx";
+import { useT } from "../../stores/useI18nStore";
 
 /** トーストの種別 */
 type ToastType = "success" | "error" | "info" | "warning";
@@ -75,6 +76,7 @@ let listeners: ToastListener[] = [];
 let counter = 0;
 
 const emitChange = () => {
+
   listeners.forEach((listener) => listener([...toasts]));
 };
 
@@ -118,6 +120,7 @@ export const toast = {
 // ============================================================
 
 export const ToastContainer: React.FC = () => {
+  const t = useT();
   const [items, setItems] = useState<ToastItem[]>([]);
 
   useEffect(() => {
@@ -184,7 +187,7 @@ export const ToastContainer: React.FC = () => {
               onMouseLeave={(e) => {
                 e.currentTarget.style.color = "var(--color-text-tertiary)";
               }}
-              aria-label="閉じる"
+              aria-label={t.common.close}
             >
               <svg
                 width="14"

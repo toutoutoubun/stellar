@@ -1,3 +1,4 @@
+import { useI18nStore } from "../stores/useI18nStore";
 // src/lib/tauriShim.ts
 // Stellar — Tauri 環境検出 + 安全な invoke / listen / convertFileSrc
 // Tauri ランタイムが存在しない環境（ブラウザプレビュー等）では
@@ -84,7 +85,7 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     const input = (args?.input ?? args ?? {}) as any;
     const project = {
       id: mockId(),
-      name: input.name ?? "新規プロジェクト",
+      name: input.name ?? useI18nStore.getState().t.utils.str_9w7zjx,
       description: input.description ?? null,
       methodType: input.methodType ?? "thematic",
       createdAt: now(),
@@ -111,7 +112,7 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     const input = (args?.input ?? args ?? {}) as any;
     const paper = {
       id: mockId(),
-      title: input.title ?? "無題の論文",
+      title: input.title ?? useI18nStore.getState().t.utils.str_zgkhcc,
       authors: input.authors ?? [],
       year: input.year ?? null,
       journal: input.journal ?? null,
@@ -154,7 +155,7 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     const a = (args ?? {}) as any;
     const ds = {
       id: mockId(),
-      name: a.name ?? "新規データセット",
+      name: a.name ?? useI18nStore.getState().t.quantitative.k_2jvud1,
       description: a.description ?? null,
       sourceType: a.sourceType ?? "manual",
       rowCount: 0,
@@ -169,7 +170,7 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     const a = (args ?? {}) as any;
     const ds = {
       id: mockId(),
-      name: a.name ?? "コード集計データ",
+      name: a.name ?? useI18nStore.getState().t.utils.str_7nzz94,
       description: null,
       sourceType: "codes" as const,
       rowCount: 0,
@@ -182,7 +183,7 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
   if (cmd === "create_dataset_from_highlights") {
     const ds = {
       id: mockId(),
-      name: "ハイライト抽出データ",
+      name: useI18nStore.getState().t.utils.str_gs5oob,
       description: null,
       sourceType: "highlights" as const,
       rowCount: 0,
@@ -227,7 +228,7 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     const analysis = {
       id: mockId(),
       datasetId: input.datasetId ?? "",
-      name: input.name ?? "新規分析",
+      name: input.name ?? useI18nStore.getState().t.utils.str_de9xm1,
       analysisType: input.analysisType ?? "descriptive",
       config: input.config ?? {},
       result: input.result ?? null,
@@ -257,7 +258,7 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
       id: mockId(),
       projectId: a.projectId ?? "",
       parentId: a.parentId ?? null,
-      label: a.label ?? "新規コード",
+      label: a.label ?? useI18nStore.getState().t.utils.str_b194an,
       color: a.color ?? "#6366f1",
       description: a.description ?? null,
       sortOrder: mockStore.codes.length,

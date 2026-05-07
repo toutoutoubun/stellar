@@ -13,6 +13,7 @@ import type {
   SaveAnalysisInput,
   DataStudioTab,
 } from "../types";
+import { useI18nStore } from "./useI18nStore";
 
 // ============================================================
 // ストア型定義
@@ -92,7 +93,7 @@ export const useQuantitativeStore = create<QuantitativeState>((set, get) => ({
       const datasets = await invoke<Dataset[]>("get_datasets");
       set({ datasets });
     } catch (e) {
-      const msg = typeof e === "string" ? e : "データセットの読み込みに失敗しました";
+      const msg = typeof e === "string" ? e : useI18nStore.getState().t.stores.str_aaisnh;
       set({ error: msg });
       console.error("Failed to load datasets:", e);
     } finally {
@@ -129,7 +130,7 @@ export const useQuantitativeStore = create<QuantitativeState>((set, get) => ({
       set({ variables, dataRows, analyses });
     } catch (e) {
       const msg =
-        typeof e === "string" ? e : "データの読み込みに失敗しました";
+        typeof e === "string" ? e : useI18nStore.getState().t.stores.str_5us4d5;
       set({ error: msg });
       console.error("Failed to load dataset data:", e);
     } finally {
@@ -174,7 +175,7 @@ export const useQuantitativeStore = create<QuantitativeState>((set, get) => ({
       });
     } catch (e) {
       const msg =
-        typeof e === "string" ? e : "CSVのインポートに失敗しました";
+        typeof e === "string" ? e : useI18nStore.getState().t.stores.CSV;
       set({ error: msg });
       console.error("Failed to import CSV:", e);
       throw e;
@@ -193,7 +194,7 @@ export const useQuantitativeStore = create<QuantitativeState>((set, get) => ({
         sourceType: "manual",
       });
       if (!dataset || !dataset.id) {
-        throw new Error("データセットの作成に失敗しました（空のレスポンス）");
+        throw new Error(useI18nStore.getState().t.stores.str_v3w5t1);
       }
       // 楽観的更新
       set((s) => ({
@@ -205,7 +206,7 @@ export const useQuantitativeStore = create<QuantitativeState>((set, get) => ({
       return dataset;
     } catch (e) {
       const msg =
-        typeof e === "string" ? e : "データセットの作成に失敗しました";
+        typeof e === "string" ? e : useI18nStore.getState().t.stores.str_x5gx9o;
       set({ error: msg });
       console.error("Failed to create dataset:", e);
       throw e;
@@ -223,7 +224,7 @@ export const useQuantitativeStore = create<QuantitativeState>((set, get) => ({
         name,
       });
       if (!dataset || !dataset.id) {
-        throw new Error("コードからのデータセット生成に失敗しました（空のレスポンス）");
+        throw new Error(useI18nStore.getState().t.stores.str_6cia2i);
       }
       set((s) => ({
         datasets: [dataset, ...s.datasets],
@@ -236,7 +237,7 @@ export const useQuantitativeStore = create<QuantitativeState>((set, get) => ({
       const msg =
         typeof e === "string"
           ? e
-          : "コードからのデータセット生成に失敗しました";
+          : useI18nStore.getState().t.stores.str_aohbxz;
       set({ error: msg });
       console.error("Failed to create dataset from codes:", e);
       throw e;
@@ -256,7 +257,7 @@ export const useQuantitativeStore = create<QuantitativeState>((set, get) => ({
         },
       );
       if (!dataset || !dataset.id) {
-        throw new Error("ハイライトからのデータセット生成に失敗しました（空のレスポンス）");
+        throw new Error(useI18nStore.getState().t.stores.str_8kycem);
       }
       set((s) => ({
         datasets: [dataset, ...s.datasets],
@@ -268,7 +269,7 @@ export const useQuantitativeStore = create<QuantitativeState>((set, get) => ({
       const msg =
         typeof e === "string"
           ? e
-          : "ハイライトからのデータセット生成に失敗しました";
+          : useI18nStore.getState().t.stores.str_qn4ygv;
       set({ error: msg });
       console.error("Failed to create dataset from highlights:", e);
       throw e;
@@ -295,7 +296,7 @@ export const useQuantitativeStore = create<QuantitativeState>((set, get) => ({
       // 失敗時はロールバック
       set({ variables: prevVariables });
       const msg =
-        typeof e === "string" ? e : "変数の更新に失敗しました";
+        typeof e === "string" ? e : useI18nStore.getState().t.stores.str_8mhtrx;
       set({ error: msg });
       console.error("Failed to update variable:", e);
       throw e;
@@ -320,7 +321,7 @@ export const useQuantitativeStore = create<QuantitativeState>((set, get) => ({
       });
     } catch (e) {
       const msg =
-        typeof e === "string" ? e : "データの読み込みに失敗しました";
+        typeof e === "string" ? e : useI18nStore.getState().t.stores.str_5us4d5;
       set({ error: msg });
       console.error("Failed to load data rows:", e);
     } finally {
@@ -334,7 +335,7 @@ export const useQuantitativeStore = create<QuantitativeState>((set, get) => ({
     try {
       const analysis = await invoke<Analysis>("save_analysis", { input });
       if (!analysis || !analysis.id) {
-        throw new Error("分析の保存に失敗しました（空のレスポンス）");
+        throw new Error(useI18nStore.getState().t.stores.str_s3r04y);
       }
       set((s) => ({
         analyses: [analysis, ...s.analyses],
@@ -342,7 +343,7 @@ export const useQuantitativeStore = create<QuantitativeState>((set, get) => ({
       return analysis;
     } catch (e) {
       const msg =
-        typeof e === "string" ? e : "分析の保存に失敗しました";
+        typeof e === "string" ? e : useI18nStore.getState().t.stores.str_siz2rj;
       set({ error: msg });
       console.error("Failed to save analysis:", e);
       throw e;
@@ -361,7 +362,7 @@ export const useQuantitativeStore = create<QuantitativeState>((set, get) => ({
       set({ analyses });
     } catch (e) {
       const msg =
-        typeof e === "string" ? e : "分析の読み込みに失敗しました";
+        typeof e === "string" ? e : useI18nStore.getState().t.stores.str_l917vd;
       set({ error: msg });
       console.error("Failed to load analyses:", e);
     } finally {
@@ -389,7 +390,7 @@ export const useQuantitativeStore = create<QuantitativeState>((set, get) => ({
       // 失敗時はロールバック
       set({ datasets: prevDatasets });
       const msg =
-        typeof e === "string" ? e : "データセットの削除に失敗しました";
+        typeof e === "string" ? e : useI18nStore.getState().t.stores.str_iv5qaa;
       set({ error: msg });
       console.error("Failed to delete dataset:", e);
       throw e;

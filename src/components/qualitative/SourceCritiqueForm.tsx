@@ -8,6 +8,7 @@ import { swalConfirm } from "../../lib/swal";
 import type { SourceCritique, SourceCritiqueInput, Paper } from "../../types";
 import { HelpTooltip } from "./HelpTooltip";
 import { IconDelete, IconPanelLeft, IconScroll } from "./icons/QualIcons";
+import { useT } from "../../stores/useI18nStore";
 
 interface SourceCritiqueFormProps {
   projectId: string;
@@ -16,6 +17,7 @@ interface SourceCritiqueFormProps {
 export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
   projectId,
 }) => {
+  const t = useT();
   const [critiques, setCritiques] = useState<SourceCritique[]>([]);
   const [papers, setPapers] = useState<Paper[]>([]);
   const [selectedPaperId, setSelectedPaperId] = useState<string | null>(null);
@@ -44,6 +46,7 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
 
   useEffect(() => {
     const load = async () => {
+      const t = useT();
       setLoading(true);
       try {
         const [paperResult, critiqueList] = await Promise.all([
@@ -55,7 +58,7 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
         setPapers(paperList);
         setCritiques(critiqueList);
       } catch (err) {
-        console.error("データ取得エラー:", err);
+        console.error(t.qualitative.k_ro7ypi, err);
       } finally {
         setLoading(false);
       }
@@ -106,7 +109,7 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
           });
         }
       } catch (err) {
-        console.error("史料批判取得エラー:", err);
+        console.error(t.qualitative.k_hhw8qa, err);
       }
     },
     []
@@ -125,7 +128,7 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
       );
       setCritiques(updated);
     } catch (err) {
-      console.error("史料批判保存エラー:", err);
+      console.error(t.qualitative.k_gl6mks, err);
     } finally {
       setSaving(false);
     }
@@ -133,7 +136,7 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
 
   const handleDelete = useCallback(
     async (id: string) => {
-      const ok = await swalConfirm("史料批判の削除", "この史料批判を削除しますか？");
+      const ok = await swalConfirm(t.qualitative.k_t3c3je, t.qualitative.k_d2dlnr);
       if (!ok) return;
       try {
         await invoke("delete_source_critique", { id });
@@ -142,7 +145,7 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
           setSelectedPaperId(null);
         }
       } catch (err) {
-        console.error("史料批判削除エラー:", err);
+        console.error(t.qualitative.k_qrch2t, err);
       }
     },
     [critiques, selectedPaperId]
@@ -187,7 +190,7 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
           <button
             type="button"
             onClick={() => setListCollapsed(!listCollapsed)}
-            title={listCollapsed ? "展開" : "折りたたむ"}
+            title={listCollapsed ? t.qualitative.k_gixi : t.qualitative.k_yczceq}
             style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-tertiary)", padding: "4px", display: "flex" }}
           >
             <IconPanelLeft size={13} />
@@ -263,7 +266,7 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
                       type="button"
                       onClick={() => void handleDelete(c.id)}
                       className="opacity-0 group-hover:opacity-100"
-                      title="削除"
+                      title={t.common.delete}
                       style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer", display: "flex", padding: "2px" }}
                     >
                       <IconDelete size={11} />
@@ -280,15 +283,15 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
       <div className="flex-1 overflow-y-auto p-6" style={{ maxWidth: "700px" }}>
         <HelpTooltip
           storageKey="qual_source_critique"
-          title="史料批判シートの使い方"
+          title={t.qualitative.k_gi9vkn}
           paragraphs={[
-            "歴史研究における史料の信頼性を体系的に評価するためのフォームです。",
-            "一次史料・二次史料の真正性、バイアス、整合性などを記録できます。",
+            t.qualitative.k_x1ainh,
+            t.qualitative.k_2w45w2,
           ]}
           steps={[
-            "左の一覧から論文を選択してください",
-            "フォームに史料情報を入力します",
-            "信頼度スコアを設定し、保存ボタンを押します",
+            t.qualitative.k_xhv9sn,
+            t.qualitative.k_rin3zk,
+            t.qualitative.k_gdavtt,
           ]}
         />
 
@@ -299,10 +302,10 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
             </h3>
 
             <div className="flex flex-col gap-4">
-              <FormField label="著者情報" value={form.authorInfo ?? ""} onChange={(v) => updateField("authorInfo", v)} />
+              <FormField label={t.qualitative.k_h84k62} value={form.authorInfo ?? ""} onChange={(v) => updateField("authorInfo", v)} />
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <FormField label="作成年代" value={form.creationDate ?? ""} onChange={(v) => updateField("creationDate", v)} />
+                  <FormField label={t.qualitative.k_af5ueb} value={form.creationDate ?? ""} onChange={(v) => updateField("creationDate", v)} />
                 </div>
                 <label className="flex items-center gap-1 text-xs self-end pb-1" style={{ color: "var(--color-text-secondary)" }}>
                   <input
@@ -313,23 +316,23 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
                   推定日付
                 </label>
               </div>
-              <FormField label="作成場所" value={form.location ?? ""} onChange={(v) => updateField("location", v)} />
-              <FormField label="史料種別" value={form.sourceType ?? ""} onChange={(v) => updateField("sourceType", v)} placeholder="一次/二次/公文書/私文書..." />
-              <FormField label="真正性" value={form.authenticity ?? ""} onChange={(v) => updateField("authenticity", v)} multiline />
-              <FormField label="所蔵・アーカイブ情報" value={form.archiveInfo ?? ""} onChange={(v) => updateField("archiveInfo", v)} />
-              <FormField label="作成意図" value={form.intent ?? ""} onChange={(v) => updateField("intent", v)} multiline />
-              <FormField label="想定読者" value={form.audience ?? ""} onChange={(v) => updateField("audience", v)} />
+              <FormField label={t.qualitative.k_af4vy8} value={form.location ?? ""} onChange={(v) => updateField("location", v)} />
+              <FormField label={t.qualitative.k_b0muhq} value={form.sourceType ?? ""} onChange={(v) => updateField("sourceType", v)} placeholder={t.qualitative.k_frszp6} />
+              <FormField label={t.qualitative.k_hywzn} value={form.authenticity ?? ""} onChange={(v) => updateField("authenticity", v)} multiline />
+              <FormField label={t.qualitative.k_z0avyv} value={form.archiveInfo ?? ""} onChange={(v) => updateField("archiveInfo", v)} />
+              <FormField label={t.qualitative.k_af6by0} value={form.intent ?? ""} onChange={(v) => updateField("intent", v)} multiline />
+              <FormField label={t.qualitative.k_cmaudb} value={form.audience ?? ""} onChange={(v) => updateField("audience", v)} />
 
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <FormField label="バイアスレベル" value={form.biasLevel ?? ""} onChange={(v) => updateField("biasLevel", v)} placeholder="低/中/高" />
+                  <FormField label={t.qualitative.k_5v6jn1} value={form.biasLevel ?? ""} onChange={(v) => updateField("biasLevel", v)} placeholder={t.qualitative.k_qapyk5} />
                 </div>
                 <div className="flex-1">
-                  <FormField label="バイアス理由" value={form.biasReason ?? ""} onChange={(v) => updateField("biasReason", v)} />
+                  <FormField label={t.qualitative.k_4ehmxi} value={form.biasReason ?? ""} onChange={(v) => updateField("biasReason", v)} />
                 </div>
               </div>
 
-              <FormField label="他史料との整合性" value={form.consistency ?? ""} onChange={(v) => updateField("consistency", v)} multiline />
+              <FormField label={t.qualitative.k_ft5e40} value={form.consistency ?? ""} onChange={(v) => updateField("consistency", v)} multiline />
 
               <div>
                 <label className="text-xs mb-1 block" style={{ color: "var(--color-text-tertiary)" }}>
@@ -345,7 +348,7 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
                 />
               </div>
 
-              <FormField label="研究者メモ" value={form.researcherNotes ?? ""} onChange={(v) => updateField("researcherNotes", v)} multiline />
+              <FormField label={t.qualitative.k_bqngho} value={form.researcherNotes ?? ""} onChange={(v) => updateField("researcherNotes", v)} multiline />
 
               <button
                 type="button"
@@ -362,7 +365,7 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
                   alignSelf: "flex-start",
                 }}
               >
-                {saving ? "保存中..." : "保存"}
+                {saving ? t.qualitative.k_vts3p8 : t.settings.shortcuts.items.save}
               </button>
             </div>
           </>

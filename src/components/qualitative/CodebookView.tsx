@@ -9,12 +9,14 @@ import type { CodeNode, HighlightWithContext } from "../../types";
 import { CodeTreeNode } from "./CodeTreeNode";
 import { HelpTooltip } from "./HelpTooltip";
 import { IconPlus, IconComment, IconPanelLeft } from "./icons/QualIcons";
+import { useT } from "../../stores/useI18nStore";
 
 interface CodebookViewProps {
   projectId: string;
 }
 
 export const CodebookView: React.FC<CodebookViewProps> = ({ projectId }) => {
+  const t = useT();
   const [codeTree, setCodeTree] = useState<CodeNode[]>([]);
   const [selectedCodeId, setSelectedCodeId] = useState<string | null>(null);
   const [highlights, setHighlights] = useState<HighlightWithContext[]>([]);
@@ -28,7 +30,7 @@ export const CodebookView: React.FC<CodebookViewProps> = ({ projectId }) => {
       const tree = await invoke<CodeNode[]>("get_code_tree", { projectId });
       setCodeTree(tree);
     } catch (err) {
-      console.error("コードツリー取得エラー:", err);
+      console.error(t.qualitative.k_89eley, err);
     } finally {
       setLoading(false);
     }
@@ -41,7 +43,7 @@ export const CodebookView: React.FC<CodebookViewProps> = ({ projectId }) => {
       const result = await invoke<HighlightWithContext[]>("get_highlights_by_code", { codeId });
       setHighlights(result);
     } catch (err) {
-      console.error("ハイライト取得エラー:", err);
+      console.error(t.qualitative.k_cjt8o, err);
     }
   }, []);
 
@@ -55,21 +57,21 @@ export const CodebookView: React.FC<CodebookViewProps> = ({ projectId }) => {
       await invoke("create_code", { input: { projectId, name: newCodeName.trim(), color: newCodeColor } });
       setNewCodeName("");
       void loadCodeTree();
-    } catch (err) { console.error("コード作成エラー:", err); }
+    } catch (err) { console.error(t.qualitative.k_t2xyvh, err); }
   }, [newCodeName, newCodeColor, projectId, loadCodeTree]);
 
   const handleUpdateCode = useCallback(async (id: string, name: string, color: string) => {
-    try { await invoke("update_code", { id, input: { name, color } }); void loadCodeTree(); } catch (err) { console.error("コード更新エラー:", err); }
+    try { await invoke("update_code", { id, input: { name, color } }); void loadCodeTree(); } catch (err) { console.error(t.qualitative.k_3my69n, err); }
   }, [loadCodeTree]);
 
   const handleDeleteCode = useCallback(async (id: string) => {
-    const ok = await swalConfirm("コード削除", "このコードを削除しますか？");
+    const ok = await swalConfirm(t.qualitative.k_gahyli, t.qualitative.k_9bdo2p);
     if (!ok) return;
-    try { await invoke("delete_code", { id }); if (selectedCodeId === id) setSelectedCodeId(null); void loadCodeTree(); } catch (err) { console.error("コード削除エラー:", err); }
+    try { await invoke("delete_code", { id }); if (selectedCodeId === id) setSelectedCodeId(null); void loadCodeTree(); } catch (err) { console.error(t.qualitative.k_xeq3q1, err); }
   }, [selectedCodeId, loadCodeTree]);
 
   const handleDrop = useCallback(async (draggedId: string, newParentId: string | null) => {
-    try { await invoke("update_code", { id: draggedId, input: { parentId: newParentId } }); void loadCodeTree(); } catch (err) { console.error("コード移動エラー:", err); }
+    try { await invoke("update_code", { id: draggedId, input: { parentId: newParentId } }); void loadCodeTree(); } catch (err) { console.error(t.qualitative.k_y8ung9, err); }
   }, [loadCodeTree]);
 
   const handleRootDrop = useCallback((e: React.DragEvent) => {
@@ -95,7 +97,7 @@ export const CodebookView: React.FC<CodebookViewProps> = ({ projectId }) => {
               コードツリー <span style={{ fontWeight: 400 }}>({flattenTree(codeTree).length})</span>
             </span>
           )}
-          <button type="button" onClick={() => setTreeCollapsed(!treeCollapsed)} title={treeCollapsed ? "展開" : "折りたたむ"} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-tertiary)", padding: "4px", display: "flex" }}>
+          <button type="button" onClick={() => setTreeCollapsed(!treeCollapsed)} title={treeCollapsed ? t.qualitative.k_gixi : t.qualitative.k_yczceq} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-tertiary)", padding: "4px", display: "flex" }}>
             <IconPanelLeft size={13} />
           </button>
         </header>
@@ -106,7 +108,7 @@ export const CodebookView: React.FC<CodebookViewProps> = ({ projectId }) => {
             <div className="flex items-center gap-1 px-2 py-1.5 shrink-0" style={{ borderBottom: "1px solid var(--color-border-secondary)" }}>
               <input type="color" value={newCodeColor} onChange={(e) => setNewCodeColor(e.target.value)} style={{ width: "22px", height: "22px", border: "none", padding: 0, cursor: "pointer", borderRadius: "4px" }} />
               <input
-                type="text" value={newCodeName} onChange={(e) => setNewCodeName(e.target.value)} placeholder="新しいコード名"
+                type="text" value={newCodeName} onChange={(e) => setNewCodeName(e.target.value)} placeholder={t.qualitative.k_v0f07e}
                 className="flex-1 text-xs px-2 py-1"
                 style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "4px", outline: "none" }}
                 onKeyDown={(e) => { if (e.key === "Enter") void handleCreateCode(); }}
@@ -134,9 +136,9 @@ export const CodebookView: React.FC<CodebookViewProps> = ({ projectId }) => {
       <div className="flex-1 overflow-y-auto p-4">
         <HelpTooltip
           storageKey="qual_codebook"
-          title="コードブックの使い方"
-          paragraphs={["左のツリーでコードを階層的に管理できます。ドラッグ&ドロップで親子関係を変更可能です。"]}
-          steps={["カラーピッカーと名前を入力してコードを追加", "コードを選択すると、割り当て済みハイライトが右に表示されます", "PDFリーダーのコーディングタブでハイライトにコードを付与できます"]}
+          title={t.qualitative.k_yn8j6g}
+          paragraphs={[t.qualitative.k_xssqzv]}
+          steps={[t.qualitative.k_9dl84i, t.qualitative.k_4yb8q3, t.qualitative.k_f727j8]}
         />
         {selectedCodeId ? (
           <>

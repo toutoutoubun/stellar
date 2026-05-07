@@ -4,6 +4,7 @@
 
 import { marked, Renderer } from "marked";
 import { stripMarkdown } from "./exportMarkdown";
+import { useI18nStore } from "../stores/useI18nStore";
 
 // ============================================================
 // marked 設定 — 学術論文向け拡張
@@ -277,7 +278,7 @@ export function exportPdf(content: string, title: string): void {
 
   const printWindow = window.open("", "_blank");
   if (!printWindow) {
-    throw new Error("ポップアップがブロックされました。ブラウザの設定を確認してください。");
+    throw new Error(useI18nStore.getState().t.utils.str_oxfjvb);
   }
   printWindow.document.write(fullHtml);
   printWindow.document.close();

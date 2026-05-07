@@ -12,6 +12,7 @@ import { density } from "graphology-metrics/graph/density";
 import louvain from "graphology-communities-louvain";
 
 import type { NetworkAnalysisResult } from "./types";
+import { useI18nStore } from "../../stores/useI18nStore";
 
 // ---------------------------------------------------------------------------
 // Community colour palette — 12 distinct hues suitable for light & dark themes
@@ -120,7 +121,7 @@ export function analyzeNetwork(
 
   // Handle degenerate graphs
   if (graph.order === 0) {
-    return emptyResult("ネットワークにノードがありません。");
+    return emptyResult(useI18nStore.getState().t.stats.str_npy1ds);
   }
 
   // -- 2. Degree centrality -----------------------------------------------

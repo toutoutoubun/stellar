@@ -11,6 +11,7 @@ import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { toast } from "../ui/Toast";
 import type { Variable, SortDirection } from "../../types";
+import { useT } from "../../stores/useI18nStore";
 
 // ── 変数タイプ別スタイル ──
 const NOMINAL_COLORS = [
@@ -26,6 +27,7 @@ const NOMINAL_COLORS = [
 
 /** カテゴリ値ごとのカラーインデックスを取得 */
 function getNominalColorIndex(value: string): number {
+
   let hash = 0;
   for (let i = 0; i < value.length; i++) {
     hash = (hash * 31 + value.charCodeAt(i)) | 0;
@@ -40,6 +42,7 @@ const COL_MIN_WIDTH = 120;
 const ROW_NUM_WIDTH = 56;
 
 export const DataPreviewTable: React.FC = () => {
+  const t = useT();
   const variables = useQuantitativeStore((s) => s.variables);
   const dataRows = useQuantitativeStore((s) => s.dataRows);
   const selectedDataset = useQuantitativeStore((s) => s.selectedDataset);
@@ -184,7 +187,7 @@ export const DataPreviewTable: React.FC = () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    toast.success("CSVファイルをダウンロードしました");
+    toast.success(t.quantitative.k_iw2q5n);
   }, [variables, dataRows, selectedDataset]);
 
   // ── 空状態 ──
@@ -239,7 +242,7 @@ export const DataPreviewTable: React.FC = () => {
         {/* 検索 */}
         <div style={{ width: "260px" }}>
           <Input
-            placeholder="行を検索…"
+            placeholder={t.quantitative.k_src012}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             fullWidth
@@ -417,8 +420,8 @@ export const DataPreviewTable: React.FC = () => {
             >
               <p className="text-sm">
                 {searchQuery
-                  ? "検索条件に一致するデータがありません"
-                  : "データがありません"}
+                  ? t.quantitative.k_xmvrey
+                  : t.quantitative.k_pk1rf0}
               </p>
             </div>
           ) : (

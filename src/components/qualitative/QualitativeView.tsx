@@ -45,23 +45,26 @@ import { ProcessTracingView } from "./ProcessTracingView";
 import { ComparativeDesignView } from "./ComparativeDesignView";
 import { FramingAnalysisView } from "./FramingAnalysisView";
 import { AnalysisReport } from "./AnalysisReport";
+import { useT, useI18nStore } from "../../stores/useI18nStore";
 
 /** タブ定義 — アイコンは React コンポーネント */
 const TABS: { key: QualitativeTab; label: string; Icon: React.FC<{ size?: number; color?: string }> }[] = [
-  { key: "dashboard", label: "概要", Icon: IconDashboard },
-  { key: "codebook", label: "コードブック", Icon: IconCodebook },
-  { key: "matrix", label: "マトリクス", Icon: IconMatrix },
+  { key: "dashboard", label: useI18nStore.getState().t.qualitative.k_ip8f, Icon: IconDashboard },
+  { key: "codebook", label: useI18nStore.getState().t.qualitative.k_7z1tpa, Icon: IconCodebook },
+  { key: "matrix", label: useI18nStore.getState().t.qualitative.k_fnxlsm, Icon: IconMatrix },
   { key: "icr", label: "ICR", Icon: IconIcr },
-  { key: "source-critique", label: "史料批判", Icon: IconScroll },
-  { key: "timeline", label: "タイムライン", Icon: IconTimeline },
-  { key: "actor-map", label: "アクターマップ", Icon: IconActorMap },
-  { key: "process-tracing", label: "プロセストレーシング", Icon: IconProcessTracing },
-  { key: "comparative", label: "比較デザイン", Icon: IconComparative },
-  { key: "framing", label: "フレーミング", Icon: IconFraming },
-  { key: "report", label: "レポート", Icon: IconReport },
+  { key: "source-critique", label: useI18nStore.getState().t.qualitative.k_b0itbm, Icon: IconScroll },
+  { key: "timeline", label: useI18nStore.getState().t.qualitative.k_3mh737, Icon: IconTimeline },
+  { key: "actor-map", label: useI18nStore.getState().t.qualitative.k_yybalk, Icon: IconActorMap },
+  { key: "process-tracing", label: useI18nStore.getState().t.qualitative.k_vz7qeo, Icon: IconProcessTracing },
+  { key: "comparative", label: useI18nStore.getState().t.qualitative.k_2mss8j, Icon: IconComparative },
+  { key: "framing", label: useI18nStore.getState().t.qualitative.k_7wled3, Icon: IconFraming },
+  { key: "report", label: useI18nStore.getState().t.qualitative.k_6dj4vx, Icon: IconReport },
 ];
 
 const QualitativeView: React.FC = () => {
+  const t = useT();
+
   const [projects, setProjects] = useState<QualProject[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<QualitativeTab>("dashboard");
@@ -82,7 +85,7 @@ const QualitativeView: React.FC = () => {
         setSelectedProjectId(result[0].id);
       }
     } catch (err) {
-      console.error("プロジェクト取得エラー:", err);
+      console.error(t.qualitative.k_wvi2ea, err);
     } finally {
       setLoading(false);
     }
@@ -109,13 +112,13 @@ const QualitativeView: React.FC = () => {
       setNewProjectName("");
       setShowNewProject(false);
     } catch (err) {
-      console.error("プロジェクト作成エラー:", err);
+      console.error(t.qualitative.k_2ft95d, err);
     }
   }, [newProjectName, newProjectMethod]);
 
   const handleDeleteProject = useCallback(
     async (id: string) => {
-      const ok = await swalConfirm("プロジェクト削除", "このプロジェクトを削除しますか？");
+      const ok = await swalConfirm(t.qualitative.k_yzx5hk, t.qualitative.k_3ip7wz);
       if (!ok) return;
       try {
         await invoke("delete_project", { id });
@@ -124,7 +127,7 @@ const QualitativeView: React.FC = () => {
           setSelectedProjectId(projects.find((p) => p.id !== id)?.id ?? null);
         }
       } catch (err) {
-        console.error("プロジェクト削除エラー:", err);
+        console.error(t.qualitative.k_63mq89, err);
       }
     },
     [selectedProjectId, projects],
@@ -173,31 +176,31 @@ const QualitativeView: React.FC = () => {
     <div style={{ padding: "24px", maxWidth: "680px" }}>
       <HelpTooltip
         storageKey="qual_dashboard"
-        title="質的分析モジュールへようこそ"
+        title={t.qualitative.k_truqme}
         paragraphs={[
-          "CAQDAS機能と歴史・政治研究ツールを統合した分析環境です。",
-          "左のサイドバーでプロジェクトを管理し、上のタブで各分析機能に切り替えます。",
+          t.qualitative.k_ctdu1r,
+          t.qualitative.k_c5qwzu,
         ]}
         steps={[
-          "プロジェクトを作成し、分析手法を選択します",
-          "PDFリーダーでハイライトを追加し、コードブックでコードを割り当てます",
-          "マトリクス・ICR・タイムライン等の分析ツールを活用します",
-          "レポートタブで分析結果をMarkdownで出力できます",
+          t.qualitative.k_rmou8w,
+          t.qualitative.k_ru3ooh,
+          t.qualitative.k_49qp7e,
+          t.qualitative.k_1j8emn,
         ]}
       />
 
       <h2 className="text-lg font-semibold mb-4" style={{ color: "var(--color-text-primary)" }}>
-        {selectedProject?.name ?? "プロジェクト"}
+        {selectedProject?.name ?? t.qualitative.k_8tzti6}
       </h2>
       <div className="grid grid-cols-2 gap-3" style={{ maxWidth: "500px" }}>
-        <InfoCard label="手法" value={selectedProject?.methodType ?? "-"} />
+        <InfoCard label={t.qualitative.k_hbe2} value={selectedProject?.methodType ?? "-"} />
         <InfoCard
-          label="作成日"
+          label={t.notes.sortCreated}
           value={selectedProject ? new Date(selectedProject.createdAt).toLocaleDateString("ja-JP") : "-"}
         />
       </div>
       <p className="mt-3 text-xs" style={{ color: "var(--color-text-secondary)", lineHeight: "1.6" }}>
-        {selectedProject?.description ?? "説明なし"}
+        {selectedProject?.description ?? t.qualitative.k_hwu93j}
       </p>
 
       <div className="mt-6">
@@ -263,7 +266,7 @@ const QualitativeView: React.FC = () => {
           <button
             type="button"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            title={sidebarCollapsed ? "サイドバーを展開" : "サイドバーを折りたたむ"}
+            title={sidebarCollapsed ? t.sidebar.expandSidebar : t.sidebar.collapseSidebar}
             style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-tertiary)", padding: "4px", display: "flex" }}
           >
             <IconPanelLeft size={14} />
@@ -298,7 +301,7 @@ const QualitativeView: React.FC = () => {
                   type="text"
                   value={newProjectName}
                   onChange={(e) => setNewProjectName(e.target.value)}
-                  placeholder="プロジェクト名"
+                  placeholder={t.qualitative.k_aalcnl}
                   className="w-full text-xs mb-1.5 px-2 py-1"
                   style={{
                     backgroundColor: "var(--color-bg-primary)",
@@ -435,7 +438,7 @@ const QualitativeView: React.FC = () => {
             <button
               type="button"
               onClick={() => setTabBarCollapsed(true)}
-              title="タブバーを折りたたむ"
+              title={t.qualitative.k_4qcjen}
               style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-tertiary)", padding: "4px", display: "flex" }}
             >
               <IconChevronLeft size={12} />
@@ -460,7 +463,7 @@ const QualitativeView: React.FC = () => {
               style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-tertiary)" }}
             >
               <IconChevronRight size={12} />
-              {TABS.find((t) => t.key === activeTab)?.label ?? "タブ"}
+              {TABS.find((t) => t.key === activeTab)?.label ?? t.qualitative.k_8k53}
             </button>
           </div>
         )}

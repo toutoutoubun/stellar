@@ -10,6 +10,7 @@ import { useNoteStore } from "../../stores/useNoteStore";
 import { Badge } from "../ui/Badge";
 import { toast } from "../ui/Toast";
 import { IconItemType } from "../ui/Icons";
+import { useI18nStore } from "../../stores/useI18nStore";
 
 interface NoteContextPanelProps {
   /** 現在のノート */
@@ -293,7 +294,7 @@ const TagsSection: React.FC<{
     const trimmed = newTag.trim();
     if (!trimmed) return;
     if (note.tags.includes(trimmed)) {
-      toast.info("このタグは既に追加されています");
+      toast.info(useI18nStore.getState().t.notes.k_rz3qm7);
       setNewTag("");
       return;
     }
@@ -302,7 +303,7 @@ const TagsSection: React.FC<{
       setNewTag("");
       setIsAdding(false);
     } catch {
-      toast.error("タグの追加に失敗しました");
+      toast.error(useI18nStore.getState().t.notes.k_15jcbk);
     }
   }, [newTag, note.id, note.tags, updateNote]);
 
@@ -314,7 +315,7 @@ const TagsSection: React.FC<{
           tags: note.tags.filter((t) => t !== tag),
         });
       } catch {
-        toast.error("タグの削除に失敗しました");
+        toast.error(useI18nStore.getState().t.notes.k_xhhiw9);
       }
     },
     [note.id, note.tags, updateNote],
@@ -388,7 +389,7 @@ const TagsSection: React.FC<{
                     setNewTag("");
                   }
                 }}
-                placeholder="タグ名"
+                placeholder={useI18nStore.getState().t.notes.k_7ds2k}
                 autoFocus
                 className="text-xs flex-1"
                 style={{

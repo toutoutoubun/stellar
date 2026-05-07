@@ -19,6 +19,7 @@ import {
 } from "../charts";
 import { fmt } from "../charts/chartTheme";
 import { downloadSVG, downloadPNG } from "../../../lib/utils/exportChart";
+import { useI18nStore } from "../../../stores/useI18nStore";
 
 interface Props {
   analysis: Analysis;
@@ -218,8 +219,8 @@ const DescriptiveCard = memo<{
         <div className="flex items-center gap-1">
           {/* チャートタイプ切り替え */}
           {([
-            { key: "histogram" as const, label: "ヒストグラム" },
-            { key: "boxplot" as const, label: "箱ひげ図" },
+            { key: "histogram" as const, label: useI18nStore.getState().t.quantResults.str_5ogujq },
+            { key: "boxplot" as const, label: useI18nStore.getState().t.quantResults.str_fsz0xu },
           ] as const).map((ct) => (
             <button
               key={ct.key}
@@ -247,12 +248,12 @@ const DescriptiveCard = memo<{
       {/* 統計量グリッド */}
       <div className="grid grid-cols-4 gap-2 mb-3">
         {[
-          { label: "平均", value: fmt(desc.mean) },
-          { label: "中央値", value: fmt(desc.median) },
-          { label: "最頻値", value: desc.mode.length > 0 ? fmt(desc.mode[0]!) : "—" },
+          { label: useI18nStore.getState().t.quantResults.str_gjlg, value: fmt(desc.mean) },
+          { label: useI18nStore.getState().t.quantResults.str_bvtsz, value: fmt(desc.median) },
+          { label: useI18nStore.getState().t.quantResults.str_ftg7d, value: desc.mode.length > 0 ? fmt(desc.mode[0]!) : "—" },
           { label: "SD", value: fmt(desc.sd) },
-          { label: "最小", value: fmt(desc.min) },
-          { label: "最大", value: fmt(desc.max) },
+          { label: useI18nStore.getState().t.quantResults.str_i0wf, value: fmt(desc.min) },
+          { label: useI18nStore.getState().t.quantResults.str_i0br, value: fmt(desc.max) },
           { label: "Q1", value: fmt(desc.q1) },
           { label: "Q3", value: fmt(desc.q3) },
         ].map((item) => (
@@ -359,7 +360,7 @@ const FrequencyCard = memo<{ freq: FrequencyTable }>(({ freq }) => {
           <table className="w-full text-xs" style={{ borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                {["値", "度数", "%", "累積%"].map((h) => (
+                {[useI18nStore.getState().t.quantResults.k_ftw, useI18nStore.getState().t.quantCharts.str_gnm2, "%", useI18nStore.getState().t.quantResults.str_iww6f].map((h) => (
                   <th
                     key={h}
                     className="text-left py-1.5 px-2 font-medium"
@@ -518,7 +519,7 @@ export const DescriptiveResult: React.FC<Props> = ({ analysis, variables: _varia
                         fontWeight: 600,
                       }}
                     >
-                      {c.pValue < 0.05 ? "有意" : "非有意"}
+                      {c.pValue < 0.05 ? useI18nStore.getState().t.quantResults.str_i23q : useI18nStore.getState().t.quantResults.str_mo7pg}
                     </span>
                   </div>
                   {c.interpretation}

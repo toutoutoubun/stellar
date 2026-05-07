@@ -10,6 +10,7 @@ import { CITATION_STYLE_LABELS } from "../../types";
 import { Badge } from "../ui/Badge";
 import { copyCitationToClipboard } from "../../utils/citation";
 import { toast } from "../ui/Toast";
+import { useI18nStore } from "../../stores/useI18nStore";
 
 interface PaperCardProps {
   paper: Paper;
@@ -25,6 +26,7 @@ interface PaperCardProps {
 
 /** カスタム props 比較: paper.id, selected, animationDelay のみ比較 */
 function arePropsEqual(prev: PaperCardProps, next: PaperCardProps): boolean {
+
   return (
     prev.paper.id === next.paper.id &&
     prev.paper.updatedAt === next.paper.updatedAt &&
@@ -41,8 +43,8 @@ function arePropsEqual(prev: PaperCardProps, next: PaperCardProps): boolean {
 
 /** 著者表示のフォーマット（1行、複数著者は et al.） */
 const formatAuthorsShort = (authors: string[]): string => {
-  if (authors.length === 0) return "著者不明";
-  if (authors.length === 1) return authors[0] ?? "著者不明";
+  if (authors.length === 0) return useI18nStore.getState().t.library.k_h81ga7;
+  if (authors.length === 1) return authors[0] ?? useI18nStore.getState().t.library.k_h81ga7;
   if (authors.length === 2) return `${authors[0]}, ${authors[1]}`;
   return `${authors[0]} et al.`;
 };
@@ -214,7 +216,7 @@ const PaperCardInner: React.FC<PaperCardProps> = ({
           `${CITATION_STYLE_LABELS[style]} 形式で引用をコピーしました`,
         );
       } else {
-        toast.error("クリップボードへのコピーに失敗しました");
+        toast.error(useI18nStore.getState().t.library.k_pytgr9);
       }
       setContextMenu(null);
       setShowCitationSub(false);
@@ -225,7 +227,7 @@ const PaperCardInner: React.FC<PaperCardProps> = ({
   // ── コンテキストメニュー定義 ──
   const menuItems: ContextMenuItem[] = [
     {
-      label: "編集",
+      label: useI18nStore.getState().t.common.edit,
       icon: (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -238,7 +240,7 @@ const PaperCardInner: React.FC<PaperCardProps> = ({
       },
     },
     {
-      label: "引用をコピー",
+      label: useI18nStore.getState().t.library.k_ezke84,
       icon: (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
@@ -258,7 +260,7 @@ const PaperCardInner: React.FC<PaperCardProps> = ({
       })),
     },
     {
-      label: "削除",
+      label: useI18nStore.getState().t.common.delete,
       icon: (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="3 6 5 6 21 6" />
@@ -444,7 +446,7 @@ const PaperCardInner: React.FC<PaperCardProps> = ({
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor =
                     "var(--color-bg-hover)";
-                  if (item.label !== "引用をコピー") {
+                  if (item.label !== useI18nStore.getState().t.library.k_ezke84) {
                     setShowCitationSub(false);
                   }
                 }}

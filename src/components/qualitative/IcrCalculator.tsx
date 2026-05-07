@@ -7,12 +7,14 @@ import { invoke } from "../../lib/tauriShim";
 import type { IcrResult, ImportedCoding } from "../../types";
 import { HelpTooltip } from "./HelpTooltip";
 import { IconIcr } from "./icons/QualIcons";
+import { useT } from "../../stores/useI18nStore";
 
 interface IcrCalculatorProps {
   projectId: string;
 }
 
 export const IcrCalculator: React.FC<IcrCalculatorProps> = ({ projectId }) => {
+  const t = useT();
   const [result, setResult] = useState<IcrResult | null>(null);
   const [jsonInput, setJsonInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,7 +22,7 @@ export const IcrCalculator: React.FC<IcrCalculatorProps> = ({ projectId }) => {
 
   const handleCalculate = useCallback(async () => {
     if (!jsonInput.trim()) {
-      setError("インポートデータを入力してください");
+      setError(t.qualitative.k_4mccl5);
       return;
     }
 
@@ -35,7 +37,7 @@ export const IcrCalculator: React.FC<IcrCalculatorProps> = ({ projectId }) => {
       });
       setResult(res);
     } catch (err) {
-      const msg = typeof err === "string" ? err : "ICR計算に失敗しました";
+      const msg = typeof err === "string" ? err : t.qualitative.k_wmf8zr;
       setError(msg);
     } finally {
       setLoading(false);
@@ -43,27 +45,27 @@ export const IcrCalculator: React.FC<IcrCalculatorProps> = ({ projectId }) => {
   }, [projectId, jsonInput]);
 
   const getKappaLabel = (k: number): { label: string; color: string } => {
-    if (k >= 0.81) return { label: "ほぼ完全一致", color: "#22c55e" };
-    if (k >= 0.61) return { label: "実質的一致", color: "#84cc16" };
-    if (k >= 0.41) return { label: "中程度の一致", color: "#eab308" };
-    if (k >= 0.21) return { label: "わずかな一致", color: "#f97316" };
-    if (k >= 0.0) return { label: "偶然レベル", color: "#ef4444" };
-    return { label: "一致以下", color: "#dc2626" };
+    if (k >= 0.81) return { label: t.qualitative.k_uwv8i7, color: "#22c55e" };
+    if (k >= 0.61) return { label: t.qualitative.k_lcj52l, color: "#84cc16" };
+    if (k >= 0.41) return { label: t.qualitative.k_kmvjlm, color: "#eab308" };
+    if (k >= 0.21) return { label: t.qualitative.k_rjw5cy, color: "#f97316" };
+    if (k >= 0.0) return { label: t.qualitative.k_q2hug2, color: "#ef4444" };
+    return { label: t.qualitative.k_adl58a, color: "#dc2626" };
   };
 
   return (
     <div className="p-6" style={{ maxWidth: "800px" }}>
       <HelpTooltip
         storageKey="qual_icr"
-        title="ICR計算の使い方"
+        title={t.qualitative.k_azaeb7}
         paragraphs={[
           "Cohen's kappa 係数を用いて、2人のコーダー間の一致度を測定します。",
-          "メインコーダーのデータは既存のハイライト-コード割り当てから自動取得されます。",
+          t.qualitative.k_tnw3me,
         ]}
         steps={[
-          "比較するコーダーのデータをJSON形式で入力してください",
-          "各エントリにはhighlightIdとcodeIds（コードIDの配列）を含めます",
-          "計算ボタンを押すとkappa係数と不一致箇所が表示されます",
+          t.qualitative.k_icbz15,
+          t.qualitative.k_y3lhnm,
+          t.qualitative.k_ar4n6p,
         ]}
       />
 
@@ -108,7 +110,7 @@ export const IcrCalculator: React.FC<IcrCalculatorProps> = ({ projectId }) => {
       <textarea
         value={jsonInput}
         onChange={(e) => setJsonInput(e.target.value)}
-        placeholder="比較コーダーのデータ（JSON）を入力..."
+        placeholder={t.qualitative.k_969yr5}
         rows={8}
         className="w-full text-xs mb-3 p-3"
         style={{
@@ -150,7 +152,7 @@ export const IcrCalculator: React.FC<IcrCalculatorProps> = ({ projectId }) => {
         }}
       >
         <IconIcr size={14} color="#fff" />
-        {loading ? "計算中..." : "kappa係数を計算"}
+        {loading ? t.settings.data.calculating : t.qualitative.k_6putu0}
       </button>
 
       {/* 結果表示 */}

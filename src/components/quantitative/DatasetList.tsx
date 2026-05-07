@@ -12,6 +12,7 @@ import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { toast } from "../ui/Toast";
 import type { DatasetSourceType } from "../../types";
+import { useT, useI18nStore } from "../../stores/useI18nStore";
 
 // ── ソースタイプのバッジ設定 ──
 const SOURCE_BADGES: Record<
@@ -19,14 +20,14 @@ const SOURCE_BADGES: Record<
   { label: string; bg: string; text: string }
 > = {
   csv: { label: "CSV", bg: "rgba(66, 133, 244, 0.15)", text: "#4285f4" },
-  manual: { label: "手入力", bg: "rgba(52, 168, 83, 0.15)", text: "#34a853" },
+  manual: { label: useI18nStore.getState().t.quantitative.k_eslep, bg: "rgba(52, 168, 83, 0.15)", text: "#34a853" },
   codes: {
-    label: "コードから",
+    label: useI18nStore.getState().t.quantitative.k_gaoaw2,
     bg: "rgba(160, 140, 255, 0.15)",
     text: "#a08cff",
   },
   highlights: {
-    label: "ハイライトから",
+    label: useI18nStore.getState().t.quantitative.k_jgxomi,
     bg: "rgba(251, 140, 0, 0.15)",
     text: "#fb8c00",
   },
@@ -37,27 +38,28 @@ type CreateSource = "csv" | "manual" | "codes" | "highlights";
 const CREATE_SOURCES: { key: CreateSource; label: string; desc: string }[] = [
   {
     key: "csv",
-    label: "CSVファイルから",
-    desc: "CSV / TSV ファイルを読み込んでデータセットを作成します",
+    label: useI18nStore.getState().t.quantitative.k_otnss7,
+    desc: useI18nStore.getState().t.quantitative.k_1m423,
   },
   {
     key: "manual",
-    label: "手入力",
-    desc: "空のデータセットを作成し、手動でデータを入力します",
+    label: useI18nStore.getState().t.quantitative.k_eslep,
+    desc: useI18nStore.getState().t.quantitative.k_gsikxv,
   },
   {
     key: "codes",
-    label: "QDAコードから生成",
-    desc: "質的分析のコードからデータセットを自動生成します",
+    label: useI18nStore.getState().t.quantitative.k_udnti7,
+    desc: useI18nStore.getState().t.quantitative.k_fij35e,
   },
   {
     key: "highlights",
-    label: "ハイライトから生成",
-    desc: "論文のハイライトからデータセットを自動生成します",
+    label: useI18nStore.getState().t.quantitative.k_txzgk9,
+    desc: useI18nStore.getState().t.quantitative.k_9z5ic3,
   },
 ];
 
 export const DatasetList: React.FC = () => {
+  const t = useT();
   const datasets = useQuantitativeStore((s) => s.datasets);
   const selectedDataset = useQuantitativeStore((s) => s.selectedDataset);
   const selectDataset = useQuantitativeStore((s) => s.selectDataset);
@@ -149,7 +151,7 @@ export const DatasetList: React.FC = () => {
   const handleSourceChange = useCallback(
     (source: CreateSource) => {
       setCreateSource(source);
-      if (!datasetName || CREATE_SOURCES.some((s) => datasetName.startsWith(s.label.split("から")[0] ?? ""))) {
+      if (!datasetName || CREATE_SOURCES.some((s) => datasetName.startsWith(s.label.split(t.quantitative.k_8hb2)[0] ?? ""))) {
         setDatasetName(getAutoName(source));
       }
     },
@@ -172,7 +174,7 @@ export const DatasetList: React.FC = () => {
         toast.success(`データセット「${ds.name}」を作成しました`);
       } else if (createSource === "codes") {
         if (!selectedProjectId) {
-          toast.warning("QDAプロジェクトを選択してください");
+          toast.warning(t.quantitative.k_un0ypx);
           return;
         }
         const ds = await createDatasetFromCodes(selectedProjectId, name);
@@ -219,7 +221,7 @@ export const DatasetList: React.FC = () => {
     if (!contextMenu) return;
     try {
       await deleteDataset(contextMenu.datasetId);
-      toast.success("データセットを削除しました");
+      toast.success(t.quantitative.k_lzypz9);
     } catch {
       // エラーはストアで処理済み
     }
@@ -408,23 +410,23 @@ export const DatasetList: React.FC = () => {
         >
           {[
             {
-              label: "名前変更",
+              label: t.quantitative.k_ay4t7v,
               icon: "✏️",
               action: () => setContextMenu(null),
             },
             {
-              label: "コードから生成",
+              label: t.quantitative.k_y5e6kx,
               icon: "🏷",
               action: handleGenerateCodesFromContext,
             },
             {
-              label: "ハイライトから生成",
+              label: t.quantitative.k_txzgk9,
               icon: "📋",
               action: handleGenerateHighlightsFromContext,
             },
             { label: "separator", icon: "", action: () => {} },
             {
-              label: "削除",
+              label: t.common.delete,
               icon: "🗑",
               action: handleDeleteFromContext,
               danger: true,
@@ -471,7 +473,7 @@ export const DatasetList: React.FC = () => {
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title="新規データセット"
+        title={t.quantitative.k_2jvud1}
         width="520px"
         footer={
           <>
@@ -540,10 +542,10 @@ export const DatasetList: React.FC = () => {
 
           {/* 名前入力 */}
           <Input
-            label="データセット名"
+            label={t.quantitative.k_otpnnt}
             value={datasetName}
             onChange={(e) => setDatasetName(e.target.value)}
-            placeholder="データセットの名前を入力"
+            placeholder={t.quantitative.k_br9jg0}
             fullWidth
           />
 
@@ -559,7 +561,7 @@ export const DatasetList: React.FC = () => {
               <textarea
                 value={datasetDesc}
                 onChange={(e) => setDatasetDesc(e.target.value)}
-                placeholder="データセットの説明を入力"
+                placeholder={t.quantitative.k_eq1j72}
                 rows={2}
                 className="w-full text-sm resize-none selectable"
                 data-selectable="true"

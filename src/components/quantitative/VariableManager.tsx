@@ -9,20 +9,22 @@ import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { toast } from "../ui/Toast";
 import type { Variable, VariableType, LikertLabel } from "../../types";
+import { useT, useI18nStore } from "../../stores/useI18nStore";
 
 // ── 変数タイプアイコン・ラベル ──
 const VARIABLE_TYPE_META: Record<
   VariableType,
   { icon: string; label: string; color: string }
 > = {
-  scale: { icon: "📊", label: "スケール", color: "#4285f4" },
-  nominal: { icon: "🏷", label: "名義", color: "#34a853" },
-  ordinal: { icon: "📋", label: "順序", color: "#a08cff" },
-  text: { icon: "📝", label: "テキスト", color: "#fb8c00" },
-  date: { icon: "📅", label: "日付", color: "#e03131" },
+  scale: { icon: "📊", label: useI18nStore.getState().t.quantitative.k_6clnyf, color: "#4285f4" },
+  nominal: { icon: "🏷", label: useI18nStore.getState().t.quantitative.k_ezwc, color: "#34a853" },
+  ordinal: { icon: "📋", label: useI18nStore.getState().t.quantitative.k_qdl5, color: "#a08cff" },
+  text: { icon: "📝", label: useI18nStore.getState().t.quantitative.k_6ctu6u, color: "#fb8c00" },
+  date: { icon: "📅", label: useI18nStore.getState().t.quantitative.k_hrir, color: "#e03131" },
 };
 
 export const VariableManager: React.FC = () => {
+  const t = useT();
   const variables = useQuantitativeStore((s) => s.variables);
   const updateVariable = useQuantitativeStore((s) => s.updateVariable);
   const selectedDataset = useQuantitativeStore((s) => s.selectedDataset);
@@ -34,10 +36,10 @@ export const VariableManager: React.FC = () => {
 
   // 自動検出（モック）
   const handleAutoDetect = useCallback(() => {
-    toast.info("変数タイプの自動検出を実行中…");
+    toast.info(t.quantitative.k_ljmr10);
     // 実際のバックエンド呼び出しに置き換え
     setTimeout(() => {
-      toast.success("変数タイプの自動検出が完了しました");
+      toast.success(t.quantitative.k_mj4q1j);
     }, 800);
   }, []);
 
@@ -280,7 +282,7 @@ const VariableCard: React.FC<{
             e.currentTarget.style.backgroundColor = "transparent";
             e.currentTarget.style.color = "var(--color-text-tertiary)";
           }}
-          aria-label="変数を編集"
+          aria-label={useI18nStore.getState().t.quantitative.k_5z9urt}
         >
           <svg
             width="12"
@@ -323,7 +325,7 @@ const VariableCard: React.FC<{
           onClick={() => setEditingName(true)}
           className="text-sm font-semibold text-left truncate"
           style={{ color: "var(--color-text-primary)" }}
-          title="クリックで名前を編集"
+          title={useI18nStore.getState().t.quantitative.k_bziyy8}
         >
           {variable.name}
         </button>
@@ -339,7 +341,7 @@ const VariableCard: React.FC<{
             if (e.key === "Enter") e.currentTarget.blur();
           }}
           autoFocus
-          placeholder="ラベル（日本語）"
+          placeholder={useI18nStore.getState().t.quantitative.k_xuoqjj}
           className="text-xs bg-transparent selectable"
           data-selectable="true"
           style={{
@@ -359,9 +361,9 @@ const VariableCard: React.FC<{
               ? "var(--color-text-secondary)"
               : "var(--color-text-disabled)",
           }}
-          title="クリックでラベルを編集"
+          title={useI18nStore.getState().t.quantitative.k_twqqc5}
         >
-          {variable.label || "ラベルを追加…"}
+          {variable.label || useI18nStore.getState().t.quantitative.k_wi39ho}
         </button>
       )}
 
@@ -547,7 +549,7 @@ const VariableEditSheet: React.FC<{
         variableType: varType,
         dateFormat: varType === "date" ? dateFormat || null : null,
       });
-      toast.success("変数を更新しました");
+      toast.success(useI18nStore.getState().t.quantitative.k_a7t2i);
       onClose();
     } catch {
       // エラーはストアで処理
@@ -639,7 +641,7 @@ const VariableEditSheet: React.FC<{
           <div className="grid grid-cols-2 gap-4">
             {/* 変数名 */}
             <Input
-              label="変数名"
+              label={useI18nStore.getState().t.qualitative.k_dj71i}
               value={name}
               onChange={(e) => setName(e.target.value)}
               fullWidth
@@ -647,10 +649,10 @@ const VariableEditSheet: React.FC<{
 
             {/* ラベル */}
             <Input
-              label="ラベル（日本語）"
+              label={useI18nStore.getState().t.quantitative.k_xuoqjj}
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder="例: 満足度"
+              placeholder={useI18nStore.getState().t.quantitative.k_hhhlfi}
               fullWidth
             />
           </div>
@@ -707,10 +709,10 @@ const VariableEditSheet: React.FC<{
           {/* 日付フォーマット（日付タイプのみ） */}
           {varType === "date" && (
             <Input
-              label="日付フォーマット"
+              label={useI18nStore.getState().t.quantitative.k_pgiqya}
               value={dateFormat}
               onChange={(e) => setDateFormat(e.target.value)}
-              placeholder="例: YYYY-MM-DD"
+              placeholder={useI18nStore.getState().t.quantitative.k_t6suhb}
               fullWidth
             />
           )}

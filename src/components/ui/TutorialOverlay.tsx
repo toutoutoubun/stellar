@@ -7,11 +7,13 @@
 import type React from "react";
 import { useState, useCallback, useEffect } from "react";
 import { StellarIcon } from "./StellarIcon";
+import { useT, useI18nStore } from "../../stores/useI18nStore";
 
 const TUTORIAL_STORAGE_KEY = "stellar-tutorial-seen";
 
 /** チュートリアル表示済みか */
 export function isTutorialSeen(): boolean {
+
   try {
     return localStorage.getItem(TUTORIAL_STORAGE_KEY) === "true";
   } catch {
@@ -41,9 +43,9 @@ interface TutorialStep {
 
 const TUTORIAL_STEPS: TutorialStep[] = [
   {
-    title: "文献ライブラリ",
+    title: useI18nStore.getState().t.ui.str_42m74l,
     description:
-      "論文の書誌情報を一元管理します。手動入力のほか PDF を添付すればメタデータを自動抽出。タグ・年・PDF有無で絞り込み、グリッド/リスト表示を切り替えられます。",
+      useI18nStore.getState().t.ui.PDF_PDF,
     icon: (
       <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
@@ -53,16 +55,16 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       </svg>
     ),
     tips: [
-      "サイドバーの「文献」アイコンからアクセス",
-      "PDF 添付で書誌情報を自動抽出",
-      "タグ・出版年・PDF有無でフィルタリング",
-      "グリッド / リスト表示を切り替え可能",
+      useI18nStore.getState().t.ui.str_7mkitv,
+      useI18nStore.getState().t.ui.PDF,
+      useI18nStore.getState().t.ui.PDF_2,
+      useI18nStore.getState().t.ui.str_e5vkvi,
     ],
   },
   {
-    title: "PDF リーダー & ハイライト",
+    title: useI18nStore.getState().t.ui.PDF_3,
     description:
-      "文献の PDF をアプリ内で閲覧できます。テキストを選択すると、4色のハイライトを付与でき、メモも添付可能。ハイライト一覧パネルで振り返りも簡単です。",
+      useI18nStore.getState().t.ui.PDF_4,
     icon: (
       <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -71,16 +73,16 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       </svg>
     ),
     tips: [
-      "テキスト選択でハイライトツールバーが表示",
-      "黄・青・緑・ピンクの 4 色で分類",
-      "ハイライトにメモを追加して整理",
-      "Ctrl++ / Ctrl+- でズーム操作",
+      useI18nStore.getState().t.ui.str_pdath0,
+      useI18nStore.getState().t.ui.str_12gmj3,
+      useI18nStore.getState().t.ui.str_efmawu,
+      useI18nStore.getState().t.ui.Ctrl_Ctrl,
     ],
   },
   {
-    title: "ノートエディタ",
+    title: useI18nStore.getState().t.ui.str_70k5md,
     description:
-      "Markdown 対応のリッチエディタでノートを作成。WikiLink（[[リンク名]]）で他のノートや論文と双方向リンクし、知識ネットワークを構築できます。",
+      useI18nStore.getState().t.ui.Markdown_WikiLink,
     icon: (
       <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -91,16 +93,16 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       </svg>
     ),
     tips: [
-      "[[ で WikiLink オートコンプリート",
-      "==テキスト== でインラインハイライト",
-      "@cite{ID} で論文引用バッジを挿入",
-      "Mermaid 記法でダイアグラムも挿入可能",
+      useI18nStore.getState().t.ui.WikiLink,
+      useI18nStore.getState().t.ui.str_12vhnw,
+      useI18nStore.getState().t.ui.cite_ID,
+      useI18nStore.getState().t.ui.Mermaid,
     ],
   },
   {
-    title: "グラフビュー",
+    title: useI18nStore.getState().t.ui.str_9of5o2,
     description:
-      "ノートと論文の繋がりを力学グラフで可視化。クラスターやリンクの密集を発見し、研究テーマ間の関連を俯瞰できます。",
+      useI18nStore.getState().t.ui.str_jl33sc,
     icon: (
       <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="6" cy="6" r="3" />
@@ -114,16 +116,16 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       </svg>
     ),
     tips: [
-      "サイドバーのグラフアイコンからアクセス",
-      "ノード種別・タグでフィルタリング",
-      "ダブルクリックでノート/論文に遷移",
-      "ミニマップで全体を俯瞰",
+      useI18nStore.getState().t.ui.str_8njrnl,
+      useI18nStore.getState().t.ui.str_np8niw,
+      useI18nStore.getState().t.ui.str_snbfcy,
+      useI18nStore.getState().t.ui.str_q20ljt,
     ],
   },
   {
-    title: "質的分析",
+    title: useI18nStore.getState().t.sidebar.qualitative,
     description:
-      "質的研究のための統合ツールセット。コードブックでテーマ分類し、マトリクス表示やプロセストレーシング、アクターマップ等の多彩な分析手法を利用できます。",
+      useI18nStore.getState().t.ui.str_yl6zoy,
     icon: (
       <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
@@ -133,16 +135,16 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       </svg>
     ),
     tips: [
-      "コードブック — テーマ/カテゴリ体系を構築",
-      "コーディングマトリクスでパターンを分析",
-      "タイムライン・アクターマップ・プロセストレーシング",
-      "ICR（コーダー間信頼性）計算に対応",
+      useI18nStore.getState().t.ui.str_8mb9ay,
+      useI18nStore.getState().t.ui.str_f86lqw,
+      useI18nStore.getState().t.ui.str_usyyxr,
+      useI18nStore.getState().t.ui.ICR,
     ],
   },
   {
-    title: "量的分析",
+    title: useI18nStore.getState().t.sidebar.quantitative,
     description:
-      "CSV データのインポートから変数定義、記述統計・推測統計、ネットワーク分析やテキスト分析まで、データスタジオで一貫して実行できます。",
+      useI18nStore.getState().t.ui.CSV,
     icon: (
       <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <line x1="18" y1="20" x2="18" y2="10" />
@@ -152,16 +154,16 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       </svg>
     ),
     tips: [
-      "CSV インポートでデータを取り込み",
-      "変数定義でデータ型やラベルを設定",
-      "散布図・ヒストグラム・箱ひげ図など多彩なチャート",
-      "t検定・回帰分析などの推測統計にも対応",
+      useI18nStore.getState().t.ui.CSV_2,
+      useI18nStore.getState().t.ui.str_1ejdsm,
+      useI18nStore.getState().t.ui.str_byjyhn,
+      useI18nStore.getState().t.ui.str_fh5t7q,
     ],
   },
   {
-    title: "エクスポート & ショートカット",
+    title: useI18nStore.getState().t.ui.str_44nlwx,
     description:
-      "ノートを Markdown / PDF / DOCX 形式でエクスポート可能。キーボードショートカットを活用すると作業効率がさらに向上します。",
+      useI18nStore.getState().t.ui.Markdown_PDF_DOCX,
     icon: (
       <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="4" width="20" height="16" rx="2" />
@@ -176,10 +178,10 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       </svg>
     ),
     tips: [
-      "Ctrl+K — 全文検索を開く",
-      "Ctrl+N — 新しいノートを作成",
-      "Ctrl+, — 設定画面を開く",
-      "Ctrl+Shift+F — フォーカスモード",
+      useI18nStore.getState().t.ui.Ctrl_K,
+      useI18nStore.getState().t.ui.Ctrl_N,
+      useI18nStore.getState().t.ui.Ctrl,
+      useI18nStore.getState().t.ui.Ctrl_Shift_F,
     ],
   },
 ];
@@ -199,6 +201,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
   open,
   onClose,
 }) => {
+  const t = useT();
   const [step, setStep] = useState(0);
   const [fadeState, setFadeState] = useState<"in" | "out">("in");
 
@@ -326,7 +329,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
               e.currentTarget.style.backgroundColor = "transparent";
               e.currentTarget.style.color = "var(--color-text-tertiary)";
             }}
-            aria-label="閉じる"
+            aria-label={t.common.close}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -571,8 +574,8 @@ export const HelpButton: React.FC<HelpButtonProps> = ({ onClick }) => (
       e.currentTarget.style.color = "var(--color-text-tertiary)";
       e.currentTarget.style.backgroundColor = "transparent";
     }}
-    title="使い方ガイド"
-    aria-label="使い方ガイドを開く"
+    title={useI18nStore.getState().t.ui.str_z5hxct}
+    aria-label={useI18nStore.getState().t.ui.str_q9yn7d}
   >
     ?
   </button>

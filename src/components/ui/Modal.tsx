@@ -6,6 +6,7 @@
 import type React from "react";
 import { useEffect, useCallback, useRef } from "react";
 import { clsx } from "clsx";
+import { useT } from "../../stores/useI18nStore";
 
 interface ModalProps {
   /** モーダルの表示状態 */
@@ -33,6 +34,7 @@ export const Modal: React.FC<ModalProps> = ({
   footer,
   closeOnOverlayClick = true,
 }) => {
+  const t = useT();
   const modalRef = useRef<HTMLDivElement>(null);
 
   // ESC キーで閉じる
@@ -127,7 +129,7 @@ export const Modal: React.FC<ModalProps> = ({
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = "transparent";
                 }}
-                aria-label="閉じる"
+                aria-label={t.common.close}
               >
                 <svg
                   width="16"

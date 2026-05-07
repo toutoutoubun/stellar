@@ -9,6 +9,7 @@ import { useQuantitativeStore } from "../../stores/useQuantitativeStore";
 import { Button } from "../ui/Button";
 import { toast } from "../ui/Toast";
 import type { VariableType } from "../../types";
+import { useT, useI18nStore } from "../../stores/useI18nStore";
 
 // ── 変数タイプアイコン定義 ──
 const VARIABLE_TYPE_OPTIONS: {
@@ -16,22 +17,23 @@ const VARIABLE_TYPE_OPTIONS: {
   icon: string;
   label: string;
 }[] = [
-  { type: "scale", icon: "📊", label: "スケール（数値）" },
-  { type: "nominal", icon: "🏷", label: "名義（カテゴリ）" },
-  { type: "ordinal", icon: "📋", label: "順序（ランク）" },
-  { type: "text", icon: "📝", label: "テキスト" },
-  { type: "date", icon: "📅", label: "日付" },
+  { type: "scale", icon: "📊", label: useI18nStore.getState().t.quantitative.k_g4muy4 },
+  { type: "nominal", icon: "🏷", label: useI18nStore.getState().t.quantitative.k_ii97u4 },
+  { type: "ordinal", icon: "📋", label: useI18nStore.getState().t.quantitative.k_u8ggn7 },
+  { type: "text", icon: "📝", label: useI18nStore.getState().t.quantitative.k_6ctu6u },
+  { type: "date", icon: "📅", label: useI18nStore.getState().t.quantitative.k_hrir },
 ];
 
 // ── 区切り文字選択肢 ──
 const DELIMITERS = [
-  { value: ",", label: "カンマ" },
-  { value: "\t", label: "タブ" },
-  { value: ";", label: "セミコロン" },
+  { value: ",", label: useI18nStore.getState().t.quantitative.k_7d7w6 },
+  { value: "\t", label: useI18nStore.getState().t.qualitative.k_8k53 },
+  { value: ";", label: useI18nStore.getState().t.quantitative.k_g6st4b },
 ];
 
 // ── CSV パース関数 ──
 function parseCsvLine(line: string, delimiter: string): string[] {
+
   const result: string[] = [];
   let current = "";
   let inQuotes = false;
@@ -136,6 +138,7 @@ function formatFileSize(bytes: number): string {
 }
 
 export const CsvImporter: React.FC = () => {
+  const t = useT();
   const selectedDataset = useQuantitativeStore((s) => s.selectedDataset);
   const importCsv = useQuantitativeStore((s) => s.importCsv);
   const setTab = useQuantitativeStore((s) => s.setTab);
@@ -277,7 +280,7 @@ export const CsvImporter: React.FC = () => {
   }, []);
 
   const delimiterLabel =
-    DELIMITERS.find((d) => d.value === delimiter)?.label ?? "カンマ";
+    DELIMITERS.find((d) => d.value === delimiter)?.label ?? t.quantitative.k_7d7w6;
 
   return (
     <div className="h-full overflow-y-auto p-6 space-y-6">

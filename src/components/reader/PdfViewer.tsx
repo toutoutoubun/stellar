@@ -20,6 +20,7 @@ import type {
 
 import type { Highlight, HighlightColor, HighlightRect } from "../../types";
 import { HIGHLIGHT_COLORS } from "../../utils/highlightColors";
+import { useI18nStore } from "../../stores/useI18nStore";
 
 // pdfjs-dist のワーカーパス（react-pdf-highlighter v8 同梱の pdfjs-dist 4.4.168）
 const PDF_WORKER_URL = new URL(
@@ -37,6 +38,7 @@ export interface PdfHighlight extends IHighlight {
 
 /** Stellar の Highlight → PdfHighlight に変換 */
 function toPdfHighlight(h: Highlight): PdfHighlight {
+
   return {
     id: h.id,
     content: { text: h.text },
@@ -208,7 +210,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
           </div>
         }
         onError={(error) => {
-          console.error("PDF読み込みエラー:", error);
+          console.error(useI18nStore.getState().t.reader.PDF_2, error);
         }}
         errorMessage={
           <div

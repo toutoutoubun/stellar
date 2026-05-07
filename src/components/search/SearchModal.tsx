@@ -12,8 +12,10 @@ import type { SearchResultItem, RecentItem } from "../../types";
 import { useSearch } from "../../hooks/useSearch";
 import { SearchInput } from "./SearchInput";
 import { SearchResults } from "./SearchResults";
+import { useT } from "../../stores/useI18nStore";
 
 export const SearchModal: React.FC = () => {
+  const t = useT();
   const isOpen = useUIStore((s) => s.searchModalOpen);
   const closeModal = useUIStore((s) => s.closeSearchModal);
   const openPaper = useUIStore((s) => s.openPaper);
@@ -125,7 +127,7 @@ export const SearchModal: React.FC = () => {
       onKeyDown={() => {}}
       role="dialog"
       aria-modal="true"
-      aria-label="全文検索"
+      aria-label={t.layout.str_ap0rmt}
       aria-hidden={!isOpen}
     >
       {/* モーダル本体 */}

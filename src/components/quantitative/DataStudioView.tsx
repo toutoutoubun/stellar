@@ -11,12 +11,13 @@ import { VariableManager } from "./VariableManager";
 import { DataPreviewTable } from "./DataPreviewTable";
 import { AnalysisHubView } from "./AnalysisHubView";
 import type { DataStudioTab } from "../../types";
+import { useI18nStore } from "../../stores/useI18nStore";
 
 // ── タブ定義 ──
 const TABS: { key: DataStudioTab; label: string; icon: React.ReactNode }[] = [
   {
     key: "import",
-    label: "インポート",
+    label: useI18nStore.getState().t.quantitative.k_gj2fk6,
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -27,7 +28,7 @@ const TABS: { key: DataStudioTab; label: string; icon: React.ReactNode }[] = [
   },
   {
     key: "variables",
-    label: "変数定義",
+    label: useI18nStore.getState().t.quantitative.k_bnl1qu,
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
@@ -36,7 +37,7 @@ const TABS: { key: DataStudioTab; label: string; icon: React.ReactNode }[] = [
   },
   {
     key: "preview",
-    label: "データプレビュー",
+    label: useI18nStore.getState().t.quantitative.k_c745uz,
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
@@ -49,7 +50,7 @@ const TABS: { key: DataStudioTab; label: string; icon: React.ReactNode }[] = [
   },
   {
     key: "analysis",
-    label: "分析",
+    label: useI18nStore.getState().t.notes.k_eiq2,
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <line x1="18" y1="20" x2="18" y2="10" />
@@ -62,6 +63,7 @@ const TABS: { key: DataStudioTab; label: string; icon: React.ReactNode }[] = [
 ];
 
 const DataStudioView: React.FC = () => {
+
   const dataStudioTab = useQuantitativeStore((s) => s.dataStudioTab);
   const setTab = useQuantitativeStore((s) => s.setTab);
   const selectedDataset = useQuantitativeStore((s) => s.selectedDataset);

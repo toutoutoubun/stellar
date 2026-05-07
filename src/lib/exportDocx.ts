@@ -25,6 +25,7 @@ import {
   LevelFormat,
   convertInchesToTwip,
 } from "docx";
+import { useI18nStore } from "../stores/useI18nStore";
 
 // ============================================================
 // Markdown パーサー（行ベース → ブロック → インライン）
@@ -225,7 +226,7 @@ function parseMarkdownToElements(md: string): (Paragraph | Table)[] {
     );
     elements.push(
       new Paragraph({
-        children: [new TextRun({ text: "脚注", bold: true, size: 20 })],
+        children: [new TextRun({ text: useI18nStore.getState().t.utils.str_mk26, bold: true, size: 20 })],
         spacing: { before: 120, after: 80 },
       }),
     );
