@@ -98,7 +98,11 @@ const QualitativeView: React.FC = () => {
         name: newProjectName.trim(),
         methodType: newProjectMethod,
       };
-      const created = await invoke<QualProject>("create_project", { input });
+      const created = await invoke<QualProject | null>("create_project", { input });
+      if (!created) {
+        console.warn("create_project returned null (mock mode)");
+        return;
+      }
       setProjects((prev) => [created, ...prev]);
       setSelectedProjectId(created.id);
       setNewProjectName("");

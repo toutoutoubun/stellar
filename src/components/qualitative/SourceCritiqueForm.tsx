@@ -45,10 +45,12 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
     const load = async () => {
       setLoading(true);
       try {
-        const [paperList, critiqueList] = await Promise.all([
-          invoke<Paper[]>("get_papers", { page: 1, perPage: 500, sortBy: "title", sortDir: "asc", search: "" }),
+        const [paperResult, critiqueList] = await Promise.all([
+          invoke<{ items: Paper[] } | Paper[]>("get_papers", { page: 1, perPage: 500, sortBy: "title", sortDir: "asc", search: "" }),
           invoke<SourceCritique[]>("get_source_critiques_by_project", { projectId }),
         ]);
+        // get_papers は { items: Paper[] } を返す場合と Paper[] を返す場合の両方に対応
+        const paperList = Array.isArray(paperResult) ? paperResult : (paperResult?.items ?? []);
         setPapers(paperList);
         setCritiques(critiqueList);
       } catch (err) {
