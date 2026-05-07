@@ -122,6 +122,9 @@ importers:
       simple-statistics:
         specifier: ^7.8.9
         version: 7.8.9
+      sweetalert2:
+        specifier: ^11.26.24
+        version: 11.26.24
       uuid:
         specifier: ^14.0.0
         version: 14.0.0
@@ -2241,6 +2244,9 @@ packages:
 
   style-mod@4.1.3:
     resolution: {integrity: sha512-i/n8VsZydrugj3Iuzll8+x/00GH2vnYsk1eomD8QiRrSAeW6ItbCQDtfXCeJHd0iwiNagqjQkvpvREEPtW3IoQ==}
+
+  sweetalert2@11.26.24:
+    resolution: {integrity: sha512-SLgukW4wicewpW5VOukSXY5Z6DL/z7HCOK2ODSjmQPiSphCN8gJAmh9npoceXOtBRNoDN0xIz+zHYthtfiHmjg==}
 
   tailwindcss@4.2.4:
     resolution: {integrity: sha512-HhKppgO81FQof5m6TEnuBWCZGgfRAWbaeOaGT00KOy/Pf/j6oUihdvBpA7ltCeAvZpFhW3j0PTclkxsd4IXYDA==}
@@ -4686,6 +4692,8 @@ snapshots:
     optional: true
 
   style-mod@4.1.3: {}
+
+  sweetalert2@11.26.24: {}
 
   tailwindcss@4.2.4: {}
 
