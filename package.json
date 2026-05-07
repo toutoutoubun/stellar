@@ -50,6 +50,7 @@
     "react-force-graph-2d": "^1.29.1",
     "react-pdf-highlighter": "8.0.0-rc.0",
     "simple-statistics": "^7.8.9",
+    "sweetalert2": "^11.26.24",
     "uuid": "^14.0.0",
     "zustand": "^5.0.12"
   },
