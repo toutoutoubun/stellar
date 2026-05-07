@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { invoke } from "../../lib/tauriShim";
+import { swalConfirm } from "../../lib/swal";
 import type {
   ComparativeDesignFull,
   CreateComparativeDesignInput,
@@ -102,7 +103,8 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
 
   const handleDeleteCase = useCallback(
     async (id: string) => {
-      if (!confirm("このケースを削除しますか？")) return;
+      const ok = await swalConfirm("ケース削除", "このケースを削除しますか？");
+      if (!ok) return;
       try {
         await invoke("delete_comparative_case", { id });
         void loadDesign();
@@ -115,7 +117,8 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
 
   const handleDeleteVariable = useCallback(
     async (id: string) => {
-      if (!confirm("この変数を削除しますか？")) return;
+      const ok2 = await swalConfirm("変数削除", "この変数を削除しますか？");
+      if (!ok2) return;
       try {
         await invoke("delete_comparative_variable", { id });
         void loadDesign();

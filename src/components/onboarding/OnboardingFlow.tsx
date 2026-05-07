@@ -54,13 +54,13 @@ const WelcomeStep: React.FC<{ onNext: () => void }> = ({ onNext }) => (
 
     <div>
       <h1
-        className="text-2xl font-bold mb-2"
+        className="text-3xl font-bold mb-3"
         style={{ color: "var(--color-text-primary)" }}
       >
         Stellar へようこそ
       </h1>
       <p
-        className="text-sm leading-relaxed"
+        className="text-base leading-relaxed"
         style={{
           color: "var(--color-text-secondary)",
           maxWidth: "400px",
@@ -139,7 +139,7 @@ const StorageStep: React.FC<{
           データの保存先
         </h2>
         <p
-          className="text-sm leading-relaxed"
+          className="text-base leading-relaxed"
           style={{
             color: "var(--color-text-secondary)",
             maxWidth: "400px",
@@ -273,7 +273,7 @@ const ThemeStep: React.FC<{
           テーマを選ぶ
         </h2>
         <p
-          className="text-sm"
+          className="text-base"
           style={{ color: "var(--color-text-secondary)" }}
         >
           お好みの外観テーマを選択してください
@@ -363,7 +363,7 @@ const CompletionStep: React.FC<{ onComplete: () => void }> = ({
         準備完了!
       </h2>
       <p
-        className="text-sm leading-relaxed"
+        className="text-base leading-relaxed"
         style={{
           color: "var(--color-text-secondary)",
           maxWidth: "400px",
@@ -376,7 +376,7 @@ const CompletionStep: React.FC<{ onComplete: () => void }> = ({
     </div>
 
     <div
-      className="flex flex-col gap-2 text-xs"
+      className="flex flex-col gap-2 text-sm"
       style={{ color: "var(--color-text-tertiary)" }}
     >
       <div className="flex items-center gap-2">

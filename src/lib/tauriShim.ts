@@ -11,7 +11,7 @@ export const isTauri: boolean = !!(window as any).__TAURI_INTERNALS__;
 // ブラウザプレビューでも create / get / update / delete が動作するように
 // メモリ上にデータを保持する軽量ストア。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mockStore: Record<string, any[]> = {
+const mockStore: { notes: any[]; projects: any[]; papers: any[]; datasets: any[]; analyses: any[]; codes: any[]; highlights: any[] } = {
   notes: [],
   projects: [],
   papers: [],

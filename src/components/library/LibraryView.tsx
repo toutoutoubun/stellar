@@ -16,6 +16,7 @@ import { Input } from "../ui/Input";
 import { Badge } from "../ui/Badge";
 import { toast } from "../ui/Toast";
 import type { CreatePaperInput } from "../../types";
+import { swalConfirm } from "../../lib/swal";
 
 /** フィルタードロップダウンの共通スタイル */
 const dropdownStyle: React.CSSProperties = {
@@ -125,21 +126,8 @@ export const LibraryView: React.FC = () => {
     async (id: string) => {
       const paper = papers.find((p) => p.id === id);
       const title = paper?.title ?? "この論文";
-      // Tauri のダイアログを使用
-      try {
-        const { ask } = await import("@tauri-apps/plugin-dialog");
-        const confirmed = await ask(
-          `「${title}」を削除しますか？\nこの操作は取り消せません。`,
-          { title: "論文の削除", kind: "warning" }
-        );
-        if (!confirmed) return;
-      } catch {
-        // ダイアログプラグインが利用できない場合は window.confirm にフォールバック
-        const confirmed = window.confirm(
-          `「${title}」を削除しますか？\nこの操作は取り消せません。`
-        );
-        if (!confirmed) return;
-      }
+      const confirmed = await swalConfirm("論文の削除", `「${title}」を削除しますか？\nこの操作は取り消せません。`);
+      if (!confirmed) return;
       try {
         await deletePaper(id);
         toast.success("論文を削除しました");
@@ -273,15 +261,15 @@ export const LibraryView: React.FC = () => {
           {/* 下段: フィルタバー */}
           <div className="flex items-center gap-2 flex-wrap">
             {/* 検索入力 */}
-            <div style={{ width: "200px" }}>
+            <div style={{ width: "240px", minWidth: "180px" }}>
               <Input
                 value={filterQuery}
                 onChange={(e) => setFilterQuery(e.target.value)}
                 placeholder="検索..."
                 icon={
                   <svg
-                    width="14"
-                    height="14"
+                    width="15"
+                    height="15"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"

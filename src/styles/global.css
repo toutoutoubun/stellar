@@ -464,6 +464,31 @@ pre {
   min-width: 0;
 }
 
+/* ── SweetAlert2 テーマ統合 ── */
+.stellar-swal-popup {
+  border-radius: 16px !important;
+  font-family: var(--font-family-sans) !important;
+  padding: 1.5em !important;
+}
+.stellar-swal-title {
+  font-size: 1.15em !important;
+  font-weight: 600 !important;
+}
+.stellar-swal-html {
+  font-size: 0.92em !important;
+  line-height: 1.6 !important;
+}
+.stellar-swal-btn,
+.stellar-swal-btn-cancel {
+  border-radius: 8px !important;
+  font-size: 0.88em !important;
+  font-weight: 500 !important;
+  padding: 0.5em 1.4em !important;
+}
+.swal2-toast .stellar-swal-popup {
+  padding: 0.6em 1em !important;
+}
+
 /* 視覚的に非表示だがスクリーンリーダーには読み上げさせる */
 .sr-only {
   position: absolute;

@@ -13,6 +13,7 @@ import { StellarEditor } from "./StellarEditor";
 import { NoteContextPanel } from "./NoteContextPanel";
 import { FocusMode } from "./FocusMode";
 import { toast } from "../ui/Toast";
+import { swalConfirm } from "../../lib/swal";
 import { countWords, estimateReadingTime } from "../../lib/exportMarkdown";
 import { exportMarkdownFile, exportPlainText, exportPdf, exportHtmlBlob, downloadBlob } from "../../lib/exportPdf";
 import { generateDocx } from "../../lib/exportDocx";
@@ -133,9 +134,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
   /** ノート削除 */
   const handleDelete = useCallback(async () => {
     if (!activeNote) return;
-    const ok = window.confirm(
-      `「${activeNote.title}」を削除しますか？この操作は取り消せません。`,
-    );
+    const ok = await swalConfirm("ノートの削除", `「${activeNote.title}」を削除しますか？この操作は取り消せません。`);
     if (ok) {
       try {
         await deleteNote(activeNote.id);

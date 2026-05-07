@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { invoke } from "../../lib/tauriShim";
+import { swalConfirm } from "../../lib/swal";
 import type { CodeNode, HighlightWithContext } from "../../types";
 import { CodeTreeNode } from "./CodeTreeNode";
 import { HelpTooltip } from "./HelpTooltip";
@@ -62,7 +63,8 @@ export const CodebookView: React.FC<CodebookViewProps> = ({ projectId }) => {
   }, [loadCodeTree]);
 
   const handleDeleteCode = useCallback(async (id: string) => {
-    if (!confirm("このコードを削除しますか？")) return;
+    const ok = await swalConfirm("コード削除", "このコードを削除しますか？");
+    if (!ok) return;
     try { await invoke("delete_code", { id }); if (selectedCodeId === id) setSelectedCodeId(null); void loadCodeTree(); } catch (err) { console.error("コード削除エラー:", err); }
   }, [selectedCodeId, loadCodeTree]);
 

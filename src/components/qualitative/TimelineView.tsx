@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { invoke } from "../../lib/tauriShim";
+import { swalConfirm } from "../../lib/swal";
 import type { TimelineEvent, CreateTimelineEventInput } from "../../types";
 import { HelpTooltip } from "./HelpTooltip";
 import { IconPlus, IconDelete, IconClose, IconFilter, IconApproximate, IconTimeline } from "./icons/QualIcons";
@@ -104,7 +105,8 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
 
   const handleDelete = useCallback(
     async (id: string) => {
-      if (!confirm("このイベントを削除しますか？")) return;
+      const ok = await swalConfirm("イベント削除", "このイベントを削除しますか？");
+      if (!ok) return;
       try {
         await invoke("delete_timeline_event", { id });
         void loadEvents();

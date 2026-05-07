@@ -340,10 +340,10 @@
   --space-16: 64px;
 
   /* ── フォントサイズ ── */
-  --font-size-xs: 11px;
+  --font-size-xs: 12px;
   --font-size-sm: 13px;
-  --font-size-base: 14px;
-  --font-size-md: 15px;
+  --font-size-base: 14.5px;
+  --font-size-md: 15.5px;
   --font-size-lg: 18px;
   --font-size-xl: 22px;
   --font-size-2xl: 28px;

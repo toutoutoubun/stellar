@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { invoke } from "../../lib/tauriShim";
+import { swalConfirm } from "../../lib/swal";
 import type {
   PtData,
   PtSummary,
@@ -89,7 +90,8 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
 
   const handleDeleteHypothesis = useCallback(
     async (id: string) => {
-      if (!confirm("この仮説と関連する証拠をすべて削除しますか？")) return;
+      const ok = await swalConfirm("仮説削除", "この仮説と関連する証拠をすべて削除しますか？");
+      if (!ok) return;
       try {
         await invoke("delete_pt_hypothesis", { id });
         void loadData();

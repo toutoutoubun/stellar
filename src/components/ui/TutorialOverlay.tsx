@@ -287,8 +287,8 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
         >
           <div className="flex items-center gap-2">
             <svg
-              width="16"
-              height="16"
+              width="18"
+              height="18"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -300,7 +300,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
             </svg>
             <span
-              className="text-xs font-semibold uppercase tracking-wider"
+              className="text-sm font-semibold uppercase tracking-wider"
               style={{ color: "var(--color-text-tertiary)" }}
             >
               Stellar ガイド
@@ -356,13 +356,13 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
               {currentStep.icon}
             </div>
             <h2
-              className="text-lg font-bold mb-2"
+              className="text-xl font-bold mb-2"
               style={{ color: "var(--color-text-primary)" }}
             >
               {currentStep.title}
             </h2>
             <p
-              className="text-sm leading-relaxed"
+              className="text-base leading-relaxed"
               style={{
                 color: "var(--color-text-secondary)",
                 maxWidth: "420px",
@@ -388,7 +388,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
                 {currentStep.tips.map((tip, idx) => (
                   <div
                     key={idx}
-                    className="flex items-start gap-2.5 text-xs"
+                    className="flex items-start gap-2.5 text-sm"
                     style={{ color: "var(--color-text-secondary)" }}
                   >
                     <span
@@ -448,7 +448,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
           {/* ステップカウンター + ボタン */}
           <div className="flex items-center gap-2">
             <span
-              className="text-xs mr-2"
+              className="text-sm mr-2"
               style={{ color: "var(--color-text-tertiary)" }}
             >
               {step + 1} / {TOTAL_STEPS}
@@ -457,7 +457,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
             {step > 0 && (
               <button
                 onClick={handlePrev}
-                className="px-3 py-1.5 text-xs font-medium"
+                className="px-4 py-2 text-sm font-medium"
                 style={{
                   color: "var(--color-text-secondary)",
                   backgroundColor: "transparent",
@@ -473,7 +473,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
             {step < TOTAL_STEPS - 1 ? (
               <button
                 onClick={handleNext}
-                className="px-3 py-1.5 text-xs font-semibold"
+                className="px-4 py-2 text-sm font-semibold"
                 style={{
                   backgroundColor: "var(--color-accent-primary)",
                   color: "var(--color-text-inverse)",
@@ -487,7 +487,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
             ) : (
               <button
                 onClick={handleClose}
-                className="px-4 py-1.5 text-xs font-semibold"
+                className="px-5 py-2 text-sm font-semibold"
                 style={{
                   backgroundColor: "var(--color-accent-primary)",
                   color: "var(--color-text-inverse)",

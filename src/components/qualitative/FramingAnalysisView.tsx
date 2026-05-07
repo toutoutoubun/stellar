@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { invoke } from "../../lib/tauriShim";
+import { swalConfirm } from "../../lib/swal";
 import type { Frame, FramingMatrix, CreateFrameInput } from "../../types";
 import { HelpTooltip } from "./HelpTooltip";
 import {
@@ -92,7 +93,8 @@ export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({
 
   const handleDeleteFrame = useCallback(
     async (id: string) => {
-      if (!confirm("このフレームを削除しますか？")) return;
+      const ok = await swalConfirm("フレーム削除", "このフレームを削除しますか？");
+      if (!ok) return;
       try {
         await invoke("delete_frame", { id });
         if (selectedFrame?.id === id) setSelectedFrame(null);

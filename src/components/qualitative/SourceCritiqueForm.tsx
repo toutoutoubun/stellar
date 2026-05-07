@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { invoke } from "../../lib/tauriShim";
+import { swalConfirm } from "../../lib/swal";
 import type { SourceCritique, SourceCritiqueInput, Paper } from "../../types";
 import { HelpTooltip } from "./HelpTooltip";
 import { IconDelete, IconPanelLeft, IconScroll } from "./icons/QualIcons";
@@ -132,7 +133,8 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
 
   const handleDelete = useCallback(
     async (id: string) => {
-      if (!confirm("この史料批判を削除しますか？")) return;
+      const ok = await swalConfirm("史料批判の削除", "この史料批判を削除しますか？");
+      if (!ok) return;
       try {
         await invoke("delete_source_critique", { id });
         setCritiques((prev) => prev.filter((c) => c.id !== id));

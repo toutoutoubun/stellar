@@ -103,10 +103,10 @@ const DataStudioView: React.FC = () => {
             <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
           </svg>
           <div className="text-center">
-            <p className="text-sm font-medium" style={{ color: "var(--color-text-secondary)" }}>
+            <p className="text-base font-medium" style={{ color: "var(--color-text-secondary)" }}>
               データセットを選択してください
             </p>
-            <p className="text-xs mt-1">
+            <p className="text-sm mt-1">
               左パネルからデータセットを選択するか、新しいデータセットを作成してください
             </p>
           </div>
@@ -146,9 +146,9 @@ const DataStudioView: React.FC = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* タブバー */}
         <div
-          className="shrink-0 flex items-center gap-1 px-4"
+          className="shrink-0 flex items-center gap-2 px-4"
           style={{
-            height: "44px",
+            height: "48px",
             borderBottom: "1px solid var(--color-border-primary)",
             backgroundColor: "var(--color-bg-secondary)",
           }}
@@ -160,7 +160,7 @@ const DataStudioView: React.FC = () => {
               <button
                 key={tab.key}
                 onClick={() => !isDisabled && handleTabChange(tab.key)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium relative select-none"
+                className="flex items-center gap-2 px-3.5 py-2 text-sm font-medium relative select-none"
                 style={{
                   color: isActive
                     ? "var(--color-accent-primary)"
@@ -202,7 +202,7 @@ const DataStudioView: React.FC = () => {
           {/* 選択中データセット名 */}
           {selectedDataset && (
             <span
-              className="ml-auto text-xs truncate max-w-48"
+              className="ml-auto text-sm truncate max-w-48"
               style={{ color: "var(--color-text-tertiary)" }}
             >
               {selectedDataset.name}

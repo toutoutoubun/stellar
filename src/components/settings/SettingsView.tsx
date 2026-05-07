@@ -219,13 +219,13 @@ export const SettingsView: React.FC = () => {
       {/* テーマ選択 */}
       <section>
         <h3
-          className="text-sm font-semibold mb-1"
+          className="text-base font-semibold mb-1"
           style={{ color: "var(--color-text-primary)" }}
         >
           テーマ
         </h3>
         <p
-          className="text-xs mb-4"
+          className="text-sm mb-4"
           style={{ color: "var(--color-text-tertiary)" }}
         >
           アプリの外観テーマを選択します
@@ -245,13 +245,13 @@ export const SettingsView: React.FC = () => {
       {/* フォントサイズ */}
       <section>
         <h3
-          className="text-sm font-semibold mb-1"
+          className="text-base font-semibold mb-1"
           style={{ color: "var(--color-text-primary)" }}
         >
           フォントサイズ
         </h3>
         <p
-          className="text-xs mb-3"
+          className="text-sm mb-3"
           style={{ color: "var(--color-text-tertiary)" }}
         >
           アプリ全体のベースフォントサイズ（13px〜16px）
@@ -289,13 +289,13 @@ export const SettingsView: React.FC = () => {
       {/* 行の高さ */}
       <section>
         <h3
-          className="text-sm font-semibold mb-1"
+          className="text-base font-semibold mb-1"
           style={{ color: "var(--color-text-primary)" }}
         >
           行の高さ
         </h3>
         <p
-          className="text-xs mb-3"
+          className="text-sm mb-3"
           style={{ color: "var(--color-text-tertiary)" }}
         >
           エディタの行間（1.5〜2.0）
@@ -333,13 +333,13 @@ export const SettingsView: React.FC = () => {
       {/* エディタフォント */}
       <section>
         <h3
-          className="text-sm font-semibold mb-1"
+          className="text-base font-semibold mb-1"
           style={{ color: "var(--color-text-primary)" }}
         >
           エディタフォント
         </h3>
         <p
-          className="text-xs mb-3"
+          className="text-sm mb-3"
           style={{ color: "var(--color-text-tertiary)" }}
         >
           ノートエディタで使用するフォント
@@ -393,13 +393,13 @@ export const SettingsView: React.FC = () => {
       {/* データサマリー */}
       <section>
         <h3
-          className="text-sm font-semibold mb-1"
+          className="text-base font-semibold mb-1"
           style={{ color: "var(--color-text-primary)" }}
         >
           データサマリー
         </h3>
         <p
-          className="text-xs mb-4"
+          className="text-sm mb-4"
           style={{ color: "var(--color-text-tertiary)" }}
         >
           アプリケーションのデータ統計
@@ -487,13 +487,13 @@ export const SettingsView: React.FC = () => {
       {/* データパス */}
       <section>
         <h3
-          className="text-sm font-semibold mb-1"
+          className="text-base font-semibold mb-1"
           style={{ color: "var(--color-text-primary)" }}
         >
           データ保存先
         </h3>
         <p
-          className="text-xs mb-3"
+          className="text-sm mb-3"
           style={{ color: "var(--color-text-tertiary)" }}
         >
           データベースと PDF ファイルの保存場所
@@ -544,13 +544,13 @@ export const SettingsView: React.FC = () => {
       {/* エクスポート & バックアップ */}
       <section>
         <h3
-          className="text-sm font-semibold mb-1"
+          className="text-base font-semibold mb-1"
           style={{ color: "var(--color-text-primary)" }}
         >
           エクスポート＆バックアップ
         </h3>
         <p
-          className="text-xs mb-4"
+          className="text-sm mb-4"
           style={{ color: "var(--color-text-tertiary)" }}
         >
           データの書き出しやバックアップを作成します
@@ -637,13 +637,13 @@ export const SettingsView: React.FC = () => {
       <div className="flex flex-col gap-6">
         <div>
           <h3
-            className="text-sm font-semibold mb-1"
+            className="text-base font-semibold mb-1"
             style={{ color: "var(--color-text-primary)" }}
           >
             キーボードショートカット
           </h3>
           <p
-            className="text-xs mb-4"
+            className="text-sm mb-4"
             style={{ color: "var(--color-text-tertiary)" }}
           >
             利用可能なキーボードショートカットの一覧です
@@ -737,13 +737,13 @@ export const SettingsView: React.FC = () => {
       {/* デフォルト引用スタイル */}
       <section>
         <h3
-          className="text-sm font-semibold mb-1"
+          className="text-base font-semibold mb-1"
           style={{ color: "var(--color-text-primary)" }}
         >
           デフォルト引用スタイル
         </h3>
         <p
-          className="text-xs mb-4"
+          className="text-sm mb-4"
           style={{ color: "var(--color-text-tertiary)" }}
         >
           引用を生成する際のデフォルトフォーマットを選択します
@@ -801,13 +801,13 @@ export const SettingsView: React.FC = () => {
       {/* 著者名順序 */}
       <section>
         <h3
-          className="text-sm font-semibold mb-1"
+          className="text-base font-semibold mb-1"
           style={{ color: "var(--color-text-primary)" }}
         >
           日本語著者名の表示順序
         </h3>
         <p
-          className="text-xs mb-4"
+          className="text-sm mb-4"
           style={{ color: "var(--color-text-tertiary)" }}
         >
           日本語の著者名を表示する際の姓名順序を選択します

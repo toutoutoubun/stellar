@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { invoke } from "../../lib/tauriShim";
+import { swalConfirm } from "../../lib/swal";
 import type {
   Actor,
   ActorRelation,
@@ -118,7 +119,8 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
 
   const handleDeleteActor = useCallback(
     async (id: string) => {
-      if (!confirm("このアクターを削除しますか？")) return;
+      const ok = await swalConfirm("アクター削除", "このアクターを削除しますか？");
+      if (!ok) return;
       try {
         await invoke("delete_actor", { id });
         void loadData();

@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { invoke } from "../../lib/tauriShim";
+import { swalConfirm } from "../../lib/swal";
 import type {
   QualProject,
   CreateQualProjectInput,
@@ -114,7 +115,8 @@ const QualitativeView: React.FC = () => {
 
   const handleDeleteProject = useCallback(
     async (id: string) => {
-      if (!confirm("このプロジェクトを削除しますか？")) return;
+      const ok = await swalConfirm("プロジェクト削除", "このプロジェクトを削除しますか？");
+      if (!ok) return;
       try {
         await invoke("delete_project", { id });
         setProjects((prev) => prev.filter((p) => p.id !== id));
@@ -135,7 +137,7 @@ const QualitativeView: React.FC = () => {
       return (
         <div className="flex flex-col items-center justify-center h-full gap-4" style={{ color: "var(--color-text-tertiary)" }}>
           <IconBook size={32} />
-          <span className="text-sm">プロジェクトを選択または作成してください</span>
+          <span className="text-base">プロジェクトを選択または作成してください</span>
         </div>
       );
     }
@@ -218,7 +220,7 @@ const QualitativeView: React.FC = () => {
                 transition: "all 100ms",
               }}
             >
-              <t.Icon size={12} />
+              <t.Icon size={14} />
               {t.label}
             </button>
           ))}
@@ -241,7 +243,7 @@ const QualitativeView: React.FC = () => {
       <aside
         className="flex flex-col h-full shrink-0"
         style={{
-          width: sidebarCollapsed ? "40px" : "200px",
+          width: sidebarCollapsed ? "44px" : "220px",
           borderRight: "1px solid var(--color-border-primary)",
           backgroundColor: "var(--color-bg-secondary)",
           transition: "width 150ms ease-out",
@@ -250,11 +252,11 @@ const QualitativeView: React.FC = () => {
       >
         {/* ヘッダー */}
         <header
-          className="flex items-center justify-between px-2 shrink-0"
-          style={{ height: "40px", borderBottom: "1px solid var(--color-border-primary)" }}
+          className="flex items-center justify-between px-3 shrink-0"
+          style={{ height: "44px", borderBottom: "1px solid var(--color-border-primary)" }}
         >
           {!sidebarCollapsed && (
-            <span className="text-xs font-semibold" style={{ color: "var(--color-text-tertiary)" }}>
+            <span className="text-sm font-semibold" style={{ color: "var(--color-text-tertiary)" }}>
               プロジェクト
             </span>
           )}
@@ -366,7 +368,7 @@ const QualitativeView: React.FC = () => {
                   }}
                   onClick={() => { setSelectedProjectId(p.id); setActiveTab("dashboard"); }}
                 >
-                  <span className="text-xs truncate flex-1">{p.name}</span>
+                  <span className="text-sm truncate flex-1">{p.name}</span>
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); void handleDeleteProject(p.id); }}
@@ -378,7 +380,7 @@ const QualitativeView: React.FC = () => {
                 </div>
               ))}
               {projects.length === 0 && !showNewProject && (
-                <div className="text-center py-6 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+                <div className="text-center py-6 text-sm" style={{ color: "var(--color-text-tertiary)" }}>
                   プロジェクトなし
                 </div>
               )}
@@ -393,10 +395,11 @@ const QualitativeView: React.FC = () => {
         <nav
           className="flex items-center shrink-0"
           style={{
-            height: tabBarCollapsed ? "0px" : "36px",
+            height: tabBarCollapsed ? "0px" : "44px",
             borderBottom: tabBarCollapsed ? "none" : "1px solid var(--color-border-primary)",
             backgroundColor: "var(--color-bg-secondary)",
             overflow: "hidden",
+            overflowX: "auto",
             transition: "height 150ms ease-out",
           }}
         >
@@ -407,10 +410,9 @@ const QualitativeView: React.FC = () => {
                 key={t.key}
                 type="button"
                 onClick={() => setActiveTab(t.key)}
-                className="inline-flex items-center gap-1 text-xs px-2.5 h-full whitespace-nowrap"
+                className="inline-flex items-center gap-1.5 text-sm px-3 h-full whitespace-nowrap"
                 style={{
                   color: isActive ? "var(--color-accent-primary)" : "var(--color-text-tertiary)",
-                  borderBottom: `2px solid ${isActive ? "var(--color-accent-primary)" : "transparent"}`,
                   background: "none",
                   border: "none",
                   borderBottomStyle: "solid",
@@ -419,9 +421,10 @@ const QualitativeView: React.FC = () => {
                   cursor: "pointer",
                   transition: "all 80ms",
                   fontWeight: isActive ? 600 : 400,
+                  flexShrink: 0,
                 }}
               >
-                <t.Icon size={13} color={isActive ? "var(--color-accent-primary)" : "var(--color-text-tertiary)"} />
+                <t.Icon size={15} color={isActive ? "var(--color-accent-primary)" : "var(--color-text-tertiary)"} />
                 {t.label}
               </button>
             );
