@@ -313,14 +313,20 @@ pub struct GraphData {
 }
 
 /// グラフノード — 論文またはノート1つ分
+/// フロントエンド (react-force-graph-2d) が期待するフィールド名に合わせる:
+///   name  — ノードラベル（タイトル）
+///   type  — "paper" | "note"
+///   val   — ノードサイズ（リンク数）
 #[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct GraphNode {
     pub id: String,
-    pub label: String,
+    pub name: String,
+    #[serde(rename = "type")]
     pub node_type: String,
     pub tags: Vec<String>,
+    #[serde(rename = "linkCount")]
     pub link_count: u32,
+    pub val: u32,
 }
 
 /// グラフエッジ — ノード間のリンク1本分

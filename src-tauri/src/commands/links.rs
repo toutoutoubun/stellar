@@ -162,16 +162,17 @@ pub async fn get_graph_data(app: AppHandle) -> Result<GraphData, String> {
         .iter()
         .filter_map(|row| {
             let id: String = row.try_get("id").ok()?;
-            let label: String = row.try_get("title").ok()?;
+            let name: String = row.try_get("title").ok()?;
             let tags = col_string_vec(row, "tags");
             let link_count = link_counts.get(&id).copied().unwrap_or(0);
 
             Some(GraphNode {
                 id,
-                label,
+                name,
                 node_type: "paper".to_string(),
                 tags,
                 link_count,
+                val: link_count.max(1),
             })
         })
         .collect();
@@ -181,16 +182,17 @@ pub async fn get_graph_data(app: AppHandle) -> Result<GraphData, String> {
         .iter()
         .filter_map(|row| {
             let id: String = row.try_get("id").ok()?;
-            let label: String = row.try_get("title").ok()?;
+            let name: String = row.try_get("title").ok()?;
             let tags = col_string_vec(row, "tags");
             let link_count = link_counts.get(&id).copied().unwrap_or(0);
 
             Some(GraphNode {
                 id,
-                label,
+                name,
                 node_type: "note".to_string(),
                 tags,
                 link_count,
+                val: link_count.max(1),
             })
         })
         .collect();
