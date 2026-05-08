@@ -540,6 +540,10 @@ const en: TranslationKeys = {
     k_reload_pdf: "Reload",
     k_no_pdf_attached: "No PDF is attached to this paper.",
     k_add_pdf_from_library: "Please add a PDF from the library.",
+    k_copy_quote: "Copy quoted text",
+    k_coding: "Coding",
+    k_select_text_to_highlight: "Select text to add highlights",
+    k_convert_to_note: "Convert selected highlights to note (${count})",
 },
 
   // ============================================================

@@ -539,6 +539,10 @@ const fr: TranslationKeys = {
     k_reload_pdf: "Recharger",
     k_no_pdf_attached: "Aucun PDF n'est joint à cet article.",
     k_add_pdf_from_library: "Veuillez ajouter un PDF depuis la bibliothèque.",
+    k_copy_quote: "Copier le texte cité",
+    k_coding: "Codage",
+    k_select_text_to_highlight: "Sélectionnez du texte pour ajouter des surlignages",
+    k_convert_to_note: "Convertir les surlignages sélectionnés en note (${count})",
 },
 
   // ============================================================

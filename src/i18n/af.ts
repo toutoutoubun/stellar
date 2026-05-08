@@ -539,6 +539,10 @@ const af: TranslationKeys = {
     k_reload_pdf: "Herlaai",
     k_no_pdf_attached: "Geen PDF is aan hierdie artikel geheg nie.",
     k_add_pdf_from_library: "Voeg asseblief 'n PDF by vanaf die biblioteek.",
+    k_copy_quote: "Kopieer aangehaalde teks",
+    k_coding: "Kodering",
+    k_select_text_to_highlight: "Kies teks om hoogtepunte by te voeg",
+    k_convert_to_note: "Skakel geselekteerde hoogtepunte om na nota (${count})",
 },
 
   // ============================================================

@@ -171,7 +171,7 @@ export const HighlightPanel: React.FC<HighlightPanelProps> = ({
             <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
             <line x1="7" y1="7" x2="7.01" y2="7" />
           </svg>
-          コーディング
+          {useI18nStore.getState().t.reader.k_coding}
         </button>
 
         {/* 選択解除ボタン（ハイライトタブで選択中のみ表示） */}
@@ -235,9 +235,7 @@ export const HighlightPanel: React.FC<HighlightPanelProps> = ({
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                 </svg>
                 <p className="text-sm text-center">
-                  テキストを選択して
-                  <br />
-                  ハイライトを追加しましょう
+                  {useI18nStore.getState().t.reader.k_select_text_to_highlight}
                 </p>
               </div>
             ) : (
@@ -303,7 +301,7 @@ export const HighlightPanel: React.FC<HighlightPanelProps> = ({
                   <line x1="12" y1="18" x2="12" y2="12" />
                   <line x1="9" y1="15" x2="15" y2="15" />
                 </svg>
-                選択ハイライトをノートに変換（{selectedCount}件）
+                {useI18nStore.getState().t.reader.k_convert_to_note.replace('${count}', String(selectedCount))}
               </button>
             </footer>
           )}

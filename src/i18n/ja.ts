@@ -538,6 +538,10 @@ const ja = {
     k_reload_pdf: "再読み込み",
     k_no_pdf_attached: "この論文にはPDFが添付されていません。",
     k_add_pdf_from_library: "ライブラリからPDFを追加してください。",
+    k_copy_quote: "引用テキストをコピー",
+    k_coding: "コーディング",
+    k_select_text_to_highlight: "テキストを選択してハイライトを追加しましょう",
+    k_convert_to_note: "選択ハイライトをノートに変換（${count}件）",
 },
 
   // ============================================================
