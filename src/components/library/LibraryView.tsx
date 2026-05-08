@@ -4,7 +4,7 @@
 // 3ペインレイアウト内のメインコンテンツ領域として機能する
 
 import type React from "react";
-import { useEffect, useCallback, useState, useRef, useMemo } from "react";
+import { useEffect, useCallback, useState, useRef } from "react";
 import { useLibraryStore } from "../../stores/useLibraryStore";
 import { useUIStore } from "../../stores/useUIStore";
 import { PaperCard } from "./PaperCard";
