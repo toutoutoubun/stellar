@@ -1,9 +1,12 @@
 // src/components/library/ReadingStatusBadge.tsx
 // Stellar — 読書ステータスバッジ（ドロップダウン切替付き）
 // PaperCard / PaperListRow / PaperDetailPanel に埋め込んで使用
+// ドロップダウンは position:fixed でビューポート基準に描画し、
+// 親コンポーネントの overflow:hidden の影響を受けない
 
 import type React from "react";
 import { useState, useCallback, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import type { ReadingStatus } from "../../types";
 import { useCitationStore } from "../../stores/useCitationStore";
 import { toast } from "../ui/Toast";
@@ -43,6 +46,13 @@ const STATUS_COLORS: Record<ReadingStatus, { bg: string; text: string; dot: stri
 
 const ALL_STATUSES: ReadingStatus[] = ["unread", "reading", "done", "revisit"];
 
+/** ドロップダウンの表示位置 */
+interface DropdownPosition {
+  top: number;
+  left: number;
+  openUpward: boolean;
+}
+
 export const ReadingStatusBadge: React.FC<ReadingStatusBadgeProps> = ({
   paperId,
   status: externalStatus,
@@ -50,6 +60,8 @@ export const ReadingStatusBadge: React.FC<ReadingStatusBadgeProps> = ({
 }) => {
   const t = useT();
   const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState<DropdownPosition | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const storeStatus = useCitationStore((s) => s.readingStatuses[paperId]);
@@ -66,16 +78,61 @@ export const ReadingStatusBadge: React.FC<ReadingStatusBadgeProps> = ({
     revisit: t.citationNetwork.revisit,
   };
 
+  /** トリガーボタンの位置からドロップダウン位置を計算 */
+  const calcPosition = useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const dropdownHeight = ALL_STATUSES.length * 32 + 8; // 概算
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUpward = spaceBelow < dropdownHeight + 8 && rect.top > dropdownHeight;
+
+    setPosition({
+      top: openUpward ? rect.top : rect.bottom + 4,
+      left: rect.left,
+      openUpward,
+    });
+  }, []);
+
+  /** 開閉トグル */
+  const handleToggle = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (updating) return;
+      if (!open) {
+        calcPosition();
+      }
+      setOpen((v) => !v);
+    },
+    [updating, open, calcPosition],
+  );
+
   // 外クリックで閉じる
   useEffect(() => {
     if (!open) return;
     const handleClick = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setOpen(false);
+      const target = e.target as Node;
+      if (
+        triggerRef.current?.contains(target) ||
+        dropdownRef.current?.contains(target)
+      ) {
+        return;
       }
+      setOpen(false);
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  // スクロール・リサイズ時は閉じる
+  useEffect(() => {
+    if (!open) return;
+    const handleClose = () => setOpen(false);
+    window.addEventListener("scroll", handleClose, true);
+    window.addEventListener("resize", handleClose);
+    return () => {
+      window.removeEventListener("scroll", handleClose, true);
+      window.removeEventListener("resize", handleClose);
+    };
   }, [open]);
 
   const handleSelect = useCallback(
@@ -89,15 +146,16 @@ export const ReadingStatusBadge: React.FC<ReadingStatusBadgeProps> = ({
         toast.error(t.citationNetwork.statusUpdateFailed);
       }
     },
-    [paperId, currentStatus, updateReadingStatus, t]
+    [paperId, currentStatus, updateReadingStatus, t],
   );
 
   const colors = STATUS_COLORS[currentStatus];
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative">
       {/* トリガーバッジ */}
       <button
+        ref={triggerRef}
         className="inline-flex items-center gap-1.5 select-none"
         style={{
           padding: compact ? "2px 6px" : "3px 8px",
@@ -112,10 +170,7 @@ export const ReadingStatusBadge: React.FC<ReadingStatusBadgeProps> = ({
           opacity: updating ? 0.6 : 1,
           border: "none",
         }}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (!updating) setOpen((v) => !v);
-        }}
+        onClick={handleToggle}
         title={t.citationNetwork.readingStatus}
       >
         {/* ステータスドット */}
@@ -149,83 +204,90 @@ export const ReadingStatusBadge: React.FC<ReadingStatusBadgeProps> = ({
         </svg>
       </button>
 
-      {/* ドロップダウン */}
-      {open && (
-        <div
-          style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            marginTop: "4px",
-            minWidth: "120px",
-            backgroundColor: "var(--color-bg-card)",
-            borderRadius: "var(--radius-input)",
-            boxShadow: "var(--shadow-dropdown)",
-            border: "1px solid var(--color-border-secondary)",
-            padding: "var(--space-1) 0",
-            zIndex: "var(--z-dropdown)",
-            animation: "scale-in 150ms ease-out both",
-          }}
-        >
-          {ALL_STATUSES.map((s) => {
-            const sc = STATUS_COLORS[s];
-            const isActive = s === currentStatus;
-            return (
-              <button
-                key={s}
-                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left"
-                style={{
-                  color: isActive ? sc.text : "var(--color-text-primary)",
-                  fontWeight: isActive ? 600 : 400,
-                  backgroundColor: isActive ? sc.bg : "transparent",
-                  transition: "background-color var(--transition-fast)",
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void handleSelect(s);
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.backgroundColor = "transparent";
-                  }
-                }}
-              >
-                <span
+      {/* ドロップダウン — Portal で body 直下に描画し、overflow:hidden を回避 */}
+      {open &&
+        position &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            style={{
+              position: "fixed",
+              top: position.openUpward ? undefined : `${position.top}px`,
+              bottom: position.openUpward
+                ? `${window.innerHeight - position.top + 4}px`
+                : undefined,
+              left: `${position.left}px`,
+              minWidth: "120px",
+              backgroundColor: "var(--color-bg-card)",
+              borderRadius: "var(--radius-input)",
+              boxShadow: "var(--shadow-dropdown)",
+              border: "1px solid var(--color-border-secondary)",
+              padding: "var(--space-1) 0",
+              zIndex: 9999,
+              animation: "scale-in 150ms ease-out both",
+            }}
+          >
+            {ALL_STATUSES.map((s) => {
+              const sc = STATUS_COLORS[s];
+              const isActive = s === currentStatus;
+              return (
+                <button
+                  key={s}
+                  className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left"
                   style={{
-                    width: "6px",
-                    height: "6px",
-                    borderRadius: "50%",
-                    backgroundColor: sc.dot,
-                    flexShrink: 0,
+                    color: isActive ? sc.text : "var(--color-text-primary)",
+                    fontWeight: isActive ? 600 : 400,
+                    backgroundColor: isActive ? sc.bg : "transparent",
+                    transition: "background-color var(--transition-fast)",
                   }}
-                />
-                <span>{statusLabel[s]}</span>
-                {isActive && (
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="ml-auto"
-                    style={{ opacity: 0.7 }}
-                  >
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void handleSelect(s);
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor =
+                        "var(--color-bg-hover)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }
+                  }}
+                >
+                  <span
+                    style={{
+                      width: "6px",
+                      height: "6px",
+                      borderRadius: "50%",
+                      backgroundColor: sc.dot,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span>{statusLabel[s]}</span>
+                  {isActive && (
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="ml-auto"
+                      style={{ opacity: 0.7 }}
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                </button>
+              );
+            })}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };
