@@ -97,6 +97,9 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
   const [pdfFilePath, setPdfFilePath] = useState<string | null>(null);
   const [pdfFileName, setPdfFileName] = useState<string | null>(null);
 
+  // メタデータ取得時に返された PDF ダウンロード URL（バックエンドの pdf_url）
+  const [pdfDownloadUrl, setPdfDownloadUrl] = useState<string | null>(null);
+
   // ── フォームリセット ──
   const resetForm = useCallback(() => {
 
@@ -111,6 +114,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
     setSaving(false);
     setPdfFilePath(null);
     setPdfFileName(null);
+    setPdfDownloadUrl(null);
   }, []);
 
   // ── タブ切替時にリセット ──
@@ -151,12 +155,22 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
     }
     setFetching(true);
     setFetched(false);
+    setPdfDownloadUrl(null);
     try {
-      const data = await invoke<Partial<CreatePaperInput>>(
+      // バックエンドは PaperMetadata を返す（pdf_url フィールド含む）
+      const data = await invoke<Partial<CreatePaperInput> & { pdf_url?: string; pdfUrl?: string }>(
         "fetch_metadata_from_url",
         { url: urlInput.trim() }
       );
-      applyMetadata({ ...data, url: urlInput.trim() });
+      // pdf_url を保持（camelCase / snake_case 両対応）
+      const fetchedPdfUrl = data.pdfUrl ?? data.pdf_url ?? null;
+      if (fetchedPdfUrl) {
+        setPdfDownloadUrl(fetchedPdfUrl);
+        setDownloadPdf(true); // PDF URL がある場合はデフォルトでチェックON
+      }
+      // pdf_url / pdfUrl はフォームには不要なので除去してから適用
+      const { pdf_url: _a, pdfUrl: _b, ...formData } = data;
+      applyMetadata({ ...formData, url: urlInput.trim() });
       toast.success(useI18nStore.getState().t.library.k_2uf93e);
     } catch (e) {
       const errMsg = String(e).replace(/^Error:\s*/i, "");
@@ -278,7 +292,39 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
     }
     setSaving(true);
     try {
+      // まず論文を保存
       await onSave(finalForm);
+
+      // URLタブで「PDFも一緒に保存する」がON かつ PDF URL がある場合、
+      // バックエンドの download_pdf_from_url を呼んで PDF をダウンロード
+      if (activeTab === "url" && downloadPdf && pdfDownloadUrl) {
+        try {
+          // 保存直後の最新 paper を取得して ID を得る
+          const { useLibraryStore } = await import("../../stores/useLibraryStore");
+          const papers = useLibraryStore.getState().papers;
+          const latestPaper = papers.find(
+            (p) => p.title === finalForm.title
+          );
+          const paperId = latestPaper?.id ?? "unknown";
+
+          const savedPath = await invoke<string>("download_pdf_from_url", {
+            paperId,
+            pdfUrl: pdfDownloadUrl,
+          });
+
+          // PDF パスを論文に紐付ける
+          if (savedPath && latestPaper) {
+            await useLibraryStore.getState().attachPdf(latestPaper.id, savedPath);
+            toast.success("PDFを保存しました");
+          }
+        } catch (pdfErr) {
+          console.error("[AddPaperModal] PDF ダウンロード失敗:", pdfErr);
+          toast.warning(
+            `論文は保存されましたが、PDFのダウンロードに失敗しました: ${String(pdfErr).replace(/^Error:\s*/i, "")}`
+          );
+        }
+      }
+
       toast.success(useI18nStore.getState().t.library.k_9cffqr);
       handleClose();
     } catch {
@@ -286,7 +332,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
     } finally {
       setSaving(false);
     }
-  }, [form, activeTab, pdfFilePath, onSave, handleClose]);
+  }, [form, activeTab, pdfFilePath, downloadPdf, pdfDownloadUrl, onSave, handleClose]);
 
   // ── フォームフィールド群の描画 ──
   const renderFormFields = () => (
@@ -681,6 +727,17 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
             </div>
             <span style={{ color: "var(--color-text-secondary)" }}>
               PDFも一緒に保存する
+              {pdfDownloadUrl && (
+                <span
+                  style={{
+                    color: "var(--color-accent-primary)",
+                    marginLeft: "4px",
+                    fontSize: "10px",
+                  }}
+                >
+                  ✓ PDF URL 検出済み
+                </span>
+              )}
             </span>
           </label>
 

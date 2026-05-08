@@ -462,6 +462,14 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
       "www.nature.com": "Nature",
     };
     const siteName = siteNames[hostname] || hostname;
+    // J-Stage / arXiv 等の場合は PDF URL をモック生成
+    let mockPdfUrl: string | null = null;
+    if (hostname.includes("jstage.jst.go.jp")) {
+      // J-Stage の PDF URL パターン: /article/{journal}/{vol}/{issue}/{page}/_pdf
+      mockPdfUrl = url.replace(/\/_article.*$/, "/_pdf/-char/ja");
+    } else if (hostname === "arxiv.org") {
+      mockPdfUrl = url.replace("/abs/", "/pdf/") + ".pdf";
+    }
     const mockMeta = {
       title: `[Mock] Sample Article from ${siteName}`,
       authors: ["Sample Author"],
@@ -473,8 +481,20 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
       doi: "10.1234/mock.2024.001",
       url: url,
       abstract: `This is a mock abstract for a paper fetched from ${siteName} (${url}). In a real Tauri environment, the Rust backend would scrape metadata from the actual page using site-specific strategies.`,
+      pdfUrl: mockPdfUrl,
     };
     return { handled: true, result: mockMeta };
+  }
+
+  // ── PDF ダウンロード（モック） ──
+  if (cmd === "download_pdf_from_url") {
+    const paperId = (args?.paperId ?? args?.paper_id ?? "unknown") as string;
+    const pdfUrl = (args?.pdfUrl ?? args?.pdf_url ?? "") as string;
+    console.info(`[tauriShim] Mock download_pdf_from_url: paperId=${paperId}, pdfUrl=${pdfUrl}`);
+    // モック環境ではダミーのファイルパスを返す
+    const shortId = paperId.substring(0, 8);
+    const mockPath = `/mock/pdfs/${shortId}_${Date.now()}.pdf`;
+    return { handled: true, result: mockPath };
   }
 
   if (cmd === "extract_metadata_from_pdf") {
