@@ -56,29 +56,6 @@
     "shell:allow-open",
     "process:default",
     "process:allow-restart",
-    "process:allow-exit",
-    {
-      "identifier": "core:asset:default",
-      "allow": [
-        {
-          "path": "$APPCONFIG/**"
-        },
-        {
-          "path": "$APPDATA/**"
-        },
-        {
-          "path": "$HOME/**"
-        },
-        {
-          "path": "$DESKTOP/**"
-        },
-        {
-          "path": "$DOCUMENT/**"
-        },
-        {
-          "path": "$DOWNLOAD/**"
-        }
-      ]
-    }
+    "process:allow-exit"
   ]
 }
