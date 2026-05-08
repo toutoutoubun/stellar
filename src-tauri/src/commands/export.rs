@@ -797,176 +797,56 @@ pub async fn import_stellar_package(
     // ID マッピング（旧ID → 新ID）
     let mut id_map: HashMap<String, String> = HashMap::new();
 
-    // papers.json を読み込みインポート
-    if let Ok(mut entry) = archive.by_name("papers.json") {
-        let mut buf = String::new();
-        entry.read_to_string(&mut buf).map_err(|e| e.to_string())?;
-        let papers: Vec<PaperResponse> =
-            serde_json::from_str(&buf).map_err(|e| format!("papers.json のパースに失敗: {}", e))?;
+    // ────────────────────────────────────────────────────────
+    // 同期フェーズ: ZIPエントリ（!Send な ZipFile）からJSONを読み出し・パースする。
+    // ZipFile は await をまたげないため、全データを先に読み込む。
+    // ────────────────────────────────────────────────────────
 
-        for paper in papers {
-            // DOI で既存論文をチェック
-            if let Some(ref doi) = paper.doi {
-                let existing = sqlx::query("SELECT id FROM papers WHERE doi = ?")
-                    .bind(doi)
-                    .fetch_optional(pool.as_ref())
-                    .await
-                    .map_err(|e| format!("DOI チェックに失敗: {}", e))?;
-
-                if let Some(row) = existing {
-                    let existing_id: String = row.try_get("id").unwrap_or_default();
-                    id_map.insert(paper.id.clone(), existing_id);
-                    result.conflicts.push(ImportConflict {
-                        item_type: "paper".to_string(),
-                        original_id: paper.id.clone(),
-                        title: paper.title.clone(),
-                        reason: format!("DOI 重複: {}", doi),
-                    });
-                    continue;
-                }
-            }
-
-            let new_id = uuid::Uuid::new_v4().to_string();
-            id_map.insert(paper.id.clone(), new_id.clone());
-            let now = chrono::Utc::now().to_rfc3339();
-            let authors_json = serde_json::to_string(&paper.authors).unwrap_or("[]".to_string());
-            let tags_json = serde_json::to_string(&paper.tags).unwrap_or("[]".to_string());
-
-            sqlx::query(
-                "INSERT INTO papers (id, title, authors, year, journal, volume, issue, pages, doi, url, abstract, pdf_path, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            )
-            .bind(&new_id)
-            .bind(&paper.title)
-            .bind(&authors_json)
-            .bind(paper.year)
-            .bind(&paper.journal)
-            .bind(&paper.volume)
-            .bind(&paper.issue)
-            .bind(&paper.pages)
-            .bind(&paper.doi)
-            .bind(&paper.url)
-            .bind(&paper.r#abstract)
-            .bind::<Option<&str>>(None) // pdf_path は後で設定
-            .bind(&tags_json)
-            .bind(&now)
-            .bind(&now)
-            .execute(pool.as_ref())
-            .await
-            .map_err(|e| format!("論文のインポートに失敗: {}", e))?;
-
-            result.papers_imported += 1;
+    let papers: Vec<PaperResponse> = {
+        if let Ok(mut entry) = archive.by_name("papers.json") {
+            let mut buf = String::new();
+            entry.read_to_string(&mut buf).map_err(|e| e.to_string())?;
+            serde_json::from_str(&buf)
+                .map_err(|e| format!("papers.json のパースに失敗: {}", e))?
+        } else {
+            Vec::new()
         }
-    }
+    };
 
-    // notes.json を読み込みインポート
-    if let Ok(mut entry) = archive.by_name("notes.json") {
-        let mut buf = String::new();
-        entry.read_to_string(&mut buf).map_err(|e| e.to_string())?;
-        let notes: Vec<NoteResponse> =
-            serde_json::from_str(&buf).map_err(|e| format!("notes.json のパースに失敗: {}", e))?;
-
-        for note in notes {
-            let new_id = uuid::Uuid::new_v4().to_string();
-            id_map.insert(note.id.clone(), new_id.clone());
-            let now = chrono::Utc::now().to_rfc3339();
-            let tags_json = serde_json::to_string(&note.tags).unwrap_or("[]".to_string());
-            let mapped_paper_id = note
-                .paper_id
-                .as_ref()
-                .and_then(|pid| id_map.get(pid).cloned().or(Some(pid.clone())));
-
-            sqlx::query(
-                "INSERT INTO notes (id, title, content, paper_id, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            )
-            .bind(&new_id)
-            .bind(&note.title)
-            .bind(&note.content)
-            .bind(&mapped_paper_id)
-            .bind(&tags_json)
-            .bind(&now)
-            .bind(&now)
-            .execute(pool.as_ref())
-            .await
-            .map_err(|e| format!("ノートのインポートに失敗: {}", e))?;
-
-            result.notes_imported += 1;
+    let notes: Vec<NoteResponse> = {
+        if let Ok(mut entry) = archive.by_name("notes.json") {
+            let mut buf = String::new();
+            entry.read_to_string(&mut buf).map_err(|e| e.to_string())?;
+            serde_json::from_str(&buf)
+                .map_err(|e| format!("notes.json のパースに失敗: {}", e))?
+        } else {
+            Vec::new()
         }
-    }
+    };
 
-    // highlights.json を読み込みインポート
-    if let Ok(mut entry) = archive.by_name("highlights.json") {
-        let mut buf = String::new();
-        entry.read_to_string(&mut buf).map_err(|e| e.to_string())?;
-        let highlights: Vec<HighlightResponse> = serde_json::from_str(&buf)
-            .map_err(|e| format!("highlights.json のパースに失敗: {}", e))?;
-
-        for hl in highlights {
-            let new_id = uuid::Uuid::new_v4().to_string();
-            id_map.insert(hl.id.clone(), new_id.clone());
-            let mapped_paper_id = id_map
-                .get(&hl.paper_id)
-                .cloned()
-                .unwrap_or(hl.paper_id.clone());
-            let rect_json = serde_json::to_string(&hl.rect).unwrap_or("{}".to_string());
-            let now = chrono::Utc::now().to_rfc3339();
-
-            sqlx::query(
-                "INSERT INTO highlights (id, paper_id, text, comment, color, page, rect, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            )
-            .bind(&new_id)
-            .bind(&mapped_paper_id)
-            .bind(&hl.text)
-            .bind(&hl.comment)
-            .bind(&hl.color)
-            .bind(hl.page)
-            .bind(&rect_json)
-            .bind(&now)
-            .execute(pool.as_ref())
-            .await
-            .map_err(|e| format!("ハイライトのインポートに失敗: {}", e))?;
-
-            result.highlights_imported += 1;
+    let highlights: Vec<HighlightResponse> = {
+        if let Ok(mut entry) = archive.by_name("highlights.json") {
+            let mut buf = String::new();
+            entry.read_to_string(&mut buf).map_err(|e| e.to_string())?;
+            serde_json::from_str(&buf)
+                .map_err(|e| format!("highlights.json のパースに失敗: {}", e))?
+        } else {
+            Vec::new()
         }
-    }
+    };
 
-    // links.json を読み込みインポート
-    if let Ok(mut entry) = archive.by_name("links.json") {
-        let mut buf = String::new();
-        entry.read_to_string(&mut buf).map_err(|e| e.to_string())?;
-        let links: Vec<LinkResponse> = serde_json::from_str(&buf)
-            .map_err(|e| format!("links.json のパースに失敗: {}", e))?;
-
-        for link in links {
-            let new_id = uuid::Uuid::new_v4().to_string();
-            let mapped_source = id_map
-                .get(&link.source_id)
-                .cloned()
-                .unwrap_or(link.source_id.clone());
-            let mapped_target = id_map
-                .get(&link.target_id)
-                .cloned()
-                .unwrap_or(link.target_id.clone());
-            let now = chrono::Utc::now().to_rfc3339();
-
-            sqlx::query(
-                "INSERT INTO links (id, source_type, source_id, target_type, target_id, context, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            )
-            .bind(&new_id)
-            .bind(&link.source_type)
-            .bind(&mapped_source)
-            .bind(&link.target_type)
-            .bind(&mapped_target)
-            .bind(&link.context)
-            .bind(&now)
-            .execute(pool.as_ref())
-            .await
-            .map_err(|e| format!("リンクのインポートに失敗: {}", e))?;
-
-            result.links_imported += 1;
+    let links: Vec<LinkResponse> = {
+        if let Ok(mut entry) = archive.by_name("links.json") {
+            let mut buf = String::new();
+            entry.read_to_string(&mut buf).map_err(|e| e.to_string())?;
+            serde_json::from_str(&buf)
+                .map_err(|e| format!("links.json のパースに失敗: {}", e))?
+        } else {
+            Vec::new()
         }
-    }
+    };
 
-    // PDF ファイルを展開（オプション）
+    // PDF ファイルを展開（同期 — ZipFile は !Send なのでここで完了させる）
     if manifest.includes_pdfs {
         let app_path = app
             .path()
@@ -976,7 +856,6 @@ pub async fn import_stellar_package(
         std::fs::create_dir_all(&pdfs_dir)
             .map_err(|e| format!("PDF ディレクトリの作成に失敗: {}", e))?;
 
-        // ZIP の全エントリを走査して pdfs/ プレフィクスのものを展開
         for i in 0..archive.len() {
             let mut entry = archive
                 .by_index(i)
@@ -997,6 +876,154 @@ pub async fn import_stellar_package(
                 result.pdfs_extracted += 1;
             }
         }
+    }
+
+    // archive はこれ以降使わないので明示的にドロップ（!Send を完全に排除）
+    drop(archive);
+
+    // ────────────────────────────────────────────────────────
+    // 非同期フェーズ: パース済みデータを DB に書き込む（.await が必要）
+    // ────────────────────────────────────────────────────────
+
+    // papers のインポート
+    for paper in papers {
+        // DOI で既存論文をチェック
+        if let Some(ref doi) = paper.doi {
+            let existing = sqlx::query("SELECT id FROM papers WHERE doi = ?")
+                .bind(doi)
+                .fetch_optional(pool.as_ref())
+                .await
+                .map_err(|e| format!("DOI チェックに失敗: {}", e))?;
+
+            if let Some(row) = existing {
+                let existing_id: String = row.try_get("id").unwrap_or_default();
+                id_map.insert(paper.id.clone(), existing_id);
+                result.conflicts.push(ImportConflict {
+                    item_type: "paper".to_string(),
+                    original_id: paper.id.clone(),
+                    title: paper.title.clone(),
+                    reason: format!("DOI 重複: {}", doi),
+                });
+                continue;
+            }
+        }
+
+        let new_id = uuid::Uuid::new_v4().to_string();
+        id_map.insert(paper.id.clone(), new_id.clone());
+        let now = chrono::Utc::now().to_rfc3339();
+        let authors_json = serde_json::to_string(&paper.authors).unwrap_or("[]".to_string());
+        let tags_json = serde_json::to_string(&paper.tags).unwrap_or("[]".to_string());
+
+        sqlx::query(
+            "INSERT INTO papers (id, title, authors, year, journal, volume, issue, pages, doi, url, abstract, pdf_path, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(&new_id)
+        .bind(&paper.title)
+        .bind(&authors_json)
+        .bind(paper.year)
+        .bind(&paper.journal)
+        .bind(&paper.volume)
+        .bind(&paper.issue)
+        .bind(&paper.pages)
+        .bind(&paper.doi)
+        .bind(&paper.url)
+        .bind(&paper.r#abstract)
+        .bind::<Option<&str>>(None) // pdf_path は後で設定
+        .bind(&tags_json)
+        .bind(&now)
+        .bind(&now)
+        .execute(pool.as_ref())
+        .await
+        .map_err(|e| format!("論文のインポートに失敗: {}", e))?;
+
+        result.papers_imported += 1;
+    }
+
+    // notes のインポート
+    for note in notes {
+        let new_id = uuid::Uuid::new_v4().to_string();
+        id_map.insert(note.id.clone(), new_id.clone());
+        let now = chrono::Utc::now().to_rfc3339();
+        let tags_json = serde_json::to_string(&note.tags).unwrap_or("[]".to_string());
+        let mapped_paper_id = note
+            .paper_id
+            .as_ref()
+            .and_then(|pid| id_map.get(pid).cloned().or(Some(pid.clone())));
+
+        sqlx::query(
+            "INSERT INTO notes (id, title, content, paper_id, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(&new_id)
+        .bind(&note.title)
+        .bind(&note.content)
+        .bind(&mapped_paper_id)
+        .bind(&tags_json)
+        .bind(&now)
+        .bind(&now)
+        .execute(pool.as_ref())
+        .await
+        .map_err(|e| format!("ノートのインポートに失敗: {}", e))?;
+
+        result.notes_imported += 1;
+    }
+
+    // highlights のインポート
+    for hl in highlights {
+        let new_id = uuid::Uuid::new_v4().to_string();
+        id_map.insert(hl.id.clone(), new_id.clone());
+        let mapped_paper_id = id_map
+            .get(&hl.paper_id)
+            .cloned()
+            .unwrap_or(hl.paper_id.clone());
+        let rect_json = serde_json::to_string(&hl.rect).unwrap_or("{}".to_string());
+        let now = chrono::Utc::now().to_rfc3339();
+
+        sqlx::query(
+            "INSERT INTO highlights (id, paper_id, text, comment, color, page, rect, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(&new_id)
+        .bind(&mapped_paper_id)
+        .bind(&hl.text)
+        .bind(&hl.comment)
+        .bind(&hl.color)
+        .bind(hl.page)
+        .bind(&rect_json)
+        .bind(&now)
+        .execute(pool.as_ref())
+        .await
+        .map_err(|e| format!("ハイライトのインポートに失敗: {}", e))?;
+
+        result.highlights_imported += 1;
+    }
+
+    // links のインポート
+    for link in links {
+        let new_id = uuid::Uuid::new_v4().to_string();
+        let mapped_source = id_map
+            .get(&link.source_id)
+            .cloned()
+            .unwrap_or(link.source_id.clone());
+        let mapped_target = id_map
+            .get(&link.target_id)
+            .cloned()
+            .unwrap_or(link.target_id.clone());
+        let now = chrono::Utc::now().to_rfc3339();
+
+        sqlx::query(
+            "INSERT INTO links (id, source_type, source_id, target_type, target_id, context, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(&new_id)
+        .bind(&link.source_type)
+        .bind(&mapped_source)
+        .bind(&link.target_type)
+        .bind(&mapped_target)
+        .bind(&link.context)
+        .bind(&now)
+        .execute(pool.as_ref())
+        .await
+        .map_err(|e| format!("リンクのインポートに失敗: {}", e))?;
+
+        result.links_imported += 1;
     }
 
     Ok(result)
