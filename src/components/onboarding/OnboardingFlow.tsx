@@ -172,10 +172,10 @@ const StorageStep: React.FC<{
 
   const handleChooseFolder = useCallback(async () => {
     try {
-      const { open } = await import("@tauri-apps/plugin-dialog");
-      const selected = await open({ directory: true, multiple: false });
+      const { openDirectoryDialog } = await import("../../lib/tauriShim");
+      const selected = await openDirectoryDialog();
       if (selected) {
-        setDataPath(typeof selected === "string" ? selected : String(selected));
+        setDataPath(selected);
       }
     } catch {
       // キャンセルされた場合

@@ -2035,3 +2035,45 @@ pub async fn generate_analysis_report(
 
     Ok(report)
 }
+
+// ════════════════════════════════════════════════════════════════
+// エイリアスコマンド — フロントエンドが get_qual_projects 等で呼び出す
+// Rust 側は create_project / get_projects / delete_project だが
+// フロントエンド (useQualitativeStore) は create_qual_project 等を使用
+// ════════════════════════════════════════════════════════════════
+
+/// get_qual_projects — get_projects のエイリアス
+#[tauri::command]
+pub async fn get_qual_projects(app: AppHandle) -> Result<Vec<ProjectResponse>, String> {
+    get_projects(app).await
+}
+
+/// create_qual_project — フロントエンドは name, description をトップレベル引数で渡す
+#[tauri::command]
+pub async fn create_qual_project(
+    app: AppHandle,
+    name: String,
+    description: Option<String>,
+) -> Result<ProjectResponse, String> {
+    let input = CreateProjectDto {
+        name,
+        description,
+        method_type: "thematic".to_string(),
+    };
+    create_project(app, input).await
+}
+
+/// delete_qual_project — delete_project のエイリアス
+#[tauri::command]
+pub async fn delete_qual_project(app: AppHandle, id: String) -> Result<(), String> {
+    delete_project(app, id).await
+}
+
+/// get_codes — get_code_tree のエイリアス（フロントエンドが get_codes で呼ぶ場合の互換）
+#[tauri::command]
+pub async fn get_codes(
+    app: AppHandle,
+    project_id: String,
+) -> Result<Vec<CodeNode>, String> {
+    get_code_tree(app, project_id).await
+}

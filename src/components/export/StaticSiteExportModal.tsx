@@ -120,9 +120,9 @@ export const StaticSiteExportModal: React.FC<StaticSiteExportModalProps> = ({
   // ── フォルダ選択 ──
   const pickFolder = useCallback(async () => {
     try {
-      const { open: openDialog } = await import("@tauri-apps/plugin-dialog");
-      const selected = await openDialog({ directory: true, multiple: false });
-      if (selected && typeof selected === "string") {
+      const { openDirectoryDialog } = await import("../../lib/tauriShim");
+      const selected = await openDirectoryDialog();
+      if (selected) {
         setOutputDir(selected);
       }
     } catch {
@@ -153,7 +153,7 @@ export const StaticSiteExportModal: React.FC<StaticSiteExportModalProps> = ({
       toast.success(t.exportImport.k_siteGenerated);
       // フォルダを開く
       try {
-        const { open: shellOpen } = await import("@tauri-apps/plugin-shell");
+        const { shellOpen } = await import("../../lib/tauriShim");
         await shellOpen(resultPath);
       } catch {
         // fallback — shell open not available

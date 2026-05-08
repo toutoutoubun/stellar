@@ -149,8 +149,8 @@ export const StellarPackageModal: React.FC<StellarPackageModalProps> = ({
     }
 
     try {
-      const { save } = await import("@tauri-apps/plugin-dialog");
-      const filePath = await save({
+      const { saveFileDialog } = await import("../../lib/tauriShim");
+      const filePath = await saveFileDialog({
         defaultPath: "research.stellar",
         filters: [{ name: "Stellar Package", extensions: ["stellar"] }],
       });
@@ -183,8 +183,8 @@ export const StellarPackageModal: React.FC<StellarPackageModalProps> = ({
   // ── Import: ファイル選択 ──
   const handlePickFile = useCallback(async () => {
     try {
-      const { open: openDialog } = await import("@tauri-apps/plugin-dialog");
-      const selected = await openDialog({
+      const { openFileDialog } = await import("../../lib/tauriShim");
+      const selected = await openFileDialog({
         multiple: false,
         filters: [{ name: "Stellar Package", extensions: ["stellar"] }],
       });

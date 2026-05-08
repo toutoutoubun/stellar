@@ -540,6 +540,65 @@ async fn search_highlights_like(
 // テスト
 // ════════════════════════════════════════════════════════════
 
+// ────────────────────────────────────────────────────────────
+// get_recent_items — 最近更新された論文・ノートを返す
+// ────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecentItem {
+    pub id: String,
+    pub item_type: String,
+    pub title: String,
+    pub meta: String,
+    pub accessed_at: String,
+}
+
+/// 最近更新された論文・ノートを updated_at 降順で返す
+#[tauri::command]
+pub async fn get_recent_items(
+    app: AppHandle,
+    limit: Option<u32>,
+) -> Result<Vec<RecentItem>, String> {
+    let pool = get_pool(&app);
+    let limit = limit.unwrap_or(8).clamp(1, 50) as i64;
+
+    // 論文とノートを UNION ALL で結合して updated_at 降順
+    let rows = sqlx::query(
+        "SELECT id, 'paper' AS item_type, title,
+                COALESCE(journal, '') AS meta, updated_at AS accessed_at
+         FROM papers
+         UNION ALL
+         SELECT id, 'note' AS item_type, title,
+                COALESCE(
+                    (SELECT p.title FROM papers p WHERE p.id = notes.paper_id),
+                    ''
+                ) AS meta,
+                updated_at AS accessed_at
+         FROM notes
+         WHERE is_draft = 0 OR is_draft IS NULL
+         ORDER BY accessed_at DESC
+         LIMIT ?"
+    )
+    .bind(limit)
+    .fetch_all(pool.as_ref())
+    .await
+    .map_err(|e| format!("最近のアイテム取得に失敗: {}", e))?;
+
+    let items = rows
+        .iter()
+        .map(|row| RecentItem {
+            id: row.try_get("id").unwrap_or_default(),
+            item_type: row.try_get("item_type").unwrap_or_default(),
+            title: row.try_get("title").unwrap_or_default(),
+            meta: row.try_get("meta").unwrap_or_default(),
+            accessed_at: row.try_get("accessed_at").unwrap_or_default(),
+        })
+        .collect();
+
+    Ok(items)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

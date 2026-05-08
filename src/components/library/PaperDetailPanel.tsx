@@ -168,8 +168,8 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
   const handleOpenDoi = useCallback(async () => {
     if (!paper.doi) return;
     try {
-      const { open } = await import("@tauri-apps/plugin-shell");
-      await open(`https://doi.org/${paper.doi}`);
+      const { shellOpen } = await import("../../lib/tauriShim");
+      await shellOpen(`https://doi.org/${paper.doi}`);
     } catch {
       // フォールバック: window.open
       window.open(`https://doi.org/${paper.doi}`, "_blank");

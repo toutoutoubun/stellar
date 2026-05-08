@@ -218,9 +218,9 @@ export const SettingsView: React.FC = () => {
   // データパス変更
   const handleChangeDataPath = useCallback(async () => {
     try {
-      const { open } = await import("@tauri-apps/plugin-dialog");
-      const selected = await open({ directory: true, multiple: false });
-      if (selected && typeof selected === "string") {
+      const { openDirectoryDialog } = await import("../../lib/tauriShim");
+      const selected = await openDirectoryDialog();
+      if (selected) {
         await dataApi.changePath(selected);
         // サマリーを再取得して表示を更新
         const summary = await dataApi.getSummary();

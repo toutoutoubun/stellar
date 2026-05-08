@@ -675,3 +675,122 @@ export async function openFileDialog(
     input.click();
   });
 }
+
+// ── 安全な openDirectoryDialog ────────────────────────────
+
+/** ディレクトリ選択ダイアログのオプション */
+interface OpenDirectoryDialogOptions {
+  title?: string;
+  multiple?: boolean;
+}
+
+/**
+ * 安全なディレクトリ選択ダイアログラッパー。
+ * Tauri 環境では @tauri-apps/plugin-dialog の open({ directory: true }) を呼び、
+ * 非 Tauri 環境ではコンソール警告と null を返す。
+ */
+export async function openDirectoryDialog(
+  options?: OpenDirectoryDialogOptions,
+): Promise<string | null> {
+  if (isTauri) {
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const result = await open({
+        directory: true,
+        multiple: options?.multiple ?? false,
+        title: options?.title,
+      });
+      if (typeof result === "string") return result;
+      if (Array.isArray(result) && result.length > 0) return String(result[0]);
+      return null;
+    } catch (err) {
+      console.error("[tauriShim] Tauri directory dialog open() failed:", err);
+      return null;
+    }
+  }
+
+  // 非 Tauri 環境: ディレクトリ選択はブラウザでは不可
+  console.warn("[tauriShim] Directory dialog not available in browser preview");
+  return null;
+}
+
+// ── 安全な saveFileDialog ────────────────────────────
+
+/** 保存ダイアログのオプション */
+interface SaveFileDialogOptions {
+  defaultPath?: string;
+  filters?: FileDialogFilter[];
+  title?: string;
+}
+
+/**
+ * 安全なファイル保存ダイアログラッパー。
+ * Tauri 環境では @tauri-apps/plugin-dialog の save() を呼び、
+ * 非 Tauri 環境ではデフォルトパスを返す。
+ */
+export async function saveFileDialog(
+  options?: SaveFileDialogOptions,
+): Promise<string | null> {
+  if (isTauri) {
+    try {
+      const { save } = await import("@tauri-apps/plugin-dialog");
+      const result = await save({
+        defaultPath: options?.defaultPath,
+        filters: options?.filters,
+        title: options?.title,
+      });
+      return result ?? null;
+    } catch (err) {
+      console.error("[tauriShim] Tauri save dialog failed:", err);
+      return null;
+    }
+  }
+
+  // 非 Tauri 環境: デフォルトパスを返す（ダウンロード時にフロント側で処理）
+  return options?.defaultPath ?? null;
+}
+
+// ── 安全な shellOpen ──────────────────────────────────
+
+/**
+ * 安全な shell open ラッパー。
+ * Tauri 環境では @tauri-apps/plugin-shell の open() を呼び、
+ * 非 Tauri 環境では window.open() にフォールバックする。
+ */
+export async function shellOpen(url: string): Promise<void> {
+  if (isTauri) {
+    try {
+      const { open } = await import("@tauri-apps/plugin-shell");
+      await open(url);
+      return;
+    } catch (err) {
+      console.error("[tauriShim] Tauri shell open() failed:", err);
+      // フォールバック
+    }
+  }
+
+  // 非 Tauri 環境またはフォールバック: window.open
+  window.open(url, "_blank");
+}
+
+// ── 安全な relaunch ──────────────────────────────────
+
+/**
+ * 安全なアプリ再起動ラッパー。
+ * Tauri 環境では @tauri-apps/plugin-process の relaunch() を呼び、
+ * 非 Tauri 環境では window.location.reload() にフォールバックする。
+ */
+export async function relaunch(): Promise<void> {
+  if (isTauri) {
+    try {
+      const { relaunch: tauriRelaunch } = await import("@tauri-apps/plugin-process");
+      await tauriRelaunch();
+      return;
+    } catch (err) {
+      console.error("[tauriShim] Tauri relaunch() failed:", err);
+    }
+  }
+
+  // 非 Tauri 環境またはフォールバック
+  window.location.reload();
+}

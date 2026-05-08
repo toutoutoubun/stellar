@@ -433,3 +433,88 @@ pub async fn get_all_tags(app: AppHandle) -> Result<Vec<TagCount>, String> {
 
     Ok(tags)
 }
+
+// ────────────────────────────────────────────────────────────
+// import_pdf — PDFファイルをアプリデータディレクトリにコピーし、パスを返す
+// ────────────────────────────────────────────────────────────
+
+/// ソースPDFをアプリの pdfs/ ディレクトリにコピーし、保存先パスを返す。
+/// フロントエンドの LibraryView.tsx handleAttachPdf から呼び出される。
+#[tauri::command]
+pub async fn import_pdf(
+    app: AppHandle,
+    paper_id: String,
+    source_path: String,
+) -> Result<String, String> {
+    use tauri::Manager;
+
+    // ソースファイル存在確認
+    let src = std::path::Path::new(&source_path);
+    if !src.exists() {
+        return Err(format!("ソースファイルが見つかりません: {}", source_path));
+    }
+
+    // アプリデータ内の pdfs ディレクトリ
+    let app_path = app.path().app_config_dir()
+        .map_err(|e| format!("アプリディレクトリの取得に失敗: {}", e))?;
+    let pdfs_dir = app_path.join("pdfs");
+    std::fs::create_dir_all(&pdfs_dir)
+        .map_err(|e| format!("PDFディレクトリの作成に失敗: {}", e))?;
+
+    // ファイル名: paper_id + 元のファイル名拡張子
+    let original_name = src.file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| format!("{}.pdf", paper_id));
+
+    // 衝突回避のためにpaper_idをプレフィックスに付ける
+    let dest_name = format!("{}_{}", &paper_id[..8.min(paper_id.len())], original_name);
+    let dest_path = pdfs_dir.join(&dest_name);
+
+    // コピー実行
+    std::fs::copy(&source_path, &dest_path)
+        .map_err(|e| format!("PDFのコピーに失敗: {}", e))?;
+
+    let saved_path = dest_path.to_string_lossy().to_string();
+    log::info!("PDFをインポートしました: {} -> {}", source_path, saved_path);
+
+    Ok(saved_path)
+}
+
+// ────────────────────────────────────────────────────────────
+// save_note_attachment — 画像等の添付ファイルをアプリデータに保存
+// ────────────────────────────────────────────────────────────
+
+/// エディタからの画像挿入時、バイト配列を受け取りファイルとして保存する。
+/// StellarEditor.tsx handleImageInsert から呼び出される。
+#[tauri::command]
+pub async fn save_note_attachment(
+    app: AppHandle,
+    note_id: String,
+    file_name: String,
+    data: Vec<u8>,
+) -> Result<String, String> {
+    use tauri::Manager;
+
+    // アプリデータ内の attachments ディレクトリ
+    let app_path = app.path().app_config_dir()
+        .map_err(|e| format!("アプリディレクトリの取得に失敗: {}", e))?;
+    let attachments_dir = app_path.join("attachments").join(&note_id);
+    std::fs::create_dir_all(&attachments_dir)
+        .map_err(|e| format!("添付ファイルディレクトリの作成に失敗: {}", e))?;
+
+    // ユニークなファイル名を生成
+    let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+    let safe_name = file_name.replace(|c: char| !c.is_alphanumeric() && c != '.' && c != '-' && c != '_', "_");
+    let dest_name = format!("{}_{}", timestamp, safe_name);
+    let dest_path = attachments_dir.join(&dest_name);
+
+    // ファイル書き込み
+    std::fs::write(&dest_path, &data)
+        .map_err(|e| format!("添付ファイルの保存に失敗: {}", e))?;
+
+    // Tauri の convertFileSrc 互換パスを返す
+    let saved_path = dest_path.to_string_lossy().to_string();
+    log::info!("添付ファイルを保存しました: {} ({} bytes)", saved_path, data.len());
+
+    Ok(saved_path)
+}

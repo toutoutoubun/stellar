@@ -29,8 +29,8 @@ const CitationEntryRow: React.FC<{
       : entry.url;
     if (!url) return;
     try {
-      const { open } = await import("@tauri-apps/plugin-shell");
-      await open(url);
+      const { shellOpen } = await import("../../lib/tauriShim");
+      await shellOpen(url);
     } catch {
       window.open(url, "_blank");
     }
@@ -142,8 +142,8 @@ const RecommendationRow: React.FC<{
       : rec.url;
     if (!url) return;
     try {
-      const { open } = await import("@tauri-apps/plugin-shell");
-      await open(url);
+      const { shellOpen } = await import("../../lib/tauriShim");
+      await shellOpen(url);
     } catch {
       window.open(url, "_blank");
     }

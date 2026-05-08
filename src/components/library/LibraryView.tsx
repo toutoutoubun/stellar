@@ -197,15 +197,14 @@ export const LibraryView: React.FC = () => {
   const handleAttachPdf = useCallback(
     async (paperId: string) => {
       try {
-        const { open } = await import("@tauri-apps/plugin-dialog");
-        const selected = await open({
+        const { openFileDialog, invoke } = await import("../../lib/tauriShim");
+        const selected = await openFileDialog({
           multiple: false,
           filters: [{ name: "PDF", extensions: ["pdf"] }],
         });
         if (selected && typeof selected === "string") {
           // Rust側でPDFをアプリデータにコピーしてパスを保存
           try {
-            const { invoke } = await import("../../lib/tauriShim");
             const savedPath = await invoke<string>("import_pdf", {
               paperId,
               sourcePath: selected,

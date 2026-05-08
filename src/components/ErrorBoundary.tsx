@@ -39,7 +39,7 @@ export class ErrorBoundary extends React.Component<
   }
 
   handleRestart = (): void => {
-    import("@tauri-apps/plugin-process")
+    import("../lib/tauriShim")
       .then(({ relaunch }) => relaunch())
       .catch(() => window.location.reload());
   };

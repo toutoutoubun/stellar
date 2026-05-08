@@ -260,6 +260,25 @@ pub fn run() {
             commands::export::export_static_site,
             commands::export::export_stellar_package,
             commands::export::import_stellar_package,
+            // データ管理コマンド
+            commands::data::get_data_summary,
+            commands::data::get_highlight_count,
+            commands::data::get_disk_usage,
+            commands::data::get_data_path,
+            commands::data::change_data_path,
+            commands::data::export_data,
+            commands::data::create_backup,
+            // PDF インポート・添付ファイル保存
+            commands::papers::import_pdf,
+            commands::papers::save_note_attachment,
+            // 最近のアイテム
+            commands::search::get_recent_items,
+            // 質的プロジェクト — エイリアス（フロントエンドが get_qual_projects 等で呼ぶ）
+            commands::qualitative::get_qual_projects,
+            commands::qualitative::create_qual_project,
+            commands::qualitative::delete_qual_project,
+            // 質的コード一覧エイリアス
+            commands::qualitative::get_codes,
         ])
         .run(tauri::generate_context!())
         .expect("Stellar の起動に失敗しました");
