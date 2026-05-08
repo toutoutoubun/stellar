@@ -488,45 +488,31 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
 
   /**
    * ノードに初期位置を付与する。
-   * react-force-graph-2d はデフォルトで全ノードを (0,0) に配置するため、
-   * 円形に散らしておかないとシミュレーション初期に全ノードが重なる。
    *
-   * 【重要】graphData の参照安定化:
+   * 【重要】react-force-graph-2d の center force はデフォルトで (0,0) を
+   * 中心に引き寄せる。初期位置もグラフ空間の原点 (0,0) 付近に円形配置する。
+   * ピクセル座標 (width/2, height/2) に配置してはならない — それは
+   * ビューポート変換後の画面座標であり、グラフ空間座標ではない。
+   *
+   * graphData の参照安定化:
    * react-force-graph-2d は graphData が変わるたびにシミュレーションを
    * リセットするため、ノード ID リストが同じなら同一オブジェクトを返す。
-   * シミュレーション中のノードは内部で x/y を書き換えるため、
-   * ここでは初期位置の「種」だけ与え、以降は react-force-graph に任せる。
    */
   const prevNodeIdsRef = useRef<string>("");
   const prevGraphDataRef = useRef<{ nodes: GraphNodeExtended[]; links: GraphLink[] } | null>(null);
-  /** 前回の有効な寸法（0x0 → 実サイズ 遷移の検出に使用） */
-  const prevDimsRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
 
   const graphData = useMemo(() => {
-    const cx = width / 2;
-    const cy = height / 2;
-    const radius = Math.min(width, height) * 0.3;
     const n = nodes.length || 1;
 
     // ノードIDリストのフィンガープリント
     const nodeIdKey = nodes.map((nd) => nd.id).join(",");
 
-    // 寸法が 0x0 → 実サイズに変わった場合は「初回配置」として再配置を強制する
-    // これにより containerSize が遅延で設定されても正しい位置にノードが配置される
-    const prevHadSize = prevDimsRef.current.w > 0 && prevDimsRef.current.h > 0;
-    const nowHasSize = width > 0 && height > 0;
-    const dimensionsJustBecameValid = !prevHadSize && nowHasSize;
-    prevDimsRef.current = { w: width, h: height };
-
-    // ノードID構成が同じ かつ 寸法が 0→実サイズ の遷移ではない場合のみ
-    // プロパティ更新のみ行い、オブジェクト参照を維持する
+    // ノードID構成が同じ場合はプロパティ更新のみ行い、オブジェクト参照を維持する
     if (
       prevNodeIdsRef.current === nodeIdKey &&
-      prevGraphDataRef.current &&
-      !dimensionsJustBecameValid
+      prevGraphDataRef.current
     ) {
       const prev = prevGraphDataRef.current;
-      // 既存ノードのプロパティ（name, tags等）だけ同期
       const nodeMap = new Map(nodes.map((nd) => [nd.id, nd]));
       for (const existing of prev.nodes) {
         const updated = nodeMap.get(existing.id);
@@ -542,19 +528,15 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
       return prev;
     }
 
-    // width/height が 0 の場合は空データを返す（描画をスキップ）
-    // GraphView 側の containerSize.width > 0 ガードと二重安全
-    if (width <= 0 || height <= 0) {
-      return { nodes: [] as GraphNodeExtended[], links: [] as GraphLink[] };
-    }
-
-    // 新しいノード構成 or 寸法が有効になった → 初期位置を円形配置して新規作成
+    // 初期位置を原点 (0,0) 中心に円形配置。
+    // 半径はノード数に応じてスケール（少数ノードでも十分な間隔を確保）
+    const radius = Math.max(50, n * 8);
     const positioned = (nodes as GraphNodeExtended[]).map((node, i) => {
       const angle = (2 * Math.PI * i) / n;
       return {
         ...node,
-        x: cx + radius * Math.cos(angle) + (Math.random() - 0.5) * 20,
-        y: cy + radius * Math.sin(angle) + (Math.random() - 0.5) * 20,
+        x: radius * Math.cos(angle) + (Math.random() - 0.5) * 20,
+        y: radius * Math.sin(angle) + (Math.random() - 0.5) * 20,
       };
     });
 
@@ -566,85 +548,80 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
     prevNodeIdsRef.current = nodeIdKey;
     prevGraphDataRef.current = data;
     return data;
-  }, [nodes, links, width, height]);
+  }, [nodes, links]);
 
   /** シミュレーション安定後に zoomToFit する回数制限付きフラグ */
   const hasZoomedRef = useRef(false);
-  /** ノードID構成の前回値（Force再設定＋zoomToFitをトリガーする判定用） */
+  /** ノードID構成の前回値（Force再設定をトリガーする判定用） */
   const prevForceNodeKeyRef = useRef<string>("");
 
-  /** Force シミュレーション設定 */
-  /** 前回の有効寸法を追跡（Force 設定 + zoomToFit のトリガー判定用） */
-  const prevForceDimsRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
-
+  /**
+   * Force シミュレーション設定
+   *
+   * 【重要な修正ポイント】
+   * react-force-graph-2d は graphData が変わると内部で d3 シミュレーションを
+   * リセットする。その際、force の設定もデフォルトに戻る。
+   * したがって graphData が変わるたびに force を再設定する必要がある。
+   *
+   * また、warmupTicks はコンポーネントの初回レンダリング時に実行されるため、
+   * useEffect 内の force 設定は warmup には間に合わない。
+   * → warmupTicks を 0 にし、代わりに d3ReheatSimulation() で
+   *   正しい force 設定が適用された状態でシミュレーションを開始する。
+   */
   useEffect(() => {
     const fg = graphRef.current;
     if (!fg) return;
 
-    // ノードID構成が変わっていない場合は Force 再設定をスキップ
-    // （フィルタ以外のプロパティ更新でシミュレーションが暴れるのを防止）
     const nodeKey = nodes.map((nd) => nd.id).sort().join(",");
     const isNewConfig = nodeKey !== prevForceNodeKeyRef.current;
     prevForceNodeKeyRef.current = nodeKey;
 
-    // 寸法が 0 → 有効値に変わった場合もシミュレーションを再加熱 + zoomToFit を実行
-    const prevHadValidDims = prevForceDimsRef.current.w > 0 && prevForceDimsRef.current.h > 0;
-    const nowHasValidDims = width > 0 && height > 0;
-    const dimsJustBecameValid = !prevHadValidDims && nowHasValidDims;
-    prevForceDimsRef.current = { w: width, h: height };
-
     try {
-      // 斥力: ノード間を十分に離す（デフォルト -30 では全く足りない）
+      // 斥力: ノード間を十分に離す（デフォルト -30 では密集してしまう）
+      // d3-force の forceManyBody().strength() は fluent API
       const charge = fg.d3Force("charge");
-      if (charge && typeof charge === "object" && "strength" in charge) {
-        (charge as { strength: (v: number) => void }).strength(-300);
+      if (charge && typeof charge.strength === "function") {
+        charge.strength(-300);
       }
 
       // リンク距離: ノード間の理想距離
       const link = fg.d3Force("link");
-      if (link && typeof link === "object" && "distance" in link) {
-        (link as { distance: (v: number) => void }).distance(100);
+      if (link && typeof link.distance === "function") {
+        link.distance(100);
       }
 
-      // 中心引力
-      const center = fg.d3Force("center");
-      if (center && typeof center === "object" && "strength" in center) {
-        (center as { strength: (v: number) => void }).strength(0.05);
-      }
+      // center force はデフォルトの (0,0) を使用。
+      // forceCenter は x(), y() のみ持ち、strength() は持たない。
+
+      // 【核心】force 設定後にシミュレーションを再加熱して、
+      // 新しい force パラメータでノードを再配置させる
+      fg.d3ReheatSimulation();
     } catch (e) {
       console.error(t.graph.k_i4xtrj, e);
     }
 
-    // 寸法が有効になった直後はシミュレーションを再加熱して
-    // ノードを新しい中心座標に向かって移動させる
-    if (dimsJustBecameValid) {
-      try {
-        fg.d3ReheatSimulation();
-      } catch { /* ignore */ }
-    }
-
-    // ノード構成が変わった場合 or 寸法が初めて有効になった場合に
-    // zoomToFit を段階的に実行
-    if (isNewConfig || dimsJustBecameValid) {
+    // ノード構成が変わった場合に zoomToFit を段階的に実行。
+    // シミュレーションが収束してノードが散らばった後に実行する。
+    if (isNewConfig) {
       hasZoomedRef.current = false;
       const timers = [
+        // 早期: シミュレーションがある程度進んだ段階で初回フィット
         setTimeout(() => {
-          try { fg.zoomToFit(400, 60); } catch { /* ignore */ }
+          try { fg.zoomToFit(400, 80); } catch { /* ignore */ }
         }, 800),
+        // 中期: レイアウトがほぼ安定した段階で再フィット
         setTimeout(() => {
-          try { fg.zoomToFit(400, 60); } catch { /* ignore */ }
+          try { fg.zoomToFit(400, 80); } catch { /* ignore */ }
         }, 2000),
+        // 後期: 完全に安定した後の最終フィット
         setTimeout(() => {
-          if (!hasZoomedRef.current) {
-            try { fg.zoomToFit(400, 60); } catch { /* ignore */ }
-            hasZoomedRef.current = true;
-          }
+          try { fg.zoomToFit(400, 80); } catch { /* ignore */ }
         }, 4000),
       ];
 
       return () => timers.forEach(clearTimeout);
     }
-  }, [nodes, ForceGraph2D, width, height]);
+  }, [nodes, links, ForceGraph2D, t]);
 
   /**
    * graphRef を親に公開。
@@ -700,8 +677,10 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
   const handleEngineStop = useCallback(() => {
     if (!hasZoomedRef.current) {
       hasZoomedRef.current = true;
+      // エンジン停止 = シミュレーション完全収束後。
+      // この時点でノードは最終位置にあるため、最も信頼性の高い zoomToFit。
       try {
-        graphRef.current?.zoomToFit(400, 60);
+        graphRef.current?.zoomToFit(600, 80);
       } catch { /* ignore */ }
     }
     // エンジン停止時に ref が確実にセットされているので、ここでも通知
@@ -1034,13 +1013,14 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
         enableZoomInteraction
         enablePanInteraction
         // パフォーマンス
-        // warmupTicks: 描画前にシミュレーションを事前実行してノードを散らす
-        // cooldownTicks: シミュレーション収束までのティック数
-        cooldownTicks={200}
-        warmupTicks={100}
+        // warmupTicks=0: useEffect 内で force 設定 → d3ReheatSimulation() する
+        //   ため、warmup はデフォルト force で実行されてしまう問題を回避。
+        // cooldownTicks: シミュレーションの収束判定ティック数
+        cooldownTicks={300}
+        warmupTicks={0}
         onEngineStop={handleEngineStop}
-        minZoom={0.3}
-        maxZoom={8}
+        minZoom={0.1}
+        maxZoom={12}
       />
   );
 };
