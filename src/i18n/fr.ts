@@ -67,9 +67,6 @@ const fr: TranslationKeys = {
     data: {
       summary: "Résumé des données",
       summaryDesc: "Statistiques des données de l'application",
-      papers: "Articles",
-      notes: "Notes",
-      highlights: "Surlignages",
       diskUsage: "Espace disque utilisé",
       calculating: "Calcul en cours...",
       storagePath: "Chemin de stockage",

@@ -65,9 +65,6 @@ const ja = {
     data: {
       summary: "データサマリー",
       summaryDesc: "アプリケーションのデータ統計",
-      papers: "論文",
-      notes: "ノート",
-      highlights: "ハイライト",
       diskUsage: "ディスク使用量",
       calculating: "計算中...",
       storagePath: "データ保存先",

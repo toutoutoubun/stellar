@@ -67,9 +67,6 @@ const af: TranslationKeys = {
     data: {
       summary: "Data-opsomming",
       summaryDesc: "Programdata-statistieke",
-      papers: "Artikels",
-      notes: "Notas",
-      highlights: "Uitligtings",
       diskUsage: "Skyfgebruik",
       calculating: "Bereken…",
       storagePath: "Bergingspad",
