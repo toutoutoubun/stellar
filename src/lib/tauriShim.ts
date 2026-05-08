@@ -471,6 +471,9 @@ const MOCK_RESPONSES: Record<string, any> = {
   generate_bibliography: "",
   sync_word_count: undefined,
 
+  // PDF metadata extraction
+  extract_metadata_from_pdf: { title: "Sample Paper", authors: ["Author A"], year: 2024, tags: [] },
+
   // Export / Import
   export_static_site: "/mock/export/static-site",
   export_stellar_package: "/mock/export/package.stellar",
@@ -588,4 +591,86 @@ export async function getCurrentWindow(): Promise<WindowHandle> {
   if (!isTauri) return noopWindow;
   const { getCurrentWindow: tauriGetCurrentWindow } = await import("@tauri-apps/api/window");
   return tauriGetCurrentWindow() as unknown as WindowHandle;
+}
+
+// ── 安全な openFileDialog ────────────────────────────
+
+/** ファイルダイアログのフィルター */
+interface FileDialogFilter {
+  name: string;
+  extensions: string[];
+}
+
+/** ファイルダイアログのオプション */
+interface OpenFileDialogOptions {
+  multiple?: boolean;
+  filters?: FileDialogFilter[];
+  title?: string;
+}
+
+/**
+ * 安全なファイル選択ダイアログラッパー。
+ * Tauri 環境では @tauri-apps/plugin-dialog の open() を呼び、
+ * 非 Tauri 環境（ブラウザプレビュー）では HTML <input type="file"> を使う。
+ *
+ * @returns 選択されたファイルパス（またはパス配列）。キャンセル時は null。
+ *          非 Tauri 環境では File オブジェクトの name を返す。
+ */
+export async function openFileDialog(
+  options?: OpenFileDialogOptions,
+): Promise<string | string[] | null> {
+  if (isTauri) {
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const result = await open({
+        multiple: options?.multiple ?? false,
+        filters: options?.filters,
+        title: options?.title,
+      });
+      return result;
+    } catch (err) {
+      console.error("[tauriShim] Tauri dialog open() failed:", err);
+      return null;
+    }
+  }
+
+  // 非 Tauri 環境: HTML <input type="file"> フォールバック
+  return new Promise<string | null>((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.style.display = "none";
+
+    // フィルターから accept 属性を構築
+    if (options?.filters?.length) {
+      const exts = options.filters
+        .flatMap((f) => f.extensions)
+        .map((ext) => `.${ext}`);
+      input.accept = exts.join(",");
+    }
+
+    if (options?.multiple) {
+      input.multiple = true;
+    }
+
+    input.addEventListener("change", () => {
+      const files = input.files;
+      if (!files || files.length === 0) {
+        resolve(null);
+      } else if (options?.multiple) {
+        resolve(Array.from(files).map((f) => f.name));
+      } else {
+        resolve(files[0].name);
+      }
+      input.remove();
+    });
+
+    // キャンセル検出: フォーカス復帰後にファイルが選択されていなければ null
+    input.addEventListener("cancel", () => {
+      resolve(null);
+      input.remove();
+    });
+
+    document.body.appendChild(input);
+    input.click();
+  });
 }

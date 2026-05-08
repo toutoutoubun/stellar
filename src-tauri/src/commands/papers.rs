@@ -362,6 +362,45 @@ pub async fn attach_pdf(
 }
 
 // ────────────────────────────────────────────────────────────
+// extract_metadata_from_pdf — PDFファイルからメタデータを抽出する
+// ────────────────────────────────────────────────────────────
+
+/// PDFファイルパスを受け取り、Document Info Dictionaryからメタデータを抽出して返す。
+/// フロントエンドの AddPaperModal から呼び出される。
+/// 抽出に失敗した場合はファイル名からタイトルを推定し、部分的なメタデータを返す。
+#[tauri::command]
+pub async fn extract_metadata_from_pdf(
+    pdf_path: String,
+) -> Result<serde_json::Value, String> {
+    use crate::utils::pdf::{is_valid_pdf_path, extract_title_from_filename, extract_metadata_from_file};
+
+    if !is_valid_pdf_path(&pdf_path) {
+        return Err("指定されたファイルはPDFではありません".to_string());
+    }
+
+    // ファイルの存在確認
+    if !std::path::Path::new(&pdf_path).exists() {
+        return Err(format!("ファイルが見つかりません: {}", pdf_path));
+    }
+
+    let meta = extract_metadata_from_file(&pdf_path);
+
+    // タイトルが取得できなければファイル名から推定
+    let title = meta.title.unwrap_or_else(|| extract_title_from_filename(&pdf_path));
+
+    let result = serde_json::json!({
+        "title": title,
+        "authors": meta.authors,
+        "year": meta.year,
+        "abstract": meta.subject,
+        "pdfPath": pdf_path,
+        "tags": []
+    });
+
+    Ok(result)
+}
+
+// ────────────────────────────────────────────────────────────
 // get_all_tags — タグ一覧取得（全論文のタグを集計して出現回数順に返す）
 // ────────────────────────────────────────────────────────────
 

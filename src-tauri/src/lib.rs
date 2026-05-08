@@ -117,6 +117,7 @@ pub fn run() {
             commands::papers::update_paper,
             commands::papers::delete_paper,
             commands::papers::attach_pdf,
+            commands::papers::extract_metadata_from_pdf,
             commands::papers::get_all_tags,
             commands::notes::get_notes,
             commands::notes::get_note,

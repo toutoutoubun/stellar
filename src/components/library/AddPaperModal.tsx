@@ -10,7 +10,7 @@ import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { toast } from "../ui/Toast";
-import { invoke } from "../../lib/tauriShim";
+import { invoke, openFileDialog } from "../../lib/tauriShim";
 import { useI18nStore } from "../../stores/useI18nStore";
 
 /** タブの種別 */
@@ -218,41 +218,46 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
     setForm((prev) => ({ ...prev, tags }));
   }, []);
 
-  // ── PDFファイル選択（Tauriダイアログ） ──
+  // ── PDFファイル選択（tauriShim経由 — Tauri/ブラウザ両対応） ──
   const handlePickPdf = useCallback(async () => {
     try {
-      const { open } = await import("@tauri-apps/plugin-dialog");
-      const selected = await open({
+      const selected = await openFileDialog({
         multiple: false,
         filters: [{ name: "PDF", extensions: ["pdf"] }],
+        title: "PDFファイルを選択",
       });
-      if (selected && typeof selected === "string") {
-        setPdfFilePath(selected);
-        // ファイル名を抽出
-        const name = selected.split(/[\\/]/).pop() ?? selected;
-        setPdfFileName(name);
 
-        // Rust側でPDFメタデータ抽出を試みる
-        setFetching(true);
-        setFetched(false);
-        try {
-          const data = await invoke<Partial<CreatePaperInput>>(
-            "extract_metadata_from_pdf",
-            { pdfPath: selected }
-          );
-          applyMetadata({ ...data, pdfPath: selected });
-          toast.success(useI18nStore.getState().t.library.k_lc058i);
-        } catch {
-          // メタデータ抽出が失敗してもファイルパスは保持
-          const titleFromFile = name.replace(/\.pdf$/i, "").replace(/[_-]/g, " ");
-          applyMetadata({ title: titleFromFile, pdfPath: selected });
-          toast.info(useI18nStore.getState().t.library.k_eqyro1);
-        } finally {
-          setFetching(false);
-        }
+      if (!selected || typeof selected !== "string") {
+        // キャンセルされた場合は何もしない
+        return;
       }
-    } catch {
-      // ダイアログがキャンセルされた場合
+
+      setPdfFilePath(selected);
+      // ファイル名を抽出
+      const name = selected.split(/[\\/]/).pop() ?? selected;
+      setPdfFileName(name);
+
+      // Rust側でPDFメタデータ抽出を試みる
+      setFetching(true);
+      setFetched(false);
+      try {
+        const data = await invoke<Partial<CreatePaperInput>>(
+          "extract_metadata_from_pdf",
+          { pdfPath: selected }
+        );
+        applyMetadata({ ...data, pdfPath: selected });
+        toast.success(useI18nStore.getState().t.library.k_lc058i);
+      } catch {
+        // メタデータ抽出が失敗してもファイルパスは保持
+        const titleFromFile = name.replace(/\.pdf$/i, "").replace(/[_-]/g, " ");
+        applyMetadata({ title: titleFromFile, pdfPath: selected });
+        toast.info(useI18nStore.getState().t.library.k_eqyro1);
+      } finally {
+        setFetching(false);
+      }
+    } catch (err) {
+      console.error("[AddPaperModal] PDF選択に失敗:", err);
+      toast.error("PDFファイルの選択中にエラーが発生しました");
     }
   }, [applyMetadata]);
 
