@@ -3,7 +3,7 @@
 // 2カラムレイアウト: 左=DatasetList / 右=タブ（インポート | 変数定義 | データプレビュー）
 
 import type React from "react";
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { useQuantitativeStore } from "../../stores/useQuantitativeStore";
 import { DatasetList } from "./DatasetList";
 import { CsvImporter } from "./CsvImporter";
@@ -63,6 +63,7 @@ const TABS: { key: DataStudioTab; label: string; icon: React.ReactNode }[] = [
 ];
 
 const DataStudioView: React.FC = () => {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const dataStudioTab = useQuantitativeStore((s) => s.dataStudioTab);
   const setTab = useQuantitativeStore((s) => s.setTab);
@@ -132,13 +133,14 @@ const DataStudioView: React.FC = () => {
 
   return (
     <div className="flex h-full overflow-hidden">
-      {/* ── 左カラム: データセット一覧 ── */}
+      {/* ── 左カラム: データセット一覧（折りたたみ対応） ── */}
       <div
         className="shrink-0 h-full overflow-hidden flex flex-col"
         style={{
-          width: "280px",
-          borderRight: "1px solid var(--color-border-primary)",
+          width: sidebarCollapsed ? "0px" : "280px",
+          borderRight: sidebarCollapsed ? "none" : "1px solid var(--color-border-primary)",
           backgroundColor: "var(--color-bg-secondary)",
+          transition: "width 150ms ease-out",
         }}
       >
         <DatasetList />
@@ -155,6 +157,49 @@ const DataStudioView: React.FC = () => {
             backgroundColor: "var(--color-bg-secondary)",
           }}
         >
+          {/* サイドバー折りたたみトグル */}
+          <button
+            type="button"
+            onClick={() => setSidebarCollapsed((prev) => !prev)}
+            className="shrink-0 flex items-center justify-center"
+            style={{
+              width: "28px",
+              height: "28px",
+              borderRadius: "6px",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--color-text-tertiary)",
+              transition: "all 120ms",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+              e.currentTarget.style.color = "var(--color-text-secondary)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.color = "var(--color-text-tertiary)";
+            }}
+            title={sidebarCollapsed ? "データセット一覧を表示" : "データセット一覧を非表示"}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{
+                transform: sidebarCollapsed ? "rotate(180deg)" : "none",
+                transition: "transform 150ms ease-out",
+              }}
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <line x1="9" y1="3" x2="9" y2="21" />
+            </svg>
+          </button>
           {TABS.map((tab) => {
             const isActive = dataStudioTab === tab.key;
             const isDisabled = !selectedDataset && tab.key !== "import";

@@ -4,7 +4,7 @@
 // 改善: より直感的な空状態、洗練されたローディング表示、アクション誘導
 
 import type React from "react";
-import { Component, Suspense, lazy } from "react";
+import { Component, Suspense, lazy, useState } from "react";
 import { useUIStore } from "../../stores/useUIStore";
 import { LibraryView } from "../library/LibraryView";
 import { NoteEditor } from "../notes/NoteEditor";
@@ -203,6 +203,108 @@ const NotesEmptyState: React.FC = () => {
   );
 };
 
+/** ノートビュー — NoteList + NoteEditor 分割レイアウト（折りたたみ対応） */
+import type { MainPaneContent } from "../../types";
+
+const NotesView: React.FC<{ mainPaneContent: MainPaneContent }> = ({ mainPaneContent }) => {
+  const [noteListCollapsed, setNoteListCollapsed] = useState(false);
+
+  return (
+    <div className="flex h-full overflow-hidden">
+      {/* 左: ノート一覧パネル（折りたたみ対応） */}
+      <div
+        className="shrink-0 h-full overflow-hidden"
+        style={{
+          width: noteListCollapsed ? "0px" : "280px",
+          borderRight: noteListCollapsed ? "none" : "1px solid var(--color-border-primary)",
+          backgroundColor: "var(--color-bg-secondary)",
+          transition: "width 150ms ease-out",
+        }}
+      >
+        <NoteList />
+      </div>
+      {/* 右: ノートエディタ / 草稿エディタ / 空状態 */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* ノート一覧トグルバー */}
+        <div
+          className="shrink-0 flex items-center px-2"
+          style={{
+            height: "36px",
+            borderBottom: "1px solid var(--color-border-secondary)",
+            backgroundColor: "var(--color-bg-secondary)",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setNoteListCollapsed((prev) => !prev)}
+            className="flex items-center justify-center"
+            style={{
+              width: "28px",
+              height: "28px",
+              borderRadius: "6px",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--color-text-tertiary)",
+              transition: "all 120ms",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+              e.currentTarget.style.color = "var(--color-text-secondary)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.color = "var(--color-text-tertiary)";
+            }}
+            title={noteListCollapsed ? "ノート一覧を表示" : "ノート一覧を非表示"}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{
+                transform: noteListCollapsed ? "rotate(180deg)" : "none",
+                transition: "transform 150ms ease-out",
+              }}
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <line x1="9" y1="3" x2="9" y2="21" />
+            </svg>
+          </button>
+          {noteListCollapsed && (
+            <span
+              className="ml-1 text-xs"
+              style={{ color: "var(--color-text-tertiary)" }}
+            >
+              {useI18nStore.getState().t.notes.title}
+            </span>
+          )}
+        </div>
+        {/* エディタ本体 */}
+        <div className="flex-1 overflow-hidden">
+          {mainPaneContent.type === "note" ? (
+            <NoteEditor noteId={mainPaneContent.noteId} />
+          ) : mainPaneContent.type === "draft" ? (
+            <DraftNoteEditor noteId={mainPaneContent.noteId} />
+          ) : mainPaneContent.type === "split-view" ? (
+            <SplitView
+              paperId={mainPaneContent.paperId}
+              noteId={mainPaneContent.noteId}
+            />
+          ) : (
+            <NotesEmptyState />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const MainPane: React.FC = () => {
   const mainPaneContent = useUIStore((s) => s.mainPaneContent);
   const sidebarView = useUIStore((s) => s.sidebarView);
@@ -244,36 +346,7 @@ export const MainPane: React.FC = () => {
 
     // サイドバーが「ノート」ビューの場合：NoteList + NoteEditor 分割レイアウト
     if (sidebarView === "notes") {
-      return (
-        <div className="flex h-full overflow-hidden">
-          {/* 左: ノート一覧パネル */}
-          <div
-            className="shrink-0 h-full overflow-hidden"
-            style={{
-              width: "280px",
-              borderRight: "1px solid var(--color-border-primary)",
-              backgroundColor: "var(--color-bg-secondary)",
-            }}
-          >
-            <NoteList />
-          </div>
-          {/* 右: ノートエディタ / 草稿エディタ / 空状態 */}
-          <div className="flex-1 overflow-hidden">
-            {mainPaneContent.type === "note" ? (
-              <NoteEditor noteId={mainPaneContent.noteId} />
-            ) : mainPaneContent.type === "draft" ? (
-              <DraftNoteEditor noteId={mainPaneContent.noteId} />
-            ) : mainPaneContent.type === "split-view" ? (
-              <SplitView
-                paperId={mainPaneContent.paperId}
-                noteId={mainPaneContent.noteId}
-              />
-            ) : (
-              <NotesEmptyState />
-            )}
-          </div>
-        </div>
-      );
+      return <NotesView mainPaneContent={mainPaneContent} />;
     }
 
     switch (mainPaneContent.type) {
