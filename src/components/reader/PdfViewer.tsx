@@ -5,7 +5,8 @@
 
 import type React from "react";
 import type { ReactElement } from "react";
-import { useCallback, useRef, useMemo } from "react";
+import { useCallback, useRef, useMemo, useState } from "react";
+import { isTauri } from "../../lib/tauriShim";
 import {
   PdfLoader,
   PdfHighlighter,
@@ -131,6 +132,8 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
   const scrollViewerToRef = useRef<((highlight: PdfHighlight) => void) | null>(
     null,
   );
+  const [retryKey, setRetryKey] = useState(0);
+  const [lastError, setLastError] = useState<string | null>(null);
 
   /** アプリ内 Highlight → PdfHighlight 変換（メモ化） */
   const pdfHighlights = useMemo(
@@ -185,6 +188,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
       style={{ backgroundColor: "var(--color-bg-tertiary)" }}
     >
       <PdfLoader
+        key={retryKey}
         url={pdfUrl}
         workerSrc={PDF_WORKER_URL}
         beforeLoad={
@@ -210,14 +214,21 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
           </div>
         }
         onError={(error) => {
-          console.error(useI18nStore.getState().t.reader.PDF_2, error);
+          const errMsg = error instanceof Error ? error.message : String(error);
+          console.error("[PdfViewer] PDF読み込みエラー:", {
+            url: pdfUrl,
+            error: errMsg,
+            isTauri,
+            stack: error instanceof Error ? error.stack : undefined,
+          });
+          setLastError(errMsg);
         }}
         errorMessage={
           <div
             className="flex items-center justify-center h-full"
             style={{ color: "var(--color-accent-danger)" }}
           >
-            <div className="flex flex-col items-center gap-3">
+            <div className="flex flex-col items-center gap-3" style={{ maxWidth: "400px" }}>
               <svg
                 width="32"
                 height="32"
@@ -233,6 +244,44 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
                 <line x1="9" y1="9" x2="15" y2="15" />
               </svg>
               <span className="text-sm">{useI18nStore.getState().t.reader.PDF_3}</span>
+              {lastError && (
+                <span
+                  className="text-xs text-center"
+                  style={{
+                    color: "var(--color-text-tertiary)",
+                    wordBreak: "break-all",
+                    maxWidth: "360px",
+                  }}
+                >
+                  {lastError}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setLastError(null);
+                  setRetryKey((k) => k + 1);
+                }}
+                className="text-xs px-3 py-1.5 mt-1"
+                style={{
+                  backgroundColor: "var(--color-bg-tertiary)",
+                  color: "var(--color-text-secondary)",
+                  border: "1px solid var(--color-border-primary)",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  transition: "all var(--transition-fast)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+                  e.currentTarget.style.borderColor = "var(--color-accent-primary)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--color-bg-tertiary)";
+                  e.currentTarget.style.borderColor = "var(--color-border-primary)";
+                }}
+              >
+                再読み込み
+              </button>
             </div>
           </div>
         }

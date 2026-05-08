@@ -7,7 +7,7 @@
 import type React from "react";
 import { useState, useCallback, useEffect, useRef } from "react";
 
-import { invoke, convertFileSrc } from "../../lib/tauriShim";
+import { invoke, convertFileSrc, isTauri } from "../../lib/tauriShim";
 
 import type { Paper, Highlight, HighlightColor, HighlightRect } from "../../types";
 import { useHighlights } from "../../hooks/useHighlights";
@@ -93,8 +93,95 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
     };
   }, [paperId]);
 
-  /** PDF URL の生成（Tauri の convertFileSrc でローカルファイルを変換） */
-  const pdfUrl = paper?.pdfPath ? convertFileSrc(paper.pdfPath) : null;
+  // ── PDF Blob URL 管理 ──
+  // pdfjs-dist は fetch() で PDF を取得するが、Tauri の asset protocol
+  // (https://asset.localhost) はステータスコード・Range ヘッダー等の
+  // 互換性問題があり、直接 URL を渡すと読み込み失敗する。
+  // そのため asset URL から先に fetch → Blob URL に変換して PdfLoader に渡す。
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [pdfLoadError, setPdfLoadError] = useState<string | null>(null);
+  const [pdfLoadingBlob, setPdfLoadingBlob] = useState(false);
+
+  /** PDF Blob URL の生成 */
+  useEffect(() => {
+    if (!paper?.pdfPath) {
+      setPdfBlobUrl(null);
+      setPdfLoadError(null);
+      return;
+    }
+
+    let cancelled = false;
+    let objectUrl: string | null = null;
+
+    const loadPdf = async () => {
+      setPdfLoadingBlob(true);
+      setPdfLoadError(null);
+
+      try {
+        if (isTauri) {
+          // Tauri 環境: convertFileSrc で asset URL を取得し、fetch → Blob URL
+          const assetUrl = convertFileSrc(paper.pdfPath!);
+          console.info("[ReaderView] PDF asset URL:", assetUrl);
+
+          const response = await fetch(assetUrl);
+          if (!response.ok && response.status !== 0) {
+            throw new Error(`PDF fetch failed: HTTP ${response.status} ${response.statusText}`);
+          }
+
+          const blob = await response.blob();
+          if (blob.size === 0) {
+            throw new Error("PDF file is empty (0 bytes)");
+          }
+
+          // PDF の先頭バイトを検証
+          const header = await blob.slice(0, 5).text();
+          if (header !== "%PDF-") {
+            throw new Error(`Invalid PDF file (header: ${JSON.stringify(header)})`);
+          }
+
+          objectUrl = URL.createObjectURL(
+            new Blob([blob], { type: "application/pdf" })
+          );
+        } else {
+          // 非 Tauri 環境（ブラウザプレビュー）: パスが https:// の場合はそのまま使用
+          const path = paper.pdfPath!;
+          if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("blob:")) {
+            objectUrl = path;
+          } else {
+            // ローカルパス（モック環境）: Blob URL は作れないのでエラー
+            throw new Error("Cannot load local PDF in browser preview");
+          }
+        }
+
+        if (!cancelled && objectUrl) {
+          setPdfBlobUrl(objectUrl);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error("[ReaderView] PDF Blob URL 生成失敗:", msg, {
+            pdfPath: paper.pdfPath,
+            isTauri,
+          });
+          setPdfLoadError(msg);
+        }
+      } finally {
+        if (!cancelled) {
+          setPdfLoadingBlob(false);
+        }
+      }
+    };
+
+    void loadPdf();
+
+    return () => {
+      cancelled = true;
+      // Blob URL のクリーンアップ（非 Tauri のパススルー URL は revoke しない）
+      if (objectUrl && objectUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [paper?.pdfPath]);
 
   /** ハイライト追加ハンドラ */
   const handleAddHighlight = useCallback(
@@ -305,8 +392,77 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
     );
   }
 
+  // PDF Blob ロード中
+  if (paper?.pdfPath && pdfLoadingBlob) {
+    return (
+      <div
+        className="flex items-center justify-center h-full"
+        style={{ color: "var(--color-text-tertiary)" }}
+      >
+        <div className="flex flex-col items-center gap-3">
+          <svg
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            style={{ animation: "spin 1s linear infinite" }}
+          >
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+          </svg>
+          <span className="text-sm">{t.reader.PDF}</span>
+        </div>
+      </div>
+    );
+  }
+
+  // PDF Blob 生成エラー
+  if (paper?.pdfPath && pdfLoadError) {
+    return (
+      <div
+        className="flex items-center justify-center h-full"
+        style={{ color: "var(--color-accent-danger)" }}
+      >
+        <div className="flex flex-col items-center gap-3" style={{ maxWidth: "440px" }}>
+          <svg
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="15" y1="9" x2="9" y2="15" />
+            <line x1="9" y1="9" x2="15" y2="15" />
+          </svg>
+          <span className="text-sm">{t.reader.PDF_3}</span>
+          <span
+            className="text-xs text-center"
+            style={{
+              color: "var(--color-text-tertiary)",
+              wordBreak: "break-all",
+              maxWidth: "400px",
+            }}
+          >
+            {pdfLoadError}
+          </span>
+          <span
+            className="text-xs"
+            style={{ color: "var(--color-text-disabled)" }}
+          >
+            Path: {paper.pdfPath}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   // PDFパスが設定されていない
-  if (!pdfUrl) {
+  if (!pdfBlobUrl) {
     return (
       <div
         className="flex items-center justify-center h-full"
@@ -357,7 +513,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
         {/* PDFビューア */}
         <div className="flex-1 overflow-hidden relative">
           <PdfViewer
-            pdfUrl={pdfUrl}
+            pdfUrl={pdfBlobUrl}
             highlights={highlights}
             onAddHighlight={handleAddHighlight}
             selectedColor={selectedColor}
