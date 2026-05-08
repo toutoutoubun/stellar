@@ -635,7 +635,7 @@ export async function openFileDialog(
   }
 
   // 非 Tauri 環境: HTML <input type="file"> フォールバック
-  return new Promise<string | null>((resolve) => {
+  return new Promise<string | string[] | null>((resolve) => {
     const input = document.createElement("input");
     input.type = "file";
     input.style.display = "none";
@@ -659,7 +659,8 @@ export async function openFileDialog(
       } else if (options?.multiple) {
         resolve(Array.from(files).map((f) => f.name));
       } else {
-        resolve(files[0].name);
+        const first = files.item(0);
+        resolve(first ? first.name : null);
       }
       input.remove();
     });
