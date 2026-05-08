@@ -34,36 +34,13 @@ pub fn run() {
             let handle = app.handle().clone();
 
             // sqlx::SqlitePool を非同期で初期化し、Managed State に登録
-            // 初回失敗時に1回リトライする（マイグレーション途中失敗からの復旧用）
+            // **設計原則**: init_db は「絶対に失敗しない」。
+            // プール接続もマイグレーションも、あらゆるエラーを吸収して
+            // 必ず AppDb を manage する。これにより「DB未初期化」エラーを根絶する。
             tauri::async_runtime::block_on(async move {
-                let mut last_err = String::new();
-                for attempt in 1..=2 {
-                    match db::init_db(&handle).await {
-                        Ok(pool) => {
-                            handle.manage(AppDb(Arc::new(pool)));
-                            log::info!("sqlx SqlitePool を初期化しました (試行 {})", attempt);
-                            last_err.clear();
-                            break;
-                        }
-                        Err(e) => {
-                            last_err = format!("{}", e);
-                            log::error!(
-                                "DB 初期化に失敗 (試行 {}/2): {}",
-                                attempt, last_err
-                            );
-                            if attempt < 2 {
-                                log::info!("1秒後にリトライします…");
-                                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-                            }
-                        }
-                    }
-                }
-                if !last_err.is_empty() {
-                    log::error!(
-                        "DB 初期化が2回とも失敗しました。アプリは起動しますがデータアクセスはできません: {}",
-                        last_err
-                    );
-                }
+                let pool = db::init_db(&handle).await;
+                handle.manage(AppDb(Arc::new(pool)));
+                log::info!("sqlx SqlitePool を Managed State に登録しました");
             });
 
             // メインウィンドウの取得とデバッグ用 DevTools 表示
