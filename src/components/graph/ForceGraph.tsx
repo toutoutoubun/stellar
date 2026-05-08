@@ -193,10 +193,14 @@ const CanvasFallbackGraph: React.FC<CanvasFallbackProps> = ({
       // 斥力（ノード間）
       const nodeArr = inputNodes;
       for (let i = 0; i < nodeArr.length; i++) {
-        const a = pos.get(nodeArr[i].id);
+        const ni = nodeArr[i];
+        if (!ni) continue;
+        const a = pos.get(ni.id);
         if (!a) continue;
         for (let j = i + 1; j < nodeArr.length; j++) {
-          const b = pos.get(nodeArr[j].id);
+          const nj = nodeArr[j];
+          if (!nj) continue;
+          const b = pos.get(nj.id);
           if (!b) continue;
           let dx = a.x - b.x;
           let dy = a.y - b.y;
@@ -482,50 +486,165 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
     return ids;
   }, [selectedNodeId, links, nodes]);
 
-  /** グラフデータ（react-force-graph形式） */
-  const graphData = useMemo(
-    () => ({
-      nodes: nodes as GraphNodeExtended[],
+  /**
+   * ノードに初期位置を付与する。
+   * react-force-graph-2d はデフォルトで全ノードを (0,0) に配置するため、
+   * 円形に散らしておかないとシミュレーション初期に全ノードが重なる。
+   *
+   * 【重要】graphData の参照安定化:
+   * react-force-graph-2d は graphData が変わるたびにシミュレーションを
+   * リセットするため、ノード ID リストが同じなら同一オブジェクトを返す。
+   * シミュレーション中のノードは内部で x/y を書き換えるため、
+   * ここでは初期位置の「種」だけ与え、以降は react-force-graph に任せる。
+   */
+  const prevNodeIdsRef = useRef<string>("");
+  const prevGraphDataRef = useRef<{ nodes: GraphNodeExtended[]; links: GraphLink[] } | null>(null);
+
+  const graphData = useMemo(() => {
+    const cx = width / 2;
+    const cy = height / 2;
+    const radius = Math.min(width, height) * 0.3;
+    const n = nodes.length || 1;
+
+    // ノードIDリストのフィンガープリント
+    const nodeIdKey = nodes.map((nd) => nd.id).join(",");
+
+    // ノードID構成が同じ場合はプロパティ更新のみ行い、オブジェクト参照を維持する
+    // これにより react-force-graph-2d のシミュレーションリセットを防ぐ
+    if (prevNodeIdsRef.current === nodeIdKey && prevGraphDataRef.current) {
+      const prev = prevGraphDataRef.current;
+      // 既存ノードのプロパティ（name, tags等）だけ同期
+      const nodeMap = new Map(nodes.map((nd) => [nd.id, nd]));
+      for (const existing of prev.nodes) {
+        const updated = nodeMap.get(existing.id);
+        if (updated) {
+          existing.name = updated.name;
+          existing.type = updated.type;
+          existing.linkCount = updated.linkCount;
+          existing.tags = updated.tags;
+          existing.updatedAt = updated.updatedAt;
+        }
+      }
+      prev.links = links as GraphLink[];
+      return prev;
+    }
+
+    // 新しいノード構成 → 初期位置を円形配置して新規作成
+    const positioned = (nodes as GraphNodeExtended[]).map((node, i) => {
+      const angle = (2 * Math.PI * i) / n;
+      return {
+        ...node,
+        x: cx + radius * Math.cos(angle) + (Math.random() - 0.5) * 20,
+        y: cy + radius * Math.sin(angle) + (Math.random() - 0.5) * 20,
+      };
+    });
+
+    const data = {
+      nodes: positioned,
       links: links as GraphLink[],
-    }),
-    [nodes, links],
-  );
+    };
+
+    prevNodeIdsRef.current = nodeIdKey;
+    prevGraphDataRef.current = data;
+    return data;
+  }, [nodes, links, width, height]);
+
+  /** シミュレーション安定後に zoomToFit する回数制限付きフラグ */
+  const hasZoomedRef = useRef(false);
+  /** ノードID構成の前回値（Force再設定＋zoomToFitをトリガーする判定用） */
+  const prevForceNodeKeyRef = useRef<string>("");
 
   /** Force シミュレーション設定 */
   useEffect(() => {
     const fg = graphRef.current;
     if (!fg) return;
 
+    // ノードID構成が変わっていない場合は Force 再設定をスキップ
+    // （フィルタ以外のプロパティ更新でシミュレーションが暴れるのを防止）
+    const nodeKey = nodes.map((nd) => nd.id).sort().join(",");
+    const isNewConfig = nodeKey !== prevForceNodeKeyRef.current;
+    prevForceNodeKeyRef.current = nodeKey;
+
     try {
+      // 斥力: ノード間を十分に離す（デフォルト -30 では全く足りない）
       const charge = fg.d3Force("charge");
       if (charge && typeof charge === "object" && "strength" in charge) {
-        (charge as { strength: (v: number) => void }).strength(-150);
+        (charge as { strength: (v: number) => void }).strength(-300);
       }
 
+      // リンク距離: ノード間の理想距離
       const link = fg.d3Force("link");
       if (link && typeof link === "object" && "distance" in link) {
-        (link as { distance: (v: number) => void }).distance(80);
+        (link as { distance: (v: number) => void }).distance(100);
+      }
+
+      // 中心引力
+      const center = fg.d3Force("center");
+      if (center && typeof center === "object" && "strength" in center) {
+        (center as { strength: (v: number) => void }).strength(0.05);
       }
     } catch (e) {
       console.error(t.graph.k_i4xtrj, e);
     }
 
-    // 初回レンダリング後にフィット表示
-    setTimeout(() => {
-      try {
-        fg.zoomToFit(400, 60);
-      } catch (e) {
-        console.error(t.graph.k_6u2gub, e);
-      }
-    }, 500);
-  }, [nodes.length, ForceGraph2D]);
+    // ノード構成が変わった場合のみ zoomToFit を段階的に実行
+    if (isNewConfig) {
+      hasZoomedRef.current = false;
+      const timers = [
+        setTimeout(() => {
+          try { fg.zoomToFit(400, 60); } catch { /* ignore */ }
+        }, 800),
+        setTimeout(() => {
+          try { fg.zoomToFit(400, 60); } catch { /* ignore */ }
+        }, 2000),
+        setTimeout(() => {
+          if (!hasZoomedRef.current) {
+            try { fg.zoomToFit(400, 60); } catch { /* ignore */ }
+            hasZoomedRef.current = true;
+          }
+        }, 4000),
+      ];
 
-  /** graphRef を親に公開 */
-  useEffect(() => {
-    if (graphRef.current && onGraphReady) {
-      onGraphReady(graphRef.current);
+      return () => timers.forEach(clearTimeout);
     }
-  }, [onGraphReady, ForceGraph2D]);
+  }, [nodes, ForceGraph2D, width, height]);
+
+  /**
+   * graphRef を親に公開。
+   * ForceGraph2D の ref は最初のレンダリング後にセットされるため、
+   * レンダリング完了を検知する onEngineStop / setTimeout で公開する。
+   * useEffect の依存に ForceGraph2D だけでは ref がまだ null の場合がある。
+   */
+  const graphReadyNotifiedRef = useRef(false);
+
+  useEffect(() => {
+    graphReadyNotifiedRef.current = false;
+  }, [ForceGraph2D]);
+
+  // レンダリング後に ref をチェックして親に通知
+  useEffect(() => {
+    if (graphReadyNotifiedRef.current) return;
+    if (!graphRef.current || !onGraphReady) return;
+
+    // ref がセットされたら即座に通知
+    onGraphReady(graphRef.current);
+    graphReadyNotifiedRef.current = true;
+  });
+
+  /** シミュレーション cooldown 完了時に最終 zoomToFit + graphReady 通知 */
+  const handleEngineStop = useCallback(() => {
+    if (!hasZoomedRef.current) {
+      hasZoomedRef.current = true;
+      try {
+        graphRef.current?.zoomToFit(400, 60);
+      } catch { /* ignore */ }
+    }
+    // エンジン停止時に ref が確実にセットされているので、ここでも通知
+    if (!graphReadyNotifiedRef.current && graphRef.current && onGraphReady) {
+      onGraphReady(graphRef.current);
+      graphReadyNotifiedRef.current = true;
+    }
+  }, [onGraphReady]);
 
   /** カスタムノード描画 */
   const nodeCanvasObject = useCallback(
@@ -850,8 +969,11 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
         enableZoomInteraction
         enablePanInteraction
         // パフォーマンス
-        cooldownTicks={100}
-        warmupTicks={30}
+        // warmupTicks: 描画前にシミュレーションを事前実行してノードを散らす
+        // cooldownTicks: シミュレーション収束までのティック数
+        cooldownTicks={200}
+        warmupTicks={100}
+        onEngineStop={handleEngineStop}
         minZoom={0.3}
         maxZoom={8}
       />

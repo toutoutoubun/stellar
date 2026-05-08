@@ -88,6 +88,8 @@ pub fn run() {
             commands::search::get_link_suggestions,
             commands::metadata::fetch_metadata_by_doi,
             commands::metadata::fetch_metadata_from_url,
+            commands::metadata::download_pdf_from_url,
+            commands::metadata::format_bibliography,
             // 質的分析コマンド — プロジェクト管理
             commands::qualitative::create_project,
             commands::qualitative::get_projects,

@@ -216,7 +216,13 @@ export function useGraphData(): UseGraphDataReturn {
   /**
    * フィルタ適用を requestAnimationFrame でスケジューリング。
    * スライダー操作等の高頻度変更でもフレーム落ちしない。
+   *
+   * 【参照安定化】
+   * フィルタ結果のノードID構成が同じ場合は配列参照を維持する。
+   * これにより ForceGraph の graphData useMemo が不要にトリガーされるのを防ぐ。
    */
+  const prevFilteredNodeIdsRef = useRef<string>("");
+
   useEffect(() => {
     // 前回のrAFをキャンセル
     if (rafIdRef.current) {
@@ -226,8 +232,31 @@ export function useGraphData(): UseGraphDataReturn {
     rafIdRef.current = requestAnimationFrame(() => {
       if (rawData) {
         const result = applyFilters(extendedNodes, rawData.links, filters);
-        setDeferredFilterResult(result);
+        // ノードID構成が変わっていない場合は参照を維持
+        const newNodeIdKey = result.nodes.map((n) => n.id).join(",");
+        if (newNodeIdKey === prevFilteredNodeIdsRef.current) {
+          // プロパティだけ同期（linkCount等が変わる可能性）
+          setDeferredFilterResult((prev) => {
+            const nodeMap = new Map(result.nodes.map((n) => [n.id, n]));
+            for (const existing of prev.nodes) {
+              const updated = nodeMap.get(existing.id);
+              if (updated) {
+                existing.name = updated.name;
+                existing.type = updated.type;
+                existing.linkCount = updated.linkCount;
+                existing.tags = updated.tags;
+                existing.updatedAt = updated.updatedAt;
+              }
+            }
+            // links は参照が変わっても react-force-graph 側で問題にならない
+            return { nodes: prev.nodes, links: result.links };
+          });
+        } else {
+          prevFilteredNodeIdsRef.current = newNodeIdKey;
+          setDeferredFilterResult(result);
+        }
       } else {
+        prevFilteredNodeIdsRef.current = "";
         setDeferredFilterResult({ nodes: [], links: [] });
       }
     });

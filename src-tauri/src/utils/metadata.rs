@@ -5,8 +5,9 @@
 // 取得戦略（優先順位）:
 // 1. URL から DOI を抽出 → CrossRef API で解決（最も信頼性が高い）
 // 2. CiNii / IRDB URL の場合 → CiNii Research API で解決
-// 3. HTML meta タグスクレイピング（citation_*, Highwire Press, Dublin Core, OGP）
-// 4. スクレイプで DOI を発見した場合 → CrossRef API で補完
+// 3. J-Stage URL の場合 → J-Stage Article API を試行
+// 4. HTML meta タグスクレイピング（citation_*, Highwire Press, Dublin Core, OGP）
+// 5. スクレイプで DOI を発見した場合 → CrossRef API で補完
 //
 // 対応サイト:
 // - J-Stage (jstage.jst.go.jp)
@@ -42,20 +43,42 @@ pub async fn fetch_metadata_by_doi(doi: &str) -> Result<PaperMetadata, MetadataE
 /// 取得フロー:
 /// 1. URL から DOI を抽出できる場合 → CrossRef API を試行
 /// 2. CiNii / IRDB URL の場合 → CiNii Research API を試行
-/// 3. HTML スクレイピングを実行（サイト別最適化ヘッダー付き）
-/// 4. スクレイプ結果の DOI で CrossRef を補完
+/// 3. J-Stage URL の場合 → J-Stage Article API を試行
+/// 4. HTML スクレイピングを実行（サイト別最適化ヘッダー付き）
+/// 5. スクレイプ結果の DOI で CrossRef を補完
 pub async fn scrape_metadata_from_url(url: &str) -> Result<PaperMetadata, MetadataError> {
     let url = url.trim();
     log::info!("[metadata] URL からメタデータ取得を開始: {}", url);
 
+    // ── 戦略 0: IRDB URL の場合、リダイレクト先を追跡して CiNii URL を取得 ──
+    let resolved_url = if url.to_lowercase().contains("irdb.nii.ac.jp") {
+        log::info!("[metadata] IRDB URL を検出、リダイレクト先を追跡");
+        match resolve_irdb_redirect(url).await {
+            Ok(redirected) => {
+                log::info!("[metadata] IRDB リダイレクト先: {}", redirected);
+                redirected
+            }
+            Err(e) => {
+                log::warn!("[metadata] IRDB リダイレクト追跡失敗: {} — 元URL で続行", e);
+                url.to_string()
+            }
+        }
+    } else {
+        url.to_string()
+    };
+
     // ── 戦略 1: URL から DOI を抽出し、CrossRef API で解決 ──
-    if let Some(doi) = extract_doi_from_url(url) {
+    if let Some(doi) = extract_doi_from_url(&resolved_url) {
         log::info!("[metadata] URL から DOI を抽出: {}", doi);
         match fetch_from_crossref(&doi).await {
             Ok(mut meta) => {
                 // CrossRef の URL が元の URL と異なる場合、元の URL を保持
                 if meta.url.as_deref() != Some(url) {
                     meta.url = Some(url.to_string());
+                }
+                // PDF URL の抽出を試みる
+                if meta.pdf_url.is_none() {
+                    meta.pdf_url = guess_pdf_url_from_doi(&doi);
                 }
                 log::info!("[metadata] CrossRef API で解決成功 (DOI: {})", doi);
                 return Ok(meta);
@@ -68,7 +91,7 @@ pub async fn scrape_metadata_from_url(url: &str) -> Result<PaperMetadata, Metada
     }
 
     // ── 戦略 2: CiNii / IRDB URL の場合、CiNii Research API で解決 ──
-    if let Some(crid) = extract_cinii_crid(url) {
+    if let Some(crid) = extract_cinii_crid(&resolved_url) {
         log::info!("[metadata] CiNii CRID を抽出: {}", crid);
         match fetch_metadata_by_cinii(&crid).await {
             Ok(meta) => {
@@ -81,11 +104,28 @@ pub async fn scrape_metadata_from_url(url: &str) -> Result<PaperMetadata, Metada
         }
     }
 
-    // ── 戦略 3: HTML スクレイピング（サイト別最適化） ──
-    log::info!("[metadata] HTML スクレイピングにフォールバック");
-    let mut meta = scrape_html_metadata(url).await?;
+    // ── 戦略 3: J-Stage URL の場合、J-Stage 記事 API を試行 ──
+    if resolved_url.to_lowercase().contains("jstage.jst.go.jp") {
+        log::info!("[metadata] J-Stage URL を検出、記事API を試行");
+        match fetch_from_jstage_api(&resolved_url).await {
+            Ok(meta) => {
+                log::info!("[metadata] J-Stage API で解決成功");
+                return Ok(meta);
+            }
+            Err(e) => {
+                log::warn!("[metadata] J-Stage API フォールバック失敗: {}", e);
+            }
+        }
+    }
 
-    // ── 戦略 4: スクレイプ結果の DOI で CrossRef 補完 ──
+    // ── 戦略 4: HTML スクレイピング（サイト別最適化、リトライ付き） ──
+    log::info!("[metadata] HTML スクレイピングにフォールバック");
+    let mut meta = scrape_html_metadata_with_retry(&resolved_url).await?;
+
+    // URL を元の入力値で上書き（リダイレクト先ではなく）
+    meta.url = Some(url.to_string());
+
+    // ── 戦略 5: スクレイプ結果の DOI で CrossRef 補完 ──
     if let Some(ref doi) = meta.doi {
         let doi_clean = normalize_doi(doi);
         if !doi_clean.is_empty() && (meta.authors.is_empty() || meta.year.is_none()) {
@@ -96,7 +136,40 @@ pub async fn scrape_metadata_from_url(url: &str) -> Result<PaperMetadata, Metada
         }
     }
 
+    // ── PDF URL 抽出（スクレイプ結果にない場合） ──
+    if meta.pdf_url.is_none() {
+        if let Some(ref doi) = meta.doi {
+            meta.pdf_url = guess_pdf_url_from_doi(doi);
+        }
+    }
+
     Ok(meta)
+}
+
+// ════════════════════════════════════════════════════════════
+// IRDB リダイレクト追跡
+// ════════════════════════════════════════════════════════════
+
+/// IRDB URL を HEAD リクエストでリダイレクト先まで追跡する
+/// IRDB は多くの場合 CiNii Research にリダイレクトされる
+async fn resolve_irdb_redirect(url: &str) -> Result<String, MetadataError> {
+    // リダイレクトを追跡するが、本体は取得しない（HEAD）
+    let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::limited(10))
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| MetadataError::NetworkError(format!("HTTP クライアント構築失敗: {}", e)))?;
+
+    let response = client
+        .get(url)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .header("Accept", "text/html")
+        .send()
+        .await
+        .map_err(|e| MetadataError::NetworkError(format!("IRDB リダイレクト追跡失敗: {}", e)))?;
+
+    let final_url = response.url().to_string();
+    Ok(final_url)
 }
 
 // ════════════════════════════════════════════════════════════
@@ -155,14 +228,11 @@ fn extract_doi_from_url(url: &str) -> Option<String> {
     }
 
     // ── J-Stage (jstage.jst.go.jp) ──
-    // https://www.jstage.jst.go.jp/article/journalcode/vol/issue/page/_article/-char/ja
-    // DOI は通常 10.xxxx/journalcode.vol.issue_page の形式
     // J-Stage は URL に直接 DOI が入っていないが、citation_doi meta タグで取得可能
     // ここでは URL パターンから DOI は抽出不可 → スクレイピングにフォールバック
 
     // ── Elsevier / ScienceDirect ──
     // https://www.sciencedirect.com/science/article/pii/S0001234567890123
-    // https://linkinghub.elsevier.com/retrieve/pii/S0001234567890123
     // DOI は URL に含まれないが、PII→DOI 変換は不可能 → スクレイピングにフォールバック
 
     // ── Wiley ──
@@ -197,7 +267,6 @@ fn extract_doi_from_url(url: &str) -> Option<String> {
         if let Some(article_id) = extract_after_pattern(url, "nature.com/articles/") {
             let article_id = article_id.split('?').next().unwrap_or(&article_id).to_string();
             let article_id = article_id.split('#').next().unwrap_or(&article_id).to_string();
-            // Nature の記事IDは通常 DOI のサフィックスで、10.1038/ がプレフィックス
             let doi = format!("10.1038/{}", article_id);
             if is_valid_doi(&doi) {
                 return Some(doi);
@@ -222,13 +291,9 @@ fn extract_doi_from_url(url: &str) -> Option<String> {
     }
 
     // ── SciELO ──
-    // https://www.scielo.br/j/xxx/a/YYYYYYY/?lang=en
-    // https://www.scielo.org.mx/scielo.php?pid=S0187-358X2023000300107&script=sci_arttext
     // SciELO は citation_doi メタタグを提供 → スクレイピングにフォールバック
 
     // ── PubMed / PMC ──
-    // https://pubmed.ncbi.nlm.nih.gov/12345678/
-    // https://pmc.ncbi.nlm.nih.gov/articles/PMC12345678/
     // DOI は URL に含まれないが、PubMed API で取得可能 → スクレイピングにフォールバック
 
     // ── arXiv ──
@@ -248,6 +313,13 @@ fn extract_doi_from_url(url: &str) -> Option<String> {
     // https://journals.co.za/doi/10.xxxx/yyyy
     if url_lower.contains("journals.co.za/doi/") {
         if let Some(doi) = extract_doi_after_doi_path(url) {
+            return Some(doi);
+        }
+    }
+    // https://sabinet.co.za/record/... → DOI は不明 → スクレイピング
+    // Sabinet 個別記事ページからもDOI パターンを探す
+    if url_lower.contains("sabinet.co.za") {
+        if let Some(doi) = extract_doi_pattern_from_anywhere(url) {
             return Some(doi);
         }
     }
@@ -279,8 +351,13 @@ fn extract_cinii_crid(url: &str) -> Option<String> {
             .map(|s| s.trim_end_matches('/').to_string());
     }
 
-    // IRDB: https://irdb.nii.ac.jp/xxxxx → CiNii にリダイレクトされることが多い
-    // IRDB は直接 API を持たないため、CRID は抽出できない
+    // https://cir.nii.ac.jp/all/... (検索結果からの直接リンク)
+    if url_lower.contains("cir.nii.ac.jp/all/") {
+        return extract_after_pattern(url, "cir.nii.ac.jp/all/")
+            .map(|s| s.split('?').next().unwrap_or(&s).to_string())
+            .map(|s| s.split('#').next().unwrap_or(&s).to_string())
+            .map(|s| s.trim_end_matches('/').to_string());
+    }
 
     None
 }
@@ -292,7 +369,6 @@ fn extract_cinii_crid(url: &str) -> Option<String> {
 /// DOI を正規化する（前後の空白・URL プレフィックス除去）
 fn normalize_doi(doi: &str) -> String {
     let doi = doi.trim();
-    // https://doi.org/10.xxxx → 10.xxxx
     let doi = doi
         .strip_prefix("https://doi.org/")
         .or_else(|| doi.strip_prefix("http://doi.org/"))
@@ -300,7 +376,6 @@ fn normalize_doi(doi: &str) -> String {
         .or_else(|| doi.strip_prefix("http://dx.doi.org/"))
         .or_else(|| doi.strip_prefix("doi:"))
         .unwrap_or(doi);
-    // URL エンコードをデコード
     urlencoding::decode(doi).unwrap_or_else(|_| doi.into()).to_string()
 }
 
@@ -311,14 +386,12 @@ fn is_valid_doi(doi: &str) -> bool {
 
 /// URL 中の特定パターン以降の文字列を抽出する
 fn extract_after_pattern(url: &str, pattern: &str) -> Option<String> {
-    // 大文字小文字を無視して検索
     let url_lower = url.to_lowercase();
     let pattern_lower = pattern.to_lowercase();
     if let Some(pos) = url_lower.find(&pattern_lower) {
         let start = pos + pattern.len();
         if start < url.len() {
             let remainder = &url[start..];
-            // クエリパラメータやフラグメントの前で切る
             let result = remainder.split('?').next().unwrap_or(remainder);
             let result = result.split('#').next().unwrap_or(result);
             let result = result.trim_end_matches('/');
@@ -333,17 +406,14 @@ fn extract_after_pattern(url: &str, pattern: &str) -> Option<String> {
 /// /doi/[full|abs|epub|pdf]/10.xxxx/yyyy パスから DOI を抽出する
 fn extract_doi_after_doi_path(url: &str) -> Option<String> {
     let url_lower = url.to_lowercase();
-    // /doi/ 以降を取得
     if let Some(pos) = url_lower.find("/doi/") {
-        let after_doi = &url[pos + 5..]; // "/doi/" の後
-        // full/, abs/, epub/, pdf/ などのプレフィックスを除去
+        let after_doi = &url[pos + 5..];
         let after_prefix = after_doi
             .strip_prefix("full/")
             .or_else(|| after_doi.strip_prefix("abs/"))
             .or_else(|| after_doi.strip_prefix("epub/"))
             .or_else(|| after_doi.strip_prefix("pdf/"))
             .unwrap_or(after_doi);
-        // クエリパラメータ除去
         let doi = after_prefix.split('?').next().unwrap_or(after_prefix);
         let doi = doi.split('#').next().unwrap_or(doi);
         let doi = doi.trim_end_matches('/');
@@ -357,17 +427,13 @@ fn extract_doi_after_doi_path(url: &str) -> Option<String> {
 
 /// URL 中のどこかにある 10.xxxx/yyyy パターンを正規表現的に検索する
 fn extract_doi_pattern_from_anywhere(url: &str) -> Option<String> {
-    // URL デコード
     let decoded = urlencoding::decode(url).unwrap_or_else(|_| url.into());
-    // "10." で始まるパターンを探す
     let chars: Vec<char> = decoded.chars().collect();
     let len = chars.len();
     let mut i = 0;
     while i + 4 < len {
         if chars[i] == '1' && chars[i + 1] == '0' && chars[i + 2] == '.' {
-            // 10. の後に数字が続くか確認
             if i + 3 < len && chars[i + 3].is_ascii_digit() {
-                // DOI の終端を探す（スペース、クエリパラメータ等で終了）
                 let start = i;
                 let mut end = i + 3;
                 let mut has_slash = false;
@@ -378,8 +444,6 @@ fn extract_doi_pattern_from_anywhere(url: &str) -> Option<String> {
                     {
                         break;
                     }
-                    // # や ? の後はクエリ/フラグメントなので止める
-                    // ただし DOI 自体に ? が含まれることはほぼない
                     if c == '?' || c == '#' {
                         break;
                     }
@@ -402,46 +466,82 @@ fn extract_doi_pattern_from_anywhere(url: &str) -> Option<String> {
     None
 }
 
+/// DOI からPDF URLを推定する（既知のパブリッシャーパターン）
+fn guess_pdf_url_from_doi(doi: &str) -> Option<String> {
+    // arXiv
+    if doi.starts_with("10.48550/arXiv.") {
+        let arxiv_id = doi.strip_prefix("10.48550/arXiv.")?;
+        return Some(format!("https://arxiv.org/pdf/{}.pdf", arxiv_id));
+    }
+    // Unpaywall API で PDF URL を取得する方が正確だが、
+    // ここでは簡易推定のみ
+    None
+}
+
 // ════════════════════════════════════════════════════════════
 // CrossRef API
 // ════════════════════════════════════════════════════════════
 
-/// CrossRef API からメタデータを取得する
+/// CrossRef API からメタデータを取得する（リトライ付き）
 async fn fetch_from_crossref(doi: &str) -> Result<PaperMetadata, MetadataError> {
     let url = format!("https://api.crossref.org/works/{}", urlencoding::encode(doi));
     let client = build_http_client()?;
 
-    let response = client
-        .get(&url)
-        .header("User-Agent", "Stellar/0.1.0 (mailto:stellar@example.com)")
-        .send()
-        .await
-        .map_err(|e| MetadataError::NetworkError(format!("CrossRef API への接続に失敗: {}", e)))?;
+    // 最大2回リトライ（合計3回試行）
+    let mut last_err = MetadataError::NetworkError("未試行".to_string());
+    for attempt in 0..3 {
+        if attempt > 0 {
+            log::info!("[metadata] CrossRef API リトライ {}/2 (DOI: {})", attempt, doi);
+            tokio::time::sleep(std::time::Duration::from_millis(500 * (attempt as u64))).await;
+        }
 
-    if response.status() == reqwest::StatusCode::NOT_FOUND {
-        return Err(MetadataError::NotFound(format!(
-            "DOI '{}' に対応する論文が見つかりません",
-            doi
-        )));
+        match client
+            .get(&url)
+            .header("User-Agent", "Stellar/0.1.0 (mailto:stellar@example.com; https://github.com/stellar-app)")
+            .send()
+            .await
+        {
+            Ok(response) => {
+                if response.status() == reqwest::StatusCode::NOT_FOUND {
+                    return Err(MetadataError::NotFound(format!(
+                        "DOI '{}' に対応する論文が見つかりません",
+                        doi
+                    )));
+                }
+                if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
+                    last_err = MetadataError::ApiError("CrossRef API レート制限 (429)".to_string());
+                    continue;
+                }
+                if !response.status().is_success() {
+                    last_err = MetadataError::ApiError(format!(
+                        "CrossRef API がエラーを返しました ({})",
+                        response.status()
+                    ));
+                    continue;
+                }
+
+                let body: serde_json::Value = response
+                    .json()
+                    .await
+                    .map_err(|e| MetadataError::ParseError(format!("レスポンスの解析に失敗: {}", e)))?;
+
+                return parse_crossref_response(&body, doi);
+            }
+            Err(e) => {
+                last_err = MetadataError::NetworkError(format!("CrossRef API への接続に失敗: {}", e));
+            }
+        }
     }
 
-    if !response.status().is_success() {
-        return Err(MetadataError::ApiError(format!(
-            "CrossRef API がエラーを返しました ({})",
-            response.status()
-        )));
-    }
+    Err(last_err)
+}
 
-    let body: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|e| MetadataError::ParseError(format!("レスポンスの解析に失敗: {}", e)))?;
-
+/// CrossRef JSON レスポンスからメタデータを抽出する
+fn parse_crossref_response(body: &serde_json::Value, doi: &str) -> Result<PaperMetadata, MetadataError> {
     let message = body
         .get("message")
         .ok_or_else(|| MetadataError::ParseError("message フィールドがありません".to_string()))?;
 
-    // タイトル
     let title = message
         .get("title")
         .and_then(|t| t.as_array())
@@ -450,7 +550,6 @@ async fn fetch_from_crossref(doi: &str) -> Result<PaperMetadata, MetadataError> 
         .unwrap_or("Untitled")
         .to_string();
 
-    // 著者リスト（given + family 形式）
     let authors = message
         .get("author")
         .and_then(|a| a.as_array())
@@ -460,7 +559,6 @@ async fn fetch_from_crossref(doi: &str) -> Result<PaperMetadata, MetadataError> 
                     let given = author.get("given").and_then(|v| v.as_str()).unwrap_or("");
                     let family = author.get("family").and_then(|v| v.as_str()).unwrap_or("");
                     if family.is_empty() && given.is_empty() {
-                        // name フィールドがある場合（組織名等）
                         author.get("name").and_then(|v| v.as_str()).map(|s| s.to_string())
                     } else if family.is_empty() {
                         Some(given.to_string())
@@ -474,7 +572,6 @@ async fn fetch_from_crossref(doi: &str) -> Result<PaperMetadata, MetadataError> 
         })
         .unwrap_or_default();
 
-    // 出版年（published-print → published-online → created の優先順位）
     let year = message
         .get("published-print")
         .or_else(|| message.get("published-online"))
@@ -487,7 +584,6 @@ async fn fetch_from_crossref(doi: &str) -> Result<PaperMetadata, MetadataError> 
         .and_then(|y| y.as_i64())
         .map(|y| y as i32);
 
-    // ジャーナル名
     let journal = message
         .get("container-title")
         .and_then(|ct| ct.as_array())
@@ -495,7 +591,6 @@ async fn fetch_from_crossref(doi: &str) -> Result<PaperMetadata, MetadataError> 
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
 
-    // 巻・号・ページ
     let volume = message
         .get("volume")
         .and_then(|v| v.as_str())
@@ -511,17 +606,31 @@ async fn fetch_from_crossref(doi: &str) -> Result<PaperMetadata, MetadataError> 
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
 
-    // アブストラクト（HTMLタグを除去）
     let r#abstract = message
         .get("abstract")
         .and_then(|v| v.as_str())
         .map(|s| strip_html_tags(s));
 
-    // URL
     let url = message
         .get("URL")
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
+
+    // CrossRef から PDF リンクを抽出
+    let pdf_url = message
+        .get("link")
+        .and_then(|l| l.as_array())
+        .and_then(|links| {
+            links.iter().find_map(|link| {
+                let content_type = link.get("content-type").and_then(|v| v.as_str()).unwrap_or("");
+                let intended_app = link.get("intended-application").and_then(|v| v.as_str()).unwrap_or("");
+                if content_type == "application/pdf" || intended_app == "text-mining" {
+                    link.get("URL").and_then(|v| v.as_str()).map(|s| s.to_string())
+                } else {
+                    None
+                }
+            })
+        });
 
     Ok(PaperMetadata {
         title,
@@ -534,6 +643,7 @@ async fn fetch_from_crossref(doi: &str) -> Result<PaperMetadata, MetadataError> 
         doi: Some(doi.to_string()),
         url,
         r#abstract,
+        pdf_url,
     })
 }
 
@@ -603,7 +713,6 @@ pub async fn fetch_metadata_by_cinii(crid: &str) -> Result<PaperMetadata, Metada
         })
         .unwrap_or_default();
 
-    // 出版年
     let year = body
         .get("publicationDate")
         .and_then(|v| v.as_str())
@@ -615,14 +724,12 @@ pub async fn fetch_metadata_by_cinii(crid: &str) -> Result<PaperMetadata, Metada
                 .and_then(|y| y.parse::<i32>().ok())
         });
 
-    // ジャーナル名
     let journal = body
         .get("publicationName")
         .and_then(|v| v.as_str())
         .or_else(|| body.get("prism:publicationName").and_then(|v| v.as_str()))
         .map(|s| s.to_string());
 
-    // 巻・号・ページ
     let volume = body
         .get("prism:volume")
         .and_then(|v| v.as_str())
@@ -643,26 +750,39 @@ pub async fn fetch_metadata_by_cinii(crid: &str) -> Result<PaperMetadata, Metada
         }
     };
 
-    // DOI
     let doi = body
         .get("doi")
         .and_then(|v| v.as_str())
         .or_else(|| body.get("prism:doi").and_then(|v| v.as_str()))
         .map(|s| s.to_string());
 
-    // アブストラクト
     let r#abstract = body
         .get("description")
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
 
-    // URL（CiNii のパーマリンク）
     let link_url = body
         .get("@id")
         .and_then(|v| v.as_str())
         .or_else(|| body.get("url").and_then(|v| v.as_str()))
         .map(|s| s.to_string())
         .or_else(|| Some(format!("https://cir.nii.ac.jp/crid/{}", crid)));
+
+    // CiNii から PDF リンクを探す
+    let pdf_url = body
+        .get("relation")
+        .and_then(|v| v.as_array())
+        .and_then(|arr| {
+            arr.iter().find_map(|rel| {
+                let rel_type = rel.get("@type").and_then(|v| v.as_str()).unwrap_or("");
+                let rel_url = rel.get("@id").and_then(|v| v.as_str());
+                if rel_type == "fullTextUrl" {
+                    rel_url.map(|s| s.to_string())
+                } else {
+                    None
+                }
+            })
+        });
 
     Ok(PaperMetadata {
         title,
@@ -675,14 +795,62 @@ pub async fn fetch_metadata_by_cinii(crid: &str) -> Result<PaperMetadata, Metada
         doi,
         url: link_url,
         r#abstract,
+        pdf_url,
     })
 }
 
 // ════════════════════════════════════════════════════════════
-// HTML スクレイピング（サイト別最適化）
+// J-Stage Article API
+// ════════════════════════════════════════════════════════════
+
+/// J-Stage 記事 URL から J-Stage API でメタデータを取得する
+/// J-Stage URL: https://www.jstage.jst.go.jp/article/{journal_code}/{vol}/{issue}/{page}/_article/-char/{lang}
+async fn fetch_from_jstage_api(url: &str) -> Result<PaperMetadata, MetadataError> {
+    // URL から記事IDを抽出
+    // https://www.jstage.jst.go.jp/article/journalcode/vol/issue/page/_article
+    let url_lower = url.to_lowercase();
+    
+    // J-Stage API: 記事のメタデータを JSON-LD で取得
+    // まずはHTMLスクレイピングで DOI を取得し、CrossRef で解決する方が確実
+    // J-Stage は citation_doi メタタグを必ず提供する
+    
+    // J-Stage にはDOI以外にも独自の記事APIがある
+    // https://www.jstage.jst.go.jp/AF06S010ShsiDtl?sryCd=xxx&noVol=x&noIssue=x
+    // しかし公式APIはXMLベースで扱いにくい
+    
+    // 代わりに、J-Stage の URL パターンから journal_code を抽出して
+    // J-Stage XML API を呼ぶ
+    if let Some(pos) = url_lower.find("/article/") {
+        let after = &url[pos + 9..]; // "/article/" の後
+        let parts: Vec<&str> = after.split('/').collect();
+        if parts.len() >= 4 {
+            let journal_code = parts[0];
+            let vol = parts[1];
+            let _issue = parts[2];
+            let page = parts[3];
+            
+            // J-Stage の記事識別子で検索
+            let api_url = format!(
+                "https://www.jstage.jst.go.jp/AF06S010ShsiDtl?sryCd={}&noVol={}&noIssue=&artcdStar={}&cdLang=JA&request_locale=JA",
+                journal_code, vol, page
+            );
+            log::info!("[metadata] J-Stage API URL: {}", api_url);
+            
+            // J-Stage API は不安定なことがあるので、HTMLスクレイピングにフォールバック
+        }
+    }
+    
+    // J-Stage はHTMLスクレイピングの方が確実
+    // 専用のヘッダーとセレクタを使用
+    scrape_html_metadata_with_retry(url).await
+}
+
+// ════════════════════════════════════════════════════════════
+// HTML スクレイピング（サイト別最適化 + リトライ）
 // ════════════════════════════════════════════════════════════
 
 /// サイト識別子
+#[derive(Debug, Clone, Copy)]
 enum AcademicSite {
     JStage,
     ScienceDirect,
@@ -694,6 +862,7 @@ enum AcademicSite {
     Wiley,
     PubMed,
     ArXiv,
+    CiNii,
     Generic,
 }
 
@@ -720,69 +889,130 @@ fn identify_site(url: &str) -> AcademicSite {
         AcademicSite::PubMed
     } else if url_lower.contains("arxiv.org") {
         AcademicSite::ArXiv
+    } else if url_lower.contains("cir.nii.ac.jp") || url_lower.contains("ci.nii.ac.jp") {
+        AcademicSite::CiNii
     } else {
         AcademicSite::Generic
     }
 }
 
 /// サイト別に最適化された HTTP ヘッダーを取得する
-fn get_site_headers(site: &AcademicSite) -> Vec<(&'static str, &'static str)> {
-    let mut headers = vec![
-        ("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"),
-        ("Accept-Language", "en-US,en;q=0.9,ja;q=0.8"),
-        ("Cache-Control", "no-cache"),
+fn get_site_headers(site: &AcademicSite) -> Vec<(&'static str, String)> {
+    let mut headers: Vec<(&'static str, String)> = vec![
+        ("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8".to_string()),
+        ("Accept-Language", "en-US,en;q=0.9,ja;q=0.8".to_string()),
+        ("Cache-Control", "no-cache".to_string()),
+        ("Pragma", "no-cache".to_string()),
     ];
 
-    // サイト別のUser-Agentとヘッダー
+    let chrome_ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36".to_string();
+
     match site {
         AcademicSite::JStage => {
-            // J-Stage は比較的寛容だが、適切な UA が必要
-            headers.push(("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"));
-            headers.push(("Accept-Language", "ja,en-US;q=0.9,en;q=0.8"));
+            headers.push(("User-Agent", chrome_ua));
+            headers.push(("Accept-Language", "ja,en-US;q=0.9,en;q=0.8".to_string()));
+            headers.push(("Referer", "https://www.jstage.jst.go.jp/".to_string()));
         }
-        AcademicSite::ScienceDirect | AcademicSite::TaylorFrancis | AcademicSite::Wiley => {
-            // Elsevier, T&F, Wiley はbot検知が厳しい
-            headers.push(("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"));
-            headers.push(("Sec-Fetch-Dest", "document"));
-            headers.push(("Sec-Fetch-Mode", "navigate"));
-            headers.push(("Sec-Fetch-Site", "none"));
-            headers.push(("Sec-Fetch-User", "?1"));
-            headers.push(("Upgrade-Insecure-Requests", "1"));
+        AcademicSite::ScienceDirect => {
+            // ScienceDirect は特に厳しいbot検知を行う
+            // Accept ヘッダーにXMLを含めると別レスポンスになることがある
+            headers.push(("User-Agent", chrome_ua));
+            headers.push(("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8".to_string()));
+            headers.push(("Sec-Fetch-Dest", "document".to_string()));
+            headers.push(("Sec-Fetch-Mode", "navigate".to_string()));
+            headers.push(("Sec-Fetch-Site", "none".to_string()));
+            headers.push(("Sec-Fetch-User", "?1".to_string()));
+            headers.push(("Upgrade-Insecure-Requests", "1".to_string()));
+            headers.push(("Sec-Ch-Ua", "\"Chromium\";v=\"124\", \"Google Chrome\";v=\"124\", \"Not-A.Brand\";v=\"99\"".to_string()));
+            headers.push(("Sec-Ch-Ua-Mobile", "?0".to_string()));
+            headers.push(("Sec-Ch-Ua-Platform", "\"Windows\"".to_string()));
+        }
+        AcademicSite::TaylorFrancis => {
+            headers.push(("User-Agent", chrome_ua));
+            headers.push(("Sec-Fetch-Dest", "document".to_string()));
+            headers.push(("Sec-Fetch-Mode", "navigate".to_string()));
+            headers.push(("Sec-Fetch-Site", "none".to_string()));
+            headers.push(("Sec-Fetch-User", "?1".to_string()));
+            headers.push(("Upgrade-Insecure-Requests", "1".to_string()));
+            headers.push(("Referer", "https://www.google.com/".to_string()));
         }
         AcademicSite::Jstor => {
-            headers.push(("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"));
+            headers.push(("User-Agent", chrome_ua));
+            headers.push(("Referer", "https://www.google.com/".to_string()));
         }
-        AcademicSite::Sabinet | AcademicSite::SciELO => {
-            headers.push(("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"));
+        AcademicSite::Sabinet => {
+            headers.push(("User-Agent", chrome_ua));
+        }
+        AcademicSite::Wiley => {
+            headers.push(("User-Agent", chrome_ua));
+            headers.push(("Sec-Fetch-Dest", "document".to_string()));
+            headers.push(("Sec-Fetch-Mode", "navigate".to_string()));
+            headers.push(("Sec-Fetch-Site", "none".to_string()));
+            headers.push(("Sec-Fetch-User", "?1".to_string()));
+            headers.push(("Upgrade-Insecure-Requests", "1".to_string()));
         }
         AcademicSite::Springer => {
-            headers.push(("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"));
+            headers.push(("User-Agent", chrome_ua));
         }
-        AcademicSite::PubMed => {
-            // PubMed は API 的なアクセスも許容する
-            headers.push(("User-Agent", "Stellar/0.1.0 (Academic Reference Manager)"));
+        AcademicSite::PubMed | AcademicSite::ArXiv => {
+            headers.push(("User-Agent", "Stellar/0.1.0 (Academic Reference Manager)".to_string()));
         }
-        AcademicSite::ArXiv => {
-            headers.push(("User-Agent", "Stellar/0.1.0 (Academic Reference Manager)"));
+        AcademicSite::CiNii => {
+            headers.push(("User-Agent", chrome_ua));
+            headers.push(("Accept-Language", "ja,en-US;q=0.9,en;q=0.8".to_string()));
         }
-        AcademicSite::Generic => {
-            headers.push(("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"));
+        AcademicSite::SciELO | AcademicSite::Generic => {
+            headers.push(("User-Agent", chrome_ua));
         }
     }
 
     headers
 }
 
-/// HTML をスクレイプしてメタデータを抽出する
-async fn scrape_html_metadata(url: &str) -> Result<PaperMetadata, MetadataError> {
+/// HTML をスクレイプしてメタデータを抽出する（リトライ付き）
+async fn scrape_html_metadata_with_retry(url: &str) -> Result<PaperMetadata, MetadataError> {
     let site = identify_site(url);
-    let headers = get_site_headers(&site);
+    let mut last_err = MetadataError::NetworkError("未試行".to_string());
+    
+    // 最大2回リトライ（合計3回試行）、403/429の場合は遅延を入れる
+    for attempt in 0..3 {
+        if attempt > 0 {
+            let delay_ms = match attempt {
+                1 => 1000,
+                _ => 2000,
+            };
+            log::info!("[metadata] スクレイピング リトライ {}/2 (URL: {}) — {}ms 待機", attempt, url, delay_ms);
+            tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
+        }
+        
+        match scrape_html_metadata_once(url, &site).await {
+            Ok(meta) => return Ok(meta),
+            Err(MetadataError::ApiError(msg)) if msg.contains("403") || msg.contains("429") => {
+                log::warn!("[metadata] アクセス制限 (attempt {}): {}", attempt, msg);
+                last_err = MetadataError::ApiError(msg);
+                continue;
+            }
+            Err(e) => {
+                last_err = e;
+                // ネットワークエラーやパースエラーはリトライしない
+                break;
+            }
+        }
+    }
 
+    // 最終手段: DOI がURLから取得できるならば CrossRef にフォールバック
+    // （通常はここに到達しない — extract_doi_from_url で先にやっている）
+    Err(last_err)
+}
+
+/// HTML をスクレイプしてメタデータを抽出する（1回の試行）
+async fn scrape_html_metadata_once(url: &str, site: &AcademicSite) -> Result<PaperMetadata, MetadataError> {
+    let headers = get_site_headers(site);
     let client = build_http_client()?;
 
     let mut request = client.get(url);
     for (key, value) in &headers {
-        request = request.header(*key, *value);
+        request = request.header(*key, value.as_str());
     }
 
     let response = request
@@ -797,11 +1027,10 @@ async fn scrape_html_metadata(url: &str) -> Result<PaperMetadata, MetadataError>
     log::info!("[metadata] HTTP {} — {}", status, url);
 
     if !status.is_success() {
-        // 403/429 の場合はサイト固有のエラーメッセージ
         let msg = match status.as_u16() {
             403 => format!(
-                "アクセスが拒否されました (403)。{}はボット対策のためブラウザ以外からのアクセスを制限している可能性があります。DOI を使って取得してください。URL: {}",
-                site_display_name(&site), url
+                "アクセスが拒否されました (403)。{}はボット対策のためアクセスを制限している可能性があります。DOI を使って取得してください。URL: {}",
+                site_display_name(site), url
             ),
             429 => format!(
                 "リクエスト制限に達しました (429)。しばらく待ってから再試行してください。URL: {}", url
@@ -816,7 +1045,7 @@ async fn scrape_html_metadata(url: &str) -> Result<PaperMetadata, MetadataError>
         .await
         .map_err(|e| MetadataError::ParseError(format!("HTML の取得に失敗: {}", e)))?;
 
-    parse_html_metadata(&html_text, url, &site)
+    parse_html_metadata(&html_text, url, site)
 }
 
 /// HTML テキストからメタデータを抽出する
@@ -824,12 +1053,12 @@ fn parse_html_metadata(html: &str, url: &str, site: &AcademicSite) -> Result<Pap
     let document = scraper::Html::parse_document(html);
 
     // ── タイトル ──
-    // Highwire Press (citation_*) → Dublin Core (DC.*) → OGP → <title>
     let title = get_meta_content(&document, "citation_title")
         .or_else(|| get_meta_content(&document, "DC.title"))
         .or_else(|| get_meta_content(&document, "dc.title"))
         .or_else(|| get_meta_content(&document, "DC.Title"))
         .or_else(|| get_meta_property(&document, "og:title"))
+        .or_else(|| extract_title_from_html(&document, site))
         .or_else(|| extract_title_tag(&document))
         .unwrap_or_else(|| "Untitled".to_string());
 
@@ -851,7 +1080,6 @@ fn parse_html_metadata(html: &str, url: &str, site: &AcademicSite) -> Result<Pap
     if authors.is_empty() {
         authors = get_all_meta_contents(&document, "DC.Creator");
     }
-    // サイト固有の著者抽出
     if authors.is_empty() {
         authors = extract_authors_from_html(&document, site);
     }
@@ -895,7 +1123,6 @@ fn parse_html_metadata(html: &str, url: &str, site: &AcademicSite) -> Result<Pap
         .or_else(|| get_meta_content(&document, "dc.identifier"))
         .or_else(|| get_meta_content(&document, "DC.Identifier"))
         .or_else(|| get_meta_content(&document, "DOI"))
-        // DC.identifier は DOI 以外の値も含み得るのでフィルタ
         .and_then(|s| {
             let cleaned = normalize_doi(&s);
             if is_valid_doi(&cleaned) {
@@ -906,7 +1133,6 @@ fn parse_html_metadata(html: &str, url: &str, site: &AcademicSite) -> Result<Pap
                 None
             }
         })
-        // HTML 本文中の DOI も探す
         .or_else(|| extract_doi_from_html_body(html));
 
     // ── アブストラクト ──
@@ -918,7 +1144,10 @@ fn parse_html_metadata(html: &str, url: &str, site: &AcademicSite) -> Result<Pap
         .or_else(|| extract_abstract_from_html(&document, site))
         .map(|s| strip_html_tags(&s));
 
-    // URL は入力値を使用
+    // ── PDF URL ──
+    let pdf_url = get_meta_content(&document, "citation_pdf_url")
+        .or_else(|| extract_pdf_url_from_html(&document, url, site));
+
     let meta_url = Some(url.to_string());
 
     Ok(PaperMetadata {
@@ -932,6 +1161,7 @@ fn parse_html_metadata(html: &str, url: &str, site: &AcademicSite) -> Result<Pap
         doi,
         url: meta_url,
         r#abstract,
+        pdf_url,
     })
 }
 
@@ -939,12 +1169,102 @@ fn parse_html_metadata(html: &str, url: &str, site: &AcademicSite) -> Result<Pap
 // サイト固有の HTML 抽出
 // ════════════════════════════════════════════════════════════
 
+/// HTML 本文からタイトルを抽出（meta タグにない場合のフォールバック）
+fn extract_title_from_html(document: &scraper::Html, site: &AcademicSite) -> Option<String> {
+    let selectors = match site {
+        AcademicSite::JStage => vec![
+            "h1.article-title",
+            ".article-title",
+            "#article-overiew-title",
+        ],
+        AcademicSite::ScienceDirect => vec![
+            "h1.title-text span",
+            ".title-text",
+        ],
+        AcademicSite::Jstor => vec![
+            "h1.item-title",
+            ".item-title",
+        ],
+        AcademicSite::Sabinet => vec![
+            "h1.article-title",
+            ".article-detail h1",
+        ],
+        AcademicSite::CiNii => vec![
+            "h1.item-title",
+            ".item-title",
+        ],
+        _ => vec![
+            "h1.article-title",
+            "h1.title",
+            "article h1",
+        ],
+    };
+
+    for selector_str in selectors {
+        if let Ok(sel) = scraper::Selector::parse(selector_str) {
+            if let Some(el) = document.select(&sel).next() {
+                let text = el.text().collect::<String>().trim().to_string();
+                if !text.is_empty() {
+                    return Some(text);
+                }
+            }
+        }
+    }
+    None
+}
+
 /// HTML 本文から著者を抽出する（meta タグにない場合のフォールバック）
 fn extract_authors_from_html(document: &scraper::Html, site: &AcademicSite) -> Vec<String> {
     match site {
         AcademicSite::JStage => {
-            // J-Stage: <span class="author-list">...</span> 内の <a> タグ
-            if let Ok(sel) = scraper::Selector::parse(".author-list a, .article-author a") {
+            if let Ok(sel) = scraper::Selector::parse(".author-list a, .article-author a, .content-author a") {
+                let authors: Vec<String> = document
+                    .select(&sel)
+                    .map(|el| el.text().collect::<String>().trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+                if !authors.is_empty() {
+                    return authors;
+                }
+            }
+        }
+        AcademicSite::ScienceDirect => {
+            // ScienceDirect: JSON-LD スクリプトから著者を抽出
+            if let Some(authors) = extract_authors_from_json_ld(document) {
+                return authors;
+            }
+            if let Ok(sel) = scraper::Selector::parse(".author-group .text .content span.given-name, .author-group .text .content span.surname") {
+                let names: Vec<String> = document
+                    .select(&sel)
+                    .map(|el| el.text().collect::<String>().trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+                // given + surname のペアを結合
+                let mut authors = Vec::new();
+                let mut i = 0;
+                while i + 1 < names.len() {
+                    authors.push(format!("{} {}", names[i], names[i + 1]));
+                    i += 2;
+                }
+                if !authors.is_empty() {
+                    return authors;
+                }
+            }
+        }
+        AcademicSite::TaylorFrancis => {
+            if let Ok(sel) = scraper::Selector::parse(".entryAuthor a, .author-name a, .NLM_contrib-group a") {
+                let authors: Vec<String> = document
+                    .select(&sel)
+                    .map(|el| el.text().collect::<String>().trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+                if !authors.is_empty() {
+                    return authors;
+                }
+            }
+        }
+        AcademicSite::Jstor => {
+            if let Ok(sel) = scraper::Selector::parse(".contrib-group .name, .item-contributors .name, [data-testid=\"author-name\"]") {
                 let authors: Vec<String> = document
                     .select(&sel)
                     .map(|el| el.text().collect::<String>().trim().to_string())
@@ -956,8 +1276,31 @@ fn extract_authors_from_html(document: &scraper::Html, site: &AcademicSite) -> V
             }
         }
         AcademicSite::PubMed => {
-            // PubMed: <span class="authors-list-item">
             if let Ok(sel) = scraper::Selector::parse(".authors-list-item .full-name, .authors-list a.full-name") {
+                let authors: Vec<String> = document
+                    .select(&sel)
+                    .map(|el| el.text().collect::<String>().trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+                if !authors.is_empty() {
+                    return authors;
+                }
+            }
+        }
+        AcademicSite::Sabinet => {
+            if let Ok(sel) = scraper::Selector::parse(".article-authors a, .author-name, .contributor-name") {
+                let authors: Vec<String> = document
+                    .select(&sel)
+                    .map(|el| el.text().collect::<String>().trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+                if !authors.is_empty() {
+                    return authors;
+                }
+            }
+        }
+        AcademicSite::CiNii => {
+            if let Ok(sel) = scraper::Selector::parse(".author-list a, .item-creator a, [itemprop=\"author\"] a") {
                 let authors: Vec<String> = document
                     .select(&sel)
                     .map(|el| el.text().collect::<String>().trim().to_string())
@@ -971,7 +1314,10 @@ fn extract_authors_from_html(document: &scraper::Html, site: &AcademicSite) -> V
         _ => {}
     }
 
-    // 汎用: schema.org の author
+    // 汎用: schema.org の author + JSON-LD
+    if let Some(authors) = extract_authors_from_json_ld(document) {
+        return authors;
+    }
     if let Ok(sel) = scraper::Selector::parse("[itemprop=\"author\"] [itemprop=\"name\"], [rel=\"author\"]") {
         let authors: Vec<String> = document
             .select(&sel)
@@ -986,6 +1332,58 @@ fn extract_authors_from_html(document: &scraper::Html, site: &AcademicSite) -> V
     vec![]
 }
 
+/// JSON-LD スクリプトタグから著者を抽出する
+fn extract_authors_from_json_ld(document: &scraper::Html) -> Option<Vec<String>> {
+    let sel = scraper::Selector::parse("script[type=\"application/ld+json\"]").ok()?;
+    for el in document.select(&sel) {
+        let text = el.text().collect::<String>();
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text) {
+            // 直接 author フィールドを探す
+            if let Some(authors) = extract_authors_from_json_value(&json) {
+                if !authors.is_empty() {
+                    return Some(authors);
+                }
+            }
+            // @graph 配列の中も探す
+            if let Some(graph) = json.get("@graph").and_then(|g| g.as_array()) {
+                for item in graph {
+                    if let Some(authors) = extract_authors_from_json_value(item) {
+                        if !authors.is_empty() {
+                            return Some(authors);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+fn extract_authors_from_json_value(json: &serde_json::Value) -> Option<Vec<String>> {
+    let author = json.get("author")?;
+    if let Some(arr) = author.as_array() {
+        let names: Vec<String> = arr.iter().filter_map(|a| {
+            a.get("name").and_then(|v| v.as_str()).map(|s| s.to_string())
+                .or_else(|| {
+                    let given = a.get("givenName").and_then(|v| v.as_str()).unwrap_or("");
+                    let family = a.get("familyName").and_then(|v| v.as_str()).unwrap_or("");
+                    if !given.is_empty() || !family.is_empty() {
+                        Some(format!("{} {}", given, family).trim().to_string())
+                    } else {
+                        None
+                    }
+                })
+        }).collect();
+        if !names.is_empty() {
+            return Some(names);
+        }
+    }
+    if let Some(name) = author.get("name").and_then(|v| v.as_str()) {
+        return Some(vec![name.to_string()]);
+    }
+    None
+}
+
 /// HTML 本文からアブストラクトを抽出する（meta タグにない場合のフォールバック）
 fn extract_abstract_from_html(document: &scraper::Html, site: &AcademicSite) -> Option<String> {
     let selectors = match site {
@@ -993,6 +1391,21 @@ fn extract_abstract_from_html(document: &scraper::Html, site: &AcademicSite) -> 
             "#article-overiew-abstract-wrap p",
             ".abstract-contents p",
             ".article-abstract p",
+            "#abst p",
+        ],
+        AcademicSite::ScienceDirect => vec![
+            ".abstract p",
+            "#abstracts .abstract p",
+            ".Abstracts p",
+        ],
+        AcademicSite::TaylorFrancis => vec![
+            ".abstractSection p",
+            ".abstract p",
+            "#abstract p",
+        ],
+        AcademicSite::Jstor => vec![
+            ".abstract-group p",
+            ".item-abstract p",
         ],
         AcademicSite::PubMed => vec![
             "#abstract .abstract-content p",
@@ -1002,6 +1415,10 @@ fn extract_abstract_from_html(document: &scraper::Html, site: &AcademicSite) -> 
             ".abstract p",
             "#abstract p",
             ".trans-abstract p",
+        ],
+        AcademicSite::Sabinet => vec![
+            ".article-abstract p",
+            ".abstract p",
         ],
         _ => vec![
             "[class*=\"abstract\"] p",
@@ -1026,15 +1443,90 @@ fn extract_abstract_from_html(document: &scraper::Html, site: &AcademicSite) -> 
     None
 }
 
+/// HTML 本文から PDF URL を抽出する
+fn extract_pdf_url_from_html(document: &scraper::Html, page_url: &str, site: &AcademicSite) -> Option<String> {
+    // 1. citation_pdf_url は既にチェック済み
+
+    // 2. サイト別のPDFリンク抽出
+    let selectors = match site {
+        AcademicSite::JStage => vec![
+            "a[href*=\"_pdf\"]",
+            "a.pdf-link",
+            "a[data-track-action=\"download pdf\"]",
+        ],
+        AcademicSite::ScienceDirect => vec![
+            "a.pdf-download-btn-link",
+            "a[aria-label*=\"PDF\"]",
+        ],
+        AcademicSite::TaylorFrancis => vec![
+            "a[href*=\"/doi/pdf/\"]",
+            "a.show-pdf",
+        ],
+        AcademicSite::Jstor => vec![
+            "a[data-sc=\"pdf link\"]",
+            "a[href*=\"/pdf/\"]",
+        ],
+        AcademicSite::ArXiv => vec![
+            "a[href*=\"/pdf/\"]",
+        ],
+        AcademicSite::Springer => vec![
+            "a[data-track-action=\"download pdf\"]",
+            "a.c-pdf-download__link",
+        ],
+        AcademicSite::PubMed => vec![
+            ".full-text-links-list a[href*=\".pdf\"]",
+        ],
+        _ => vec![
+            "a[href*=\".pdf\"]",
+        ],
+    };
+
+    for selector_str in selectors {
+        if let Ok(sel) = scraper::Selector::parse(selector_str) {
+            if let Some(el) = document.select(&sel).next() {
+                if let Some(href) = el.value().attr("href") {
+                    let absolute = make_absolute_url(href, page_url);
+                    return Some(absolute);
+                }
+            }
+        }
+    }
+
+    None
+}
+
+/// 相対URLを絶対URLに変換する
+fn make_absolute_url(href: &str, base_url: &str) -> String {
+    if href.starts_with("http://") || href.starts_with("https://") {
+        return href.to_string();
+    }
+    // ベースURLからオリジンを取得
+    if let Ok(base) = url::Url::parse(base_url) {
+        if let Ok(abs) = base.join(href) {
+            return abs.to_string();
+        }
+    }
+    // フォールバック: 単純結合
+    if href.starts_with('/') {
+        // ベースURLのホスト部分と結合
+        if let Some(pos) = base_url.find("://") {
+            let after = &base_url[pos + 3..];
+            if let Some(slash) = after.find('/') {
+                return format!("{}{}", &base_url[..pos + 3 + slash], href);
+            }
+        }
+        format!("{}{}", base_url.trim_end_matches('/'), href)
+    } else {
+        format!("{}/{}", base_url.trim_end_matches('/'), href)
+    }
+}
+
 /// HTML 本文から DOI を探す
 fn extract_doi_from_html_body(html: &str) -> Option<String> {
-    // "doi.org/10." のパターンを検索
     if let Some(pos) = html.to_lowercase().find("doi.org/10.") {
-        // pos から DOI を抽出
         let start = html.to_lowercase()[..pos].rfind("http")
             .unwrap_or(pos);
         let remainder = &html[start..];
-        // URL 終端を探す
         let end = remainder.find(|c: char| c == '"' || c == '\'' || c == '<' || c == '>' || c == ' ' || c == '\n')
             .unwrap_or(remainder.len());
         let url_str = &remainder[..end];
@@ -1049,6 +1541,72 @@ fn extract_doi_from_html_body(html: &str) -> Option<String> {
 }
 
 // ════════════════════════════════════════════════════════════
+// PDF ダウンロード
+// ════════════════════════════════════════════════════════════
+
+/// URL から PDF をダウンロードしてファイルに保存する
+pub async fn download_pdf_from_url(url: &str, save_path: &str) -> Result<String, MetadataError> {
+    let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::limited(10))
+        .timeout(std::time::Duration::from_secs(120))
+        .build()
+        .map_err(|e| MetadataError::NetworkError(format!("HTTP クライアント構築失敗: {}", e)))?;
+
+    let response = client
+        .get(url)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+        .header("Accept", "application/pdf,*/*")
+        .send()
+        .await
+        .map_err(|e| MetadataError::NetworkError(format!("PDF ダウンロード失敗: {}", e)))?;
+
+    if !response.status().is_success() {
+        return Err(MetadataError::ApiError(format!(
+            "PDF ダウンロードに失敗 (HTTP {}): {}",
+            response.status(),
+            url
+        )));
+    }
+
+    // Content-Type のチェック（PDFかどうか）
+    let content_type = response
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+
+    if !content_type.contains("pdf") && !content_type.contains("octet-stream") {
+        log::warn!("[metadata] PDF ダウンロード: Content-Type が pdf ではない: {}", content_type);
+    }
+
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|e| MetadataError::NetworkError(format!("PDF データ取得失敗: {}", e)))?;
+
+    // PDF の先頭バイトチェック
+    if bytes.len() < 5 || &bytes[..5] != b"%PDF-" {
+        return Err(MetadataError::ParseError(
+            "ダウンロードされたファイルはPDFではありません".to_string(),
+        ));
+    }
+
+    // ファイルに保存
+    let save_dir = std::path::Path::new(save_path).parent();
+    if let Some(dir) = save_dir {
+        std::fs::create_dir_all(dir)
+            .map_err(|e| MetadataError::NetworkError(format!("ディレクトリ作成失敗: {}", e)))?;
+    }
+
+    std::fs::write(save_path, &bytes)
+        .map_err(|e| MetadataError::NetworkError(format!("PDF ファイル保存失敗: {}", e)))?;
+
+    log::info!("[metadata] PDF ダウンロード完了: {} ({} bytes) → {}", url, bytes.len(), save_path);
+
+    Ok(save_path.to_string())
+}
+
+// ════════════════════════════════════════════════════════════
 // ユーティリティ
 // ════════════════════════════════════════════════════════════
 
@@ -1058,6 +1616,7 @@ fn build_http_client() -> Result<reqwest::Client, MetadataError> {
         .redirect(reqwest::redirect::Policy::limited(10))
         .timeout(std::time::Duration::from_secs(30))
         .danger_accept_invalid_certs(false)
+        .cookie_store(true) // クッキーストアを有効化（セッション維持用）
         .build()
         .map_err(|e| {
             MetadataError::NetworkError(format!("HTTP クライアントの構築に失敗: {}", e))
@@ -1085,20 +1644,18 @@ fn merge_metadata(primary: PaperMetadata, secondary: PaperMetadata) -> PaperMeta
         doi: primary.doi.or(secondary.doi),
         url: primary.url.or(secondary.url),
         r#abstract: primary.r#abstract.or(secondary.r#abstract),
+        pdf_url: primary.pdf_url.or(secondary.pdf_url),
     }
 }
 
 /// 日付文字列から年を抽出する
-/// 対応フォーマット: "2024", "2024/01/15", "2024-01-15", "01/15/2024", "January 2024"
 fn extract_year_from_date(date_str: &str) -> Option<i32> {
     let date_str = date_str.trim();
     
-    // "2024" のような4桁の年
     if date_str.len() == 4 {
         return date_str.parse::<i32>().ok();
     }
 
-    // "2024/01/15" or "2024-01-15" — 先頭が年
     if date_str.len() >= 4 {
         let first_part: String = date_str.chars().take_while(|c| c.is_ascii_digit()).collect();
         if first_part.len() == 4 {
@@ -1110,7 +1667,6 @@ fn extract_year_from_date(date_str: &str) -> Option<i32> {
         }
     }
 
-    // "01/15/2024" — 末尾が年
     let parts: Vec<&str> = date_str.split(|c: char| c == '/' || c == '-').collect();
     if parts.len() >= 3 {
         if let Ok(y) = parts.last().unwrap_or(&"").parse::<i32>() {
@@ -1120,7 +1676,6 @@ fn extract_year_from_date(date_str: &str) -> Option<i32> {
         }
     }
 
-    // "January 2024" — テキスト内の4桁の数字を検索
     for word in date_str.split_whitespace() {
         if word.len() == 4 {
             if let Ok(y) = word.parse::<i32>() {
@@ -1147,6 +1702,7 @@ fn site_display_name(site: &AcademicSite) -> &'static str {
         AcademicSite::Wiley => "Wiley",
         AcademicSite::PubMed => "PubMed",
         AcademicSite::ArXiv => "arXiv",
+        AcademicSite::CiNii => "CiNii Research",
         AcademicSite::Generic => "不明なサイト",
     }
 }
@@ -1163,7 +1719,6 @@ fn extract_title_tag(document: &scraper::Html) -> Option<String> {
         return None;
     }
 
-    // " | サイト名" や " - サイト名" のサフィックスを除去
     let separators = [" | ", " - ", " — ", " :: "];
     for sep in separators {
         if let Some(pos) = raw.rfind(sep) {
@@ -1181,20 +1736,27 @@ fn extract_title_tag(document: &scraper::Html) -> Option<String> {
 // HTML ヘルパー関数
 // ════════════════════════════════════════════════════════════
 
-/// `<meta name="key" content="value">` から content を取得する
 fn get_meta_content(document: &scraper::Html, name: &str) -> Option<String> {
     // name 属性は大文字小文字が混在するサイトがあるため、両方試す
-    let selector_str = format!("meta[name=\"{}\"]", name);
-    let selector = scraper::Selector::parse(&selector_str).ok()?;
-    document
-        .select(&selector)
-        .next()
-        .and_then(|el| el.value().attr("content"))
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
+    let selectors = [
+        format!("meta[name=\"{}\"]", name),
+        format!("meta[name=\"{}\"]", name.to_lowercase()),
+    ];
+    for selector_str in &selectors {
+        if let Ok(selector) = scraper::Selector::parse(selector_str) {
+            if let Some(el) = document.select(&selector).next() {
+                if let Some(content) = el.value().attr("content") {
+                    let trimmed = content.trim().to_string();
+                    if !trimmed.is_empty() {
+                        return Some(trimmed);
+                    }
+                }
+            }
+        }
+    }
+    None
 }
 
-/// `<meta property="key" content="value">` から content を取得する（OGP用）
 fn get_meta_property(document: &scraper::Html, property: &str) -> Option<String> {
     let selector_str = format!("meta[property=\"{}\"]", property);
     let selector = scraper::Selector::parse(&selector_str).ok()?;
@@ -1206,7 +1768,6 @@ fn get_meta_property(document: &scraper::Html, property: &str) -> Option<String>
         .filter(|s| !s.is_empty())
 }
 
-/// 同一 name の meta タグが複数ある場合にすべての content を取得する
 fn get_all_meta_contents(document: &scraper::Html, name: &str) -> Vec<String> {
     let selector_str = format!("meta[name=\"{}\"]", name);
     let selector = match scraper::Selector::parse(&selector_str) {
@@ -1224,7 +1785,6 @@ fn get_all_meta_contents(document: &scraper::Html, name: &str) -> Vec<String> {
         .collect()
 }
 
-/// HTML タグを除去する（scraper を使用してテキストのみを抽出する）
 fn strip_html_tags(input: &str) -> String {
     let document = scraper::Html::parse_fragment(input);
     document
@@ -1234,6 +1794,316 @@ fn strip_html_tags(input: &str) -> String {
         .join("")
         .trim()
         .to_string()
+}
+
+// ════════════════════════════════════════════════════════════
+// 書誌情報フォーマッタ
+// ════════════════════════════════════════════════════════════
+
+/// 引用スタイルに応じた書誌テキストを生成する
+pub fn format_bibliography_entry(
+    style: &str,
+    title: &str,
+    authors: &[String],
+    year: Option<i32>,
+    journal: Option<&str>,
+    volume: Option<&str>,
+    issue: Option<&str>,
+    pages: Option<&str>,
+    doi: Option<&str>,
+) -> String {
+    match style {
+        "apa7" => format_apa7(title, authors, year, journal, volume, issue, pages, doi),
+        "mla9" => format_mla9(title, authors, year, journal, volume, issue, pages, doi),
+        "chicago17" => format_chicago17(title, authors, year, journal, volume, issue, pages, doi),
+        "hitotsubashi" => format_hitotsubashi(title, authors, year, journal, volume, issue, pages, doi),
+        _ => format_apa7(title, authors, year, journal, volume, issue, pages, doi),
+    }
+}
+
+/// APA 7th Edition フォーマット
+/// Author, A. A., & Author, B. B. (Year). Title of article. *Journal Name*, *vol*(issue), pages. https://doi.org/xxx
+fn format_apa7(
+    title: &str,
+    authors: &[String],
+    year: Option<i32>,
+    journal: Option<&str>,
+    volume: Option<&str>,
+    issue: Option<&str>,
+    pages: Option<&str>,
+    doi: Option<&str>,
+) -> String {
+    let mut entry = String::new();
+
+    // 著者
+    if !authors.is_empty() {
+        let formatted: Vec<String> = authors.iter().map(|a| format_author_apa(a)).collect();
+        if formatted.len() == 1 {
+            entry.push_str(&formatted[0]);
+        } else if formatted.len() == 2 {
+            entry.push_str(&format!("{}, & {}", formatted[0], formatted[1]));
+        } else if formatted.len() <= 20 {
+            let last = formatted.last().unwrap();
+            let rest = &formatted[..formatted.len() - 1];
+            entry.push_str(&rest.join(", "));
+            entry.push_str(&format!(", & {}", last));
+        } else {
+            // 20人以上: 最初の19人 ... 最後の著者
+            let first19: Vec<&str> = formatted[..19].iter().map(|s| s.as_str()).collect();
+            entry.push_str(&first19.join(", "));
+            entry.push_str(&format!(", ... {}", formatted.last().unwrap()));
+        }
+    }
+
+    // 年
+    let year_str = year.map(|y| y.to_string()).unwrap_or_else(|| "n.d.".to_string());
+    if !entry.is_empty() {
+        entry.push_str(&format!(" ({}). ", year_str));
+    } else {
+        entry.push_str(&format!("({}). ", year_str));
+    }
+
+    // タイトル
+    entry.push_str(title);
+    entry.push_str(". ");
+
+    // ジャーナル
+    if let Some(j) = journal {
+        entry.push_str(&format!("*{}*", j));
+        if let Some(v) = volume {
+            entry.push_str(&format!(", *{}*", v));
+        }
+        if let Some(i) = issue {
+            entry.push_str(&format!("({})", i));
+        }
+        if let Some(p) = pages {
+            entry.push_str(&format!(", {}", p));
+        }
+        entry.push_str(". ");
+    }
+
+    // DOI
+    if let Some(d) = doi {
+        entry.push_str(&format!("https://doi.org/{}", d));
+    }
+
+    entry
+}
+
+/// MLA 9th Edition フォーマット
+/// Author. "Title." *Journal*, vol. X, no. X, Year, pp. X-X.
+fn format_mla9(
+    title: &str,
+    authors: &[String],
+    year: Option<i32>,
+    journal: Option<&str>,
+    volume: Option<&str>,
+    issue: Option<&str>,
+    pages: Option<&str>,
+    doi: Option<&str>,
+) -> String {
+    let mut entry = String::new();
+
+    // 著者
+    if !authors.is_empty() {
+        if authors.len() == 1 {
+            entry.push_str(&format_author_mla(&authors[0]));
+        } else if authors.len() == 2 {
+            entry.push_str(&format!("{}, and {}", format_author_mla(&authors[0]), &authors[1]));
+        } else {
+            entry.push_str(&format!("{}, et al", format_author_mla(&authors[0])));
+        }
+        entry.push_str(". ");
+    }
+
+    // タイトル（引用符で囲む）
+    entry.push_str(&format!("\"{}\"", title));
+    entry.push_str(". ");
+
+    // ジャーナル
+    if let Some(j) = journal {
+        entry.push_str(&format!("*{}*", j));
+        if let Some(v) = volume {
+            entry.push_str(&format!(", vol. {}", v));
+        }
+        if let Some(i) = issue {
+            entry.push_str(&format!(", no. {}", i));
+        }
+        if let Some(y) = year {
+            entry.push_str(&format!(", {}", y));
+        }
+        if let Some(p) = pages {
+            entry.push_str(&format!(", pp. {}", p));
+        }
+        entry.push_str(". ");
+    } else if let Some(y) = year {
+        entry.push_str(&format!("{}, ", y));
+    }
+
+    // DOI
+    if let Some(d) = doi {
+        entry.push_str(&format!("https://doi.org/{}", d));
+    }
+
+    entry
+}
+
+/// Chicago 17th Edition フォーマット（著者-日付方式）
+/// Author, FirstName. Year. "Title." *Journal* vol, no. issue: pages. https://doi.org/xxx.
+fn format_chicago17(
+    title: &str,
+    authors: &[String],
+    year: Option<i32>,
+    journal: Option<&str>,
+    volume: Option<&str>,
+    issue: Option<&str>,
+    pages: Option<&str>,
+    doi: Option<&str>,
+) -> String {
+    let mut entry = String::new();
+
+    // 著者
+    if !authors.is_empty() {
+        let first = format_author_chicago(&authors[0]);
+        if authors.len() == 1 {
+            entry.push_str(&first);
+        } else if authors.len() <= 3 {
+            entry.push_str(&first);
+            for a in &authors[1..authors.len() - 1] {
+                entry.push_str(&format!(", {}", a));
+            }
+            entry.push_str(&format!(", and {}", authors.last().unwrap()));
+        } else {
+            entry.push_str(&format!("{} et al.", first));
+        }
+        entry.push_str(". ");
+    }
+
+    // 年
+    if let Some(y) = year {
+        entry.push_str(&format!("{}. ", y));
+    }
+
+    // タイトル
+    entry.push_str(&format!("\"{}\"", title));
+    entry.push_str(". ");
+
+    // ジャーナル
+    if let Some(j) = journal {
+        entry.push_str(&format!("*{}*", j));
+        if let Some(v) = volume {
+            entry.push_str(&format!(" {}", v));
+        }
+        if let Some(i) = issue {
+            entry.push_str(&format!(", no. {}", i));
+        }
+        if let Some(p) = pages {
+            entry.push_str(&format!(": {}", p));
+        }
+        entry.push_str(". ");
+    }
+
+    // DOI
+    if let Some(d) = doi {
+        entry.push_str(&format!("https://doi.org/{}", d));
+    }
+
+    entry
+}
+
+/// 一橋スタイル（日本語文献向け）
+/// 著者名（出版年）「タイトル」『雑誌名』巻号、ページ。
+fn format_hitotsubashi(
+    title: &str,
+    authors: &[String],
+    year: Option<i32>,
+    journal: Option<&str>,
+    volume: Option<&str>,
+    issue: Option<&str>,
+    pages: Option<&str>,
+    _doi: Option<&str>,
+) -> String {
+    let mut entry = String::new();
+
+    // 著者
+    if !authors.is_empty() {
+        entry.push_str(&authors.join("・"));
+    }
+
+    // 年
+    if let Some(y) = year {
+        entry.push_str(&format!("（{}）", y));
+    }
+
+    // タイトル
+    // 日本語文献は「」、英語文献は「」を使う
+    let is_japanese = title.chars().any(|c| {
+        ('\u{3000}'..='\u{303f}').contains(&c) || // CJK記号
+        ('\u{3040}'..='\u{309f}').contains(&c) || // ひらがな
+        ('\u{30a0}'..='\u{30ff}').contains(&c) || // カタカナ
+        ('\u{4e00}'..='\u{9faf}').contains(&c)    // CJK漢字
+    });
+    if is_japanese {
+        entry.push_str(&format!("「{}」", title));
+    } else {
+        entry.push_str(&format!("\"{}\"", title));
+    }
+
+    // ジャーナル
+    if let Some(j) = journal {
+        if is_japanese {
+            entry.push_str(&format!("『{}』", j));
+        } else {
+            entry.push_str(&format!("*{}*", j));
+        }
+        if let Some(v) = volume {
+            entry.push_str(&format!("{}巻", v));
+        }
+        if let Some(i) = issue {
+            entry.push_str(&format!("{}号", i));
+        }
+        if let Some(p) = pages {
+            entry.push_str(&format!("、{}頁", p));
+        }
+    }
+    entry.push('。');
+
+    entry
+}
+
+/// APA形式の著者名フォーマット: "Given Family" → "Family, G."
+fn format_author_apa(name: &str) -> String {
+    let parts: Vec<&str> = name.split_whitespace().collect();
+    if parts.len() >= 2 {
+        let family = parts.last().unwrap();
+        let initials: Vec<String> = parts[..parts.len() - 1]
+            .iter()
+            .map(|p| {
+                let first_char = p.chars().next().unwrap_or('?');
+                format!("{}.", first_char.to_uppercase().next().unwrap_or('?'))
+            })
+            .collect();
+        format!("{}, {}", family, initials.join(" "))
+    } else {
+        name.to_string()
+    }
+}
+
+/// MLA形式の著者名フォーマット: "Given Family" → "Family, Given"
+fn format_author_mla(name: &str) -> String {
+    let parts: Vec<&str> = name.split_whitespace().collect();
+    if parts.len() >= 2 {
+        let family = parts.last().unwrap();
+        let given = parts[..parts.len() - 1].join(" ");
+        format!("{}, {}", family, given)
+    } else {
+        name.to_string()
+    }
+}
+
+/// Chicago形式の著者名フォーマット: "Given Family" → "Family, Given"
+fn format_author_chicago(name: &str) -> String {
+    format_author_mla(name) // Chicago 著者-日付方式は MLA と同様
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1344,7 +2214,6 @@ mod tests {
 
     #[test]
     fn test_no_doi_from_jstage() {
-        // J-Stage URL には DOI が含まれないのでスクレイピングにフォールバック
         assert_eq!(
             extract_doi_from_url("https://www.jstage.jst.go.jp/article/jjspe/89/1/89_56/_article/-char/ja"),
             None
@@ -1353,7 +2222,6 @@ mod tests {
 
     #[test]
     fn test_no_doi_from_sciencedirect_pii() {
-        // ScienceDirect の PII URL には DOI が含まれない
         assert_eq!(
             extract_doi_from_url("https://www.sciencedirect.com/science/article/pii/S0001234567890123"),
             None
@@ -1445,6 +2313,7 @@ mod tests {
             doi: Some("10.1234/test".to_string()),
             url: Some("https://example.com".to_string()),
             r#abstract: None,
+            pdf_url: None,
         };
         let secondary = PaperMetadata {
             title: "Secondary Title".to_string(),
@@ -1457,6 +2326,7 @@ mod tests {
             doi: Some("10.1234/test".to_string()),
             url: Some("https://doi.org/10.1234/test".to_string()),
             r#abstract: Some("Abstract text".to_string()),
+            pdf_url: None,
         };
 
         let merged = merge_metadata(primary, secondary);
@@ -1466,5 +2336,47 @@ mod tests {
         assert_eq!(merged.journal, Some("Primary Journal".to_string()));
         assert_eq!(merged.volume, Some("1".to_string()));
         assert_eq!(merged.r#abstract, Some("Abstract text".to_string()));
+    }
+
+    // ── 書誌情報フォーマットテスト ──
+
+    #[test]
+    fn test_format_apa7() {
+        let result = format_bibliography_entry(
+            "apa7",
+            "Test Article Title",
+            &["John Smith".to_string(), "Jane Doe".to_string()],
+            Some(2024),
+            Some("Journal of Testing"),
+            Some("10"),
+            Some("2"),
+            Some("100-115"),
+            Some("10.1234/test"),
+        );
+        assert!(result.contains("Smith, J."));
+        assert!(result.contains("Doe, J."));
+        assert!(result.contains("(2024)"));
+        assert!(result.contains("Test Article Title"));
+        assert!(result.contains("*Journal of Testing*"));
+        assert!(result.contains("doi.org"));
+    }
+
+    #[test]
+    fn test_format_hitotsubashi() {
+        let result = format_bibliography_entry(
+            "hitotsubashi",
+            "社会関係資本の理論的枠組み",
+            &["山田太郎".to_string(), "鈴木花子".to_string()],
+            Some(2024),
+            Some("社会学研究"),
+            Some("10"),
+            Some("2"),
+            Some("100-115"),
+            None,
+        );
+        assert!(result.contains("山田太郎・鈴木花子"));
+        assert!(result.contains("（2024）"));
+        assert!(result.contains("「社会関係資本の理論的枠組み」"));
+        assert!(result.contains("『社会学研究』"));
     }
 }

@@ -356,6 +356,8 @@ pub struct PaperMetadata {
     pub doi: Option<String>,
     pub url: Option<String>,
     pub r#abstract: Option<String>,
+    /// PDF の直接ダウンロード URL（取得できた場合のみ）
+    pub pdf_url: Option<String>,
 }
 
 /// メタデータ取得エラー
