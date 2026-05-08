@@ -242,7 +242,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
       const selected = await openFileDialog({
         multiple: false,
         filters: [{ name: "PDF", extensions: ["pdf"] }],
-        title: "PDFファイルを選択",
+        title: useI18nStore.getState().t.library.k_select_pdf_file,
       });
 
       if (!selected || typeof selected !== "string") {
@@ -275,7 +275,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
       }
     } catch (err) {
       console.error("[AddPaperModal] PDF選択に失敗:", err);
-      toast.error("PDFファイルの選択中にエラーが発生しました");
+      toast.error(useI18nStore.getState().t.library.k_pdf_select_error);
     }
   }, [applyMetadata]);
 
@@ -315,12 +315,12 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
           // PDF パスを論文に紐付ける
           if (savedPath && latestPaper) {
             await useLibraryStore.getState().attachPdf(latestPaper.id, savedPath);
-            toast.success("PDFを保存しました");
+            toast.success(useI18nStore.getState().t.library.k_pdf_saved);
           }
         } catch (pdfErr) {
           console.error("[AddPaperModal] PDF ダウンロード失敗:", pdfErr);
           toast.warning(
-            `論文は保存されましたが、PDFのダウンロードに失敗しました: ${String(pdfErr).replace(/^Error:\s*/i, "")}`
+            useI18nStore.getState().t.library.k_paper_saved_pdf_failed.replace("${error}", String(pdfErr).replace(/^Error:\s*/i, ""))
           );
         }
       }
@@ -592,9 +592,9 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
                 <line x1="9" y1="15" x2="15" y2="15" />
               </svg>
               <div className="flex flex-col items-center gap-1">
-                <span className="text-sm font-medium">PDFファイルを選択</span>
+                <span className="text-sm font-medium">{useI18nStore.getState().t.library.k_select_pdf_file}</span>
                 <span className="text-xs" style={{ color: "var(--color-text-disabled)" }}>
-                  クリックしてPDFを選択してください
+                  {useI18nStore.getState().t.library.k_click_to_select_pdf}
                 </span>
               </div>
             </button>
@@ -665,7 +665,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
               className="flex flex-col items-center justify-center py-4 gap-2"
               style={{ color: "var(--color-text-disabled)" }}
             >
-              <p className="text-xs">メタデータはPDFから自動抽出されます</p>
+              <p className="text-xs">{useI18nStore.getState().t.library.k_pdf_metadata_auto}</p>
             </div>
           ) : null}
         </div>
@@ -697,7 +697,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
               loading={fetching}
               disabled={!urlInput.trim()}
             >
-              取得
+              {useI18nStore.getState().t.library.k_fetch_btn}
             </Button>
           </div>
 
@@ -726,7 +726,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
               )}
             </div>
             <span style={{ color: "var(--color-text-secondary)" }}>
-              PDFも一緒に保存する
+              {useI18nStore.getState().t.library.k_save_pdf_together}
               {pdfDownloadUrl && (
                 <span
                   style={{
@@ -735,7 +735,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
                     fontSize: "10px",
                   }}
                 >
-                  ✓ PDF URL 検出済み
+                  {useI18nStore.getState().t.library.k_pdf_url_detected}
                 </span>
               )}
             </span>
@@ -756,7 +756,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
                 <line x1="12" y1="8" x2="12" y2="12" />
                 <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
-              <p className="text-xs">URLを入力して「取得」をクリックしてください</p>
+              <p className="text-xs">{useI18nStore.getState().t.library.k_url_fetch_hint}</p>
             </div>
           )}
         </div>
@@ -788,7 +788,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
               loading={fetching}
               disabled={!doiInput.trim()}
             >
-              取得
+              {useI18nStore.getState().t.library.k_fetch_btn}
             </Button>
           </div>
 
@@ -807,7 +807,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
                 <line x1="12" y1="8" x2="12" y2="12" />
                 <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
-              <p className="text-xs">DOIを入力して「取得」をクリックしてください</p>
+              <p className="text-xs">{useI18nStore.getState().t.library.k_doi_fetch_hint}</p>
             </div>
           )}
         </div>

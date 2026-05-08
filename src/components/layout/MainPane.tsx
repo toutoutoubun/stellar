@@ -42,7 +42,7 @@ class ViewErrorBoundary extends Component<ViewErrorBoundaryProps, ViewErrorBound
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
           <p className="text-sm" style={{ maxWidth: 360, textAlign: "center" }}>
-            {this.props.label} でエラーが発生しました。
+            {useI18nStore.getState().t.common.k_error_in_view.replace("${label}", this.props.label)}
           </p>
           <p className="text-xs" style={{ color: "var(--color-text-tertiary)", opacity: 0.7 }}>
             {this.state.error?.message}
@@ -59,7 +59,7 @@ class ViewErrorBoundary extends Component<ViewErrorBoundaryProps, ViewErrorBound
               color: "var(--color-text-secondary)",
             }}
           >
-            再試行
+            {useI18nStore.getState().t.common.retry}
           </button>
         </div>
       );
@@ -256,7 +256,7 @@ const NotesView: React.FC<{ mainPaneContent: MainPaneContent }> = ({ mainPaneCon
               e.currentTarget.style.backgroundColor = "transparent";
               e.currentTarget.style.color = "var(--color-text-tertiary)";
             }}
-            title={noteListCollapsed ? "ノート一覧を表示" : "ノート一覧を非表示"}
+            title={noteListCollapsed ? useI18nStore.getState().t.common.k_show_note_list : useI18nStore.getState().t.common.k_hide_note_list}
           >
             <svg
               width="16"
@@ -325,7 +325,7 @@ export const MainPane: React.FC = () => {
     // サイドバーが「質的分析」ビューの場合
     if (sidebarView === "qualitative") {
       return (
-        <ViewErrorBoundary label="質的分析">
+        <ViewErrorBoundary label={useI18nStore.getState().t.sidebar.qualitative}>
           <Suspense fallback={<LazyFallback />}>
             <QualitativeView />
           </Suspense>
@@ -336,7 +336,7 @@ export const MainPane: React.FC = () => {
     // サイドバーが「量的分析」ビューの場合
     if (sidebarView === "quantitative") {
       return (
-        <ViewErrorBoundary label="量的分析">
+        <ViewErrorBoundary label={useI18nStore.getState().t.sidebar.quantitative}>
           <Suspense fallback={<LazyFallback />}>
             <DataStudioView />
           </Suspense>
@@ -384,7 +384,7 @@ export const MainPane: React.FC = () => {
         );
       case "qualitative":
         return (
-          <ViewErrorBoundary label="質的分析">
+          <ViewErrorBoundary label={useI18nStore.getState().t.sidebar.qualitative}>
             <Suspense fallback={<LazyFallback />}>
               <QualitativeView />
             </Suspense>
@@ -392,7 +392,7 @@ export const MainPane: React.FC = () => {
         );
       case "quantitative":
         return (
-          <ViewErrorBoundary label="量的分析">
+          <ViewErrorBoundary label={useI18nStore.getState().t.sidebar.quantitative}>
             <Suspense fallback={<LazyFallback />}>
               <DataStudioView />
             </Suspense>

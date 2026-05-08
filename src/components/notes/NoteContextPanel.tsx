@@ -10,7 +10,7 @@ import { useNoteStore } from "../../stores/useNoteStore";
 import { Badge } from "../ui/Badge";
 import { toast } from "../ui/Toast";
 import { IconItemType } from "../ui/Icons";
-import { useI18nStore } from "../../stores/useI18nStore";
+import { useT } from "../../stores/useI18nStore";
 
 interface NoteContextPanelProps {
   /** 現在のノート */
@@ -31,6 +31,7 @@ const BacklinksSection: React.FC<{
   noteId: string;
   onNavigate: (targetId: string, targetType: NodeType) => void;
 }> = ({ noteId, onNavigate }) => {
+  const t = useT();
   const [backlinks, setBacklinks] = useState<BacklinkItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
@@ -80,7 +81,7 @@ const BacklinksSection: React.FC<{
           <polyline points="6 9 12 15 18 9" />
         </svg>
         <span className="text-xs font-semibold uppercase tracking-wider">
-          {useI18nStore.getState().t.library.k_4vgs8a}
+          {t.library.k_4vgs8a}
         </span>
         <span
           className="text-xs px-1.5 py-0.5 ml-auto"
@@ -101,14 +102,14 @@ const BacklinksSection: React.FC<{
               className="text-xs py-2"
               style={{ color: "var(--color-text-tertiary)" }}
             >
-              {useI18nStore.getState().t.layout.loading}
+              {t.layout.loading}
             </div>
           ) : backlinks.length === 0 ? (
             <div
               className="text-xs py-2"
               style={{ color: "var(--color-text-tertiary)" }}
             >
-              バックリンクはありません
+              {t.notes.k_no_backlinks}
             </div>
           ) : (
             backlinks.map((bl) => (
@@ -198,6 +199,7 @@ const OutlineSection: React.FC<{
   content: string;
   onHeadingClick: (line: number) => void;
 }> = ({ content, onHeadingClick }) => {
+  const t = useT();
   const [collapsed, setCollapsed] = useState(false);
   const headings = useMemo(() => extractHeadings(content), [content]);
 
@@ -226,7 +228,7 @@ const OutlineSection: React.FC<{
           <polyline points="6 9 12 15 18 9" />
         </svg>
         <span className="text-xs font-semibold uppercase tracking-wider">
-          アウトライン
+          {t.notes.k_outline}
         </span>
       </button>
 
@@ -237,7 +239,7 @@ const OutlineSection: React.FC<{
               className="text-xs py-2"
               style={{ color: "var(--color-text-tertiary)" }}
             >
-              見出しがありません
+              {t.notes.k_no_headings}
             </div>
           ) : (
             headings.map((h, idx) => (
@@ -284,6 +286,7 @@ const OutlineSection: React.FC<{
 const TagsSection: React.FC<{
   note: Note;
 }> = ({ note }) => {
+  const t = useT();
   const [collapsed, setCollapsed] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [newTag, setNewTag] = useState("");
@@ -294,7 +297,7 @@ const TagsSection: React.FC<{
     const trimmed = newTag.trim();
     if (!trimmed) return;
     if (note.tags.includes(trimmed)) {
-      toast.info(useI18nStore.getState().t.notes.k_rz3qm7);
+      toast.info(t.notes.k_rz3qm7);
       setNewTag("");
       return;
     }
@@ -303,7 +306,7 @@ const TagsSection: React.FC<{
       setNewTag("");
       setIsAdding(false);
     } catch {
-      toast.error(useI18nStore.getState().t.notes.k_15jcbk);
+      toast.error(t.notes.k_15jcbk);
     }
   }, [newTag, note.id, note.tags, updateNote]);
 
@@ -315,7 +318,7 @@ const TagsSection: React.FC<{
           tags: note.tags.filter((t) => t !== tag),
         });
       } catch {
-        toast.error(useI18nStore.getState().t.notes.k_xhhiw9);
+        toast.error(t.notes.k_xhhiw9);
       }
     },
     [note.id, note.tags, updateNote],
@@ -346,7 +349,7 @@ const TagsSection: React.FC<{
           <polyline points="6 9 12 15 18 9" />
         </svg>
         <span className="text-xs font-semibold uppercase tracking-wider">
-          タグ
+          {t.notes.k_tags_label}
         </span>
         <span
           className="text-xs px-1.5 py-0.5 ml-auto"
@@ -389,7 +392,7 @@ const TagsSection: React.FC<{
                     setNewTag("");
                   }
                 }}
-                placeholder={useI18nStore.getState().t.notes.k_7ds2k}
+                placeholder={t.notes.k_7ds2k}
                 autoFocus
                 className="text-xs flex-1"
                 style={{
@@ -419,7 +422,7 @@ const TagsSection: React.FC<{
                   borderRadius: "6px",
                 }}
               >
-                追加
+                {t.notes.k_add_btn}
               </button>
             </div>
           ) : (
@@ -451,8 +454,233 @@ const TagsSection: React.FC<{
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              タグを追加
+              {t.notes.k_add_tag}
             </button>
+          )}
+        </div>
+      )}
+    </section>
+  );
+};
+
+// ============================================================
+// リンクサジェストセクション（バックリンク生成サジェスト + 双方向リンク作成）
+// ============================================================
+
+interface LinkSuggestion {
+  id: string;
+  type: string;
+  title: string;
+  score: number;
+  reason: string;
+}
+
+const LinkSuggestionsSection: React.FC<{
+  noteId: string;
+  onNavigate: (targetId: string, targetType: NodeType) => void;
+}> = ({ noteId, onNavigate }) => {
+  const t = useT();
+  const [suggestions, setSuggestions] = useState<LinkSuggestion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
+  const [creating, setCreating] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchSuggestions = async () => {
+      setLoading(true);
+      try {
+        const items = await invoke<LinkSuggestion[]>("get_link_suggestions", {
+          itemId: noteId,
+          itemType: "note",
+        });
+        if (!cancelled) setSuggestions(items);
+      } catch {
+        // サジェスト取得失敗は静かに処理
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void fetchSuggestions();
+    return () => { cancelled = true; };
+  }, [noteId]);
+
+  /** サジェストからリンクを作成（双方向リンク） */
+  const handleCreateLink = useCallback(
+    async (targetId: string, targetType: string) => {
+      setCreating(targetId);
+      try {
+        await invoke("create_link", {
+          sourceId: noteId,
+          sourceType: "note",
+          targetId,
+          targetType,
+        });
+        toast.success(t.notes.k_link_created);
+        // 作成済みサジェストをリストから除去
+        setSuggestions((prev) => prev.filter((s) => s.id !== targetId));
+      } catch {
+        toast.error(t.notes.k_link_create_failed);
+      } finally {
+        setCreating(null);
+      }
+    },
+    [noteId, t],
+  );
+
+  return (
+    <section>
+      <button
+        type="button"
+        onClick={() => setCollapsed((p) => !p)}
+        className="flex items-center gap-2 w-full text-left py-1.5"
+        style={{ color: "var(--color-text-secondary)" }}
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{
+            transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)",
+            transition: "transform 150ms ease-out",
+          }}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+        <span className="text-xs font-semibold uppercase tracking-wider">
+          {t.notes.k_link_suggestions}
+        </span>
+        <span
+          className="text-xs px-1.5 py-0.5 ml-auto"
+          style={{
+            backgroundColor: "var(--color-bg-tertiary)",
+            color: "var(--color-text-tertiary)",
+            borderRadius: "999px",
+          }}
+        >
+          {suggestions.length}
+        </span>
+      </button>
+
+      {!collapsed && (
+        <div className="flex flex-col gap-1.5 mt-1">
+          {loading ? (
+            <div
+              className="text-xs py-2"
+              style={{ color: "var(--color-text-tertiary)" }}
+            >
+              {t.layout.loading}
+            </div>
+          ) : suggestions.length === 0 ? (
+            <div
+              className="text-xs py-2"
+              style={{ color: "var(--color-text-tertiary)" }}
+            >
+              {t.notes.k_no_suggestions}
+            </div>
+          ) : (
+            suggestions.map((sg) => (
+              <div
+                key={sg.id}
+                className="flex flex-col gap-1 w-full p-2"
+                style={{
+                  borderRadius: "8px",
+                  border: "1px solid var(--color-border-secondary)",
+                  backgroundColor: "var(--color-bg-primary)",
+                }}
+              >
+                {/* タイトル行 */}
+                <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
+                  <IconItemType
+                    itemType={sg.type as "paper" | "note"}
+                    size={12}
+                    style={{ flexShrink: 0 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onNavigate(sg.id, sg.type as NodeType)}
+                    className="text-xs font-medium text-left"
+                    style={{
+                      color: "var(--color-text-primary)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      minWidth: 0,
+                      flex: 1,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = "var(--color-accent-primary)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = "var(--color-text-primary)";
+                    }}
+                  >
+                    {sg.title}
+                  </button>
+                </div>
+                {/* 理由 */}
+                <span
+                  className="text-xs"
+                  style={{
+                    color: "var(--color-text-tertiary)",
+                    fontSize: "10px",
+                    paddingLeft: "18px",
+                  }}
+                >
+                  {sg.reason}
+                </span>
+                {/* リンク作成ボタン（双方向） */}
+                <div style={{ paddingLeft: "18px" }}>
+                  <button
+                    type="button"
+                    onClick={() => void handleCreateLink(sg.id, sg.type)}
+                    disabled={creating === sg.id}
+                    className="text-xs inline-flex items-center gap-1"
+                    style={{
+                      color: "var(--color-accent-primary)",
+                      padding: "2px 8px",
+                      borderRadius: "6px",
+                      border: "1px solid var(--color-accent-primary)",
+                      fontSize: "10px",
+                      transition: "all 120ms ease-out",
+                      opacity: creating === sg.id ? 0.5 : 1,
+                      cursor: creating === sg.id ? "wait" : "pointer",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (creating !== sg.id) {
+                        e.currentTarget.style.backgroundColor = "var(--color-accent-primary)";
+                        e.currentTarget.style.color = "#fff";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = "var(--color-accent-primary)";
+                    }}
+                  >
+                    {/* 双方向リンクアイコン */}
+                    <svg
+                      width="10"
+                      height="10"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                    </svg>
+                    {t.notes.k_create_link}
+                  </button>
+                </div>
+              </div>
+            ))
           )}
         </div>
       )}
@@ -486,6 +714,17 @@ export const NoteContextPanel: React.FC<NoteContextPanelProps> = ({
       <div className="flex flex-col gap-5">
         {/* バックリンク */}
         <BacklinksSection noteId={note.id} onNavigate={onNavigate} />
+
+        {/* セパレータ */}
+        <div
+          style={{
+            height: "1px",
+            backgroundColor: "var(--color-border-secondary)",
+          }}
+        />
+
+        {/* リンクサジェスト + 双方向リンク作成 */}
+        <LinkSuggestionsSection noteId={note.id} onNavigate={onNavigate} />
 
         {/* セパレータ */}
         <div

@@ -12,7 +12,8 @@ import { Button } from "../ui/Button";
 import { copyCitationToClipboard } from "../../utils/citation";
 import { toast } from "../ui/Toast";
 import { invoke } from "../../lib/tauriShim";
-import { useI18nStore } from "../../stores/useI18nStore";
+import { useT } from "../../stores/useI18nStore";
+import { useLibraryStore } from "../../stores/useLibraryStore";
 import { ReadingStatusBadge } from "./ReadingStatusBadge";
 import { CitationNetworkPanel } from "./CitationNetworkPanel";
 
@@ -86,6 +87,9 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
   onAttachPdf,
   onEdit,
 }) => {
+  const t = useT();
+  const updatePaperInStore = useLibraryStore((s) => s.updatePaper);
+
   // ── 引用コピーのドロップダウン ──
   const [showCitationDropdown, setShowCitationDropdown] = useState(false);
 
@@ -154,10 +158,10 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
       const success = await copyCitationToClipboard(paper, style);
       if (success) {
         toast.success(
-          useI18nStore.getState().t.library.k_nd5w89
+          t.library.k_nd5w89
         );
       } else {
-        toast.error(useI18nStore.getState().t.library.k_pytgr9);
+        toast.error(t.library.k_pytgr9);
       }
       setShowCitationDropdown(false);
     },
@@ -187,18 +191,15 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
         return;
       }
       try {
-        await invoke("update_paper", {
-          id: paper.id,
-          input: { tags: [...paper.tags, tag] },
-        });
-        toast.success(useI18nStore.getState().t.library.k_4ibxuc);
+        await updatePaperInStore(paper.id, { tags: [...paper.tags, tag] });
+        toast.success(t.library.k_4ibxuc);
       } catch {
-        toast.error(useI18nStore.getState().t.library.k_wbna9r);
+        toast.error(t.library.k_wbna9r);
       }
       setNewTag("");
       setShowTagInput(false);
     },
-    [newTag, paper.id, paper.tags]
+    [newTag, paper.id, paper.tags, updatePaperInStore, t]
   );
 
   return (
@@ -221,7 +222,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
           className="text-xs font-semibold uppercase tracking-wide"
           style={{ color: "var(--color-text-tertiary)" }}
         >
-          論文情報
+          {t.library.k_paper_info}
         </h3>
         <button
           onClick={onClose}
@@ -237,7 +238,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = "transparent";
           }}
-          aria-label={useI18nStore.getState().t.layout.str_tq8rjt}
+          aria-label={t.layout.str_tq8rjt}
         >
           <svg
             width="14"
@@ -282,13 +283,13 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
             lineHeight: "var(--line-height-relaxed)",
           }}
         >
-          {paper.authors.join(", ") || useI18nStore.getState().t.library.k_h81ga7}
+          {paper.authors.join(", ") || t.library.k_h81ga7}
         </p>
         <p
           className="text-xs mb-3"
           style={{ color: "var(--color-text-tertiary)" }}
         >
-          {paper.year ?? useI18nStore.getState().t.library.k_e7vv9}
+          {paper.year ?? t.library.k_e7vv9}
           {paper.journal && ` · ${paper.journal}`}
           {paper.volume && `, Vol. ${paper.volume}`}
           {paper.issue && `(${paper.issue})`}
@@ -344,7 +345,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
               }
               onClick={() => onOpenPdf(paper.id)}
             >
-              PDFを開く
+              {t.library.k_open_pdf_btn}
             </Button>
           ) : (
             <Button
@@ -360,7 +361,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
               }
               onClick={() => onAttachPdf?.(paper.id)}
             >
-              PDFを添付
+              {t.library.k_attach_pdf_btn}
             </Button>
           )}
 
@@ -377,7 +378,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
               }
               onClick={() => setShowCitationDropdown((prev) => !prev)}
             >
-              {useI18nStore.getState().t.library.k_ezke84}
+              {t.library.k_ezke84}
             </Button>
 
             {/* 引用スタイルドロップダウン */}
@@ -437,7 +438,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
               }
               onClick={() => onEdit(paper.id)}
             >
-              {useI18nStore.getState().t.common.edit}
+              {t.common.edit}
             </Button>
           )}
 
@@ -453,7 +454,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
             onClick={() => onDelete(paper.id)}
             style={{ color: "var(--color-accent-danger)" }}
           >
-            {useI18nStore.getState().t.common.delete}
+            {t.common.delete}
           </Button>
         </div>
 
@@ -466,7 +467,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
               className="text-xs font-semibold uppercase tracking-wide"
               style={{ color: "var(--color-text-tertiary)" }}
             >
-              タグ
+              {t.library.k_tags_header}
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
@@ -492,7 +493,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                   setShowTagInput(false);
                   setNewTag("");
                 }}
-                placeholder={useI18nStore.getState().t.library.k_sgs5u}
+                placeholder={t.library.k_sgs5u}
                 autoFocus
               />
             ) : (
@@ -529,7 +530,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                   <line x1="12" y1="5" x2="12" y2="19" />
                   <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
-                <span>{useI18nStore.getState().t.library.k_add_label}</span>
+                <span>{t.library.k_add_label}</span>
               </button>
             )}
           </div>
@@ -540,7 +541,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
         {/* ── アブストラクト（折りたたみ可能） ── */}
         <div className="py-1">
           <SectionHeader
-            title={useI18nStore.getState().t.library.k_hq997l}
+            title={t.library.k_hq997l}
             expanded={abstractExpanded}
             onToggle={() => setAbstractExpanded((v) => !v)}
           />
@@ -554,7 +555,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                 lineHeight: "var(--line-height-relaxed)",
               }}
             >
-              {paper.abstract ?? useI18nStore.getState().t.library.k_h0cdlq}
+              {paper.abstract ?? t.library.k_h0cdlq}
             </div>
           )}
         </div>
@@ -564,7 +565,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
         {/* ── 関連ノート ── */}
         <div className="py-1">
           <SectionHeader
-            title={useI18nStore.getState().t.library.k_z75cmx}
+            title={t.library.k_z75cmx}
             count={relatedNotes.length}
             expanded={notesExpanded}
             onToggle={() => setNotesExpanded((v) => !v)}
@@ -583,7 +584,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                     className="text-xs"
                     style={{ color: "var(--color-text-disabled)" }}
                   >
-                    {useI18nStore.getState().t.common.loading}
+                    {t.common.loading}
                   </span>
                 </div>
               ) : relatedNotes.length === 0 ? (
@@ -591,7 +592,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                   className="text-xs py-1"
                   style={{ color: "var(--color-text-disabled)" }}
                 >
-                  関連するノートはありません
+                  {t.library.k_no_related_notes}
                 </p>
               ) : (
                 relatedNotes.map((note) => (
@@ -640,7 +641,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
         {/* ── バックリンク ── */}
         <div className="py-1">
           <SectionHeader
-            title={useI18nStore.getState().t.library.k_4vgs8a}
+            title={t.library.k_4vgs8a}
             count={backlinks.length}
             expanded={backlinksExpanded}
             onToggle={() => setBacklinksExpanded((v) => !v)}
@@ -659,7 +660,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                     className="text-xs"
                     style={{ color: "var(--color-text-disabled)" }}
                   >
-                    {useI18nStore.getState().t.common.loading}
+                    {t.common.loading}
                   </span>
                 </div>
               ) : backlinks.length === 0 ? (
@@ -667,7 +668,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                   className="text-xs py-1"
                   style={{ color: "var(--color-text-disabled)" }}
                 >
-                  この論文へのリンクはありません
+                  {t.library.k_no_paper_links}
                 </p>
               ) : (
                 backlinks.map((link) => (
@@ -694,7 +695,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                       <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                     </svg>
                     <span className="truncate">
-                      {link.sourceType === "note" ? useI18nStore.getState().t.notes.title : useI18nStore.getState().t.settings.data.papers}:{" "}
+                      {link.sourceType === "note" ? t.notes.title : t.settings.data.papers}:{" "}
                       {link.sourceId.slice(0, 8)}...
                     </span>
                     {link.context && (
@@ -717,7 +718,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
         {/* ── ハイライト ── */}
         <div className="py-1">
           <SectionHeader
-            title={useI18nStore.getState().t.settings.data.highlights}
+            title={t.settings.data.highlights}
             count={highlights.length}
             expanded={highlightsExpanded}
             onToggle={() => setHighlightsExpanded((v) => !v)}
@@ -736,7 +737,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                     className="text-xs"
                     style={{ color: "var(--color-text-disabled)" }}
                   >
-                    {useI18nStore.getState().t.common.loading}
+                    {t.common.loading}
                   </span>
                 </div>
               ) : highlights.length === 0 ? (
@@ -744,7 +745,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                   className="text-xs py-1"
                   style={{ color: "var(--color-text-disabled)" }}
                 >
-                  ハイライトはありません
+                  {t.library.k_no_highlights_yet}
                 </p>
               ) : (
                 /* 最新3件のプレビュー */
@@ -792,7 +793,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                     e.currentTarget.style.opacity = "1";
                   }}
                 >
-                  {useI18nStore.getState().t.library.k_show_more_highlights.replace("${count}", String(highlights.length - 3))}
+                  {t.library.k_show_more_highlights.replace("${count}", String(highlights.length - 3))}
                 </button>
               )}
             </div>

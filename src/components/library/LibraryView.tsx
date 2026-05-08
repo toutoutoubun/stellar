@@ -273,7 +273,7 @@ export const LibraryView: React.FC = () => {
                 className="text-lg font-bold"
                 style={{ color: "var(--color-text-primary)" }}
               >
-                ライブラリ
+                {t.library.k_library_title}
               </h1>
               {papers.length > 0 && (
                 <span
@@ -309,7 +309,7 @@ export const LibraryView: React.FC = () => {
               }
               onClick={openAddModal}
             >
-              追加
+              {t.library.k_add_label}
             </Button>
           </div>
 
@@ -448,14 +448,14 @@ export const LibraryView: React.FC = () => {
                       e.currentTarget.style.backgroundColor = "transparent";
                     }}
                   >
-                    すべての年
+                    {t.library.k_all_years}
                   </button>
                   {allYears.length === 0 ? (
                     <div
                       className="px-3 py-2 text-xs"
                       style={{ color: "var(--color-text-disabled)" }}
                     >
-                      年データがありません
+                      {t.library.k_no_year_data}
                     </div>
                   ) : (
                     allYears.map((year) => (
@@ -498,12 +498,11 @@ export const LibraryView: React.FC = () => {
                   setShowYearDropdown(false);
                 }}
               >
-                PDF{t.stats.str_8h3c}{" "}
                 {filterHasPdf !== null
                   ? filterHasPdf
-                    ? t.library.k_8152k
-                    : t.library.k_811tg
-                  : "▼"}
+                    ? t.library.k_pdf_yes
+                    : t.library.k_pdf_no
+                  : <>PDF ▼</>}
               </Button>
               {showPdfDropdown && (
                 <div style={dropdownStyle}>
@@ -546,7 +545,7 @@ export const LibraryView: React.FC = () => {
                       e.currentTarget.style.backgroundColor = "transparent";
                     }}
                   >
-                    PDFあり
+                    {t.library.k_pdf_yes}
                   </button>
                   <button
                     className="flex items-center w-full px-3 py-2 text-xs text-left"
@@ -566,7 +565,7 @@ export const LibraryView: React.FC = () => {
                       e.currentTarget.style.backgroundColor = "transparent";
                     }}
                   >
-                    PDFなし
+                    {t.library.k_pdf_no}
                   </button>
                 </div>
               )}
@@ -692,7 +691,7 @@ export const LibraryView: React.FC = () => {
                 }}
                 style={{ color: "var(--color-text-tertiary)" }}
               >
-                フィルタ解除
+                {t.library.k_clear_filters}
               </Button>
             )}
 
@@ -837,7 +836,7 @@ export const LibraryView: React.FC = () => {
                   size="sm"
                   onClick={() => void fetchPapers()}
                 >
-                  再読み込み
+                  {t.library.k_reload}
                 </Button>
               </div>
             </div>
@@ -867,7 +866,7 @@ export const LibraryView: React.FC = () => {
                 {hasActiveFilters ? (
                   <>
                     <p className="text-sm">
-                      フィルタ条件に一致する論文がありません
+                      {t.library.k_no_filter_match}
                     </p>
                     <Button
                       variant="secondary"
@@ -876,13 +875,13 @@ export const LibraryView: React.FC = () => {
                         useLibraryStore.getState().clearFilters()
                       }
                     >
-                      フィルタ解除
+                      {t.library.k_clear_filters}
                     </Button>
                   </>
                 ) : (
                   <>
                     <p className="text-sm">
-                      まだ論文が追加されていません
+                      {t.library.k_no_papers_yet}
                     </p>
                     <Button
                       variant="primary"
@@ -904,7 +903,7 @@ export const LibraryView: React.FC = () => {
                       }
                       onClick={openAddModal}
                     >
-                      最初の論文を追加
+                      {t.library.k_add_first_paper}
                     </Button>
                   </>
                 )}
@@ -953,12 +952,12 @@ export const LibraryView: React.FC = () => {
               >
                 <div style={{ width: "16px" }} />
                 <div className="flex-1">{t.notes.sortTitle}</div>
-                <div style={{ width: "160px", textAlign: "left" }}>著者</div>
-                <div style={{ width: "48px", textAlign: "center" }}>年</div>
+                <div style={{ width: "160px", textAlign: "left" }}>{t.library.k_col_authors}</div>
+                <div style={{ width: "48px", textAlign: "center" }}>{t.library.k_year_filter}</div>
                 <div style={{ width: "140px", textAlign: "left" }}>
-                  ジャーナル
+                  {t.library.k_col_journal}
                 </div>
-                <div style={{ width: "140px" }}>タグ</div>
+                <div style={{ width: "140px" }}>{t.library.k_tag_filter}</div>
                 <div style={{ width: "70px", textAlign: "left" }}>
                   {t.citationNetwork.readingStatus}
                 </div>
@@ -1003,7 +1002,7 @@ export const LibraryView: React.FC = () => {
                   >
                     <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                   </svg>
-                  <span className="text-xs">読み込み中…</span>
+                  <span className="text-xs">{t.library.k_loading_more}</span>
                 </div>
               )}
 
@@ -1014,7 +1013,7 @@ export const LibraryView: React.FC = () => {
                   style={{ color: "var(--color-text-disabled)" }}
                 >
                   <span className="text-xs">
-                    全 {totalItems} 件を表示中
+                    {t.library.k_showing_total.replace("${count}", String(totalItems))}
                   </span>
                 </div>
               )}

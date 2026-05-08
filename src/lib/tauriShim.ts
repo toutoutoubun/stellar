@@ -430,20 +430,131 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
   }
   if (cmd === "get_backlinks") {
     const itemId = (args?.itemId ?? args?.item_id ?? "") as string;
+    // タイトルをストアから解決するヘルパー
+    const resolveTitle = (id: string, type: string): string => {
+      if (type === "note") {
+        const note = mockStore.notes.find((n: any) => n.id === id);
+        return note?.title || "Untitled Note";
+      }
+      const paper = mockStore.papers.find((p: any) => p.id === id);
+      return paper?.title || "Untitled Paper";
+    };
     const result = mockStore.links
       .filter((l: any) => l.sourceId === itemId || l.targetId === itemId)
       .map((l: any) => ({
         id: l.id,
         sourceId: l.sourceId,
         sourceType: l.sourceType,
-        sourceTitle: "",
+        sourceTitle: resolveTitle(l.sourceId, l.sourceType),
         targetId: l.targetId,
         targetType: l.targetType,
-        targetTitle: "",
+        targetTitle: resolveTitle(l.targetId, l.targetType),
         context: l.context,
         createdAt: l.createdAt,
       }));
     return { handled: true, result };
+  }
+
+  // ── Citations（草稿引用）──
+  if (cmd === "insert_citation") {
+    const a = (args ?? {}) as any;
+    const noteId = a.noteId ?? "";
+    const paperId = a.paperId ?? "";
+    const style = a.citationStyle ?? "apa7";
+    const pageRef = a.pageRef ?? null;
+    const paper = mockStore.papers.find((p: any) => p.id === paperId);
+    if (!paper) return { handled: true, result: null };
+    const authorLast = (paper.authors?.[0] ?? "Unknown").split(" ").pop() ?? "Unknown";
+    const yearStr = paper.year ? String(paper.year) : "n.d.";
+    const citationKey = `${authorLast}${yearStr}`;
+    let inlineText = "";
+    let bibliographyText = "";
+    const authorsStr = paper.authors?.join(", ") ?? "Unknown";
+    if (style === "apa7") {
+      inlineText = pageRef ? `(${authorLast}, ${yearStr}, ${pageRef})` : `(${authorLast}, ${yearStr})`;
+      bibliographyText = `${authorsStr} (${yearStr}). ${paper.title}.${paper.journal ? " " + paper.journal + "." : ""}`;
+    } else if (style === "mla9") {
+      inlineText = pageRef ? `(${authorLast} ${pageRef})` : `(${authorLast})`;
+      bibliographyText = `${authorsStr}. "${paper.title}."${paper.journal ? " " + paper.journal + "," : ""} ${yearStr}.`;
+    } else if (style === "chicago17") {
+      inlineText = pageRef ? `(${authorLast} ${yearStr}, ${pageRef})` : `(${authorLast} ${yearStr})`;
+      bibliographyText = `${authorsStr}. ${paper.title}.${paper.journal ? " " + paper.journal : ""}, ${yearStr}.`;
+    } else {
+      inlineText = pageRef ? `(${authorLast} ${yearStr}: ${pageRef})` : `(${authorLast} ${yearStr})`;
+      bibliographyText = `${authorsStr}『${paper.title}』${paper.journal ? paper.journal + "、" : ""}${yearStr}年。`;
+    }
+    const citation = {
+      id: mockId(),
+      noteId,
+      paperId,
+      citationKey,
+      citationStyle: style,
+      inlineText,
+      bibliographyText,
+      pageRef,
+      createdAt: now(),
+    };
+    if (!(mockStore as any).citations) (mockStore as any).citations = [];
+    (mockStore as any).citations.push(citation);
+    return { handled: true, result: { ...citation } };
+  }
+  if (cmd === "get_citations_for_note") {
+    const noteId = (args?.noteId ?? "") as string;
+    const citations = ((mockStore as any).citations ?? []).filter((c: any) => c.noteId === noteId);
+    return { handled: true, result: [...citations] };
+  }
+  if (cmd === "delete_citation") {
+    const id = (args?.id ?? "") as string;
+    if ((mockStore as any).citations) {
+      (mockStore as any).citations = (mockStore as any).citations.filter((c: any) => c.id !== id);
+    }
+    return { handled: true, result: undefined };
+  }
+  if (cmd === "generate_bibliography") {
+    const noteId = (args?.noteId ?? "") as string;
+    const citations = ((mockStore as any).citations ?? []).filter((c: any) => c.noteId === noteId);
+    if (citations.length === 0) return { handled: true, result: "" };
+    const bib = citations.map((c: any, i: number) => `[${i + 1}] ${c.bibliographyText}`).join("\n");
+    return { handled: true, result: bib };
+  }
+
+  // ── Link Suggestions（リンクサジェスト）──
+  if (cmd === "get_link_suggestions") {
+    const itemId = (args?.itemId ?? args?.item_id ?? "") as string;
+    const itemType = (args?.itemType ?? args?.item_type ?? "note") as string;
+    const linkedIds = new Set<string>();
+    for (const l of mockStore.links as any[]) {
+      if (l.sourceId === itemId) linkedIds.add(l.targetId);
+      if (l.targetId === itemId) linkedIds.add(l.sourceId);
+    }
+    linkedIds.add(itemId);
+    const currentItem = itemType === "note"
+      ? mockStore.notes.find((n: any) => n.id === itemId)
+      : mockStore.papers.find((p: any) => p.id === itemId);
+    const currentTags = new Set<string>(currentItem?.tags ?? []);
+    const candidates: { id: string; type: string; title: string; score: number; reason: string }[] = [];
+    for (const note of mockStore.notes) {
+      if (linkedIds.has(note.id) || note.isDraft === 1) continue;
+      const overlap = (note.tags ?? []).filter((t: string) => currentTags.has(t));
+      if (overlap.length > 0) {
+        candidates.push({
+          id: note.id, type: "note", title: note.title || "Untitled Note",
+          score: overlap.length, reason: `共通タグ: ${overlap.join(", ")}`,
+        });
+      }
+    }
+    for (const paper of mockStore.papers) {
+      if (linkedIds.has(paper.id)) continue;
+      const overlap = (paper.tags ?? []).filter((t: string) => currentTags.has(t));
+      if (overlap.length > 0) {
+        candidates.push({
+          id: paper.id, type: "paper", title: paper.title || "Untitled Paper",
+          score: overlap.length, reason: `共通タグ: ${overlap.join(", ")}`,
+        });
+      }
+    }
+    candidates.sort((a, b) => b.score - a.score);
+    return { handled: true, result: candidates.slice(0, 5) };
   }
 
   // ── メタデータ取得（ブラウザ開発用モック）──
@@ -645,8 +756,8 @@ const MOCK_RESPONSES: Record<string, any> = {
   assign_code_to_highlight: undefined,
   remove_code_from_highlight: undefined,
 
-  // Links (CRUD は動的ハンドラで処理)
-  get_link_suggestions: [],
+  // Links (CRUD + suggestions は動的ハンドラで処理)
+  // get_link_suggestions → 動的ハンドラで処理
 
   // Search
   full_text_search: { papers: [], notes: [], highlights: [] },
@@ -730,16 +841,14 @@ const MOCK_RESPONSES: Record<string, any> = {
   generate_analysis_report: "",
   export_qca_csv: "",
 
-  // Draft Mode (dynamic handler handles create_draft/get_drafts)
+  // Draft Mode (dynamic handler handles create_draft/get_drafts/citations)
   get_draft_chapters: [],
   create_draft_chapter: null,
   update_draft_chapter: null,
   delete_draft_chapter: undefined,
   reorder_draft_chapters: undefined,
-  insert_citation: null,
-  get_citations_for_note: [],
-  delete_citation: undefined,
-  generate_bibliography: "",
+  // insert_citation, get_citations_for_note, delete_citation, generate_bibliography
+  // → 動的ハンドラで処理
   sync_word_count: undefined,
 
   // PDF metadata extraction

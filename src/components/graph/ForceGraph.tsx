@@ -144,6 +144,9 @@ const CanvasFallbackGraph: React.FC<CanvasFallbackProps> = ({
   onRetry,
   errorMessage,
 }) => {
+  const t = useT();
+  const simpleModeLabel = t.graph.k_simple_mode;
+  const retryLabel = t.graph.k_retry;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const positionsRef = useRef<Map<string, { x: number; y: number; vx: number; vy: number }>>(new Map());
   const rafRef = useRef(0);
@@ -389,7 +392,7 @@ const CanvasFallbackGraph: React.FC<CanvasFallbackProps> = ({
           }}
           title={errorMessage}
         >
-          {useI18nStore.getState().t.graph.k_simple_mode}
+          {simpleModeLabel}
         </span>
         <button
           type="button"
@@ -404,7 +407,7 @@ const CanvasFallbackGraph: React.FC<CanvasFallbackProps> = ({
             cursor: "pointer",
           }}
         >
-          {useI18nStore.getState().t.graph.k_retry}
+          {retryLabel}
         </button>
       </div>
     </div>
@@ -969,7 +972,7 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
           >
             <path d="M21 12a9 9 0 1 1-6.219-8.56" />
           </svg>
-          <span className="text-xs">{useI18nStore.getState().t.graph.k_loading_engine}</span>
+          <span className="text-xs">{t.graph.k_loading_engine}</span>
         </div>
       </div>
     );
