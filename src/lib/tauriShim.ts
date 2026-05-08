@@ -13,7 +13,7 @@ export const isTauri: boolean = !!(window as any).__TAURI_INTERNALS__;
 // ブラウザプレビューでも create / get / update / delete が動作するように
 // メモリ上にデータを保持する軽量ストア。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mockStore: { notes: any[]; projects: any[]; papers: any[]; datasets: any[]; analyses: any[]; codes: any[]; highlights: any[] } = {
+const mockStore: { notes: any[]; projects: any[]; papers: any[]; datasets: any[]; analyses: any[]; codes: any[]; highlights: any[]; links: any[] } = {
   notes: [],
   projects: [],
   papers: [],
@@ -21,6 +21,7 @@ const mockStore: { notes: any[]; projects: any[]; papers: any[]; datasets: any[]
   analyses: [],
   codes: [],
   highlights: [],
+  links: [],
 };
 let mockIdCounter = 1;
 function mockId(): string {
@@ -349,7 +350,108 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     return { handled: true, result: { ...hl } };
   }
 
+  // ── Graph Data（動的生成）──
+  if (cmd === "get_graph_data") {
+    // mockStore のノートと論文からグラフデータを動的に生成
+    const nodes: any[] = [];
+    for (const note of mockStore.notes) {
+      if (note.isDraft === 1) continue; // 草稿は除外
+      nodes.push({
+        id: note.id,
+        name: note.title || "Untitled Note",
+        type: "note",
+        val: 1,
+        tags: note.tags ?? [],
+      });
+    }
+    for (const paper of mockStore.papers) {
+      nodes.push({
+        id: paper.id,
+        name: paper.title || "Untitled Paper",
+        type: "paper",
+        val: 1,
+        tags: paper.tags ?? [],
+      });
+    }
+    // mockStore.links からリンクを生成
+    const nodeIdSet = new Set(nodes.map((n: any) => n.id));
+    const links = mockStore.links
+      .filter((l: any) => nodeIdSet.has(l.sourceId) && nodeIdSet.has(l.targetId))
+      .map((l: any) => ({ id: l.id, source: l.sourceId, target: l.targetId }));
+    return { handled: true, result: { nodes, links } };
+  }
+
+  // ── Links CRUD ──
+  if (cmd === "create_link") {
+    const a = (args ?? {}) as any;
+    const link = {
+      id: mockId(),
+      sourceId: a.sourceId ?? a.source_id ?? "",
+      sourceType: a.sourceType ?? a.source_type ?? "note",
+      targetId: a.targetId ?? a.target_id ?? "",
+      targetType: a.targetType ?? a.target_type ?? "note",
+      context: a.context ?? null,
+      createdAt: now(),
+    };
+    mockStore.links.push(link);
+    return { handled: true, result: { ...link } };
+  }
+  if (cmd === "delete_link") {
+    mockStore.links = mockStore.links.filter((l: any) => l.id !== args?.id);
+    return { handled: true, result: undefined };
+  }
+  if (cmd === "get_backlinks") {
+    const itemId = (args?.itemId ?? args?.item_id ?? "") as string;
+    const result = mockStore.links
+      .filter((l: any) => l.sourceId === itemId || l.targetId === itemId)
+      .map((l: any) => ({
+        id: l.id,
+        sourceId: l.sourceId,
+        sourceType: l.sourceType,
+        sourceTitle: "",
+        targetId: l.targetId,
+        targetType: l.targetType,
+        targetTitle: "",
+        context: l.context,
+        createdAt: l.createdAt,
+      }));
+    return { handled: true, result };
+  }
+
   return { handled: false };
+}
+
+// ── 初期シードデータ（非 Tauri 環境でのブラウザプレビュー用）────
+// グラフビュー等が空にならないように最小限のデモデータを投入
+if (!isTauri) {
+  const seedNotes = [
+    { id: "seed-note-001", title: "研究ノート: 社会関係資本の理論的枠組み", content: "Putnam (2000) の議論を整理する…", tags: ["theory", "social-capital"], isDraft: 0, draftMeta: "{}", wordCount: 320, readingTimeMin: 2, createdAt: "2025-04-01T10:00:00Z", updatedAt: "2025-04-15T08:30:00Z" },
+    { id: "seed-note-002", title: "フィールドワーク記録 (2025-03)", content: "インタビュー結果のまとめ…", tags: ["fieldwork", "interview"], isDraft: 0, draftMeta: "{}", wordCount: 580, readingTimeMin: 3, createdAt: "2025-03-20T14:00:00Z", updatedAt: "2025-04-10T11:00:00Z" },
+    { id: "seed-note-003", title: "方法論メモ: 質的比較分析 (QCA)", content: "Ragin (1987) の手法を検討…", tags: ["methodology", "QCA"], isDraft: 0, draftMeta: "{}", wordCount: 410, readingTimeMin: 2, createdAt: "2025-03-15T09:00:00Z", updatedAt: "2025-04-12T16:00:00Z" },
+    { id: "seed-note-004", title: "文献レビュー草案", content: "先行研究の概観…", tags: ["review"], isDraft: 0, draftMeta: "{}", wordCount: 750, readingTimeMin: 4, createdAt: "2025-02-28T10:00:00Z", updatedAt: "2025-04-08T09:00:00Z" },
+    { id: "seed-note-005", title: "制度論とガバナンス", content: "North (1990) の制度概念…", tags: ["theory", "institution"], isDraft: 0, draftMeta: "{}", wordCount: 290, readingTimeMin: 2, createdAt: "2025-04-05T13:00:00Z", updatedAt: "2025-04-18T10:00:00Z" },
+  ];
+  const seedPapers = [
+    { id: "seed-paper-001", title: "Bowling Alone: The Collapse and Revival of American Community", authors: ["Robert D. Putnam"], year: 2000, journal: null, doi: null, url: null, abstract: "An exploration of declining social capital in America.", pdfPath: null, tags: ["social-capital", "theory"], createdAt: "2025-03-01T10:00:00Z", updatedAt: "2025-03-01T10:00:00Z" },
+    { id: "seed-paper-002", title: "The Comparative Method: Moving Beyond Qualitative and Quantitative Strategies", authors: ["Charles C. Ragin"], year: 1987, journal: null, doi: null, url: null, abstract: "Introduction of QCA methodology.", pdfPath: null, tags: ["methodology", "QCA"], createdAt: "2025-03-05T10:00:00Z", updatedAt: "2025-03-05T10:00:00Z" },
+    { id: "seed-paper-003", title: "Institutions, Institutional Change and Economic Performance", authors: ["Douglass C. North"], year: 1990, journal: null, doi: null, url: null, abstract: "A framework for analyzing institutions.", pdfPath: null, tags: ["theory", "institution"], createdAt: "2025-03-10T10:00:00Z", updatedAt: "2025-03-10T10:00:00Z" },
+    { id: "seed-paper-004", title: "Governing the Commons", authors: ["Elinor Ostrom"], year: 1990, journal: null, doi: null, url: null, abstract: "The Evolution of Institutions for Collective Action.", pdfPath: null, tags: ["institution", "commons"], createdAt: "2025-03-12T10:00:00Z", updatedAt: "2025-03-12T10:00:00Z" },
+  ];
+  const seedLinks = [
+    { id: "seed-link-001", sourceId: "seed-note-001", sourceType: "note", targetId: "seed-paper-001", targetType: "paper", context: null, createdAt: "2025-04-01T10:00:00Z" },
+    { id: "seed-link-002", sourceId: "seed-note-003", sourceType: "note", targetId: "seed-paper-002", targetType: "paper", context: null, createdAt: "2025-04-01T10:00:00Z" },
+    { id: "seed-link-003", sourceId: "seed-note-005", sourceType: "note", targetId: "seed-paper-003", targetType: "paper", context: null, createdAt: "2025-04-05T13:00:00Z" },
+    { id: "seed-link-004", sourceId: "seed-note-005", sourceType: "note", targetId: "seed-paper-004", targetType: "paper", context: null, createdAt: "2025-04-05T13:00:00Z" },
+    { id: "seed-link-005", sourceId: "seed-note-001", sourceType: "note", targetId: "seed-note-004", targetType: "note", context: null, createdAt: "2025-04-08T09:00:00Z" },
+    { id: "seed-link-006", sourceId: "seed-note-004", sourceType: "note", targetId: "seed-paper-001", targetType: "paper", context: null, createdAt: "2025-04-08T09:00:00Z" },
+    { id: "seed-link-007", sourceId: "seed-note-004", sourceType: "note", targetId: "seed-paper-003", targetType: "paper", context: null, createdAt: "2025-04-08T09:00:00Z" },
+    { id: "seed-link-008", sourceId: "seed-note-002", sourceType: "note", targetId: "seed-note-001", targetType: "note", context: null, createdAt: "2025-04-10T11:00:00Z" },
+    { id: "seed-link-009", sourceId: "seed-paper-003", sourceType: "paper", targetId: "seed-paper-004", targetType: "paper", context: null, createdAt: "2025-04-12T10:00:00Z" },
+  ];
+  mockStore.notes.push(...seedNotes);
+  mockStore.papers.push(...seedPapers);
+  mockStore.links.push(...seedLinks);
+  mockIdCounter = 100; // シードID と衝突しないようにカウンタを進める
 }
 
 // ── 静的フォールバック（動的ハンドラ非対応コマンド用）────
@@ -373,17 +475,11 @@ const MOCK_RESPONSES: Record<string, any> = {
   assign_code_to_highlight: undefined,
   remove_code_from_highlight: undefined,
 
-  // Links
-  get_backlinks: [],
-  create_link: null,
-  delete_link: undefined,
+  // Links (CRUD は動的ハンドラで処理)
   get_link_suggestions: [],
 
   // Search
   full_text_search: { papers: [], notes: [], highlights: [] },
-
-  // Graph
-  get_graph_data: { nodes: [], links: [] },
 
   // Qualitative — Coding Matrix
   get_coding_matrix: { rows: [], cols: [], cells: {} },

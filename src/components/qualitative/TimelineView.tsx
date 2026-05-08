@@ -35,15 +35,16 @@ function parseDateInput(input: string): { date: string; dateType: string } {
 }
 
 const IMPORTANCE_COLORS = ["#94a3b8", "#60a5fa", "#f59e0b", "#ef4444", "#dc2626"];
-const EVENT_TYPES = [
-  { value: "political", label: useI18nStore.getState().t.qualitative.k_htgc },
-  { value: "economic", label: useI18nStore.getState().t.qualitative.k_lwzg },
-  { value: "social", label: useI18nStore.getState().t.qualitative.k_l21o },
-  { value: "military", label: useI18nStore.getState().t.qualitative.k_opy6 },
-  { value: "cultural", label: useI18nStore.getState().t.qualitative.k_hq3z },
-  { value: "diplomatic", label: useI18nStore.getState().t.qualitative.k_fl1q },
-  { value: "other", label: useI18nStore.getState().t.notes.k_7bosl },
-];
+// EVENT_TYPES は表示用ラベルのフォールバックとしてのみ使用（旧データ互換）
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  political: useI18nStore.getState().t.qualitative.k_htgc,
+  economic: useI18nStore.getState().t.qualitative.k_lwzg,
+  social: useI18nStore.getState().t.qualitative.k_l21o,
+  military: useI18nStore.getState().t.qualitative.k_opy6,
+  cultural: useI18nStore.getState().t.qualitative.k_hq3z,
+  diplomatic: useI18nStore.getState().t.qualitative.k_fl1q,
+  other: useI18nStore.getState().t.notes.k_7bosl,
+};
 
 export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
   const t = useT();
@@ -56,7 +57,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dateInput, setDateInput] = useState("");
-  const [eventType, setEventType] = useState("political");
+  const [eventType, setEventType] = useState("");
   const [importance, setImportance] = useState(3);
   const [lane, setLane] = useState("");
 
@@ -242,16 +243,14 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
           <div className="grid grid-cols-3 gap-3 mb-3">
             <div>
               <label className="text-xs mb-1 block" style={{ color: "var(--color-text-tertiary)" }}>種別</label>
-              <select
+              <input
+                type="text"
                 value={eventType}
                 onChange={(e) => setEventType(e.target.value)}
+                placeholder="例: 政治, 経済, 社会..."
                 className="w-full text-xs px-2 py-1.5"
-                style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "6px" }}
-              >
-                {EVENT_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
+                style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "6px", outline: "none" }}
+              />
             </div>
             <div>
               <label className="text-xs mb-1 block" style={{ color: "var(--color-text-tertiary)" }}>重要度 ({importance})</label>
@@ -355,7 +354,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
                           fontSize: "10px",
                         }}
                       >
-                        {EVENT_TYPES.find((t) => t.value === event.eventType)?.label ?? event.eventType}
+                        {EVENT_TYPE_LABELS[event.eventType] ?? event.eventType}
                       </span>
                       {event.dateType !== "exact" && (
                         <span

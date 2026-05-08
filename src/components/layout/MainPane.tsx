@@ -344,6 +344,15 @@ export const MainPane: React.FC = () => {
       );
     }
 
+    // サイドバーが「グラフ」ビューの場合
+    if (sidebarView === "graph") {
+      return (
+        <GraphErrorBoundary>
+          <GraphView />
+        </GraphErrorBoundary>
+      );
+    }
+
     // サイドバーが「ノート」ビューの場合：NoteList + NoteEditor 分割レイアウト
     if (sidebarView === "notes") {
       return <NotesView mainPaneContent={mainPaneContent} />;
