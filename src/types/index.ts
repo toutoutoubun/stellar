@@ -1020,6 +1020,89 @@ export interface SaveAnalysisInput {
 /** Data Studio のタブ */
 export type DataStudioTab = 'import' | 'variables' | 'preview' | 'analysis';
 
+/** 変数作成時の入力型 */
+export interface CreateVariableInput {
+  datasetId: string;
+  columnIndex: number;
+  name: string;
+  label?: string | null;
+  varType?: string;
+  unit?: string | null;
+  likertMin?: number | null;
+  likertMax?: number | null;
+  likertLabels?: string | null;
+}
+
+/** トークン頻度 */
+export interface TokenFrequency {
+  id: string;
+  datasetId: string;
+  variableId: string;
+  token: string;
+  frequency: number;
+  tfIdf: number | null;
+  pos: string | null;
+  documentCount: number | null;
+}
+
+/** タグカウント（get_all_tags 用） */
+export interface TagCount {
+  name: string;
+  count: number;
+}
+
+/** ドラフト応答型（get_drafts 用） */
+export interface DraftResponse {
+  id: string;
+  title: string;
+  content: string;
+  wordCount: number;
+  readingTimeMin: number;
+  chapterCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** ハイライト-フレーム関連（get_highlight_frames 用） */
+export interface HighlightFrameRow {
+  id: string;
+  highlightId: string;
+  frameId: string;
+  assignedAt: string;
+}
+
+/** プロジェクト更新入力型 */
+export interface UpdateProjectDto {
+  name?: string;
+  description?: string | null;
+  methodType?: string;
+}
+
+/** アクター更新入力型 */
+export interface UpdateActorDto {
+  name?: string;
+  actorType?: string;
+  position?: string;
+  influence?: number;
+  level?: string;
+  description?: string | null;
+  xPosition?: number | null;
+  yPosition?: number | null;
+}
+
+/** タイムラインイベント更新入力型 */
+export interface UpdateTimelineEventDto {
+  title?: string;
+  description?: string | null;
+  eventDate?: string;
+  dateType?: string;
+  eventType?: string;
+  importance?: number;
+  lane?: string | null;
+  paperId?: string | null;
+  highlightId?: string | null;
+}
+
 // ============================================================
 // 引用ネットワーク（Citation Network）
 // ============================================================

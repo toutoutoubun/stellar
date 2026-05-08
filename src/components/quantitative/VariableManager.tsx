@@ -8,7 +8,7 @@ import { useQuantitativeStore } from "../../stores/useQuantitativeStore";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { toast } from "../ui/Toast";
-import type { Variable, VariableType, LikertLabel } from "../../types";
+import type { Variable, VariableType, LikertLabel, CreateVariableInput } from "../../types";
 import { useI18nStore } from "../../stores/useI18nStore";
 import { IconChart, IconTag, IconClipboard, IconNote, IconCalendar, IconWarning } from "../ui/Icons";
 
@@ -34,14 +34,53 @@ export const VariableManager: React.FC = () => {
   const [editingVar, setEditingVar] = useState<Variable | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  // 自動検出（モック）
-  const handleAutoDetect = useCallback(() => {
+  const autoDetectVariableTypes = useQuantitativeStore((s) => s.autoDetectVariableTypes);
+  const createVariable = useQuantitativeStore((s) => s.createVariable);
+  const deleteVariable = useQuantitativeStore((s) => s.deleteVariable);
+
+  // 変数追加フォーム
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newVarName, setNewVarName] = useState("");
+
+  // 自動検出（バックエンド呼び出し）
+  const handleAutoDetect = useCallback(async () => {
+    if (!selectedDataset) return;
     toast.info(useI18nStore.getState().t.quantitative.k_ljmr10);
-    // 実際のバックエンド呼び出しに置き換え
-    setTimeout(() => {
+    try {
+      await autoDetectVariableTypes(selectedDataset.id);
       toast.success(useI18nStore.getState().t.quantitative.k_mj4q1j);
-    }, 800);
-  }, []);
+    } catch {
+      toast.error("変数タイプの自動検出に失敗しました");
+    }
+  }, [selectedDataset, autoDetectVariableTypes]);
+
+  // 変数の手動追加
+  const handleAddVariable = useCallback(async () => {
+    if (!selectedDataset || !newVarName.trim()) return;
+    try {
+      const input: CreateVariableInput = {
+        datasetId: selectedDataset.id,
+        columnIndex: variables.length,
+        name: newVarName.trim(),
+      };
+      await createVariable(input);
+      setNewVarName("");
+      setShowAddForm(false);
+      toast.success("変数を追加しました");
+    } catch {
+      toast.error("変数の追加に失敗しました");
+    }
+  }, [selectedDataset, newVarName, variables.length, createVariable]);
+
+  // 変数の削除
+  const handleDeleteVariable = useCallback(async (id: string) => {
+    try {
+      await deleteVariable(id);
+      toast.success("変数を削除しました");
+    } catch {
+      toast.error("変数の削除に失敗しました");
+    }
+  }, [deleteVariable]);
 
   // 変数カードのクリックで編集シートを開く
   const handleOpenSheet = useCallback((v: Variable) => {
@@ -88,29 +127,64 @@ export const VariableManager: React.FC = () => {
             {variables.length}個の変数
           </p>
         </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={handleAutoDetect}
-          loading={isLoading}
-          icon={
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-            </svg>
-          }
-        >
-          変数を自動検出
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setShowAddForm(!showAddForm)}
+            icon={
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            }
+          >
+            変数を追加
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void handleAutoDetect()}
+            loading={isLoading}
+            icon={
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+              </svg>
+            }
+          >
+            自動検出
+          </Button>
+        </div>
       </div>
+
+      {/* ── 変数追加フォーム ── */}
+      {showAddForm && (
+        <div
+          className="shrink-0 flex items-center gap-2 px-6 py-3"
+          style={{ borderBottom: "1px solid var(--color-border-secondary)", backgroundColor: "var(--color-bg-tertiary)" }}
+        >
+          <input
+            value={newVarName}
+            onChange={(e) => setNewVarName(e.target.value)}
+            placeholder="変数名を入力"
+            className="flex-1 text-sm px-3 py-1.5"
+            style={{ backgroundColor: "var(--color-bg-input)", border: "1px solid var(--color-border-primary)", borderRadius: "6px", color: "var(--color-text-primary)", outline: "none" }}
+            onKeyDown={(e) => { if (e.key === "Enter") void handleAddVariable(); }}
+            autoFocus
+          />
+          <Button variant="primary" size="sm" onClick={() => void handleAddVariable()} disabled={!newVarName.trim()}>追加</Button>
+          <Button variant="ghost" size="sm" onClick={() => { setShowAddForm(false); setNewVarName(""); }}>キャンセル</Button>
+        </div>
+      )}
 
       {/* ── 変数カードグリッド ── */}
       <div className="flex-1 overflow-y-auto p-6">
@@ -145,6 +219,7 @@ export const VariableManager: React.FC = () => {
                 index={idx}
                 onEdit={() => handleOpenSheet(v)}
                 onUpdate={updateVariable}
+                onDelete={handleDeleteVariable}
               />
             ))}
           </div>
@@ -172,7 +247,8 @@ const VariableCard: React.FC<{
   index: number;
   onEdit: () => void;
   onUpdate: (id: string, updates: Partial<Variable>) => Promise<void>;
-}> = ({ variable, index, onEdit, onUpdate }) => {
+  onDelete: (id: string) => Promise<void>;
+}> = ({ variable, index, onEdit, onUpdate, onDelete }) => {
   const meta = VARIABLE_TYPE_META[variable.variableType];
   const [editingName, setEditingName] = useState(false);
   const [editingLabel, setEditingLabel] = useState(false);
@@ -265,6 +341,30 @@ const VariableCard: React.FC<{
           </span>
         </div>
 
+        {/* 削除ボタン */}
+        <button
+          onClick={() => void onDelete(variable.id)}
+          className="flex items-center justify-center w-6 h-6"
+          style={{
+            borderRadius: "var(--radius-button)",
+            color: "var(--color-text-tertiary)",
+            transition: "all var(--transition-fast)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
+            e.currentTarget.style.color = "#ef4444";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent";
+            e.currentTarget.style.color = "var(--color-text-tertiary)";
+          }}
+          aria-label="削除"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          </svg>
+        </button>
         {/* 編集ボタン */}
         <button
           onClick={onEdit}

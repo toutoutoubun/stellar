@@ -61,6 +61,12 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
   const [importance, setImportance] = useState(3);
   const [lane, setLane] = useState("");
 
+  // インライン編集状態
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editImportance, setEditImportance] = useState(3);
+
   const loadEvents = useCallback(async () => {
     setLoading(true);
     try {
@@ -107,6 +113,40 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
       console.error(t.qualitative.k_hv8kd, err);
     }
   }, [title, description, dateInput, eventType, importance, lane, projectId, loadEvents]);
+
+  /** イベント編集開始 */
+  const startEditing = useCallback((event: TimelineEvent) => {
+    setEditingEventId(event.id);
+    setEditTitle(event.title);
+    setEditDescription(event.description ?? "");
+    setEditImportance(event.importance);
+  }, []);
+
+  /** イベント更新 (update_timeline_event) */
+  const handleUpdateEvent = useCallback(
+    async (id: string) => {
+      if (!editTitle.trim()) return;
+      try {
+        await invoke("update_timeline_event", {
+          id,
+          updates: {
+            title: editTitle.trim(),
+            description: editDescription.trim() || null,
+            importance: editImportance,
+          },
+        });
+        setEditingEventId(null);
+        void loadEvents();
+      } catch (err) {
+        console.error("[update_timeline_event] failed:", err);
+      }
+    },
+    [editTitle, editDescription, editImportance, loadEvents],
+  );
+
+  const cancelEditing = useCallback(() => {
+    setEditingEventId(null);
+  }, []);
 
   const handleDelete = useCallback(
     async (id: string) => {
@@ -339,58 +379,117 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ projectId }) => {
                   border: "1px solid var(--color-border-primary)",
                 }}
               >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-semibold" style={{ color: "var(--color-text-primary)" }}>
-                        {event.title}
-                      </span>
-                      <span
-                        className="text-xs px-1.5 py-0.5"
-                        style={{
-                          backgroundColor: "var(--color-bg-tertiary)",
-                          color: "var(--color-text-tertiary)",
-                          borderRadius: "999px",
-                          fontSize: "10px",
-                        }}
+                {editingEventId === event.id ? (
+                  /* ── インライン編集モード ── */
+                  <div className="flex flex-col gap-2">
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="w-full text-xs px-2 py-1.5"
+                      style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "6px", outline: "none" }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") void handleUpdateEvent(event.id);
+                        if (e.key === "Escape") cancelEditing();
+                      }}
+                      autoFocus
+                    />
+                    <textarea
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      rows={2}
+                      className="w-full text-xs px-2 py-1.5"
+                      style={{ backgroundColor: "var(--color-bg-primary)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-primary)", borderRadius: "6px", outline: "none", resize: "vertical" }}
+                    />
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>重要度 ({editImportance})</label>
+                      <input
+                        type="range"
+                        min={1}
+                        max={5}
+                        value={editImportance}
+                        onChange={(e) => setEditImportance(Number(e.target.value))}
+                        style={{ width: "80px" }}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void handleUpdateEvent(event.id)}
+                        className="text-xs px-3 py-1"
+                        style={{ backgroundColor: "var(--color-accent-primary)", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer" }}
                       >
-                        {EVENT_TYPE_LABELS[event.eventType] ?? event.eventType}
-                      </span>
-                      {event.dateType !== "exact" && (
+                        {t.common.save}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelEditing}
+                        className="text-xs px-3 py-1"
+                        style={{ backgroundColor: "transparent", color: "var(--color-text-secondary)", border: "1px solid var(--color-border-secondary)", borderRadius: "6px", cursor: "pointer" }}
+                      >
+                        {t.common.cancel}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* ── 表示モード ── */
+                  <div className="flex items-start justify-between">
+                    <div
+                      style={{ cursor: "pointer", flex: 1 }}
+                      onDoubleClick={() => startEditing(event)}
+                      title="ダブルクリックで編集"
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-semibold" style={{ color: "var(--color-text-primary)" }}>
+                          {event.title}
+                        </span>
                         <span
-                          className="text-xs px-1 py-0.5 inline-flex items-center gap-0.5"
+                          className="text-xs px-1.5 py-0.5"
                           style={{
-                            backgroundColor: "#f59e0b20",
-                            color: "#f59e0b",
-                            borderRadius: "3px",
-                            fontSize: "9px",
+                            backgroundColor: "var(--color-bg-tertiary)",
+                            color: "var(--color-text-tertiary)",
+                            borderRadius: "999px",
+                            fontSize: "10px",
                           }}
                         >
-                          <IconApproximate size={8} color="#f59e0b" />
-                          {event.dateType === "approximate" ? t.qualitative.k_hgc2 : event.dateType === "year" ? t.qualitative.k_e2jwl : t.qualitative.k_fbsmp}
+                          {EVENT_TYPE_LABELS[event.eventType] ?? event.eventType}
                         </span>
+                        {event.dateType !== "exact" && (
+                          <span
+                            className="text-xs px-1 py-0.5 inline-flex items-center gap-0.5"
+                            style={{
+                              backgroundColor: "#f59e0b20",
+                              color: "#f59e0b",
+                              borderRadius: "3px",
+                              fontSize: "9px",
+                            }}
+                          >
+                            <IconApproximate size={8} color="#f59e0b" />
+                            {event.dateType === "approximate" ? t.qualitative.k_hgc2 : event.dateType === "year" ? t.qualitative.k_e2jwl : t.qualitative.k_fbsmp}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+                        {event.eventDate}
+                        {event.lane && <span> / {event.lane}</span>}
+                      </div>
+                      {event.description && (
+                        <p className="text-xs mt-1" style={{ color: "var(--color-text-secondary)", lineHeight: "1.5" }}>
+                          {event.description}
+                        </p>
                       )}
                     </div>
-                    <div className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-                      {event.eventDate}
-                      {event.lane && <span> / {event.lane}</span>}
-                    </div>
-                    {event.description && (
-                      <p className="text-xs mt-1" style={{ color: "var(--color-text-secondary)", lineHeight: "1.5" }}>
-                        {event.description}
-                      </p>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => void handleDelete(event.id)}
+                      className="opacity-0 group-hover:opacity-100 shrink-0"
+                      title={t.common.delete}
+                      style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer", display: "flex", padding: "2px" }}
+                    >
+                      <IconDelete size={12} />
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => void handleDelete(event.id)}
-                    className="opacity-0 group-hover:opacity-100 shrink-0"
-                    title={t.common.delete}
-                    style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer", display: "flex", padding: "2px" }}
-                  >
-                    <IconDelete size={12} />
-                  </button>
-                </div>
+                )}
               </div>
             </div>
           ))}

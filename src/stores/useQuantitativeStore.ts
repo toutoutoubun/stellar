@@ -12,6 +12,8 @@ import type {
   Analysis,
   SaveAnalysisInput,
   DataStudioTab,
+  TokenFrequency,
+  CreateVariableInput,
 } from "../types";
 import { useI18nStore } from "./useI18nStore";
 
@@ -68,6 +70,16 @@ interface QuantitativeState {
   loadAnalyses: (datasetId: string) => Promise<void>;
   deleteDataset: (id: string) => Promise<void>;
   setTab: (tab: DataStudioTab) => void;
+  // ── 新規追加アクション ──
+  createVariable: (input: CreateVariableInput) => Promise<Variable>;
+  deleteVariable: (id: string) => Promise<void>;
+  autoDetectVariableTypes: (datasetId: string) => Promise<void>;
+  insertDataRows: (datasetId: string, rows: Record<string, unknown>[]) => Promise<number>;
+  deleteDataRows: (datasetId: string) => Promise<void>;
+  getTokenFrequencies: (datasetId: string, variableId: string, limit?: number) => Promise<TokenFrequency[]>;
+  saveTokenFrequencies: (datasetId: string, variableId: string, frequencies: TokenFrequency[]) => Promise<void>;
+  getAnalysis: (id: string) => Promise<Analysis | null>;
+  updateDataset: (id: string, updates: Partial<Dataset>) => Promise<void>;
 }
 
 // ============================================================
@@ -400,5 +412,154 @@ export const useQuantitativeStore = create<QuantitativeState>((set, get) => ({
   // ── タブ切り替え ──
   setTab: (tab: DataStudioTab) => {
     set({ dataStudioTab: tab });
+  },
+
+  // ── 変数の作成 ──
+  createVariable: async (input: CreateVariableInput) => {
+    set({ isLoading: true, error: null });
+    try {
+      const variable = await invoke<Variable>("create_variable", { input });
+      set((s) => ({ variables: [...s.variables, variable] }));
+      return variable;
+    } catch (e) {
+      const msg = typeof e === "string" ? e : "変数の作成に失敗しました";
+      set({ error: msg });
+      console.error("Failed to create variable:", e);
+      throw e;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  // ── 変数の削除 ──
+  deleteVariable: async (id: string) => {
+    const { variables } = get();
+    const prevVariables = [...variables];
+    set({ variables: variables.filter((v) => v.id !== id) });
+    try {
+      await invoke("delete_variable", { id });
+    } catch (e) {
+      set({ variables: prevVariables });
+      const msg = typeof e === "string" ? e : "変数の削除に失敗しました";
+      set({ error: msg });
+      console.error("Failed to delete variable:", e);
+      throw e;
+    }
+  },
+
+  // ── 変数タイプの自動検出 ──
+  autoDetectVariableTypes: async (datasetId: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const variables = await invoke<Variable[]>("auto_detect_variable_types", { datasetId });
+      set({ variables });
+    } catch (e) {
+      const msg = typeof e === "string" ? e : "変数タイプの自動検出に失敗しました";
+      set({ error: msg });
+      console.error("Failed to auto detect variable types:", e);
+      throw e;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  // ── データ行の挿入 ──
+  insertDataRows: async (datasetId: string, rows: Record<string, unknown>[]) => {
+    set({ isLoading: true, error: null });
+    try {
+      const count = await invoke<number>("insert_data_rows", { datasetId, rows });
+      // データを再読み込み
+      const [datasets, dataRows] = await Promise.all([
+        invoke<Dataset[]>("get_datasets"),
+        invoke<DataRow[]>("get_data_rows", {
+          datasetId,
+          offset: 0,
+          limit: get().previewPageSize,
+        }),
+      ]);
+      const updatedDataset = datasets.find((d) => d.id === datasetId) ?? null;
+      set({ datasets, selectedDataset: updatedDataset, dataRows, previewPage: 0 });
+      return count;
+    } catch (e) {
+      const msg = typeof e === "string" ? e : "データ行の挿入に失敗しました";
+      set({ error: msg });
+      console.error("Failed to insert data rows:", e);
+      throw e;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  // ── データ行の全削除 ──
+  deleteDataRows: async (datasetId: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      await invoke("delete_data_rows", { datasetId });
+      // データセット一覧を再取得
+      const datasets = await invoke<Dataset[]>("get_datasets");
+      const updatedDataset = datasets.find((d) => d.id === datasetId) ?? null;
+      set({ datasets, selectedDataset: updatedDataset, dataRows: [], previewPage: 0 });
+    } catch (e) {
+      const msg = typeof e === "string" ? e : "データ行の削除に失敗しました";
+      set({ error: msg });
+      console.error("Failed to delete data rows:", e);
+      throw e;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  // ── トークン頻度の取得 ──
+  getTokenFrequencies: async (datasetId: string, variableId: string, limit = 100) => {
+    try {
+      return await invoke<TokenFrequency[]>("get_token_frequencies", { datasetId, variableId, limit });
+    } catch (e) {
+      console.error("Failed to get token frequencies:", e);
+      return [];
+    }
+  },
+
+  // ── トークン頻度の保存 ──
+  saveTokenFrequencies: async (datasetId: string, variableId: string, frequencies: TokenFrequency[]) => {
+    try {
+      await invoke("save_token_frequencies", {
+        input: { datasetId, variableId, frequencies },
+      });
+    } catch (e) {
+      const msg = typeof e === "string" ? e : "トークン頻度の保存に失敗しました";
+      set({ error: msg });
+      console.error("Failed to save token frequencies:", e);
+      throw e;
+    }
+  },
+
+  // ── 分析結果の個別取得 ──
+  getAnalysis: async (id: string) => {
+    try {
+      return await invoke<Analysis | null>("get_analysis", { id });
+    } catch (e) {
+      console.error("Failed to get analysis:", e);
+      return null;
+    }
+  },
+
+  // ── データセットの更新 ──
+  updateDataset: async (id: string, updates: Partial<Dataset>) => {
+    const { datasets, selectedDataset } = get();
+    const prevDatasets = [...datasets];
+    // 楽観的更新
+    set({
+      datasets: datasets.map((d) => (d.id === id ? { ...d, ...updates } : d)),
+      selectedDataset: selectedDataset?.id === id ? { ...selectedDataset, ...updates } : selectedDataset,
+    });
+    try {
+      await invoke("update_dataset", { id, updates });
+    } catch (e) {
+      set({ datasets: prevDatasets });
+      const msg = typeof e === "string" ? e : "データセットの更新に失敗しました";
+      set({ error: msg });
+      console.error("Failed to update dataset:", e);
+      throw e;
+    }
   },
 }));

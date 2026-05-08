@@ -33,6 +33,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
   const isModified = useNoteStore((s) => s.isModified);
   const openNoteAction = useNoteStore((s) => s.openNote);
   const saveNote = useNoteStore((s) => s.saveNote);
+  const syncWordCount = useNoteStore((s) => s.syncWordCount);
   const updateNote = useNoteStore((s) => s.updateNote);
   const deleteNote = useNoteStore((s) => s.deleteNote);
   const setIsModified = useNoteStore((s) => s.setIsModified);
@@ -90,8 +91,11 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
     (content: string) => {
       if (!activeNote) return;
       void saveNote(activeNote.id, content);
+      // 単語数をバックエンドに同期
+      const wc = countWords(content);
+      void syncWordCount(activeNote.id, wc);
     },
-    [activeNote, saveNote],
+    [activeNote, saveNote, syncWordCount],
   );
 
   /** エディタ内容変更コールバック */

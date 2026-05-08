@@ -215,6 +215,7 @@ export const AnalysisHubView: React.FC = () => {
   const selectedDataset = useQuantitativeStore((s) => s.selectedDataset);
   const variables = useQuantitativeStore((s) => s.variables);
   const dataRows = useQuantitativeStore((s) => s.dataRows);
+  const getAnalysis = useQuantitativeStore((s) => s.getAnalysis);
   const createNote = useNoteStore((s) => s.createNote);
 
   const [selectedAnalysisId, setSelectedAnalysisId] = useState<string | null>(null);
@@ -242,6 +243,21 @@ export const AnalysisHubView: React.FC = () => {
     () => analyses.find((a) => a.id === selectedAnalysisId) ?? null,
     [analyses, selectedAnalysisId],
   );
+
+  /** 個別分析を最新データで再取得する（将来のUI拡張用） */
+  const handleRefreshAnalysis = useCallback(
+    async (id: string) => {
+      const fresh = await getAnalysis(id);
+      if (fresh) {
+        useQuantitativeStore.setState((s) => ({
+          analyses: s.analyses.map((a) => (a.id === id ? fresh : a)),
+        }));
+      }
+    },
+    [getAnalysis],
+  );
+  // 将来のUI拡張（分析カードのリフレッシュボタン）で使用予定
+  void handleRefreshAnalysis;
 
   const toggleGroup = useCallback((key: string) => {
     setCollapsedGroups((prev) => {

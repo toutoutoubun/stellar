@@ -75,6 +75,7 @@ export const DatasetList: React.FC = () => {
     (s) => s.createDatasetFromHighlights,
   );
   const setTab = useQuantitativeStore((s) => s.setTab);
+  const updateDataset = useQuantitativeStore((s) => s.updateDataset);
   const isLoading = useQuantitativeStore((s) => s.isLoading);
 
   // QDA プロジェクト（コード生成用）
@@ -411,7 +412,18 @@ export const DatasetList: React.FC = () => {
             {
               label: t.quantitative.k_ay4t7v,
               icon: <IconEdit size={13} />,
-              action: () => setContextMenu(null),
+              action: () => {
+                if (!contextMenu) return;
+                const ds = datasets.find((d) => d.id === contextMenu.datasetId);
+                if (!ds) { setContextMenu(null); return; }
+                const newName = window.prompt(t.quantitative.k_otpnnt, ds.name);
+                if (newName && newName.trim() && newName.trim() !== ds.name) {
+                  void updateDataset(ds.id, { name: newName.trim() })
+                    .then(() => toast.success(t.quantitative.k_7zq8nc))
+                    .catch(() => toast.error("更新に失敗しました"));
+                }
+                setContextMenu(null);
+              },
             },
             {
               label: t.quantitative.k_y5e6kx,

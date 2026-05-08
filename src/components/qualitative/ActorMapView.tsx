@@ -120,6 +120,19 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
     }
   }, [actorName, actorType, actorPosition, actorInfluence, actorDescription, projectId, loadData]);
 
+  /** アクターを更新する */
+  const handleUpdateActor = useCallback(
+    async (id: string, updates: Partial<Pick<Actor, "name" | "actorType" | "position" | "influence" | "description">>) => {
+      try {
+        await invoke("update_actor", { id, updates });
+        void loadData();
+      } catch (err) {
+        console.error("Failed to update actor:", err);
+      }
+    },
+    [loadData],
+  );
+
   const handleDeleteActor = useCallback(
     async (id: string) => {
       const ok = await swalConfirm(t.qualitative.k_h74we4, t.qualitative.k_sqto2n);
@@ -290,7 +303,17 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
                     >
                       {ACTOR_TYPES.find((t) => t.value === actor.actorType)?.label ?? actor.actorType}
                     </span>
-                    <span className="text-xs font-medium" style={{ color: "var(--color-text-primary)" }}>{actor.name}</span>
+                    <span
+                      className="text-xs font-medium"
+                      style={{ color: "var(--color-text-primary)", cursor: "pointer" }}
+                      title="ダブルクリックで名前を編集"
+                      onDoubleClick={() => {
+                        const newName = window.prompt("アクター名を編集", actor.name);
+                        if (newName && newName.trim() && newName.trim() !== actor.name) {
+                          void handleUpdateActor(actor.id, { name: newName.trim() });
+                        }
+                      }}
+                    >{actor.name}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     {renderInfluenceDots(actor.influence)}

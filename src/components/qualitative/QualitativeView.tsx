@@ -8,6 +8,7 @@ import { swalConfirm } from "../../lib/swal";
 import type {
   QualProject,
   CreateQualProjectInput,
+  UpdateQualProjectInput,
   QualitativeTab,
 } from "../../types";
 
@@ -73,6 +74,10 @@ const QualitativeView: React.FC = () => {
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectMethod, setNewProjectMethod] = useState("thematic");
 
+  // プロジェクト名インライン編集
+  const [renamingProjectId, setRenamingProjectId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
   // 折りたたみ状態
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [tabBarCollapsed, setTabBarCollapsed] = useState(false);
@@ -116,6 +121,33 @@ const QualitativeView: React.FC = () => {
       console.error(t.qualitative.k_2ft95d, err);
     }
   }, [newProjectName, newProjectMethod]);
+
+  /** プロジェクト更新 (update_project) */
+  const handleUpdateProject = useCallback(
+    async (id: string, updates: UpdateQualProjectInput) => {
+      try {
+        const updated = await invoke<QualProject | null>("update_project", { id, updates });
+        if (updated) {
+          setProjects((prev) => prev.map((p) => (p.id === id ? updated : p)));
+        }
+      } catch (err) {
+        console.error("[update_project] failed:", err);
+      }
+    },
+    [],
+  );
+
+  /** プロジェクト名リネーム確定 */
+  const commitRename = useCallback(
+    async (id: string) => {
+      const trimmed = renameValue.trim();
+      if (trimmed) {
+        await handleUpdateProject(id, { name: trimmed });
+      }
+      setRenamingProjectId(null);
+    },
+    [renameValue, handleUpdateProject],
+  );
 
   const handleDeleteProject = useCallback(
     async (id: string) => {
@@ -372,7 +404,41 @@ const QualitativeView: React.FC = () => {
                   }}
                   onClick={() => { setSelectedProjectId(p.id); setActiveTab("dashboard"); }}
                 >
-                  <span className="text-sm truncate flex-1">{p.name}</span>
+                  {renamingProjectId === p.id ? (
+                    <input
+                      type="text"
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      className="text-sm flex-1 px-1 py-0"
+                      style={{
+                        backgroundColor: "var(--color-bg-primary)",
+                        color: "var(--color-text-primary)",
+                        border: "1px solid var(--color-accent-primary)",
+                        borderRadius: "3px",
+                        outline: "none",
+                        minWidth: 0,
+                      }}
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") void commitRename(p.id);
+                        if (e.key === "Escape") setRenamingProjectId(null);
+                      }}
+                      onBlur={() => void commitRename(p.id)}
+                    />
+                  ) : (
+                    <span
+                      className="text-sm truncate flex-1"
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        setRenamingProjectId(p.id);
+                        setRenameValue(p.name);
+                      }}
+                      title="ダブルクリックでリネーム"
+                    >
+                      {p.name}
+                    </span>
+                  )}
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); void handleDeleteProject(p.id); }}

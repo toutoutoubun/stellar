@@ -69,6 +69,7 @@ export const NoteList: React.FC = () => {
   const mainPaneContent = useUIStore((s) => s.mainPaneContent);
 
   const [searchFocused, setSearchFocused] = useState(false);
+  const [showDraftsOnly, setShowDraftsOnly] = useState(false);
   const scrollSentinelRef = useRef<HTMLDivElement>(null);
 
   // ── Intersection Observer でスクロール末端を検知 ──
@@ -96,6 +97,11 @@ export const NoteList: React.FC = () => {
   const filteredNotes = useMemo(() => {
     let result = [...notes];
 
+    // 下書きフィルタ
+    if (showDraftsOnly) {
+      result = result.filter((n) => n.isDraft === 1);
+    }
+
     // テキストフィルタ
     if (filterQuery.trim()) {
       const q = filterQuery.toLowerCase();
@@ -116,7 +122,7 @@ export const NoteList: React.FC = () => {
     });
 
     return result;
-  }, [notes, filterQuery, sortKey, sortDirection]);
+  }, [notes, filterQuery, sortKey, sortDirection, showDraftsOnly]);
 
   /** 新規ノート作成 */
   const handleCreateNote = useCallback(async () => {
@@ -378,9 +384,27 @@ export const NoteList: React.FC = () => {
             )}
           </button>
         ))}
-        {filterQuery.trim() && (
+        {/* 下書きフィルタボタン */}
+        <button
+          type="button"
+          onClick={() => setShowDraftsOnly((v) => !v)}
+          className="text-xs ml-auto"
+          style={{
+            color: showDraftsOnly ? "var(--color-accent-primary)" : "var(--color-text-tertiary)",
+            fontWeight: showDraftsOnly ? 600 : 400,
+            padding: "3px 8px",
+            borderRadius: "6px",
+            backgroundColor: showDraftsOnly ? "var(--color-bg-hover)" : "transparent",
+            transition: "all 150ms ease-out",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          {t.draftMode.draftBadge}
+        </button>
+        {(filterQuery.trim() || showDraftsOnly) && (
           <span
-            className="text-xs ml-auto"
+            className="text-xs"
             style={{ color: "var(--color-text-tertiary)" }}
           >
             {filteredNotes.length} {t.common.items}

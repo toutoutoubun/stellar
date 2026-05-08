@@ -12,6 +12,7 @@ import { Input } from "../ui/Input";
 import { toast } from "../ui/Toast";
 import type { Variable, SortDirection } from "../../types";
 import { useT } from "../../stores/useI18nStore";
+import { swalConfirm } from "../../lib/swal";
 
 // ── 変数タイプ別スタイル ──
 const NOMINAL_COLORS = [
@@ -50,6 +51,7 @@ export const DataPreviewTable: React.FC = () => {
   const previewPageSize = useQuantitativeStore((s) => s.previewPageSize);
   const loadDataRows = useQuantitativeStore((s) => s.loadDataRows);
   const isLoading = useQuantitativeStore((s) => s.isLoading);
+  const insertDataRows = useQuantitativeStore((s) => s.insertDataRows);
 
   // ソート状態
   const [sortKey, setSortKey] = useState<string | null>(null);
@@ -274,6 +276,65 @@ export const DataPreviewTable: React.FC = () => {
               ? t.quantitative.k_rgcwb4
               : t.quantitative.k_dc6a3h}
           </span>
+
+          {/* 空行追加ボタン */}
+          {variables.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => {
+                if (!selectedDataset) return;
+                try {
+                  const emptyRow: Record<string, unknown> = {};
+                  for (const v of variables) {
+                    emptyRow[v.name] = null;
+                  }
+                  await insertDataRows(selectedDataset.id, [emptyRow]);
+                  toast.success("行を追加しました");
+                } catch {
+                  toast.error("行の追加に失敗しました");
+                }
+              }}
+              icon={
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              }
+              style={{ color: "var(--color-text-tertiary)" }}
+            >
+              行追加
+            </Button>
+          )}
+
+          {/* データ行全削除ボタン */}
+          {dataRows.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => {
+                if (!selectedDataset) return;
+                const ok = await swalConfirm("データ行の全削除", "すべてのデータ行を削除しますか？この操作は取り消せません。");
+                if (!ok) return;
+                try {
+                  const deleteDataRows = useQuantitativeStore.getState().deleteDataRows;
+                  await deleteDataRows(selectedDataset.id);
+                  toast.success("データ行を削除しました");
+                } catch {
+                  toast.error("データ行の削除に失敗しました");
+                }
+              }}
+              icon={
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+              }
+              style={{ color: "var(--color-text-tertiary)" }}
+            >
+              全削除
+            </Button>
+          )}
 
           {/* エクスポートボタン */}
           <Button

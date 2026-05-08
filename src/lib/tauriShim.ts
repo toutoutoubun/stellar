@@ -104,6 +104,34 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     mockStore.projects = mockStore.projects.filter((p) => p.id !== args?.id);
     return { handled: true, result: undefined };
   }
+  if (cmd === "update_project" || cmd === "update_qual_project") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updates = (args?.updates ?? args?.input ?? {}) as any;
+    const idx = mockStore.projects.findIndex((p) => p.id === args?.id);
+    if (idx !== -1) {
+      const proj = mockStore.projects[idx]!;
+      if (updates.name !== undefined) proj.name = updates.name;
+      if (updates.description !== undefined) proj.description = updates.description;
+      if (updates.methodType !== undefined) proj.methodType = updates.methodType;
+      proj.updatedAt = now();
+      return { handled: true, result: { ...proj } };
+    }
+    return { handled: true, result: null };
+  }
+
+  // ── Tags (Library) ──
+  if (cmd === "get_all_tags") {
+    const tagCount = new Map<string, number>();
+    for (const paper of mockStore.papers) {
+      for (const tag of (paper.tags ?? [])) {
+        tagCount.set(tag, (tagCount.get(tag) ?? 0) + 1);
+      }
+    }
+    const result = [...tagCount.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => ({ name, count }));
+    return { handled: true, result };
+  }
 
   // ── Papers (Library) ──
   if (cmd === "get_papers") {

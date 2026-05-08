@@ -21,6 +21,7 @@ import { WordCloud } from "../charts";
 import { BarChart } from "../charts";
 import { downloadSVG, downloadPNG } from "../../../lib/utils/exportChart";
 import { useI18nStore } from "../../../stores/useI18nStore";
+import { useQuantitativeStore } from "../../../stores/useQuantitativeStore";
 
 // ── Force graph dynamic loader (same pattern as main graph view) ──
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -171,6 +172,27 @@ export const TextAnalysisView: React.FC<Props> = ({ analysis, variables, dataRow
     setStopwords((prev) => prev.filter((x) => x !== w));
   }, []);
 
+  // Token frequency store actions
+  const getTokenFrequencies = useQuantitativeStore((s) => s.getTokenFrequencies);
+  const saveTokenFrequencies = useQuantitativeStore((s) => s.saveTokenFrequencies);
+  const selectedDataset = useQuantitativeStore((s) => s.selectedDataset);
+
+  // Load saved token frequencies on mount
+  useEffect(() => {
+    if (!selectedDataset || !primary) return;
+    void (async () => {
+      try {
+        const saved = await getTokenFrequencies(selectedDataset.id, primary.variableId);
+        if (saved && saved.length > 0) {
+          // Saved frequencies available — can be used for comparison
+          console.debug(`[TextAnalysis] Loaded ${saved.length} saved token frequencies`);
+        }
+      } catch {
+        // Silent — saved frequencies are optional
+      }
+    })();
+  }, [selectedDataset, primary, getTokenFrequencies]);
+
   const reanalyze = useCallback(async () => {
     if (!primary || stopwords.length === 0) return;
     setReanalyzing(true);
@@ -179,12 +201,27 @@ export const TextAnalysisView: React.FC<Props> = ({ analysis, variables, dataRow
       const texts = getTextValues(primary.variableId);
       const result = await analyzeTextVariable(texts, primary.variableId, stopwords);
       setDraftResult(result);
+
+      // Save token frequencies to backend
+      if (selectedDataset && result.topWords.length > 0) {
+        const freqs: import("../../../types").TokenFrequency[] = result.topWords.map((w, i) => ({
+          id: `tf-${selectedDataset.id}-${primary.variableId}-${String(i)}`,
+          datasetId: selectedDataset.id,
+          variableId: primary.variableId,
+          token: w.token,
+          frequency: w.frequency,
+          tfIdf: w.tfidf ?? null,
+          pos: w.pos ?? null,
+          documentCount: null,
+        }));
+        void saveTokenFrequencies(selectedDataset.id, primary.variableId, freqs);
+      }
     } catch (e) {
       console.error("Re-analysis failed:", e);
     } finally {
       setReanalyzing(false);
     }
-  }, [primary, stopwords, getTextValues]);
+  }, [primary, stopwords, getTextValues, selectedDataset, saveTokenFrequencies]);
 
   if (!activeResult) {
     return (

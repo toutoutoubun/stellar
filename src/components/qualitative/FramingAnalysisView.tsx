@@ -117,6 +117,52 @@ export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({
     [selectedFrame, loadData]
   );
 
+  /** ハイライトにフレームを割り当てる（将来のUI拡張用） */
+  const assignFrameToHighlight = useCallback(
+    async (frameId: string, highlightId: string) => {
+      try {
+        await invoke("assign_frame_to_highlight", { frameId, highlightId });
+        void loadData();
+      } catch (err) {
+        console.error("Failed to assign frame to highlight:", err);
+      }
+    },
+    [loadData],
+  );
+
+  /** ハイライトからフレームを削除する（将来のUI拡張用） */
+  const removeFrameFromHighlight = useCallback(
+    async (frameId: string, highlightId: string) => {
+      try {
+        await invoke("remove_frame_from_highlight", { frameId, highlightId });
+        void loadData();
+      } catch (err) {
+        console.error("Failed to remove frame from highlight:", err);
+      }
+    },
+    [loadData],
+  );
+
+  /** ハイライトに紐づくフレーム一覧を取得する（将来のUI拡張用） */
+  const getHighlightFrames = useCallback(
+    async (highlightId: string): Promise<Frame[]> => {
+      try {
+        const result = await invoke<Frame[]>("get_highlight_frames", { highlightId });
+        return Array.isArray(result) ? result : [];
+      } catch (err) {
+        console.error("Failed to get highlight frames:", err);
+        return [];
+      }
+    },
+    [],
+  );
+
+  // ハイライト操作関数群 — 将来のUI拡張（ハイライト⇔フレーム紐付けパネル）で使用予定
+  // noUnusedLocals 回避のため参照を保持
+  void assignFrameToHighlight;
+  void removeFrameFromHighlight;
+  void getHighlightFrames;
+
   if (loading) {
     return (
       <div

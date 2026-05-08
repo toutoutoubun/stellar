@@ -10,6 +10,7 @@ import type {
   NoteSortKey,
   SortDirection,
   AutoSaveStatus,
+  DraftResponse,
 } from "../types";
 import { invoke } from "../lib/tauriShim";
 
@@ -82,6 +83,10 @@ interface NoteState {
   setSortDirection: (direction: SortDirection) => void;
   /** フィルタークエリを設定する */
   setFilterQuery: (query: string) => void;
+  /** 下書き一覧を取得する */
+  fetchDrafts: () => Promise<DraftResponse[]>;
+  /** 単語数を同期する */
+  syncWordCount: (noteId: string, wordCount: number) => Promise<void>;
 }
 
 export const useNoteStore = create<NoteState>((set, get) => ({
@@ -228,4 +233,34 @@ export const useNoteStore = create<NoteState>((set, get) => ({
 
   setSortDirection: (direction) => set({ sortDirection: direction }),
   setFilterQuery: (query) => set({ filterQuery: query }),
+
+  // ── 下書き一覧の取得 ──
+  fetchDrafts: async () => {
+    try {
+      const drafts = await invoke<DraftResponse[]>("get_drafts");
+      return Array.isArray(drafts) ? drafts : [];
+    } catch (e) {
+      console.error("[fetchDrafts] failed:", e);
+      return [];
+    }
+  },
+
+  // ── 単語数の同期 ──
+  syncWordCount: async (noteId: string, wordCount: number) => {
+    try {
+      await invoke("sync_word_count", { noteId, wordCount });
+      // ローカル状態も更新
+      set((state) => ({
+        notes: state.notes.map((n) =>
+          n.id === noteId ? { ...n, wordCount } : n
+        ),
+        activeNote:
+          state.activeNote?.id === noteId
+            ? { ...state.activeNote, wordCount }
+            : state.activeNote,
+      }));
+    } catch (e) {
+      console.error("[syncWordCount] failed:", e);
+    }
+  },
 }));
