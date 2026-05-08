@@ -418,6 +418,79 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     return { handled: true, result };
   }
 
+  // ── メタデータ取得（ブラウザ開発用モック）──
+  // 実環境では Rust 側の CrossRef API / HTML スクレイピングが動くが、
+  // ブラウザプレビューではサンプルデータを返す
+  if (cmd === "fetch_metadata_by_doi") {
+    const doi = (args?.doi ?? "") as string;
+    if (!doi) return { handled: true, result: {} };
+    // DOI からそれらしいモックメタデータを生成
+    const mockMeta = {
+      title: `[Mock] Article for DOI: ${doi}`,
+      authors: ["Mock Author A", "Mock Author B"],
+      year: 2024,
+      journal: "Mock Journal of Research",
+      volume: "12",
+      issue: "3",
+      pages: "100-115",
+      doi: doi,
+      url: `https://doi.org/${doi}`,
+      abstract: `This is a mock abstract for the paper with DOI ${doi}. In a real Tauri environment, this would be fetched from the CrossRef API.`,
+    };
+    return { handled: true, result: mockMeta };
+  }
+
+  if (cmd === "fetch_metadata_from_url") {
+    const url = (args?.url ?? "") as string;
+    if (!url) return { handled: true, result: {} };
+    // URL からそれらしいモックメタデータを生成
+    const hostname = (() => { try { return new URL(url).hostname; } catch { return "unknown"; } })();
+    const siteNames: Record<string, string> = {
+      "www.jstage.jst.go.jp": "J-Stage",
+      "jstage.jst.go.jp": "J-Stage",
+      "www.sciencedirect.com": "ScienceDirect",
+      "www.tandfonline.com": "Taylor & Francis Online",
+      "www.jstor.org": "JSTOR",
+      "journals.co.za": "Sabinet African Journals",
+      "irdb.nii.ac.jp": "IRDB",
+      "cir.nii.ac.jp": "CiNii Research",
+      "www.scielo.br": "SciELO Brazil",
+      "www.scielo.org.mx": "SciELO Mexico",
+      "arxiv.org": "arXiv",
+      "pubmed.ncbi.nlm.nih.gov": "PubMed",
+      "link.springer.com": "Springer",
+      "www.nature.com": "Nature",
+    };
+    const siteName = siteNames[hostname] || hostname;
+    const mockMeta = {
+      title: `[Mock] Sample Article from ${siteName}`,
+      authors: ["Sample Author"],
+      year: 2024,
+      journal: `${siteName} Journal`,
+      volume: "5",
+      issue: "1",
+      pages: "1-20",
+      doi: "10.1234/mock.2024.001",
+      url: url,
+      abstract: `This is a mock abstract for a paper fetched from ${siteName} (${url}). In a real Tauri environment, the Rust backend would scrape metadata from the actual page using site-specific strategies.`,
+    };
+    return { handled: true, result: mockMeta };
+  }
+
+  if (cmd === "extract_metadata_from_pdf") {
+    const pdfPath = (args?.pdf_path ?? args?.pdfPath ?? "/mock/sample.pdf") as string;
+    const fileName = pdfPath.split("/").pop()?.replace(".pdf", "") ?? "Sample Paper";
+    const mockMeta = {
+      title: fileName.replace(/[-_]/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+      authors: ["Author A"],
+      year: 2024,
+      abstract: null,
+      pdfPath: pdfPath,
+      tags: [],
+    };
+    return { handled: true, result: mockMeta };
+  }
+
   return { handled: false };
 }
 
@@ -461,8 +534,8 @@ const MOCK_RESPONSES: Record<string, any> = {
   // Library — PDF/metadata helpers
   attach_pdf: null,
   import_pdf: null,
-  fetch_metadata_by_doi: {},
-  fetch_metadata_from_url: {},
+  // fetch_metadata_by_doi, fetch_metadata_from_url, extract_metadata_from_pdf
+  // → 動的ハンドラで処理（handleDynamic 参照）
   get_recent_items: [],
 
   // Notes — attachment helper
@@ -573,7 +646,7 @@ const MOCK_RESPONSES: Record<string, any> = {
   sync_word_count: undefined,
 
   // PDF metadata extraction
-  extract_metadata_from_pdf: { title: "Sample Paper", authors: ["Author A"], year: 2024, abstract: null, pdfPath: "/mock/sample.pdf", tags: [] },
+  // extract_metadata_from_pdf → 動的ハンドラで処理
 
   // Export / Import
   export_static_site: "/mock/export/static-site",

@@ -158,8 +158,10 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
       );
       applyMetadata({ ...data, url: urlInput.trim() });
       toast.success(useI18nStore.getState().t.library.k_2uf93e);
-    } catch {
-      toast.error(useI18nStore.getState().t.library.k_qr44fw);
+    } catch (e) {
+      const errMsg = String(e).replace(/^Error:\s*/i, "");
+      console.error("[AddPaperModal] URL メタデータ取得失敗:", e);
+      toast.error(useI18nStore.getState().t.library.k_qr44fw.replace("${String(e)}", errMsg));
     } finally {
       setFetching(false);
     }
@@ -180,8 +182,10 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
       );
       applyMetadata({ ...data, doi: doiInput.trim() });
       toast.success(useI18nStore.getState().t.library.k_2uf93e);
-    } catch {
-      toast.error(useI18nStore.getState().t.library.k_qr44fw);
+    } catch (e) {
+      const errMsg = String(e).replace(/^Error:\s*/i, "");
+      console.error("[AddPaperModal] DOI メタデータ取得失敗:", e);
+      toast.error(useI18nStore.getState().t.library.k_qr44fw.replace("${String(e)}", errMsg));
     } finally {
       setFetching(false);
     }
