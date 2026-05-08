@@ -113,7 +113,7 @@ pub struct HighlightRect {
 }
 
 /// 論文レスポンス — フロントエンドに返す展開済み論文データ
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaperResponse {
     pub id: String,
@@ -145,7 +145,7 @@ pub struct PaperWithLinks {
 }
 
 /// ノートレスポンス — フロントエンドに返す展開済みノートデータ
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NoteResponse {
     pub id: String,
