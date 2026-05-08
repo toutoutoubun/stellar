@@ -4,9 +4,9 @@
 // エディタにコードブロック ```mermaid ... ``` として挿入
 
 import type React from "react";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { Modal } from "../ui/Modal";
-import { useT, useI18nStore } from "../../stores/useI18nStore";
+import { useT } from "../../stores/useI18nStore";
 
 // ============================================================
 // テンプレート定義
@@ -19,57 +19,122 @@ interface MermaidTemplate {
   code: string;
 }
 
-const MERMAID_TEMPLATES: MermaidTemplate[] = [
-  {
-    id: "flowchart",
-    label: useI18nStore.getState().t.notes.k_wflnpu,
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="18" height="5" rx="1" />
-        <line x1="12" y1="8" x2="12" y2="12" />
-        <polygon points="12 12 7 17 12 22 17 17 12 12" />
-      </svg>
-    ),
-    code: `graph TD
-    A[${useI18nStore.getState().t.notes.k_mmd_flow_start}] --> B{${useI18nStore.getState().t.notes.k_mmd_flow_branch}}
-    B -->|${useI18nStore.getState().t.notes.k_mmd_flow_yes}| C[${useI18nStore.getState().t.notes.k_mmd_flow_procA}]
-    B -->|${useI18nStore.getState().t.notes.k_mmd_flow_no}| D[${useI18nStore.getState().t.notes.k_mmd_flow_procB}]
-    C --> E[${useI18nStore.getState().t.notes.k_mmd_flow_end}]
+// アイコン定義（静的なので外に出す）
+const ICONS = {
+  flowchart: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="5" rx="1" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <polygon points="12 12 7 17 12 22 17 17 12 12" />
+    </svg>
+  ),
+  sequence: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="6" y1="3" x2="6" y2="21" />
+      <line x1="18" y1="3" x2="18" y2="21" />
+      <line x1="6" y1="8" x2="18" y2="8" />
+      <polyline points="15 5 18 8 15 11" />
+      <line x1="18" y1="16" x2="6" y2="16" />
+      <polyline points="9 13 6 16 9 19" />
+    </svg>
+  ),
+  class: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <line x1="3" y1="9" x2="21" y2="9" />
+      <line x1="3" y1="15" x2="21" y2="15" />
+    </svg>
+  ),
+  gantt: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="4" y1="6" x2="20" y2="6" />
+      <line x1="4" y1="12" x2="16" y2="12" />
+      <line x1="4" y1="18" x2="12" y2="18" />
+      <rect x="4" y="4" width="10" height="4" rx="1" fill="currentColor" opacity="0.2" />
+      <rect x="4" y="10" width="8" height="4" rx="1" fill="currentColor" opacity="0.2" />
+    </svg>
+  ),
+  mindmap: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3" />
+      <line x1="12" y1="3" x2="12" y2="9" />
+      <line x1="12" y1="15" x2="12" y2="21" />
+      <line x1="3" y1="12" x2="9" y2="12" />
+      <line x1="15" y1="12" x2="21" y2="12" />
+    </svg>
+  ),
+  state: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="12" r="4" />
+      <circle cx="18" cy="12" r="4" />
+      <line x1="12" y1="12" x2="14" y2="12" />
+      <polyline points="13 10 15 12 13 14" />
+    </svg>
+  ),
+  er: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="8" height="6" rx="1" />
+      <rect x="14" y="3" width="8" height="6" rx="1" />
+      <rect x="8" y="15" width="8" height="6" rx="1" />
+      <line x1="10" y1="6" x2="14" y2="6" />
+      <line x1="12" y1="15" x2="6" y2="9" />
+      <line x1="12" y1="15" x2="18" y2="9" />
+    </svg>
+  ),
+  pie: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+      <path d="M22 12A10 10 0 0 0 12 2v10z" />
+    </svg>
+  ),
+} as const;
+
+/**
+ * 翻訳オブジェクトを受け取り、テンプレート配列を生成する。
+ *
+ * 【重要】モジュールスコープで useI18nStore.getState() を呼ぶと、
+ * モジュール読み込み時（ストア初期化前）の値が固定され、
+ * 言語切替にも追従しない。
+ * → コンポーネント内で useMemo + useT() 経由で呼び出すことで
+ *   常に最新の翻訳を使用する。
+ *
+ * 【型注記】notes セクションのキーは 100+ あるため、Vite の rollup
+ * 型チェッカーが `... 113 more ...` と省略してプロパティを見失う場合がある。
+ * Record<string, string> にキャストして回避する（tsc --noEmit は通る）。
+ */
+function buildTemplates(t: ReturnType<typeof useT>): MermaidTemplate[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const n = t.notes as any;
+  return [
+    {
+      id: "flowchart",
+      label: n.k_mmd_tpl_flowchart,
+      icon: ICONS.flowchart,
+      code: `graph TD
+    A[${n.k_mmd_flow_start}] --> B{${n.k_mmd_flow_branch}}
+    B -->|${n.k_mmd_flow_yes}| C[${n.k_mmd_flow_procA}]
+    B -->|${n.k_mmd_flow_no}| D[${n.k_mmd_flow_procB}]
+    C --> E[${n.k_mmd_flow_end}]
     D --> E`,
-  },
-  {
-    id: "sequence",
-    label: useI18nStore.getState().t.notes.k_639uzj,
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="6" y1="3" x2="6" y2="21" />
-        <line x1="18" y1="3" x2="18" y2="21" />
-        <line x1="6" y1="8" x2="18" y2="8" />
-        <polyline points="15 5 18 8 15 11" />
-        <line x1="18" y1="16" x2="6" y2="16" />
-        <polyline points="9 13 6 16 9 19" />
-      </svg>
-    ),
-    code: `sequenceDiagram
-    participant A as ${useI18nStore.getState().t.notes.k_mmd_seq_user}
-    participant B as ${useI18nStore.getState().t.notes.k_mmd_seq_system}
-    participant C as ${useI18nStore.getState().t.notes.k_mmd_seq_db}
-    A->>B: ${useI18nStore.getState().t.notes.k_mmd_seq_request}
-    B->>C: ${useI18nStore.getState().t.notes.k_mmd_seq_query}
-    C-->>B: ${useI18nStore.getState().t.notes.k_mmd_seq_result}
-    B-->>A: ${useI18nStore.getState().t.notes.k_mmd_seq_response}`,
-  },
-  {
-    id: "class",
-    label: useI18nStore.getState().t.notes.k_6cglis,
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-        <line x1="3" y1="9" x2="21" y2="9" />
-        <line x1="3" y1="15" x2="21" y2="15" />
-      </svg>
-    ),
-    code: `classDiagram
+    },
+    {
+      id: "sequence",
+      label: n.k_mmd_tpl_sequence,
+      icon: ICONS.sequence,
+      code: `sequenceDiagram
+    participant A as ${n.k_mmd_seq_user}
+    participant B as ${n.k_mmd_seq_system}
+    participant C as ${n.k_mmd_seq_db}
+    A->>B: ${n.k_mmd_seq_request}
+    B->>C: ${n.k_mmd_seq_query}
+    C-->>B: ${n.k_mmd_seq_result}
+    B-->>A: ${n.k_mmd_seq_response}`,
+    },
+    {
+      id: "class",
+      label: n.k_mmd_tpl_class,
+      icon: ICONS.class,
+      code: `classDiagram
     class Animal {
         +String name
         +int age
@@ -85,86 +150,54 @@ const MERMAID_TEMPLATES: MermaidTemplate[] = [
     }
     Animal <|-- Dog
     Animal <|-- Cat`,
-  },
-  {
-    id: "gantt",
-    label: useI18nStore.getState().t.notes.k_xwvvz,
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="4" y1="6" x2="20" y2="6" />
-        <line x1="4" y1="12" x2="16" y2="12" />
-        <line x1="4" y1="18" x2="12" y2="18" />
-        <rect x="4" y="4" width="10" height="4" rx="1" fill="currentColor" opacity="0.2" />
-        <rect x="4" y="10" width="8" height="4" rx="1" fill="currentColor" opacity="0.2" />
-      </svg>
-    ),
-    code: `gantt
-    title ${useI18nStore.getState().t.notes.k_mmd_gantt_title}
+    },
+    {
+      id: "gantt",
+      label: n.k_mmd_tpl_gantt,
+      icon: ICONS.gantt,
+      code: `gantt
+    title ${n.k_mmd_gantt_title}
     dateFormat  YYYY-MM-DD
-    section ${useI18nStore.getState().t.notes.k_mmd_gantt_phase1}
-    ${useI18nStore.getState().t.notes.k_mmd_gantt_req}      :a1, 2024-01-01, 14d
-    ${useI18nStore.getState().t.notes.k_mmd_gantt_design}          :a2, after a1, 10d
-    section ${useI18nStore.getState().t.notes.k_mmd_gantt_phase2}
-    ${useI18nStore.getState().t.notes.k_mmd_gantt_impl}          :b1, after a2, 21d
-    ${useI18nStore.getState().t.notes.k_mmd_gantt_test}        :b2, after b1, 7d`,
-  },
-  {
-    id: "mindmap",
-    label: useI18nStore.getState().t.notes.k_c85hii,
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="3" />
-        <line x1="12" y1="3" x2="12" y2="9" />
-        <line x1="12" y1="15" x2="12" y2="21" />
-        <line x1="3" y1="12" x2="9" y2="12" />
-        <line x1="15" y1="12" x2="21" y2="12" />
-      </svg>
-    ),
-    code: `mindmap
-  root((${useI18nStore.getState().t.notes.k_mmd_mind_root}))
-    ${useI18nStore.getState().t.notes.k_mmd_mind_prior}
-      ${useI18nStore.getState().t.notes.k_mmd_mind_paperA}
-      ${useI18nStore.getState().t.notes.k_mmd_mind_paperB}
-    {t.qualitative.k_hbe2}
-      ${useI18nStore.getState().t.notes.k_mmd_mind_exp1}
-      ${useI18nStore.getState().t.notes.k_mmd_mind_exp2}
-    {t.qualitative.k_lvt8}
-      {t.notes.k_eiq2}
-      ${useI18nStore.getState().t.notes.k_mmd_mind_discuss}`,
-  },
-  {
-    id: "state",
-    label: useI18nStore.getState().t.notes.k_z7gmmy,
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="8" cy="12" r="4" />
-        <circle cx="18" cy="12" r="4" />
-        <line x1="12" y1="12" x2="14" y2="12" />
-        <polyline points="13 10 15 12 13 14" />
-      </svg>
-    ),
-    code: `stateDiagram-v2
-    [*] --> ${useI18nStore.getState().t.notes.k_mmd_state_idle}
-    ${useI18nStore.getState().t.notes.k_mmd_state_idle} --> ${useI18nStore.getState().t.notes.k_mmd_state_proc} : ${useI18nStore.getState().t.notes.k_mmd_state_start}
-    ${useI18nStore.getState().t.notes.k_mmd_state_proc} --> ${useI18nStore.getState().t.notes.k_mmd_state_done} : ${useI18nStore.getState().t.notes.k_mmd_state_success}
-    ${useI18nStore.getState().t.notes.k_mmd_state_proc} --> ${useI18nStore.getState().t.notes.k_mmd_state_err} : ${useI18nStore.getState().t.notes.k_mmd_state_fail}
-    ${useI18nStore.getState().t.notes.k_mmd_state_err} --> ${useI18nStore.getState().t.notes.k_mmd_state_idle} : ${useI18nStore.getState().t.notes.k_mmd_state_retry}
-    ${useI18nStore.getState().t.notes.k_mmd_state_done} --> [*]`,
-  },
-  {
-    id: "er",
-    label: useI18nStore.getState().t.notes.k_1yau,
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="3" width="8" height="6" rx="1" />
-        <rect x="14" y="3" width="8" height="6" rx="1" />
-        <rect x="8" y="15" width="8" height="6" rx="1" />
-        <line x1="10" y1="6" x2="14" y2="6" />
-        <line x1="12" y1="15" x2="6" y2="9" />
-        <line x1="12" y1="15" x2="18" y2="9" />
-      </svg>
-    ),
-    code: `erDiagram
+    section ${n.k_mmd_gantt_phase1}
+    ${n.k_mmd_gantt_req}      :a1, 2024-01-01, 14d
+    ${n.k_mmd_gantt_design}          :a2, after a1, 10d
+    section ${n.k_mmd_gantt_phase2}
+    ${n.k_mmd_gantt_impl}          :b1, after a2, 21d
+    ${n.k_mmd_gantt_test}        :b2, after b1, 7d`,
+    },
+    {
+      id: "mindmap",
+      label: n.k_mmd_tpl_mindmap,
+      icon: ICONS.mindmap,
+      code: `mindmap
+  root((${n.k_mmd_mind_root}))
+    ${n.k_mmd_mind_prior}
+      ${n.k_mmd_mind_paperA}
+      ${n.k_mmd_mind_paperB}
+    ${n.k_mmd_mind_method}
+      ${n.k_mmd_mind_exp1}
+      ${n.k_mmd_mind_exp2}
+    ${n.k_mmd_mind_results}
+      ${n.k_mmd_mind_analysis}
+      ${n.k_mmd_mind_discuss}`,
+    },
+    {
+      id: "state",
+      label: n.k_mmd_tpl_state,
+      icon: ICONS.state,
+      code: `stateDiagram-v2
+    [*] --> ${n.k_mmd_state_idle}
+    ${n.k_mmd_state_idle} --> ${n.k_mmd_state_proc} : ${n.k_mmd_state_start}
+    ${n.k_mmd_state_proc} --> ${n.k_mmd_state_done} : ${n.k_mmd_state_success}
+    ${n.k_mmd_state_proc} --> ${n.k_mmd_state_err} : ${n.k_mmd_state_fail}
+    ${n.k_mmd_state_err} --> ${n.k_mmd_state_idle} : ${n.k_mmd_state_retry}
+    ${n.k_mmd_state_done} --> [*]`,
+    },
+    {
+      id: "er",
+      label: n.k_mmd_tpl_er,
+      icon: ICONS.er,
+      code: `erDiagram
     PAPER ||--o{ HIGHLIGHT : has
     PAPER ||--o{ NOTE : references
     NOTE ||--o{ LINK : contains
@@ -183,24 +216,20 @@ const MERMAID_TEMPLATES: MermaidTemplate[] = [
         string text
         string color
     }`,
-  },
-  {
-    id: "pie",
-    label: useI18nStore.getState().t.notes.k_ahjbli,
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
-        <path d="M22 12A10 10 0 0 0 12 2v10z" />
-      </svg>
-    ),
-    code: `pie title ${useI18nStore.getState().t.notes.k_mmd_pie_title}
-    t.notes.k_dajeg3 : 30
-    t.notes.k_gfh0 : 25
-    t.notes.k_eiq2 : 20
-    t.notes.k_hxpffk : 15
-    t.notes.k_7bosl : 10`,
-  },
-];
+    },
+    {
+      id: "pie",
+      label: n.k_mmd_tpl_pie,
+      icon: ICONS.pie,
+      code: `pie title ${n.k_mmd_pie_title}
+    "${n.k_mmd_pie_lit}" : 30
+    "${n.k_mmd_pie_exp}" : 25
+    "${n.k_mmd_pie_analysis}" : 20
+    "${n.k_mmd_pie_writing}" : 15
+    "${n.k_mmd_pie_other}" : 10`,
+    },
+  ];
+}
 
 // ============================================================
 // Mermaid レンダリング（CDN ESM 動的 import — バンドル非依存）
@@ -222,7 +251,7 @@ const MERMAID_CDN_URL =
 let mermaidInstance: MermaidAPI | null = null;
 
 /** Mermaid を CDN から ESM dynamic import でロード（キャッシュ付き） */
-async function loadMermaid(): Promise<MermaidAPI> {
+async function loadMermaid(errorMsg: string): Promise<MermaidAPI> {
   if (mermaidInstance) return mermaidInstance;
 
   try {
@@ -239,9 +268,7 @@ async function loadMermaid(): Promise<MermaidAPI> {
     mermaidInstance = m;
     return m;
   } catch {
-    throw new Error(
-      useI18nStore.getState().t.notes.k_gpxfp7,
-    );
+    throw new Error(errorMsg);
   }
 }
 
@@ -266,13 +293,41 @@ export const MermaidDiagramModal: React.FC<MermaidDiagramModalProps> = ({
   onInsert,
 }) => {
   const t = useT();
-  const [code, setCode] = useState(MERMAID_TEMPLATES[0]?.code ?? "");
+  // notes セクションのキーが 100+ あるため、Vite rollup の型省略を回避
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const nt = t.notes as any;
+
+  // テンプレートを翻訳オブジェクトから動的に生成
+  const templates = useMemo(() => buildTemplates(t), [t]);
+
+  const [code, setCode] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<string>("flowchart");
   const [previewSvg, setPreviewSvg] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const renderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initializedRef = useRef(false);
+
+  // モーダルが開かれたときにデフォルトテンプレートを設定
+  useEffect(() => {
+    if (open && !initializedRef.current) {
+      initializedRef.current = true;
+      setCode(templates[0]?.code ?? "");
+      setSelectedTemplate("flowchart");
+    }
+    if (!open) {
+      // 閉じたときに初期化フラグをリセット
+      const timer = setTimeout(() => {
+        initializedRef.current = false;
+        setCode("");
+        setSelectedTemplate("flowchart");
+        setPreviewSvg("");
+        setError(null);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [open, templates]);
 
   /** Mermaid コードをレンダリングしてプレビュー更新 */
   const renderPreview = useCallback(async (mermaidCode: string) => {
@@ -284,7 +339,7 @@ export const MermaidDiagramModal: React.FC<MermaidDiagramModalProps> = ({
     setIsRendering(true);
     setError(null);
     try {
-      const mermaid = await loadMermaid();
+      const mermaid = await loadMermaid(nt.k_mmd_load_fail);
       // 一意のIDを生成
       const id = `mermaid-preview-${Date.now()}`;
       const { svg } = await mermaid.render(id, mermaidCode.trim());
@@ -292,14 +347,14 @@ export const MermaidDiagramModal: React.FC<MermaidDiagramModalProps> = ({
       setError(null);
     } catch (e) {
       setPreviewSvg("");
-      const msg = e instanceof Error ? e.message : t.notes.k_uwv1vx;
+      const msg = e instanceof Error ? e.message : nt.k_mmd_render_fail;
       // Mermaid のエラーメッセージを短く整形
       const shortMsg = String(msg.split("\n")[0] ?? "").slice(0, 200);
       setError(shortMsg);
     } finally {
       setIsRendering(false);
     }
-  }, []);
+  }, [t]);
 
   /** コード入力変更時にデバウンスしてプレビュー更新 */
   useEffect(() => {
@@ -326,25 +381,11 @@ export const MermaidDiagramModal: React.FC<MermaidDiagramModalProps> = ({
     onClose();
   }, [code, onInsert, onClose]);
 
-  /** モーダルを閉じるときにリセット */
-  useEffect(() => {
-    if (!open) {
-      // 少し遅延してリセット（フェードアウト完了後）
-      const timer = setTimeout(() => {
-        setCode(MERMAID_TEMPLATES[0]?.code ?? "");
-        setSelectedTemplate("flowchart");
-        setPreviewSvg("");
-        setError(null);
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [open]);
-
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={t.notes.k_luos0t}
+      title={nt.k_mmd_modal_title}
       width="880px"
       footer={
         <div className="flex items-center gap-2 w-full">
@@ -366,7 +407,7 @@ export const MermaidDiagramModal: React.FC<MermaidDiagramModalProps> = ({
               <line x1="12" y1="16" x2="12" y2="12" />
               <line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
-            Mermaid 構文リファレンス
+            {nt.k_mmd_syntax_ref}
           </a>
           <button
             type="button"
@@ -400,7 +441,7 @@ export const MermaidDiagramModal: React.FC<MermaidDiagramModalProps> = ({
               border: "none",
             }}
           >
-            ノートに挿入
+            {nt.k_mmd_insert}
           </button>
         </div>
       }
@@ -411,10 +452,10 @@ export const MermaidDiagramModal: React.FC<MermaidDiagramModalProps> = ({
           className="text-xs font-semibold uppercase tracking-wider mb-2"
           style={{ color: "var(--color-text-tertiary)" }}
         >
-          テンプレート
+          {nt.k_mmd_template}
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {MERMAID_TEMPLATES.map((tmpl) => (
+          {templates.map((tmpl) => (
             <button
               key={tmpl.id}
               type="button"
@@ -454,7 +495,7 @@ export const MermaidDiagramModal: React.FC<MermaidDiagramModalProps> = ({
             className="text-xs font-semibold uppercase tracking-wider mb-1.5"
             style={{ color: "var(--color-text-tertiary)" }}
           >
-            Mermaid コード
+            {nt.k_mmd_code}
           </div>
           <textarea
             value={code}
@@ -504,7 +545,7 @@ export const MermaidDiagramModal: React.FC<MermaidDiagramModalProps> = ({
             className="text-xs font-semibold uppercase tracking-wider mb-1.5"
             style={{ color: "var(--color-text-tertiary)" }}
           >
-            プレビュー
+            {nt.k_mmd_preview}
           </div>
           <div
             ref={previewRef}
@@ -532,7 +573,7 @@ export const MermaidDiagramModal: React.FC<MermaidDiagramModalProps> = ({
                 >
                   <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                 </svg>
-                <span className="text-xs">レンダリング中...</span>
+                <span className="text-xs">{nt.k_mmd_rendering}</span>
               </div>
             ) : error ? (
               <div
@@ -568,7 +609,7 @@ export const MermaidDiagramModal: React.FC<MermaidDiagramModalProps> = ({
                   <path d="M3 9h18" />
                   <path d="M9 21V9" />
                 </svg>
-                <span className="text-xs">コードを入力するとプレビューが表示されます</span>
+                <span className="text-xs">{nt.k_mmd_placeholder}</span>
               </div>
             )}
           </div>
