@@ -29,6 +29,11 @@ const PDF_WORKER_URL = new URL(
   import.meta.url,
 ).toString();
 
+// CJK フォント表示に必要な CMap / standard fonts のパス
+// public/cmaps/, public/standard_fonts/ に配置済み
+const CMAP_URL = "/cmaps/";
+const STANDARD_FONT_DATA_URL = "/standard_fonts/";
+
 /** アプリ内 Highlight → react-pdf-highlighter の IHighlight 形式に変換 */
 export interface PdfHighlight extends IHighlight {
   /** アプリ内の色情報を保持 */
@@ -212,6 +217,9 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
         key={retryKey}
         url={pdfUrl}
         workerSrc={PDF_WORKER_URL}
+        cMapUrl={CMAP_URL}
+        cMapPacked={true}
+        standardFontDataUrl={STANDARD_FONT_DATA_URL}
         beforeLoad={
           <div
             className="flex items-center justify-center h-full"
