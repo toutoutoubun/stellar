@@ -301,7 +301,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
                   e.currentTarget.style.borderColor = "var(--color-border-primary)";
                 }}
               >
-                再読み込み
+                {useI18nStore.getState().t.reader.k_reload_pdf}
               </button>
             </div>
           </div>

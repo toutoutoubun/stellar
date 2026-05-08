@@ -524,9 +524,9 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
             <polyline points="14 2 14 8 20 8" />
           </svg>
           <p className="text-sm text-center">
-            この論文にはPDFが添付されていません。
+            {t.reader.k_no_pdf_attached}
             <br />
-            ライブラリからPDFを追加してください。
+            {t.reader.k_add_pdf_from_library}
           </p>
         </div>
       </div>

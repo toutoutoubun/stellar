@@ -536,6 +536,9 @@ const af: TranslationKeys = {
     k_nz9we3: "Highlight: ${highlight.text.slice(0, 50)}…",
     k_nlzi09: "${colorConfig.label} (Key ${colorConfig.shortcutKey})",
     k_x4p26h: "Highlight color: ${colorConfig.label}",
+    k_reload_pdf: "Herlaai",
+    k_no_pdf_attached: "Geen PDF is aan hierdie artikel geheg nie.",
+    k_add_pdf_from_library: "Voeg asseblief 'n PDF by vanaf die biblioteek.",
 },
 
   // ============================================================
@@ -916,6 +919,13 @@ const af: TranslationKeys = {
     k_create_links_hint: "Skep skakels tussen notas en artikels om die grafiek hier te sien",
     k_min_links: "Min. skakels",
     k_links_count: "${count} skakels",
+    k_simple_mode: "Eenvoudige modus",
+    k_retry: "Probeer weer",
+    k_reset_filters: "Herstel filters",
+    k_open: "Maak oop",
+    k_error_occurred: "'n Fout het voorgekom tydens die vertoon van die grafiek",
+    k_engine_load_failed: "Die grafiekenjin kon nie gelaai word nie. Probeer weer of herbegin die toepassing.",
+    k_error_details: "Foutbesonderhede",
 
   },
 

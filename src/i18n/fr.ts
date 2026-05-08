@@ -536,6 +536,9 @@ const fr: TranslationKeys = {
     k_nz9we3: "Surlignage : ${highlight.text.slice(0, 50)}…",
     k_nlzi09: "${colorConfig.label} (Touche ${colorConfig.shortcutKey})",
     k_x4p26h: "Couleur du surlignage : ${colorConfig.label}",
+    k_reload_pdf: "Recharger",
+    k_no_pdf_attached: "Aucun PDF n'est joint à cet article.",
+    k_add_pdf_from_library: "Veuillez ajouter un PDF depuis la bibliothèque.",
 },
 
   // ============================================================
@@ -916,6 +919,13 @@ const fr: TranslationKeys = {
     k_create_links_hint: "Créez des liens entre notes et articles pour afficher le graphe ici",
     k_min_links: "Liens min.",
     k_links_count: "${count} liens",
+    k_simple_mode: "Mode simplifié",
+    k_retry: "Réessayer",
+    k_reset_filters: "Réinitialiser les filtres",
+    k_open: "Ouvrir",
+    k_error_occurred: "Une erreur s'est produite lors de l'affichage du graphe",
+    k_engine_load_failed: "Le chargement du moteur de graphe a échoué. Veuillez réessayer ou redémarrer l'application.",
+    k_error_details: "Détails de l'erreur",
 
   },
 

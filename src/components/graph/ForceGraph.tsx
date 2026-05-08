@@ -389,7 +389,7 @@ const CanvasFallbackGraph: React.FC<CanvasFallbackProps> = ({
           }}
           title={errorMessage}
         >
-          簡易モード
+          {useI18nStore.getState().t.graph.k_simple_mode}
         </span>
         <button
           type="button"
@@ -404,7 +404,7 @@ const CanvasFallbackGraph: React.FC<CanvasFallbackProps> = ({
             cursor: "pointer",
           }}
         >
-          再試行
+          {useI18nStore.getState().t.graph.k_retry}
         </button>
       </div>
     </div>

@@ -84,7 +84,7 @@ export class GraphErrorBoundary extends Component<Props, State> {
                 className="text-sm font-medium mb-1"
                 style={{ color: "var(--color-text-secondary)" }}
               >
-                グラフの表示中にエラーが発生しました
+                {useI18nStore.getState().t.graph.k_error_occurred}
               </p>
               <p
                 className="text-xs mb-3"
@@ -93,8 +93,7 @@ export class GraphErrorBoundary extends Component<Props, State> {
                   maxWidth: "360px",
                 }}
               >
-                グラフエンジンの読み込みに失敗しました。
-                再試行するか、アプリを再起動してください。
+                {useI18nStore.getState().t.graph.k_engine_load_failed}
               </p>
               {this.state.errorMessage && (
                 <details
@@ -102,7 +101,7 @@ export class GraphErrorBoundary extends Component<Props, State> {
                   style={{ color: "var(--color-text-tertiary)" }}
                 >
                   <summary style={{ cursor: "pointer" }}>
-                    エラー詳細
+                    {useI18nStore.getState().t.graph.k_error_details}
                   </summary>
                   <pre
                     className="mt-1 text-left"
@@ -147,7 +146,7 @@ export class GraphErrorBoundary extends Component<Props, State> {
                 background: "transparent",
               }}
             >
-              再試行
+              {useI18nStore.getState().t.graph.k_retry}
             </button>
           </div>
         </div>

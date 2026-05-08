@@ -313,7 +313,7 @@ export const GraphFilterPanel: React.FC<GraphFilterPanelProps> = ({
               transition: "all 150ms ease-out",
             }}
           >
-            フィルタをリセット
+            {useI18nStore.getState().t.graph.k_reset_filters}
           </button>
         </div>
       )}

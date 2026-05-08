@@ -537,6 +537,9 @@ const en: TranslationKeys = {
     k_nz9we3: "Highlight: ${highlight.text.slice(0, 50)}…",
     k_nlzi09: "${colorConfig.label} (Key ${colorConfig.shortcutKey})",
     k_x4p26h: "Highlight color: ${colorConfig.label}",
+    k_reload_pdf: "Reload",
+    k_no_pdf_attached: "No PDF is attached to this paper.",
+    k_add_pdf_from_library: "Please add a PDF from the library.",
 },
 
   // ============================================================
@@ -917,6 +920,13 @@ const en: TranslationKeys = {
     k_create_links_hint: "Create links between notes and papers to see the graph here",
     k_min_links: "Min. links",
     k_links_count: "${count} links",
+    k_simple_mode: "Simple mode",
+    k_retry: "Retry",
+    k_reset_filters: "Reset filters",
+    k_open: "Open",
+    k_error_occurred: "An error occurred while displaying the graph",
+    k_engine_load_failed: "Failed to load the graph engine. Please retry or restart the app.",
+    k_error_details: "Error details",
 
   },
 

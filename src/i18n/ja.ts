@@ -535,6 +535,9 @@ const ja = {
     k_nz9we3: "ハイライト: ${highlight.text.slice(0, 50)}…",
     k_nlzi09: "${colorConfig.label}（キー${colorConfig.shortcutKey}）",
     k_x4p26h: "ハイライト色: ${colorConfig.label}",
+    k_reload_pdf: "再読み込み",
+    k_no_pdf_attached: "この論文にはPDFが添付されていません。",
+    k_add_pdf_from_library: "ライブラリからPDFを追加してください。",
 },
 
   // ============================================================
@@ -915,6 +918,13 @@ const ja = {
     k_create_links_hint: "ノートと論文にリンクを作成すると、ここに関係図が表示されます",
     k_min_links: "最小リンク数",
     k_links_count: "${count} リンク",
+    k_simple_mode: "簡易モード",
+    k_retry: "再試行",
+    k_reset_filters: "フィルタをリセット",
+    k_open: "開く",
+    k_error_occurred: "グラフの表示中にエラーが発生しました",
+    k_engine_load_failed: "グラフエンジンの読み込みに失敗しました。再試行するか、アプリを再起動してください。",
+    k_error_details: "エラー詳細",
 
   },
 

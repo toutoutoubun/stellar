@@ -288,7 +288,7 @@ export const GraphView: React.FC = () => {
                 border: "1px solid var(--color-accent-primary)",
               }}
             >
-              フィルタをリセット
+              {t.graph.k_reset_filters}
             </button>
           )}
         </div>
@@ -408,7 +408,7 @@ export const GraphView: React.FC = () => {
                 cursor: "pointer",
               }}
             >
-              開く
+              {t.graph.k_open}
             </button>
             <button
               type="button"
