@@ -232,6 +232,15 @@ pub fn run() {
             commands::qualitative::delete_qual_project,
             // 質的コード一覧エイリアス
             commands::qualitative::get_codes,
+            // クラウドバックアップ
+            commands::cloud_backup::cloud_backup_setup,
+            commands::cloud_backup::cloud_backup_get_status,
+            commands::cloud_backup::cloud_backup_create,
+            commands::cloud_backup::cloud_backup_list,
+            commands::cloud_backup::cloud_backup_restore,
+            commands::cloud_backup::cloud_backup_recover,
+            commands::cloud_backup::cloud_backup_toggle_auto,
+            commands::cloud_backup::cloud_backup_set_api_url,
         ])
         .run(tauri::generate_context!())
         .expect("Stellar の起動に失敗しました");

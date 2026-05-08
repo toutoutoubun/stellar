@@ -482,6 +482,61 @@ export interface ShortcutEntry {
 export type AuthorNameOrder = 'surname-first' | 'given-first';
 
 // ============================================================
+// クラウドバックアップ
+// ============================================================
+
+/** クラウドバックアップのステータス */
+export interface CloudBackupStatus {
+  isConfigured: boolean;
+  deviceId: string | null;
+  recoveryCode: string | null;
+  autoBackupEnabled: boolean;
+  lastBackupAt: string | null;
+  apiUrl: string;
+}
+
+/** バックアップデータ概要 */
+export interface BackupDataSummary {
+  paperCount: number;
+  noteCount: number;
+  highlightCount: number;
+  linkCount: number;
+}
+
+/** バックアップ結果 */
+export interface CloudBackupResult {
+  success: boolean;
+  backupId: string | null;
+  backedUpAt: string;
+  sizeBytes: number;
+  summary: BackupDataSummary;
+}
+
+/** バックアップ一覧のエントリ */
+export interface BackupEntry {
+  backupId: string;
+  createdAt: string;
+  sizeBytes: number;
+  summary: BackupDataSummary;
+}
+
+/** バックアップ一覧レスポンス */
+export interface BackupListResponse {
+  backups: BackupEntry[];
+  totalCount: number;
+}
+
+/** リストア結果 */
+export interface RestoreResult {
+  success: boolean;
+  papersRestored: number;
+  notesRestored: number;
+  highlightsRestored: number;
+  linksRestored: number;
+  restoredAt: string;
+}
+
+// ============================================================
 // ユーティリティ型
 // ============================================================
 

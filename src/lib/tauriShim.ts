@@ -511,6 +511,55 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     return { handled: true, result: mockMeta };
   }
 
+  // ── クラウドバックアップ mock ──
+  if (cmd === "cloud_backup_get_status") {
+    return { handled: true, result: {
+      isConfigured: false, deviceId: null, recoveryCode: null,
+      autoBackupEnabled: false, lastBackupAt: null, apiUrl: "https://stellar-backup.workers.dev",
+    }};
+  }
+  if (cmd === "cloud_backup_setup") {
+    const deviceId = `mock-${Date.now()}`;
+    return { handled: true, result: {
+      isConfigured: true, deviceId, recoveryCode: "ABCD-EFGH-JKLM",
+      autoBackupEnabled: false, lastBackupAt: null, apiUrl: "https://stellar-backup.workers.dev",
+    }};
+  }
+  if (cmd === "cloud_backup_create") {
+    return { handled: true, result: {
+      success: true, backupId: `backup_mock_${Date.now()}`,
+      backedUpAt: new Date().toISOString(), sizeBytes: 12345,
+      summary: { paperCount: 0, noteCount: 0, highlightCount: 0, linkCount: 0 },
+    }};
+  }
+  if (cmd === "cloud_backup_list") {
+    return { handled: true, result: { backups: [], totalCount: 0 } };
+  }
+  if (cmd === "cloud_backup_restore") {
+    return { handled: true, result: {
+      success: true, papersRestored: 0, notesRestored: 0,
+      highlightsRestored: 0, linksRestored: 0, restoredAt: new Date().toISOString(),
+    }};
+  }
+  if (cmd === "cloud_backup_recover") {
+    return { handled: true, result: {
+      isConfigured: true, deviceId: "mock-recovered", recoveryCode: args?.recoveryCode ?? "",
+      autoBackupEnabled: false, lastBackupAt: null, apiUrl: "https://stellar-backup.workers.dev",
+    }};
+  }
+  if (cmd === "cloud_backup_toggle_auto") {
+    return { handled: true, result: {
+      isConfigured: true, deviceId: "mock", recoveryCode: "ABCD-EFGH-JKLM",
+      autoBackupEnabled: !!args?.enabled, lastBackupAt: null, apiUrl: "https://stellar-backup.workers.dev",
+    }};
+  }
+  if (cmd === "cloud_backup_set_api_url") {
+    return { handled: true, result: {
+      isConfigured: true, deviceId: "mock", recoveryCode: "ABCD-EFGH-JKLM",
+      autoBackupEnabled: false, lastBackupAt: null, apiUrl: (args?.apiUrl as string) ?? "https://stellar-backup.workers.dev",
+    }};
+  }
+
   return { handled: false };
 }
 

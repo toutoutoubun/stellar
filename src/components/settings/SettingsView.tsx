@@ -10,7 +10,7 @@ import { SUPPORTED_LOCALES, LOCALE_NATIVE_NAMES } from "../../i18n";
 import { ThemePreviewCard } from "./ThemePreviewCard";
 import { StellarPackageModal } from "../export/StellarPackageModal";
 import { invoke } from "../../lib/tauriShim";
-import { dataApi } from "../../utils/ipc";
+import { dataApi, cloudBackupApi } from "../../utils/ipc";
 import { toast } from "../ui/Toast";
 import type { Paper } from "../../types";
 import type {
@@ -22,6 +22,8 @@ import type {
   CitationStyle,
   AuthorNameOrder,
   Locale,
+  CloudBackupStatus,
+  BackupEntry,
 } from "../../types";
 import {
   DEFAULT_APPEARANCE_SETTINGS,
@@ -53,6 +55,18 @@ export const SettingsView: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [stellarPackageModalOpen, setStellarPackageModalOpen] = useState(false);
+
+  // クラウドバックアップ
+  const [cloudStatus, setCloudStatus] = useState<CloudBackupStatus | null>(null);
+  const [isCloudSettingUp, setIsCloudSettingUp] = useState(false);
+  const [isCloudBackingUp, setIsCloudBackingUp] = useState(false);
+  const [cloudBackups, setCloudBackups] = useState<BackupEntry[]>([]);
+  const [showRecoveryCode, setShowRecoveryCode] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [isRestoring, setIsRestoring] = useState<string | null>(null);
+  const [showRecoverInput, setShowRecoverInput] = useState(false);
+  const [recoverCodeInput, setRecoverCodeInput] = useState("");
+  const [isRecovering, setIsRecovering] = useState(false);
 
   // ブラウザ連携
   const [extensionStatus, setExtensionStatus] = useState<"running" | "waiting" | "checking">("checking");
@@ -171,6 +185,22 @@ export const SettingsView: React.FC = () => {
     }
   }, [activeTab]);
 
+  // クラウドバックアップステータスの読み込み
+  useEffect(() => {
+    if (activeTab === "data") {
+      cloudBackupApi.getStatus()
+        .then((status) => {
+          setCloudStatus(status);
+          if (status.isConfigured) {
+            cloudBackupApi.list()
+              .then((res) => setCloudBackups(res.backups))
+              .catch(() => setCloudBackups([]));
+          }
+        })
+        .catch(() => setCloudStatus(null));
+    }
+  }, [activeTab]);
+
   // ブラウザ拡張ステータスチェック
   useEffect(() => {
     if (activeTab !== "data") return;
@@ -257,6 +287,99 @@ export const SettingsView: React.FC = () => {
       setIsBackingUp(false);
     }
   }, [t]);
+
+  // クラウドバックアップ: セットアップ
+  const handleCloudSetup = useCallback(async () => {
+    setIsCloudSettingUp(true);
+    try {
+      const status = await cloudBackupApi.setup();
+      setCloudStatus(status);
+      toast.success(t.settings.data.backupSuccess);
+    } catch (e) {
+      toast.error(String(e));
+    } finally {
+      setIsCloudSettingUp(false);
+    }
+  }, [t]);
+
+  // クラウドバックアップ: 実行
+  const handleCloudBackup = useCallback(async () => {
+    setIsCloudBackingUp(true);
+    try {
+      const result = await cloudBackupApi.create();
+      if (result.success) {
+        toast.success(t.settings.data.backupSuccess);
+        // ステータスを更新
+        const status = await cloudBackupApi.getStatus();
+        setCloudStatus(status);
+        // 一覧を更新
+        const list = await cloudBackupApi.list();
+        setCloudBackups(list.backups);
+      }
+    } catch (e) {
+      toast.error(`${t.settings.data.backupFailed}: ${String(e)}`);
+    } finally {
+      setIsCloudBackingUp(false);
+    }
+  }, [t]);
+
+  // クラウドバックアップ: リストア
+  const handleCloudRestore = useCallback(async (backupId: string) => {
+    if (!cloudStatus?.recoveryCode) return;
+    if (!window.confirm(t.settings.data.restoreConfirm)) return;
+
+    setIsRestoring(backupId);
+    try {
+      const result = await cloudBackupApi.restore(backupId, cloudStatus.recoveryCode);
+      if (result.success) {
+        toast.success(`${t.settings.data.restoreSuccess}: ${result.papersRestored} ${t.settings.data.papers}, ${result.notesRestored} ${t.settings.data.notes}`);
+      }
+    } catch (e) {
+      toast.error(`${t.settings.data.restoreFailed}: ${String(e)}`);
+    } finally {
+      setIsRestoring(null);
+    }
+  }, [cloudStatus, t]);
+
+  // クラウドバックアップ: 自動バックアップ切替
+  const handleToggleAutoBackup = useCallback(async (enabled: boolean) => {
+    try {
+      const status = await cloudBackupApi.toggleAuto(enabled);
+      setCloudStatus(status);
+    } catch (e) {
+      toast.error(String(e));
+    }
+  }, []);
+
+  // クラウドバックアップ: リカバリーコードで復元
+  const handleRecover = useCallback(async () => {
+    if (!recoverCodeInput.trim()) return;
+    setIsRecovering(true);
+    try {
+      const status = await cloudBackupApi.recover(recoverCodeInput.trim());
+      setCloudStatus(status);
+      setShowRecoverInput(false);
+      setRecoverCodeInput("");
+      toast.success(t.settings.data.restoreSuccess);
+      // 一覧を更新
+      const list = await cloudBackupApi.list();
+      setCloudBackups(list.backups);
+    } catch (e) {
+      toast.error(`${t.settings.data.restoreFailed}: ${String(e)}`);
+    } finally {
+      setIsRecovering(false);
+    }
+  }, [recoverCodeInput, t]);
+
+  // リカバリーコードをクリップボードにコピー
+  const handleCopyRecoveryCode = useCallback(() => {
+    if (cloudStatus?.recoveryCode) {
+      navigator.clipboard.writeText(cloudStatus.recoveryCode).then(() => {
+        setCopiedCode(true);
+        setTimeout(() => setCopiedCode(false), 2000);
+      });
+    }
+  }, [cloudStatus]);
 
   // ============================================================
   // 外観タブ
@@ -640,6 +763,310 @@ export const SettingsView: React.FC = () => {
             </div>
           )}
         </div>
+      </section>
+
+      {/* クラウドバックアップ */}
+      <section>
+        <h3 className="text-base font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
+          <span className="flex items-center gap-2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
+            </svg>
+            {t.settings.data.cloudBackup}
+          </span>
+        </h3>
+        <p className="text-sm mb-4" style={{ color: "var(--color-text-tertiary)" }}>
+          {t.settings.data.cloudBackupDesc}
+        </p>
+
+        {!cloudStatus?.isConfigured ? (
+          /* ── 未セットアップ ── */
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={handleCloudSetup}
+              disabled={isCloudSettingUp}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium"
+              style={{
+                backgroundColor: "var(--color-accent-primary)",
+                color: "var(--color-text-inverse)",
+                borderRadius: "var(--radius-button)",
+                opacity: isCloudSettingUp ? 0.6 : 1,
+                cursor: isCloudSettingUp ? "not-allowed" : "pointer",
+                transition: "all var(--transition-fast)",
+                maxWidth: "280px",
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
+                <polyline points="16 16 12 12 8 16" />
+                <line x1="12" y1="12" x2="12" y2="21" />
+              </svg>
+              {isCloudSettingUp ? t.settings.data.settingUp : t.settings.data.setupCloudBackup}
+            </button>
+
+            {/* リカバリーコードで復元 */}
+            <div className="mt-2">
+              <button
+                onClick={() => setShowRecoverInput(!showRecoverInput)}
+                className="text-xs underline"
+                style={{ color: "var(--color-accent-primary)", cursor: "pointer", background: "none", border: "none" }}
+              >
+                {t.settings.data.recoverFromCode}
+              </button>
+              {showRecoverInput && (
+                <div className="mt-2 flex flex-col gap-2" style={{ maxWidth: "360px" }}>
+                  <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+                    {t.settings.data.recoverDesc}
+                  </p>
+                  <input
+                    type="text"
+                    value={recoverCodeInput}
+                    onChange={(e) => setRecoverCodeInput(e.target.value.toUpperCase())}
+                    placeholder={t.settings.data.enterRecoveryCode}
+                    className="px-3 py-2 text-sm"
+                    style={{
+                      backgroundColor: "var(--color-bg-input)",
+                      color: "var(--color-text-primary)",
+                      border: "1px solid var(--color-border-primary)",
+                      borderRadius: "var(--radius-input)",
+                      outline: "none",
+                      fontFamily: "monospace",
+                      letterSpacing: "0.1em",
+                    }}
+                  />
+                  <button
+                    onClick={handleRecover}
+                    disabled={isRecovering || !recoverCodeInput.trim()}
+                    className="px-3 py-2 text-xs font-medium"
+                    style={{
+                      backgroundColor: "var(--color-accent-primary)",
+                      color: "var(--color-text-inverse)",
+                      borderRadius: "var(--radius-button)",
+                      opacity: isRecovering || !recoverCodeInput.trim() ? 0.6 : 1,
+                      cursor: isRecovering || !recoverCodeInput.trim() ? "not-allowed" : "pointer",
+                      maxWidth: "140px",
+                    }}
+                  >
+                    {isRecovering ? t.settings.data.recovering : t.settings.data.recoverButton}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* ── セットアップ済み ── */
+          <div className="flex flex-col gap-5">
+            {/* バックアップ実行ボタン + 最終バックアップ日時 */}
+            <div className="flex items-center gap-4 flex-wrap">
+              <button
+                onClick={handleCloudBackup}
+                disabled={isCloudBackingUp}
+                className="flex items-center gap-2 px-4 py-2 text-xs font-medium"
+                style={{
+                  backgroundColor: "var(--color-accent-primary)",
+                  color: "var(--color-text-inverse)",
+                  borderRadius: "var(--radius-button)",
+                  opacity: isCloudBackingUp ? 0.6 : 1,
+                  cursor: isCloudBackingUp ? "not-allowed" : "pointer",
+                  transition: "all var(--transition-fast)",
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
+                  <polyline points="16 16 12 12 8 16" />
+                  <line x1="12" y1="12" x2="12" y2="21" />
+                </svg>
+                {isCloudBackingUp ? t.settings.data.backingUpCloud : t.settings.data.backupNow}
+              </button>
+              <span className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+                {t.settings.data.lastBackup}:{" "}
+                {cloudStatus.lastBackupAt
+                  ? new Date(cloudStatus.lastBackupAt).toLocaleString()
+                  : t.settings.data.never}
+              </span>
+            </div>
+
+            {/* リカバリーコード表示 */}
+            <div
+              className="p-4"
+              style={{
+                backgroundColor: "var(--color-bg-secondary)",
+                borderRadius: "var(--radius-input)",
+                border: "1px solid var(--color-border-secondary)",
+                maxWidth: "440px",
+              }}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <h4 className="text-xs font-semibold" style={{ color: "var(--color-text-secondary)" }}>
+                  {t.settings.data.recoveryCode}
+                </h4>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowRecoveryCode(!showRecoveryCode)}
+                    className="text-xs px-2 py-0.5"
+                    style={{
+                      color: "var(--color-accent-primary)",
+                      background: "none",
+                      border: "1px solid var(--color-border-primary)",
+                      borderRadius: "var(--radius-button)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {showRecoveryCode ? t.settings.data.hideCode : t.settings.data.showCode}
+                  </button>
+                  <button
+                    onClick={handleCopyRecoveryCode}
+                    className="text-xs px-2 py-0.5"
+                    style={{
+                      color: copiedCode ? "rgb(34, 197, 94)" : "var(--color-accent-primary)",
+                      background: "none",
+                      border: "1px solid var(--color-border-primary)",
+                      borderRadius: "var(--radius-button)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {copiedCode ? t.settings.data.copied : t.settings.data.copyCode}
+                  </button>
+                </div>
+              </div>
+              <div
+                className="font-mono text-lg font-bold tracking-widest mt-2 mb-2 select-all"
+                style={{
+                  color: "var(--color-text-primary)",
+                  filter: showRecoveryCode ? "none" : "blur(6px)",
+                  transition: "filter 0.2s",
+                  userSelect: showRecoveryCode ? "all" : "none",
+                }}
+              >
+                {cloudStatus.recoveryCode ?? "XXXX-XXXX-XXXX"}
+              </div>
+              <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+                {t.settings.data.recoveryCodeDesc}
+              </p>
+            </div>
+
+            {/* 自動バックアップ */}
+            <label className="flex items-center gap-3 cursor-pointer" style={{ maxWidth: "400px" }}>
+              <div
+                onClick={() => handleToggleAutoBackup(!cloudStatus.autoBackupEnabled)}
+                className="relative shrink-0"
+                style={{
+                  width: "36px",
+                  height: "20px",
+                  borderRadius: "10px",
+                  backgroundColor: cloudStatus.autoBackupEnabled
+                    ? "var(--color-accent-primary)"
+                    : "var(--color-bg-tertiary)",
+                  border: "1px solid var(--color-border-primary)",
+                  cursor: "pointer",
+                  transition: "background-color 0.2s",
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "2px",
+                    left: cloudStatus.autoBackupEnabled ? "18px" : "2px",
+                    width: "14px",
+                    height: "14px",
+                    borderRadius: "50%",
+                    backgroundColor: cloudStatus.autoBackupEnabled
+                      ? "var(--color-text-inverse)"
+                      : "var(--color-text-tertiary)",
+                    transition: "left 0.2s, background-color 0.2s",
+                  }}
+                />
+              </div>
+              <div>
+                <div className="text-sm font-medium" style={{ color: "var(--color-text-primary)" }}>
+                  {t.settings.data.autoBackup}
+                </div>
+                <div className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+                  {t.settings.data.autoBackupDesc}
+                </div>
+              </div>
+            </label>
+
+            {/* バックアップ履歴 */}
+            <div>
+              <h4 className="text-xs font-semibold mb-2" style={{ color: "var(--color-text-secondary)" }}>
+                {t.settings.data.backupHistory}
+              </h4>
+              {cloudBackups.length === 0 ? (
+                <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+                  {t.settings.data.noBackups}
+                </p>
+              ) : (
+                <div
+                  className="flex flex-col"
+                  style={{
+                    borderRadius: "var(--radius-input)",
+                    border: "1px solid var(--color-border-secondary)",
+                    overflow: "hidden",
+                    maxWidth: "480px",
+                  }}
+                >
+                  {cloudBackups.slice(0, 5).map((backup, idx) => (
+                    <div
+                      key={backup.backupId}
+                      className="flex items-center justify-between px-3 py-2.5"
+                      style={{
+                        backgroundColor: "var(--color-bg-card)",
+                        borderBottom: idx < Math.min(cloudBackups.length, 5) - 1
+                          ? "1px solid var(--color-border-secondary)"
+                          : "none",
+                      }}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium truncate" style={{ color: "var(--color-text-primary)" }}>
+                          {new Date(backup.createdAt).toLocaleString()}
+                        </div>
+                        <div className="text-xs mt-0.5" style={{ color: "var(--color-text-tertiary)" }}>
+                          {backup.summary.paperCount} {t.settings.data.papers} · {backup.summary.noteCount} {t.settings.data.notes} · {backup.summary.highlightCount} {t.settings.data.highlights}
+                          {backup.sizeBytes > 0 && ` · ${(backup.sizeBytes / 1024).toFixed(0)} KB`}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleCloudRestore(backup.backupId)}
+                        disabled={isRestoring === backup.backupId}
+                        className="shrink-0 ml-3 px-2.5 py-1 text-xs font-medium"
+                        style={{
+                          backgroundColor: "var(--color-bg-hover)",
+                          color: "var(--color-text-primary)",
+                          borderRadius: "var(--radius-button)",
+                          border: "1px solid var(--color-border-primary)",
+                          opacity: isRestoring === backup.backupId ? 0.6 : 1,
+                          cursor: isRestoring === backup.backupId ? "not-allowed" : "pointer",
+                        }}
+                      >
+                        {isRestoring === backup.backupId ? t.settings.data.restoring : t.settings.data.restore}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 暗号化の説明 */}
+            <div
+              className="flex items-start gap-2 p-3"
+              style={{
+                backgroundColor: "rgba(59, 130, 246, 0.06)",
+                borderRadius: "var(--radius-input)",
+                border: "1px solid rgba(59, 130, 246, 0.15)",
+                maxWidth: "480px",
+              }}
+            >
+              <svg className="shrink-0 mt-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(59, 130, 246)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              <p className="text-xs" style={{ color: "var(--color-text-secondary)" }}>
+                {t.settings.data.encryptionNote}
+              </p>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

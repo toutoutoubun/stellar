@@ -17,6 +17,10 @@ import type {
   CreateLinkInput,
   DataSummary,
   LinkSuggestion,
+  CloudBackupStatus,
+  CloudBackupResult,
+  BackupListResponse,
+  RestoreResult,
 } from "../types";
 
 // ============================================================
@@ -316,6 +320,37 @@ export const dataApi = {
   },
 };
 
+/** クラウドバックアップ API */
+export const cloudBackupApi = {
+  /** 初期セットアップ（デバイスID・リカバリーコード生成） */
+  setup: () => invoke<CloudBackupStatus>("cloud_backup_setup"),
+
+  /** ステータスを取得 */
+  getStatus: () => invoke<CloudBackupStatus>("cloud_backup_get_status"),
+
+  /** バックアップを実行 */
+  create: () => invoke<CloudBackupResult>("cloud_backup_create"),
+
+  /** バックアップ一覧を取得 */
+  list: () => invoke<BackupListResponse>("cloud_backup_list"),
+
+  /** バックアップからリストア */
+  restore: (backupId: string, recoveryCode: string) =>
+    invoke<RestoreResult>("cloud_backup_restore", { backupId, recoveryCode }),
+
+  /** リカバリーコードで別デバイスからリストア */
+  recover: (recoveryCode: string) =>
+    invoke<CloudBackupStatus>("cloud_backup_recover", { recoveryCode }),
+
+  /** 自動バックアップの有効/無効切替 */
+  toggleAuto: (enabled: boolean) =>
+    invoke<CloudBackupStatus>("cloud_backup_toggle_auto", { enabled }),
+
+  /** バックアップAPIのURLを変更（セルフホスト対応） */
+  setApiUrl: (apiUrl: string) =>
+    invoke<CloudBackupStatus>("cloud_backup_set_api_url", { apiUrl }),
+};
+
 /** すべての API をまとめたオブジェクト */
 export const api = {
   papers: papersApi,
@@ -324,4 +359,5 @@ export const api = {
   links: linksApi,
   search: searchApi,
   data: dataApi,
+  cloudBackup: cloudBackupApi,
 } as const;
