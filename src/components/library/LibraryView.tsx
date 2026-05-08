@@ -4,7 +4,7 @@
 // 3ペインレイアウト内のメインコンテンツ領域として機能する
 
 import type React from "react";
-import { useEffect, useCallback, useState, useRef } from "react";
+import { useEffect, useCallback, useState, useRef, useMemo } from "react";
 import { useLibraryStore } from "../../stores/useLibraryStore";
 import { useUIStore } from "../../stores/useUIStore";
 import { PaperCard } from "./PaperCard";
@@ -64,6 +64,10 @@ export const LibraryView: React.FC = () => {
   const addModalOpen = useLibraryStore((s) => s.addModalOpen);
 
   const fetchPapers = useLibraryStore((s) => s.fetchPapers);
+  const fetchMorePapers = useLibraryStore((s) => s.fetchMorePapers);
+  const loadingMore = useLibraryStore((s) => s.loadingMore);
+  const hasMore = useLibraryStore((s) => s.hasMore);
+  const totalItems = useLibraryStore((s) => s.totalItems);
   const selectPaper = useLibraryStore((s) => s.selectPaper);
   const toggleCheckedPaper = useLibraryStore((s) => s.toggleCheckedPaper);
   const deletePaper = useLibraryStore((s) => s.deletePaper);
@@ -97,6 +101,23 @@ export const LibraryView: React.FC = () => {
   const yearDropdownRef = useRef<HTMLDivElement>(null);
   const pdfDropdownRef = useRef<HTMLDivElement>(null);
   const shareDropdownRef = useRef<HTMLDivElement>(null);
+  const scrollSentinelRef = useRef<HTMLDivElement>(null);
+
+  // ── Intersection Observer でスクロール末端を検知 ──
+  useEffect(() => {
+    const sentinel = scrollSentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasMore && !loadingMore && !loading) {
+          void fetchMorePapers();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, loading, fetchMorePapers]);
 
   // ── 初回マウント時に論文一覧を取得 ──
   useEffect(() => {
@@ -136,6 +157,7 @@ export const LibraryView: React.FC = () => {
   }, []);
 
   // ── 派生データ ──
+  // フィルターがアクティブならフロントエンド側でフィルタ、なければバックエンドのページネーションをそのまま使う
   const filteredPapers = getFilteredPapers();
   const allTags = getAllTags();
   const allYears = getAllYears();
@@ -956,6 +978,47 @@ export const LibraryView: React.FC = () => {
                 />
               ))}
             </div>
+          )}
+
+          {/* ── スクロール末端検知・追加読み込みUI ── */}
+          {!loading && !error && filteredPapers.length > 0 && (
+            <>
+              {/* Intersection Observer のセンチネル */}
+              <div ref={scrollSentinelRef} style={{ height: "1px" }} />
+
+              {/* 追加読み込み中スピナー */}
+              {loadingMore && (
+                <div
+                  className="flex items-center justify-center py-4"
+                  style={{ color: "var(--color-text-tertiary)" }}
+                >
+                  <svg
+                    className="animate-spin mr-2"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                  </svg>
+                  <span className="text-xs">読み込み中…</span>
+                </div>
+              )}
+
+              {/* 件数表示 */}
+              {!hasMore && papers.length > 0 && (
+                <div
+                  className="flex items-center justify-center py-3"
+                  style={{ color: "var(--color-text-disabled)" }}
+                >
+                  <span className="text-xs">
+                    全 {totalItems} 件を表示中
+                  </span>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

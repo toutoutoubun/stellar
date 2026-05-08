@@ -14,6 +14,18 @@ import type {
 import { invoke } from "../lib/tauriShim";
 import { useI18nStore } from "./useI18nStore";
 
+/** ページネーションレスポンス型 */
+interface PaginatedResponse<T> {
+  items: T[];
+  totalItems: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+/** 1ページあたりの取得件数 */
+const PAGE_SIZE = 50;
+
 /** ライブラリストアの状態型 */
 interface LibraryState {
   /** 全論文リスト（キャッシュ） */
@@ -24,8 +36,16 @@ interface LibraryState {
   checkedPaperIds: Set<string>;
   /** 読み込み中フラグ */
   loading: boolean;
+  /** 追加読み込み中フラグ */
+  loadingMore: boolean;
   /** エラーメッセージ */
   error: string | null;
+  /** 現在のページ番号 */
+  currentPage: number;
+  /** 総件数 */
+  totalItems: number;
+  /** 全ページを読み込み済みか */
+  hasMore: boolean;
 
   // ── フィルター ──
   /** フィルタータグ（null = フィルタなし） */
@@ -52,8 +72,10 @@ interface LibraryState {
   addModalOpen: boolean;
 
   // ── アクション ──
-  /** 全論文を Tauri バックエンドから取得する */
+  /** 最初のページを取得する（リセット） */
   fetchPapers: () => Promise<void>;
+  /** 次のページを追加読み込みする */
+  fetchMorePapers: () => Promise<void>;
   /** 論文を新規作成する */
   createPaper: (input: CreatePaperInput) => Promise<Paper>;
   /** 論文を更新する */
@@ -106,7 +128,11 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   selectedPaperId: null,
   checkedPaperIds: new Set<string>(),
   loading: false,
+  loadingMore: false,
   error: null,
+  currentPage: 0,
+  totalItems: 0,
+  hasMore: true,
 
   filterTag: null,
   filterYear: null,
@@ -125,14 +151,47 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   // ────────────────────────────────────────────
 
   fetchPapers: async () => {
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, papers: [], currentPage: 0, hasMore: true, totalItems: 0 });
     try {
-      const result = await invoke<{ items: Paper[]; totalPages: number; totalItems: number }>("get_papers", { limit: 1000 });
+      const result = await invoke<PaginatedResponse<Paper>>("get_papers", {
+        page: 1,
+        limit: PAGE_SIZE,
+      });
       const papers = Array.isArray(result?.items) ? result.items : [];
-      set({ papers, loading: false });
+      set({
+        papers,
+        loading: false,
+        currentPage: 1,
+        totalItems: result?.totalItems ?? 0,
+        hasMore: (result?.page ?? 1) < (result?.totalPages ?? 0),
+      });
     } catch (e) {
       console.error("[fetchPapers] failed:", e);
       set({ error: String(e), loading: false });
+    }
+  },
+
+  fetchMorePapers: async () => {
+    const { loadingMore, hasMore, currentPage } = get();
+    if (loadingMore || !hasMore) return;
+    set({ loadingMore: true });
+    try {
+      const nextPage = currentPage + 1;
+      const result = await invoke<PaginatedResponse<Paper>>("get_papers", {
+        page: nextPage,
+        limit: PAGE_SIZE,
+      });
+      const newItems = Array.isArray(result?.items) ? result.items : [];
+      set((state) => ({
+        papers: [...state.papers, ...newItems],
+        loadingMore: false,
+        currentPage: nextPage,
+        totalItems: result?.totalItems ?? state.totalItems,
+        hasMore: nextPage < (result?.totalPages ?? 0),
+      }));
+    } catch (e) {
+      console.error("[fetchMorePapers] failed:", e);
+      set({ loadingMore: false });
     }
   },
 

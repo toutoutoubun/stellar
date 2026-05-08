@@ -3,7 +3,7 @@
 // 検索バー、ノートリスト（タイトル・更新日・タグ・プレビュー）、新規作成ボタン
 
 import type React from "react";
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useNoteStore } from "../../stores/useNoteStore";
 import { useUIStore } from "../../stores/useUIStore";
 import { useT } from "../../stores/useI18nStore";
@@ -59,11 +59,33 @@ export const NoteList: React.FC = () => {
   const setSortKey = useNoteStore((s) => s.setSortKey);
   const setFilterQuery = useNoteStore((s) => s.setFilterQuery);
 
+  const fetchMoreNotes = useNoteStore((s) => s.fetchMoreNotes);
+  const loadingMore = useNoteStore((s) => s.loadingMore);
+  const hasMore = useNoteStore((s) => s.hasMore);
+  const totalItems = useNoteStore((s) => s.totalItems);
+
   const openNote = useUIStore((s) => s.openNote);
   const openDraft = useUIStore((s) => s.openDraft);
   const mainPaneContent = useUIStore((s) => s.mainPaneContent);
 
   const [searchFocused, setSearchFocused] = useState(false);
+  const scrollSentinelRef = useRef<HTMLDivElement>(null);
+
+  // ── Intersection Observer でスクロール末端を検知 ──
+  useEffect(() => {
+    const sentinel = scrollSentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasMore && !loadingMore && !loading) {
+          void fetchMoreNotes();
+        }
+      },
+      { rootMargin: "100px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, loading, fetchMoreNotes]);
 
   /** 初回読み込み */
   useEffect(() => {
@@ -434,6 +456,42 @@ export const NoteList: React.FC = () => {
                 onClick={() => handleOpenNote(note)}
               />
             ))}
+
+            {/* Intersection Observer のセンチネル */}
+            <div ref={scrollSentinelRef} style={{ height: "1px" }} />
+
+            {/* 追加読み込み中スピナー */}
+            {loadingMore && (
+              <div
+                className="flex items-center justify-center py-3"
+                style={{ color: "var(--color-text-tertiary)" }}
+              >
+                <svg
+                  className="animate-spin mr-2"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+                <span style={{ fontSize: "11px" }}>{t.common.loading}</span>
+              </div>
+            )}
+
+            {/* 全件表示済み */}
+            {!hasMore && notes.length > 0 && !filterQuery.trim() && (
+              <div
+                className="flex items-center justify-center py-2"
+                style={{ color: "var(--color-text-disabled)" }}
+              >
+                <span style={{ fontSize: "10px" }}>
+                  {totalItems} {t.common.items}
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -13,6 +13,18 @@ import type {
 } from "../types";
 import { invoke } from "../lib/tauriShim";
 
+/** ページネーションレスポンス型 */
+interface PaginatedResponse<T> {
+  items: T[];
+  totalItems: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+/** 1ページあたりの取得件数 */
+const NOTE_PAGE_SIZE = 50;
+
 /** ノートストアの状態型 */
 interface NoteState {
   /** 全ノートリスト */
@@ -21,8 +33,16 @@ interface NoteState {
   activeNote: Note | null;
   /** 読み込み中フラグ */
   loading: boolean;
+  /** 追加読み込み中フラグ */
+  loadingMore: boolean;
   /** エラーメッセージ */
   error: string | null;
+  /** 現在のページ番号 */
+  currentPage: number;
+  /** 総件数 */
+  totalItems: number;
+  /** まだ読み込むデータがあるか */
+  hasMore: boolean;
   /** ソートキー */
   sortKey: NoteSortKey;
   /** ソート方向 */
@@ -34,8 +54,10 @@ interface NoteState {
   /** 自動保存ステータス */
   autoSaveStatus: AutoSaveStatus;
 
-  /** 全ノートを取得する */
+  /** 最初のページを取得する（リセット） */
   fetchNotes: () => Promise<void>;
+  /** 次のページを追加読み込みする */
+  fetchMoreNotes: () => Promise<void>;
   /** 特定の論文に紐づくノートを取得する */
   fetchNotesByPaper: (paperId: string) => Promise<Note[]>;
   /** ノートを開く（activeNote を設定） */
@@ -66,7 +88,11 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   notes: [],
   activeNote: null,
   loading: false,
+  loadingMore: false,
   error: null,
+  currentPage: 0,
+  totalItems: 0,
+  hasMore: true,
   sortKey: "updatedAt",
   sortDirection: "desc",
   filterQuery: "",
@@ -74,20 +100,53 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   autoSaveStatus: "idle",
 
   fetchNotes: async () => {
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, notes: [], currentPage: 0, hasMore: true, totalItems: 0 });
     try {
-      const result = await invoke<{ items: Note[]; totalPages: number; totalItems: number }>("get_notes", { limit: 1000 });
+      const result = await invoke<PaginatedResponse<Note>>("get_notes", {
+        page: 1,
+        limit: NOTE_PAGE_SIZE,
+      });
       const notes = Array.isArray(result?.items) ? result.items : [];
-      set({ notes, loading: false });
+      set({
+        notes,
+        loading: false,
+        currentPage: 1,
+        totalItems: result?.totalItems ?? 0,
+        hasMore: (result?.page ?? 1) < (result?.totalPages ?? 0),
+      });
     } catch (e) {
       console.error("[fetchNotes] failed:", e);
       set({ error: String(e), loading: false });
     }
   },
 
+  fetchMoreNotes: async () => {
+    const { loadingMore, hasMore, currentPage } = get();
+    if (loadingMore || !hasMore) return;
+    set({ loadingMore: true });
+    try {
+      const nextPage = currentPage + 1;
+      const result = await invoke<PaginatedResponse<Note>>("get_notes", {
+        page: nextPage,
+        limit: NOTE_PAGE_SIZE,
+      });
+      const newItems = Array.isArray(result?.items) ? result.items : [];
+      set((state) => ({
+        notes: [...state.notes, ...newItems],
+        loadingMore: false,
+        currentPage: nextPage,
+        totalItems: result?.totalItems ?? state.totalItems,
+        hasMore: nextPage < (result?.totalPages ?? 0),
+      }));
+    } catch (e) {
+      console.error("[fetchMoreNotes] failed:", e);
+      set({ loadingMore: false });
+    }
+  },
+
   fetchNotesByPaper: async (paperId) => {
     try {
-      const result = await invoke<{ items: Note[]; totalPages: number; totalItems: number }>("get_notes", { paperId, limit: 1000 });
+      const result = await invoke<PaginatedResponse<Note>>("get_notes", { paperId, limit: 1000 });
       const notes = Array.isArray(result?.items) ? result.items : [];
       return notes;
     } catch (e) {
