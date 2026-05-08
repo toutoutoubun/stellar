@@ -18,7 +18,6 @@ import type {
   IHighlight,
   ScaledPosition,
 } from "react-pdf-highlighter";
-
 import type { Highlight, HighlightColor, HighlightRect } from "../../types";
 import { HIGHLIGHT_COLORS } from "../../utils/highlightColors";
 import { useI18nStore } from "../../stores/useI18nStore";
@@ -219,7 +218,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
         workerSrc={PDF_WORKER_URL}
         cMapUrl={CMAP_URL}
         cMapPacked={true}
-        standardFontDataUrl={STANDARD_FONT_DATA_URL}
+        {...({ standardFontDataUrl: STANDARD_FONT_DATA_URL } as Record<string, unknown>)}
         beforeLoad={
           <div
             className="flex items-center justify-center h-full"
