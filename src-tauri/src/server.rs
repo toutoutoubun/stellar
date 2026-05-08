@@ -177,7 +177,7 @@ async fn handle_create_paper(
     app: AppHandle,
     dto: CreatePaperRequest,
 ) -> Result<String, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
     let authors_json = serde_json::to_string(&dto.authors).unwrap_or("[]".to_string());
