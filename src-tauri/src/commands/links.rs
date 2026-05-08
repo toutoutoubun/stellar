@@ -123,8 +123,10 @@ pub async fn get_graph_data(app: AppHandle) -> Result<GraphData, String> {
         .await
         .map_err(|e| format!("論文ノードの取得に失敗: {}", e))?;
 
-    // 全ノートをノードとして取得
-    let note_rows = sqlx::query("SELECT id, title, tags FROM notes ORDER BY title ASC")
+    // 全ノートをノードとして取得（下書きは除外）
+    let note_rows = sqlx::query(
+        "SELECT id, title, tags FROM notes WHERE is_draft = 0 OR is_draft IS NULL ORDER BY title ASC"
+    )
         .fetch_all(pool.as_ref())
         .await
         .map_err(|e| format!("ノートノードの取得に失敗: {}", e))?;

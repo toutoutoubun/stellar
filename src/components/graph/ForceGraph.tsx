@@ -118,6 +118,296 @@ function truncateLabel(text: string, maxLen: number): string {
 }
 
 // ============================================================
+// Canvas フォールバック（react-force-graph-2d ロード失敗時）
+// 簡易 Force レイアウトを Canvas で直接描画する
+// ============================================================
+
+interface CanvasFallbackProps {
+  nodes: GraphNodeExtended[];
+  links: GraphLink[];
+  width: number;
+  height: number;
+  selectedNodeId: string | null;
+  onNodeClick: (node: GraphNodeExtended) => void;
+  onRetry: () => void;
+  errorMessage: string;
+}
+
+/** 簡易 Force-Directed Layout を Canvas で描画 */
+const CanvasFallbackGraph: React.FC<CanvasFallbackProps> = ({
+  nodes: inputNodes,
+  links: inputLinks,
+  width,
+  height,
+  selectedNodeId,
+  onNodeClick,
+  onRetry,
+  errorMessage,
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const positionsRef = useRef<Map<string, { x: number; y: number; vx: number; vy: number }>>(new Map());
+  const rafRef = useRef(0);
+  const tickRef = useRef(0);
+
+  // ノード位置の初期化
+  useEffect(() => {
+    const pos = positionsRef.current;
+    const cx = width / 2;
+    const cy = height / 2;
+    const radius = Math.min(width, height) * 0.35;
+
+    inputNodes.forEach((node, i) => {
+      if (!pos.has(node.id)) {
+        const angle = (2 * Math.PI * i) / Math.max(inputNodes.length, 1);
+        pos.set(node.id, {
+          x: cx + radius * Math.cos(angle) + (Math.random() - 0.5) * 30,
+          y: cy + radius * Math.sin(angle) + (Math.random() - 0.5) * 30,
+          vx: 0,
+          vy: 0,
+        });
+      }
+    });
+    tickRef.current = 0;
+  }, [inputNodes, width, height]);
+
+  // Force シミュレーション + 描画ループ
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || inputNodes.length === 0) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const pos = positionsRef.current;
+    const cx = width / 2;
+    const cy = height / 2;
+
+    // リンクのソース/ターゲットIDを解決
+    const resolvedLinks = inputLinks.map((l) => ({
+      source: typeof l.source === "string" ? l.source : (l.source as { id: string }).id,
+      target: typeof l.target === "string" ? l.target : (l.target as { id: string }).id,
+    }));
+
+    function simulate() {
+      const alpha = Math.max(0.01, 1 - tickRef.current / 200);
+
+      // 斥力（ノード間）
+      const nodeArr = inputNodes;
+      for (let i = 0; i < nodeArr.length; i++) {
+        const a = pos.get(nodeArr[i].id);
+        if (!a) continue;
+        for (let j = i + 1; j < nodeArr.length; j++) {
+          const b = pos.get(nodeArr[j].id);
+          if (!b) continue;
+          let dx = a.x - b.x;
+          let dy = a.y - b.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const force = (150 * alpha) / (dist * dist);
+          dx *= force;
+          dy *= force;
+          a.vx += dx;
+          a.vy += dy;
+          b.vx -= dx;
+          b.vy -= dy;
+        }
+      }
+
+      // 引力（リンク）
+      for (const link of resolvedLinks) {
+        const a = pos.get(link.source);
+        const b = pos.get(link.target);
+        if (!a || !b) continue;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const force = (dist - 80) * 0.005 * alpha;
+        const fx = (dx / dist) * force;
+        const fy = (dy / dist) * force;
+        a.vx += fx;
+        a.vy += fy;
+        b.vx -= fx;
+        b.vy -= fy;
+      }
+
+      // 中心引力
+      for (const node of nodeArr) {
+        const p = pos.get(node.id);
+        if (!p) continue;
+        p.vx += (cx - p.x) * 0.001 * alpha;
+        p.vy += (cy - p.y) * 0.001 * alpha;
+        // 減衰 + 位置更新
+        p.vx *= 0.9;
+        p.vy *= 0.9;
+        p.x += p.vx;
+        p.y += p.vy;
+        // 画面内に収める
+        p.x = Math.max(20, Math.min(width - 20, p.x));
+        p.y = Math.max(20, Math.min(height - 20, p.y));
+      }
+
+      tickRef.current++;
+    }
+
+    function draw() {
+      if (!ctx) return;
+      const bgColor = getCSSVar("--color-bg-primary") || "#ffffff";
+      const noteColor = getCSSVar("--color-graph-node-note") || "#6366f1";
+      const paperColor = getCSSVar("--color-graph-node-paper") || "#f59e0b";
+      const edgeColor = getCSSVar("--color-graph-edge") || "#94a3b8";
+      const labelColor = getCSSVar("--color-graph-label") || "#64748b";
+
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, width, height);
+
+      // エッジ描画
+      ctx.strokeStyle = edgeColor;
+      ctx.lineWidth = 0.8;
+      ctx.globalAlpha = 0.4;
+      for (const link of resolvedLinks) {
+        const a = pos.get(link.source);
+        const b = pos.get(link.target);
+        if (!a || !b) continue;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+
+      // ノード描画
+      for (const node of inputNodes) {
+        const p = pos.get(node.id);
+        if (!p) continue;
+        const isSelected = node.id === selectedNodeId;
+        const baseSize = node.type === "note" ? 6 : 8;
+        const size = baseSize + Math.sqrt(node.linkCount ?? 0) * 2;
+        const color = node.type === "note" ? noteColor : paperColor;
+
+        if (isSelected) {
+          ctx.shadowColor = color;
+          ctx.shadowBlur = 15;
+        }
+
+        if (node.type === "note") {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, size, 0, 2 * Math.PI);
+          ctx.fillStyle = color;
+          ctx.fill();
+        } else {
+          drawHexagon(ctx, p.x, p.y, size);
+          ctx.fillStyle = color;
+          ctx.fill();
+        }
+
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+
+        // ラベル
+        const label = truncateLabel(node.name, 12);
+        ctx.font = '10px "Inter", "Hiragino Kaku Gothic ProN", sans-serif';
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillStyle = labelColor;
+        ctx.globalAlpha = 0.8;
+        ctx.fillText(label, p.x, p.y + size + 3);
+        ctx.globalAlpha = 1;
+      }
+
+      // フォールバック表示のバッジ
+      ctx.fillStyle = labelColor;
+      ctx.globalAlpha = 0.3;
+      ctx.font = '9px "Inter", sans-serif';
+      ctx.textAlign = "right";
+      ctx.textBaseline = "bottom";
+      ctx.fillText("Canvas fallback mode", width - 8, height - 8);
+      ctx.globalAlpha = 1;
+    }
+
+    function loop() {
+      simulate();
+      draw();
+      if (tickRef.current < 300) {
+        rafRef.current = requestAnimationFrame(loop);
+      }
+    }
+
+    rafRef.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [inputNodes, inputLinks, width, height, selectedNodeId]);
+
+  // ノードクリック検出
+  const handleCanvasClick = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const pos = positionsRef.current;
+
+      for (const node of inputNodes) {
+        const p = pos.get(node.id);
+        if (!p) continue;
+        const size = (node.type === "note" ? 6 : 8) + Math.sqrt(node.linkCount ?? 0) * 2 + 4;
+        const dx = mx - p.x;
+        const dy = my - p.y;
+        if (dx * dx + dy * dy <= size * size) {
+          onNodeClick(node);
+          return;
+        }
+      }
+    },
+    [inputNodes, onNodeClick],
+  );
+
+  return (
+    <div style={{ position: "relative", width, height }}>
+      <canvas
+        ref={canvasRef}
+        width={width}
+        height={height}
+        onClick={handleCanvasClick}
+        style={{ cursor: "pointer" }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          top: 8,
+          right: 8,
+          display: "flex",
+          gap: 6,
+          alignItems: "center",
+        }}
+      >
+        <span
+          style={{
+            fontSize: 9,
+            color: "var(--color-text-tertiary)",
+            opacity: 0.6,
+          }}
+          title={errorMessage}
+        >
+          簡易モード
+        </span>
+        <button
+          type="button"
+          onClick={onRetry}
+          style={{
+            fontSize: 10,
+            color: "var(--color-accent-primary)",
+            background: "transparent",
+            border: "1px solid var(--color-accent-primary)",
+            borderRadius: 6,
+            padding: "2px 8px",
+            cursor: "pointer",
+          }}
+        >
+          再試行
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
 // コンポーネント
 // ============================================================
 
@@ -484,51 +774,16 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
 
   if (loadErr) {
     return (
-      <div
-        className="flex items-center justify-center"
-        style={{
-          width,
-          height,
-          color: "var(--color-text-tertiary)",
-          backgroundColor: "var(--color-bg-primary)",
-        }}
-      >
-        <div className="flex flex-col items-center gap-3">
-          <svg
-            width="36" height="36" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" strokeWidth="1.5"
-            style={{ color: "var(--color-accent-danger)", opacity: 0.6 }}
-          >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-          <p className="text-xs" style={{ maxWidth: 280, textAlign: "center" }}>
-            グラフエンジンの初期化に失敗しました
-          </p>
-          <p
-            className="text-xs"
-            style={{ color: "var(--color-text-tertiary)", maxWidth: 320, textAlign: "center", fontSize: 10 }}
-          >
-            {loadErr.message}
-          </p>
-          <button
-            type="button"
-            onClick={() => setRetryCount((c) => c + 1)}
-            className="text-xs"
-            style={{
-              color: "var(--color-accent-primary)",
-              padding: "6px 16px",
-              borderRadius: "8px",
-              border: "1px solid var(--color-accent-primary)",
-              cursor: "pointer",
-              background: "transparent",
-            }}
-          >
-            再試行
-          </button>
-        </div>
-      </div>
+      <CanvasFallbackGraph
+        nodes={nodes}
+        links={links}
+        width={width}
+        height={height}
+        selectedNodeId={selectedNodeId}
+        onNodeClick={onNodeClick}
+        onRetry={() => setRetryCount((c) => c + 1)}
+        errorMessage={loadErr.message}
+      />
     );
   }
 
