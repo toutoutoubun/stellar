@@ -114,7 +114,7 @@ export const NoteList: React.FC = () => {
   const handleCreateDraft = useCallback(async () => {
     try {
       const draft = await invoke<Note>("create_draft", {
-        title: t.draftMode.newDraft,
+        input: { title: t.draftMode.newDraft },
       });
       if (draft) {
         // ノート一覧を再取得
