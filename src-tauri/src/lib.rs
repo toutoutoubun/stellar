@@ -1,7 +1,7 @@
 // src-tauri/src/lib.rs
 // Stellar — アプリケーションライブラリ
 // プラグイン登録・DB初期化・コマンド登録を行うエントリーポイント
-// DB は sqlx::SqlitePool を自前管理し、tauri-plugin-sql はフロントエンド用に残す
+// DB は sqlx::SqlitePool で一元管理する
 
 mod commands;
 mod db;
@@ -12,49 +12,8 @@ mod utils;
 use db::AppDb;
 use std::sync::Arc;
 use tauri::Manager;
-use tauri_plugin_sql::{Migration, MigrationKind};
-
-/// tauri-plugin-sql 用マイグレーション定義（フロントエンド JS からの DB アクセス用）
-fn get_migrations() -> Vec<Migration> {
-    vec![
-        Migration {
-            version: 1,
-            description: "初期スキーマ — papers / notes / highlights / links / FTS5(trigram)",
-            sql: include_str!("db/migrations/V001__initial.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 2,
-            description: "質的研究モジュール — CAQDAS + 歴史・政治研究ツール",
-            sql: include_str!("db/migrations/V002__qualitative.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 3,
-            description: "量的研究モジュール — Quantitative Lab",
-            sql: include_str!("db/migrations/V003__quantitative.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 4,
-            description: "引用ネットワーク・読書ステータス・関連論文サジェスト",
-            sql: include_str!("db/migrations/V004__citation_network.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 5,
-            description: "下書きモード — 長文執筆・章管理・引用挿入",
-            sql: include_str!("db/migrations/V005__draft_mode.sql"),
-            kind: MigrationKind::Up,
-        },
-        Migration {
-            version: 6,
-            description: "エクスポート設定 — 静的サイト・パッケージ・BibTeX",
-            sql: include_str!("db/migrations/V006__export.sql"),
-            kind: MigrationKind::Up,
-        },
-    ]
-}
+// 注: tauri-plugin-sql は削除済み。DB は sqlx::SqlitePool のみで管理する。
+// フロントエンドからの DB アクセスは Tauri コマンド（invoke）経由で行う。
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -65,11 +24,7 @@ pub fn run() {
                 .level(log::LevelFilter::Info)
                 .build(),
         )
-        .plugin(
-            tauri_plugin_sql::Builder::default()
-                .add_migrations("sqlite:stellar.db", get_migrations())
-                .build(),
-        )
+        // 注: tauri-plugin-sql は削除。DB は sqlx のみで管理。
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
