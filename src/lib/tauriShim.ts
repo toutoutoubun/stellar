@@ -390,6 +390,7 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
         type: "note",
         val: 1,
         tags: note.tags ?? [],
+        updatedAt: note.updatedAt ?? "",
       });
     }
     for (const paper of mockStore.papers) {
@@ -399,13 +400,14 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
         type: "paper",
         val: 1,
         tags: paper.tags ?? [],
+        updatedAt: paper.updatedAt ?? "",
       });
     }
     // mockStore.links からリンクを生成
     const nodeIdSet = new Set(nodes.map((n: any) => n.id));
     const links = mockStore.links
       .filter((l: any) => nodeIdSet.has(l.sourceId) && nodeIdSet.has(l.targetId))
-      .map((l: any) => ({ id: l.id, source: l.sourceId, target: l.targetId }));
+      .map((l: any) => ({ source: l.sourceId, target: l.targetId }));
     return { handled: true, result: { nodes, links } };
   }
 
@@ -516,6 +518,96 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     if (citations.length === 0) return { handled: true, result: "" };
     const bib = citations.map((c: any, i: number) => `[${i + 1}] ${c.bibliographyText}`).join("\n");
     return { handled: true, result: bib };
+  }
+
+  // ── Citation Network（動的生成）──
+  if (cmd === "fetch_citation_network") {
+    const paperId = (args?.paperId ?? "") as string;
+    // シードデータに基づいたサンプル参照文献・被引用文献を生成
+    const references = [
+      { ssPaperId: "mock-ref-001", title: "Social Capital: A Multifaceted Perspective", authors: ["Dasgupta, P.", "Serageldin, I."], year: 2000, doi: "10.1596/0-8213-4562-1", url: null, citationCount: 342 },
+      { ssPaperId: "mock-ref-002", title: "The Forms of Capital", authors: ["Bourdieu, P."], year: 1986, doi: null, url: "https://example.com/bourdieu1986", citationCount: 5210 },
+      { ssPaperId: "mock-ref-003", title: "Trust: The Social Virtues and the Creation of Prosperity", authors: ["Fukuyama, F."], year: 1995, doi: null, url: null, citationCount: 1820 },
+    ];
+    const citedBy = [
+      { ssPaperId: "mock-cite-001", title: "Community and Social Capital in the Digital Age", authors: ["Wellman, B.", "Haase, A."], year: 2019, doi: "10.1177/0002764219876543", url: null, citationCount: 78 },
+      { ssPaperId: "mock-cite-002", title: "Bridging and Bonding Social Capital Revisited", authors: ["Claridge, T."], year: 2020, doi: null, url: "https://example.com/claridge2020", citationCount: 45 },
+    ];
+    return {
+      handled: true,
+      result: {
+        paperId,
+        references,
+        citedBy,
+        fetchedAt: new Date().toISOString(),
+      },
+    };
+  }
+
+  if (cmd === "fetch_recommendations") {
+    // シードデータに基づいたレコメンデーションを生成
+    const recs = [
+      { id: "mock-rec-001", title: "Making Democracy Work: Civic Traditions in Modern Italy", authors: JSON.stringify(["Robert D. Putnam", "Robert Leonardi", "Raffaella Y. Nanetti"]), year: 1993, doi: "10.1515/9781400820740", url: null, abstract: "This book examines the conditions for creating strong, responsive, effective representative institutions and how social capital contributes to civic engagement.", relevanceScore: 0.92, isImported: 0 },
+      { id: "mock-rec-002", title: "The Logic of Collective Action: Public Goods and the Theory of Groups", authors: JSON.stringify(["Mancur Olson"]), year: 1965, doi: null, url: "https://example.com/olson1965", abstract: "A foundational work on how individuals in groups interact to pursue common goals, and the problem of free-riding.", relevanceScore: 0.85, isImported: 0 },
+      { id: "mock-rec-003", title: "Social Capital in the Creation of Human Capital", authors: JSON.stringify(["James S. Coleman"]), year: 1988, doi: "10.1086/228943", url: null, abstract: "Coleman introduces the concept of social capital in the context of education and human capital formation.", relevanceScore: 0.78, isImported: 0 },
+    ];
+    return { handled: true, result: recs };
+  }
+
+  if (cmd === "get_recommendations") {
+    // キャッシュ済みレコメンデーション（まだ取得していなければ空配列）
+    return { handled: true, result: [] };
+  }
+
+  if (cmd === "import_recommendation") {
+    // import_recommendation: モック環境では何もせず null を返す
+    return { handled: true, result: null };
+  }
+
+  if (cmd === "export_bibtex") {
+    const paperIds = (args?.paperIds ?? []) as string[];
+    const entries: string[] = [];
+    for (const pid of paperIds) {
+      const paper = mockStore.papers.find((p: any) => p.id === pid);
+      if (!paper) continue;
+      const authorLast = (paper.authors?.[0] ?? "Unknown").split(" ").pop() ?? "Unknown";
+      const key = `${authorLast}${paper.year ?? "nd"}`;
+      entries.push(`@article{${key},\n  title = {${paper.title}},\n  author = {${(paper.authors ?? []).join(" and ")}},\n  year = {${paper.year ?? ""}},\n  journal = {${paper.journal ?? ""}},\n  doi = {${paper.doi ?? ""}}\n}`);
+    }
+    return { handled: true, result: entries.join("\n\n") || "% No papers selected" };
+  }
+
+  if (cmd === "export_ris") {
+    const paperIds = (args?.paperIds ?? []) as string[];
+    const entries: string[] = [];
+    for (const pid of paperIds) {
+      const paper = mockStore.papers.find((p: any) => p.id === pid);
+      if (!paper) continue;
+      const lines = [
+        "TY  - JOUR",
+        `TI  - ${paper.title}`,
+        ...(paper.authors ?? []).map((a: string) => `AU  - ${a}`),
+        `PY  - ${paper.year ?? ""}`,
+        `JO  - ${paper.journal ?? ""}`,
+        `DO  - ${paper.doi ?? ""}`,
+        "ER  - ",
+      ];
+      entries.push(lines.join("\n"));
+    }
+    return { handled: true, result: entries.join("\n\n") || "" };
+  }
+
+  if (cmd === "get_citation_graph_data") {
+    // 引用グラフ: mockStore の論文間リンクからグラフを生成
+    const graphNodes = mockStore.papers.map((p: any) => ({
+      id: p.id,
+      label: p.title || "Untitled",
+      type: "paper",
+    }));
+    const graphEdges = mockStore.links
+      .filter((l: any) => l.sourceType === "paper" && l.targetType === "paper")
+      .map((l: any) => ({ source: l.sourceId, target: l.targetId }));
+    return { handled: true, result: { nodes: graphNodes, edges: graphEdges } };
   }
 
   // ── Link Suggestions（リンクサジェスト）──
@@ -715,10 +807,10 @@ if (!isTauri) {
     { id: "seed-note-005", title: "制度論とガバナンス", content: "North (1990) の制度概念…", tags: ["theory", "institution"], isDraft: 0, draftMeta: "{}", wordCount: 290, readingTimeMin: 2, createdAt: "2025-04-05T13:00:00Z", updatedAt: "2025-04-18T10:00:00Z" },
   ];
   const seedPapers = [
-    { id: "seed-paper-001", title: "Bowling Alone: The Collapse and Revival of American Community", authors: ["Robert D. Putnam"], year: 2000, journal: null, doi: null, url: null, abstract: "An exploration of declining social capital in America.", pdfPath: null, tags: ["social-capital", "theory"], createdAt: "2025-03-01T10:00:00Z", updatedAt: "2025-03-01T10:00:00Z" },
-    { id: "seed-paper-002", title: "The Comparative Method: Moving Beyond Qualitative and Quantitative Strategies", authors: ["Charles C. Ragin"], year: 1987, journal: null, doi: null, url: null, abstract: "Introduction of QCA methodology.", pdfPath: null, tags: ["methodology", "QCA"], createdAt: "2025-03-05T10:00:00Z", updatedAt: "2025-03-05T10:00:00Z" },
-    { id: "seed-paper-003", title: "Institutions, Institutional Change and Economic Performance", authors: ["Douglass C. North"], year: 1990, journal: null, doi: null, url: null, abstract: "A framework for analyzing institutions.", pdfPath: null, tags: ["theory", "institution"], createdAt: "2025-03-10T10:00:00Z", updatedAt: "2025-03-10T10:00:00Z" },
-    { id: "seed-paper-004", title: "Governing the Commons", authors: ["Elinor Ostrom"], year: 1990, journal: null, doi: null, url: null, abstract: "The Evolution of Institutions for Collective Action.", pdfPath: null, tags: ["institution", "commons"], createdAt: "2025-03-12T10:00:00Z", updatedAt: "2025-03-12T10:00:00Z" },
+    { id: "seed-paper-001", title: "Bowling Alone: The Collapse and Revival of American Community", authors: ["Robert D. Putnam"], year: 2000, journal: "Journal of Democracy", doi: "10.1353/jod.2000.0016", url: "https://doi.org/10.1353/jod.2000.0016", abstract: "An exploration of declining social capital in America.", pdfPath: null, tags: ["social-capital", "theory"], createdAt: "2025-03-01T10:00:00Z", updatedAt: "2025-03-01T10:00:00Z" },
+    { id: "seed-paper-002", title: "The Comparative Method: Moving Beyond Qualitative and Quantitative Strategies", authors: ["Charles C. Ragin"], year: 1987, journal: "University of California Press", doi: "10.2307/2069712", url: "https://doi.org/10.2307/2069712", abstract: "Introduction of QCA methodology.", pdfPath: null, tags: ["methodology", "QCA"], createdAt: "2025-03-05T10:00:00Z", updatedAt: "2025-03-05T10:00:00Z" },
+    { id: "seed-paper-003", title: "Institutions, Institutional Change and Economic Performance", authors: ["Douglass C. North"], year: 1990, journal: "Cambridge University Press", doi: "10.1017/CBO9780511808678", url: "https://doi.org/10.1017/CBO9780511808678", abstract: "A framework for analyzing institutions.", pdfPath: null, tags: ["theory", "institution"], createdAt: "2025-03-10T10:00:00Z", updatedAt: "2025-03-10T10:00:00Z" },
+    { id: "seed-paper-004", title: "Governing the Commons", authors: ["Elinor Ostrom"], year: 1990, journal: "Cambridge University Press", doi: "10.1017/CBO9780511807763", url: "https://doi.org/10.1017/CBO9780511807763", abstract: "The Evolution of Institutions for Collective Action.", pdfPath: null, tags: ["institution", "commons"], createdAt: "2025-03-12T10:00:00Z", updatedAt: "2025-03-12T10:00:00Z" },
   ];
   const seedLinks = [
     { id: "seed-link-001", sourceId: "seed-note-001", sourceType: "note", targetId: "seed-paper-001", targetType: "paper", context: null, createdAt: "2025-04-01T10:00:00Z" },
@@ -862,15 +954,15 @@ const MOCK_RESPONSES: Record<string, any> = {
   import_stellar_package: { papersImported: 0, notesImported: 0, highlightsImported: 0, linksImported: 0, pdfsExtracted: 0, conflicts: [] },
 
   // Citation Network
+  // fetch_citation_network → 動的ハンドラで処理
+  // fetch_recommendations → 動的ハンドラで処理
+  // get_recommendations → 動的ハンドラで処理
+  // import_recommendation → 動的ハンドラで処理
+  // export_bibtex → 動的ハンドラで処理
+  // export_ris → 動的ハンドラで処理
+  // get_citation_graph_data → 動的ハンドラで処理
   update_reading_status: undefined,
   get_reading_status_counts: { unread: 0, reading: 0, done: 0, revisit: 0 },
-  fetch_citation_network: { paperId: "", references: [], citedBy: [], fetchedAt: null },
-  fetch_recommendations: [],
-  get_recommendations: [],
-  import_recommendation: null,
-  get_citation_graph_data: { nodes: [], edges: [] },
-  export_bibtex: "",
-  export_ris: "",
 };
 
 /**
