@@ -402,6 +402,7 @@ pub(crate) fn col_i32(row: &sqlx::sqlite::SqliteRow, key: &str) -> i32 {
 }
 
 /// sqlx::SqliteRow から f64 を取得（NULL なら 0.0）
+#[allow(dead_code)]
 pub fn col_f64(row: &sqlx::sqlite::SqliteRow, key: &str) -> f64 {
     row.try_get::<f64, _>(key).unwrap_or(0.0)
 }

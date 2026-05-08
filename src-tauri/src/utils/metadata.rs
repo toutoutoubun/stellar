@@ -149,6 +149,7 @@ pub async fn fetch_metadata_by_doi(doi: &str) -> Result<PaperMetadata, MetadataE
 ///
 /// CiNii Research は従来の NAID（NII Article ID）を CRID に
 /// 移行しているが、後方互換性のため NAID での呼び出しも受け付ける
+#[allow(dead_code)]
 pub async fn fetch_metadata_by_cinii(naid: &str) -> Result<PaperMetadata, MetadataError> {
     let url = format!("https://cir.nii.ac.jp/crid/{}?format=json", naid);
     let client = reqwest::Client::new();
