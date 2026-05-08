@@ -499,6 +499,8 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
    */
   const prevNodeIdsRef = useRef<string>("");
   const prevGraphDataRef = useRef<{ nodes: GraphNodeExtended[]; links: GraphLink[] } | null>(null);
+  /** 前回の有効な寸法（0x0 → 実サイズ 遷移の検出に使用） */
+  const prevDimsRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
 
   const graphData = useMemo(() => {
     const cx = width / 2;
@@ -509,9 +511,20 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
     // ノードIDリストのフィンガープリント
     const nodeIdKey = nodes.map((nd) => nd.id).join(",");
 
-    // ノードID構成が同じ場合はプロパティ更新のみ行い、オブジェクト参照を維持する
-    // これにより react-force-graph-2d のシミュレーションリセットを防ぐ
-    if (prevNodeIdsRef.current === nodeIdKey && prevGraphDataRef.current) {
+    // 寸法が 0x0 → 実サイズに変わった場合は「初回配置」として再配置を強制する
+    // これにより containerSize が遅延で設定されても正しい位置にノードが配置される
+    const prevHadSize = prevDimsRef.current.w > 0 && prevDimsRef.current.h > 0;
+    const nowHasSize = width > 0 && height > 0;
+    const dimensionsJustBecameValid = !prevHadSize && nowHasSize;
+    prevDimsRef.current = { w: width, h: height };
+
+    // ノードID構成が同じ かつ 寸法が 0→実サイズ の遷移ではない場合のみ
+    // プロパティ更新のみ行い、オブジェクト参照を維持する
+    if (
+      prevNodeIdsRef.current === nodeIdKey &&
+      prevGraphDataRef.current &&
+      !dimensionsJustBecameValid
+    ) {
       const prev = prevGraphDataRef.current;
       // 既存ノードのプロパティ（name, tags等）だけ同期
       const nodeMap = new Map(nodes.map((nd) => [nd.id, nd]));
@@ -529,7 +542,13 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
       return prev;
     }
 
-    // 新しいノード構成 → 初期位置を円形配置して新規作成
+    // width/height が 0 の場合は空データを返す（描画をスキップ）
+    // GraphView 側の containerSize.width > 0 ガードと二重安全
+    if (width <= 0 || height <= 0) {
+      return { nodes: [] as GraphNodeExtended[], links: [] as GraphLink[] };
+    }
+
+    // 新しいノード構成 or 寸法が有効になった → 初期位置を円形配置して新規作成
     const positioned = (nodes as GraphNodeExtended[]).map((node, i) => {
       const angle = (2 * Math.PI * i) / n;
       return {
@@ -555,6 +574,9 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
   const prevForceNodeKeyRef = useRef<string>("");
 
   /** Force シミュレーション設定 */
+  /** 前回の有効寸法を追跡（Force 設定 + zoomToFit のトリガー判定用） */
+  const prevForceDimsRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
+
   useEffect(() => {
     const fg = graphRef.current;
     if (!fg) return;
@@ -564,6 +586,12 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
     const nodeKey = nodes.map((nd) => nd.id).sort().join(",");
     const isNewConfig = nodeKey !== prevForceNodeKeyRef.current;
     prevForceNodeKeyRef.current = nodeKey;
+
+    // 寸法が 0 → 有効値に変わった場合もシミュレーションを再加熱 + zoomToFit を実行
+    const prevHadValidDims = prevForceDimsRef.current.w > 0 && prevForceDimsRef.current.h > 0;
+    const nowHasValidDims = width > 0 && height > 0;
+    const dimsJustBecameValid = !prevHadValidDims && nowHasValidDims;
+    prevForceDimsRef.current = { w: width, h: height };
 
     try {
       // 斥力: ノード間を十分に離す（デフォルト -30 では全く足りない）
@@ -587,8 +615,17 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
       console.error(t.graph.k_i4xtrj, e);
     }
 
-    // ノード構成が変わった場合のみ zoomToFit を段階的に実行
-    if (isNewConfig) {
+    // 寸法が有効になった直後はシミュレーションを再加熱して
+    // ノードを新しい中心座標に向かって移動させる
+    if (dimsJustBecameValid) {
+      try {
+        fg.d3ReheatSimulation();
+      } catch { /* ignore */ }
+    }
+
+    // ノード構成が変わった場合 or 寸法が初めて有効になった場合に
+    // zoomToFit を段階的に実行
+    if (isNewConfig || dimsJustBecameValid) {
       hasZoomedRef.current = false;
       const timers = [
         setTimeout(() => {

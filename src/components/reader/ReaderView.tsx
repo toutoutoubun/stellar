@@ -113,35 +113,76 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
     let cancelled = false;
     let objectUrl: string | null = null;
 
+    /**
+     * Tauri fs プラグインでファイルを直接読み取るフォールバック。
+     * asset protocol が動作しない環境（スコープ未設定・WKWebView制限等）で使用。
+     */
+    const readViaFsPlugin = async (filePath: string): Promise<Blob> => {
+      const { readFile } = await import("@tauri-apps/plugin-fs");
+      const bytes = await readFile(filePath);
+      return new Blob([bytes], { type: "application/pdf" });
+    };
+
     const loadPdf = async () => {
       setPdfLoadingBlob(true);
       setPdfLoadError(null);
 
       try {
         if (isTauri) {
-          // Tauri 環境: convertFileSrc で asset URL を取得し、fetch → Blob URL
-          const assetUrl = convertFileSrc(paper.pdfPath!);
-          console.info("[ReaderView] PDF asset URL:", assetUrl);
+          let blob: Blob | null = null;
 
-          const response = await fetch(assetUrl);
-          if (!response.ok && response.status !== 0) {
-            throw new Error(`PDF fetch failed: HTTP ${response.status} ${response.statusText}`);
+          // 方法1: convertFileSrc で asset URL を取得し、fetch → Blob URL
+          try {
+            const assetUrl = convertFileSrc(paper.pdfPath!);
+            console.info("[ReaderView] PDF asset URL:", assetUrl);
+
+            const response = await fetch(assetUrl);
+            if (!response.ok && response.status !== 0) {
+              throw new Error(`HTTP ${response.status} ${response.statusText}`);
+            }
+
+            blob = await response.blob();
+            if (blob.size === 0) {
+              throw new Error("PDF file is empty (0 bytes) via asset protocol");
+            }
+
+            // PDF の先頭バイトを検証
+            const header = await blob.slice(0, 5).text();
+            if (header !== "%PDF-") {
+              throw new Error(`Invalid PDF header via asset protocol: ${JSON.stringify(header)}`);
+            }
+          } catch (assetErr) {
+            // 方法2: Tauri fs プラグインで直接読み取り
+            console.warn(
+              "[ReaderView] Asset protocol failed, falling back to fs plugin:",
+              assetErr instanceof Error ? assetErr.message : String(assetErr),
+            );
+
+            try {
+              blob = await readViaFsPlugin(paper.pdfPath!);
+              if (blob.size === 0) {
+                throw new Error("PDF file is empty (0 bytes) via fs plugin");
+              }
+              const header = await blob.slice(0, 5).text();
+              if (header !== "%PDF-") {
+                throw new Error(`Invalid PDF header via fs plugin: ${JSON.stringify(header)}`);
+              }
+              console.info("[ReaderView] PDF loaded successfully via fs plugin fallback");
+            } catch (fsErr) {
+              // 両方失敗 — 元の asset protocol エラーと合わせて報告
+              const assetMsg = assetErr instanceof Error ? assetErr.message : String(assetErr);
+              const fsMsg = fsErr instanceof Error ? fsErr.message : String(fsErr);
+              throw new Error(
+                `Asset protocol: ${assetMsg} | FS plugin: ${fsMsg}`,
+              );
+            }
           }
 
-          const blob = await response.blob();
-          if (blob.size === 0) {
-            throw new Error("PDF file is empty (0 bytes)");
+          if (blob) {
+            objectUrl = URL.createObjectURL(
+              new Blob([blob], { type: "application/pdf" }),
+            );
           }
-
-          // PDF の先頭バイトを検証
-          const header = await blob.slice(0, 5).text();
-          if (header !== "%PDF-") {
-            throw new Error(`Invalid PDF file (header: ${JSON.stringify(header)})`);
-          }
-
-          objectUrl = URL.createObjectURL(
-            new Blob([blob], { type: "application/pdf" })
-          );
         } else {
           // 非 Tauri 環境（ブラウザプレビュー）: パスが https:// の場合はそのまま使用
           const path = paper.pdfPath!;
