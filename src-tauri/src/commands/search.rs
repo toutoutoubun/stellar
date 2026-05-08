@@ -101,10 +101,24 @@ pub async fn full_text_search(
 #[tauri::command]
 pub async fn get_link_suggestions(
     app: AppHandle,
-    query: String,
+    query: Option<String>,
+    item_id: Option<String>,
+    item_type: Option<String>,
 ) -> Result<Vec<LinkSuggestion>, String> {
     let pool = get_pool(&app)?;
 
+    if let Some(ref id) = item_id {
+        if !id.trim().is_empty() {
+            return get_context_link_suggestions(
+                pool.as_ref(),
+                id.trim(),
+                item_type.as_deref().unwrap_or("note"),
+            )
+            .await;
+        }
+    }
+
+    let query = query.unwrap_or_default();
     if query.trim().is_empty() {
         return Ok(vec![]);
     }
@@ -163,7 +177,9 @@ pub async fn get_link_suggestions(
             id,
             item_type: "note".to_string(),
             title,
-            subtitle,
+            detail: Some(subtitle),
+            score: None,
+            reason: None,
         });
     }
 
@@ -194,11 +210,302 @@ pub async fn get_link_suggestions(
             id,
             item_type: "paper".to_string(),
             title,
-            subtitle,
+            detail: Some(subtitle),
+            score: None,
+            reason: None,
         });
     }
 
     Ok(suggestions)
+}
+
+// ────────────────────────────────────────────────────────────
+// resolve_wikilink — [[タイトル]] クリック時のリンク先解決
+// ────────────────────────────────────────────────────────────
+
+/// WikiLink の表示テキストからノートまたは論文を解決する。
+/// 同名がある場合は、ユーザーの執筆体験に合わせてノートを優先する。
+#[tauri::command]
+pub async fn resolve_wikilink(
+    app: AppHandle,
+    title: String,
+) -> Result<ResolvedWikiLink, String> {
+    let pool = get_pool(&app)?;
+    let trimmed = title.trim();
+    if trimmed.is_empty() {
+        return Err("WikiLink のタイトルが空です".to_string());
+    }
+
+    let note = sqlx::query(
+        "SELECT id FROM notes
+         WHERE title = ? COLLATE NOCASE
+           AND (is_draft = 0 OR is_draft IS NULL)
+         ORDER BY updated_at DESC
+         LIMIT 1",
+    )
+    .bind(trimmed)
+    .fetch_optional(pool.as_ref())
+    .await
+    .map_err(|e| format!("WikiLink ノート解決に失敗: {}", e))?;
+
+    if let Some(row) = note {
+        return Ok(ResolvedWikiLink {
+            id: col_str(&row, "id"),
+            item_type: "note".to_string(),
+        });
+    }
+
+    let paper = sqlx::query(
+        "SELECT id FROM papers
+         WHERE title = ? COLLATE NOCASE
+         ORDER BY updated_at DESC
+         LIMIT 1",
+    )
+    .bind(trimmed)
+    .fetch_optional(pool.as_ref())
+    .await
+    .map_err(|e| format!("WikiLink 論文解決に失敗: {}", e))?;
+
+    if let Some(row) = paper {
+        return Ok(ResolvedWikiLink {
+            id: col_str(&row, "id"),
+            item_type: "paper".to_string(),
+        });
+    }
+
+    Err(format!("WikiLink のリンク先が見つかりません: {}", trimmed))
+}
+
+/// 現在のノート/論文を起点に、まだリンクされていない関連候補を返す。
+async fn get_context_link_suggestions(
+    pool: &sqlx::SqlitePool,
+    item_id: &str,
+    item_type: &str,
+) -> Result<Vec<LinkSuggestion>, String> {
+    let item_type = if item_type == "paper" { "paper" } else { "note" };
+
+    let linked_rows = sqlx::query(
+        "SELECT source_type, source_id, target_type, target_id
+         FROM links
+         WHERE (source_type = ? AND source_id = ?)
+            OR (target_type = ? AND target_id = ?)",
+    )
+    .bind(item_type)
+    .bind(item_id)
+    .bind(item_type)
+    .bind(item_id)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| format!("既存リンクの取得に失敗: {}", e))?;
+
+    let mut linked_keys = std::collections::HashSet::new();
+    linked_keys.insert(format!("{}:{}", item_type, item_id));
+    for row in &linked_rows {
+        let source_type = col_str(row, "source_type");
+        let source_id = col_str(row, "source_id");
+        let target_type = col_str(row, "target_type");
+        let target_id = col_str(row, "target_id");
+        linked_keys.insert(format!("{}:{}", source_type, source_id));
+        linked_keys.insert(format!("{}:{}", target_type, target_id));
+    }
+
+    let current_row = if item_type == "paper" {
+        sqlx::query(
+            "SELECT title, COALESCE(abstract, '') AS body, tags, authors, journal, year
+             FROM papers WHERE id = ?",
+        )
+        .bind(item_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| format!("現在の論文取得に失敗: {}", e))?
+    } else {
+        sqlx::query(
+            "SELECT title, content AS body, tags, '[]' AS authors, NULL AS journal, NULL AS year
+             FROM notes WHERE id = ?",
+        )
+        .bind(item_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| format!("現在のノート取得に失敗: {}", e))?
+    };
+
+    let Some(current_row) = current_row else {
+        return Ok(vec![]);
+    };
+
+    let current_title = col_str(&current_row, "title");
+    let current_body = col_str(&current_row, "body");
+    let current_tags = col_string_vec(&current_row, "tags");
+    let current_authors = col_string_vec(&current_row, "authors");
+    let current_text = format!("{} {}", current_title, current_body);
+
+    let mut suggestions: Vec<LinkSuggestion> = Vec::new();
+
+    let note_rows = sqlx::query(
+        "SELECT id, title, content AS body, tags
+         FROM notes
+         WHERE (is_draft = 0 OR is_draft IS NULL)
+         ORDER BY updated_at DESC",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| format!("ノート候補の取得に失敗: {}", e))?;
+
+    for row in &note_rows {
+        let id = col_str(row, "id");
+        if linked_keys.contains(&format!("note:{}", id)) {
+            continue;
+        }
+        let title = col_str(row, "title");
+        let body = col_str(row, "body");
+        let tags = col_string_vec(row, "tags");
+        if let Some((score, reason)) =
+            score_link_candidate(&current_title, &current_text, &current_tags, &title, &body, &tags)
+        {
+            suggestions.push(LinkSuggestion {
+                id,
+                item_type: "note".to_string(),
+                title,
+                detail: Some("ノート".to_string()),
+                score: Some(score),
+                reason: Some(reason),
+            });
+        }
+    }
+
+    let paper_rows = sqlx::query(
+        "SELECT id, title, COALESCE(abstract, '') AS body, tags, authors, year
+         FROM papers
+         ORDER BY updated_at DESC",
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| format!("論文候補の取得に失敗: {}", e))?;
+
+    for row in &paper_rows {
+        let id = col_str(row, "id");
+        if linked_keys.contains(&format!("paper:{}", id)) {
+            continue;
+        }
+        let title = col_str(row, "title");
+        let body = col_str(row, "body");
+        let tags = col_string_vec(row, "tags");
+        if let Some((mut score, mut reason)) =
+            score_link_candidate(&current_title, &current_text, &current_tags, &title, &body, &tags)
+        {
+            let authors = col_string_vec(row, "authors");
+            let author_overlap = authors
+                .iter()
+                .filter(|a| current_authors.iter().any(|b| a.eq_ignore_ascii_case(b)))
+                .count();
+            if author_overlap > 0 {
+                score += author_overlap as f64 * 2.0;
+                reason = format!("{}, 著者一致: {}件", reason, author_overlap);
+            }
+
+            let year = col_opt_i32(row, "year");
+            let detail = match year {
+                Some(y) => format!("論文 ({})", y),
+                None => "論文".to_string(),
+            };
+
+            suggestions.push(LinkSuggestion {
+                id,
+                item_type: "paper".to_string(),
+                title,
+                detail: Some(detail),
+                score: Some(score),
+                reason: Some(reason),
+            });
+        }
+    }
+
+    suggestions.sort_by(|a, b| {
+        b.score
+            .unwrap_or(0.0)
+            .partial_cmp(&a.score.unwrap_or(0.0))
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| a.title.cmp(&b.title))
+    });
+    suggestions.truncate(8);
+    Ok(suggestions)
+}
+
+fn score_link_candidate(
+    current_title: &str,
+    current_text: &str,
+    current_tags: &[String],
+    candidate_title: &str,
+    candidate_text: &str,
+    candidate_tags: &[String],
+) -> Option<(f64, String)> {
+    let mut score = 0.0;
+    let mut reasons = Vec::new();
+
+    let shared_tags: Vec<&String> = candidate_tags
+        .iter()
+        .filter(|tag| current_tags.iter().any(|t| t.eq_ignore_ascii_case(tag)))
+        .collect();
+    if !shared_tags.is_empty() {
+        score += shared_tags.len() as f64 * 3.0;
+        reasons.push(format!(
+            "共通タグ: {}",
+            shared_tags
+                .iter()
+                .take(3)
+                .map(|s| s.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    }
+
+    if contains_ci(current_text, candidate_title) {
+        score += 5.0;
+        reasons.push("本文でタイトルに言及".to_string());
+    }
+
+    if contains_ci(candidate_text, current_title) {
+        score += 3.0;
+        reasons.push("相手本文で現在のタイトルに言及".to_string());
+    }
+
+    let overlap = keyword_overlap(current_text, candidate_text);
+    if overlap >= 2 {
+        let add = (overlap as f64).min(4.0);
+        score += add;
+        reasons.push(format!("キーワード一致: {}件", overlap));
+    }
+
+    if score <= 0.0 {
+        None
+    } else {
+        Some((score, reasons.join(" / ")))
+    }
+}
+
+fn contains_ci(haystack: &str, needle: &str) -> bool {
+    let needle = needle.trim();
+    if needle.chars().count() < 2 {
+        return false;
+    }
+    haystack.to_lowercase().contains(&needle.to_lowercase())
+}
+
+fn keyword_overlap(a: &str, b: &str) -> usize {
+    let a_words = keywords(a);
+    if a_words.is_empty() {
+        return 0;
+    }
+    let b_words = keywords(b);
+    a_words.intersection(&b_words).count()
+}
+
+fn keywords(text: &str) -> std::collections::HashSet<String> {
+    text.split(|c: char| !c.is_alphanumeric())
+        .map(|w| w.trim().to_lowercase())
+        .filter(|w| w.chars().count() >= 4)
+        .take(80)
+        .collect()
 }
 
 // ════════════════════════════════════════════════════════════

@@ -365,6 +365,10 @@ export interface LinkSuggestion {
   type: NodeType;
   /** 補助テキスト（著者名・更新日など） */
   detail?: string;
+  /** リンクサジェスト用スコア */
+  score?: number;
+  /** リンクサジェスト用理由 */
+  reason?: string;
 }
 
 /** バックリンクアイテム（コンテキストパネル表示用） */

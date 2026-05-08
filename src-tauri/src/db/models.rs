@@ -294,10 +294,26 @@ pub struct SearchHit {
 #[serde(rename_all = "camelCase")]
 pub struct LinkSuggestion {
     pub id: String,
+    #[serde(rename = "type")]
     pub item_type: String,
     pub title: String,
     /// 補足情報（著者名、タグなど）
-    pub subtitle: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
+    /// リンクサジェスト用スコア（WikiLink 補完では未使用）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub score: Option<f64>,
+    /// リンクサジェスト用理由（WikiLink 補完では未使用）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+}
+
+/// WikiLink 解決結果
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResolvedWikiLink {
+    pub id: String,
+    pub item_type: String,
 }
 
 // ============================================================

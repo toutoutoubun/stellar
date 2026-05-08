@@ -501,7 +501,7 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
    * react-force-graph-2d は graphData が変わるたびにシミュレーションを
    * リセットするため、ノード ID リストが同じなら同一オブジェクトを返す。
    */
-  const prevNodeIdsRef = useRef<string>("");
+  const prevGraphKeyRef = useRef<string>("");
   const prevGraphDataRef = useRef<{ nodes: GraphNodeExtended[]; links: GraphLink[] } | null>(null);
 
   const graphData = useMemo(() => {
@@ -509,15 +509,27 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
 
     // ノードIDリストのフィンガープリント
     const nodeIdKey = nodes.map((nd) => nd.id).join(",");
+    const linkKey = links
+      .map((link) => {
+        const src = typeof link.source === "string" ? link.source : (link.source as { id: string }).id;
+        const tgt = typeof link.target === "string" ? link.target : (link.target as { id: string }).id;
+        return src <= tgt ? `${src}|${tgt}` : `${tgt}|${src}`;
+      })
+      .sort()
+      .join(",");
+    const graphKey = `${nodeIdKey}::${linkKey}`;
+    const hasVisibleLinks = links.length > 0;
 
     // ノードID構成が同じ場合はプロパティ更新のみ行い、オブジェクト参照を維持する
     if (
-      prevNodeIdsRef.current === nodeIdKey &&
+      prevGraphKeyRef.current === graphKey &&
       prevGraphDataRef.current
     ) {
       const prev = prevGraphDataRef.current;
       const nodeMap = new Map(nodes.map((nd) => [nd.id, nd]));
-      for (const existing of prev.nodes) {
+      for (let i = 0; i < prev.nodes.length; i++) {
+        const existing = prev.nodes[i];
+        if (!existing) continue;
         const updated = nodeMap.get(existing.id);
         if (updated) {
           existing.name = updated.name;
@@ -525,6 +537,17 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
           existing.linkCount = updated.linkCount;
           existing.tags = updated.tags;
           existing.updatedAt = updated.updatedAt;
+          if (!hasVisibleLinks) {
+            const angle = (2 * Math.PI * i) / n;
+            const radius = Math.max(80, Math.sqrt(n) * 55);
+            existing.x = radius * Math.cos(angle);
+            existing.y = radius * Math.sin(angle);
+            existing.fx = existing.x;
+            existing.fy = existing.y;
+          } else if (existing.fx != null || existing.fy != null) {
+            existing.fx = undefined;
+            existing.fy = undefined;
+          }
         }
       }
       prev.links = links as GraphLink[];
@@ -533,13 +556,15 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
 
     // 初期位置を原点 (0,0) 中心に円形配置。
     // 半径はノード数に応じてスケール（少数ノードでも十分な間隔を確保）
-    const radius = Math.max(50, n * 8);
+    const radius = hasVisibleLinks ? Math.max(50, n * 8) : Math.max(80, Math.sqrt(n) * 55);
     const positioned = (nodes as GraphNodeExtended[]).map((node, i) => {
       const angle = (2 * Math.PI * i) / n;
       return {
         ...node,
         x: radius * Math.cos(angle) + (Math.random() - 0.5) * 20,
         y: radius * Math.sin(angle) + (Math.random() - 0.5) * 20,
+        fx: hasVisibleLinks ? undefined : radius * Math.cos(angle),
+        fy: hasVisibleLinks ? undefined : radius * Math.sin(angle),
       };
     });
 
@@ -548,7 +573,7 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
       links: links as GraphLink[],
     };
 
-    prevNodeIdsRef.current = nodeIdKey;
+    prevGraphKeyRef.current = graphKey;
     prevGraphDataRef.current = data;
     return data;
   }, [nodes, links]);
