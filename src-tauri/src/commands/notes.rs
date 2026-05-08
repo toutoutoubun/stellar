@@ -180,6 +180,11 @@ pub async fn create_note(app: AppHandle, input: CreateNoteDto) -> Result<NoteRes
         tags: input.tags,
         created_at: now.clone(),
         updated_at: now,
+        // 新規ノートはドラフトではない
+        is_draft: Some(0),
+        draft_meta: Some("{}".to_string()),
+        word_count: Some(0),
+        reading_time_min: Some(0),
     })
 }
 
@@ -237,6 +242,11 @@ pub async fn update_note(
         tags,
         created_at: current.created_at,
         updated_at: now,
+        // ドラフトフィールドは既存値を維持
+        is_draft: current.is_draft,
+        draft_meta: current.draft_meta,
+        word_count: current.word_count,
+        reading_time_min: current.reading_time_min,
     })
 }
 
@@ -367,6 +377,10 @@ pub async fn create_note_from_highlights(
         tags: vec![],
         created_at: now.clone(),
         updated_at: now,
+        is_draft: Some(0),
+        draft_meta: Some("{}".to_string()),
+        word_count: Some(0),
+        reading_time_min: Some(0),
     })
 }
 

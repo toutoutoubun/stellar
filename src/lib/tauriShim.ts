@@ -53,6 +53,10 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
       content: input.content ?? "",
       tags: input.tags ?? [],
       paperId: input.paperId ?? null,
+      isDraft: 0,
+      draftMeta: "{}",
+      wordCount: 0,
+      readingTimeMin: 0,
       createdAt: now(),
       updatedAt: now(),
     };

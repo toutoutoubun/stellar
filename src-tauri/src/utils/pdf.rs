@@ -49,52 +49,69 @@ pub fn extract_metadata_from_file(path: &str) -> PdfMetadata {
     };
 
     // トレイラーの Info 辞書からメタデータを取得
-    if let Ok(info_ref) = doc.trailer.get(b"Info") {
-        if let Ok(info_ref) = info_ref.as_reference() {
-            if let Ok(info_obj) = doc.get_object(info_ref) {
-                if let Ok(dict) = info_obj.as_dict() {
-                    // Title
-                    if let Ok(val) = dict.get(b"Title") {
-                        if let Some(s) = pdf_object_to_string(val) {
-                            let trimmed = s.trim().to_string();
-                            if !trimmed.is_empty() {
-                                meta.title = Some(trimmed);
-                            }
-                        }
-                    }
+    // Info は直接 Dictionary として格納される場合と、Reference として格納される場合がある
+    // ヘルパー: Info オブジェクトから辞書を抽出する
+    fn resolve_info_dict<'a>(doc: &'a lopdf::Document) -> Option<&'a lopdf::Dictionary> {
+        let info_val = doc.trailer.get(b"Info").ok()?;
+        // 1) Reference 経由で辞書を取得
+        if let Ok(r) = info_val.as_reference() {
+            if let Ok(obj) = doc.get_object(r) {
+                return obj.as_dict().ok();
+            }
+        }
+        // 2) インライン辞書として直接取得
+        info_val.as_dict().ok()
+    }
 
-                    // Author
-                    if let Ok(val) = dict.get(b"Author") {
-                        if let Some(s) = pdf_object_to_string(val) {
-                            let trimmed = s.trim().to_string();
-                            if !trimmed.is_empty() {
-                                // 著者名をセミコロン、カンマ、"and" で分割
-                                meta.authors = trimmed
-                                    .split(|c| c == ';' || c == ',')
-                                    .flat_map(|part| part.split(" and "))
-                                    .map(|s| s.trim().to_string())
-                                    .filter(|s| !s.is_empty())
-                                    .collect();
-                            }
-                        }
-                    }
+    if let Some(dict) = resolve_info_dict(&doc) {
+        // Title
+        if let Ok(val) = dict.get(b"Title") {
+            if let Some(s) = pdf_object_to_string(val) {
+                let trimmed = s.trim().to_string();
+                if !trimmed.is_empty() {
+                    meta.title = Some(trimmed);
+                }
+            }
+        }
 
-                    // Subject → abstract の候補
-                    if let Ok(val) = dict.get(b"Subject") {
-                        if let Some(s) = pdf_object_to_string(val) {
-                            let trimmed = s.trim().to_string();
-                            if !trimmed.is_empty() {
-                                meta.subject = Some(trimmed);
-                            }
-                        }
-                    }
+        // Author
+        if let Ok(val) = dict.get(b"Author") {
+            if let Some(s) = pdf_object_to_string(val) {
+                let trimmed = s.trim().to_string();
+                if !trimmed.is_empty() {
+                    // 著者名をセミコロン、カンマ、"and" で分割
+                    meta.authors = trimmed
+                        .split(|c| c == ';' || c == ',')
+                        .flat_map(|part| part.split(" and "))
+                        .map(|s| s.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .collect();
+                }
+            }
+        }
 
-                    // CreationDate から年を抽出 (D:YYYYMMDDHHmmSS 形式)
-                    if let Ok(val) = dict.get(b"CreationDate") {
-                        if let Some(s) = pdf_object_to_string(val) {
-                            meta.year = extract_year_from_pdf_date(&s);
-                        }
-                    }
+        // Subject → abstract の候補
+        if let Ok(val) = dict.get(b"Subject") {
+            if let Some(s) = pdf_object_to_string(val) {
+                let trimmed = s.trim().to_string();
+                if !trimmed.is_empty() {
+                    meta.subject = Some(trimmed);
+                }
+            }
+        }
+
+        // CreationDate から年を抽出 (D:YYYYMMDDHHmmSS 形式)
+        if let Ok(val) = dict.get(b"CreationDate") {
+            if let Some(s) = pdf_object_to_string(val) {
+                meta.year = extract_year_from_pdf_date(&s);
+            }
+        }
+
+        // ModDate からも年を抽出（CreationDate がない場合のフォールバック）
+        if meta.year.is_none() {
+            if let Ok(val) = dict.get(b"ModDate") {
+                if let Some(s) = pdf_object_to_string(val) {
+                    meta.year = extract_year_from_pdf_date(&s);
                 }
             }
         }

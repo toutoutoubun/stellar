@@ -155,6 +155,19 @@ pub struct NoteResponse {
     pub tags: Vec<String>,
     pub created_at: String,
     pub updated_at: String,
+    // ── V005 ドラフトモード拡張フィールド ──
+    /// 下書きフラグ（0 = 通常ノート, 1 = 草稿）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_draft: Option<i32>,
+    /// 下書きメタ情報（JSON文字列）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub draft_meta: Option<String>,
+    /// 単語数
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub word_count: Option<i32>,
+    /// 推定読了時間（分）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reading_time_min: Option<i32>,
 }
 
 /// ノート詳細レスポンス — バックリンク・アウトライン・紐づき論文タイトルを含む
@@ -231,6 +244,8 @@ pub struct LinkWithSource {
 #[serde(rename_all = "camelCase")]
 pub struct PaginatedResult<T: Serialize> {
     pub items: Vec<T>,
+    /// フロントエンドは "totalItems" を期待するためリネーム
+    #[serde(rename = "totalItems")]
     pub total: u32,
     pub page: u32,
     pub limit: u32,
@@ -444,6 +459,11 @@ pub fn parse_note_sqlx(row: &sqlx::sqlite::SqliteRow) -> Result<NoteResponse, St
         tags: col_string_vec(row, "tags"),
         created_at: col_str(row, "created_at"),
         updated_at: col_str(row, "updated_at"),
+        // V005 ドラフトモード拡張 — カラムが存在しない場合はデフォルト値
+        is_draft: col_opt_i32(row, "is_draft"),
+        draft_meta: col_opt_str(row, "draft_meta"),
+        word_count: col_opt_i32(row, "word_count"),
+        reading_time_min: col_opt_i32(row, "reading_time_min"),
     })
 }
 
