@@ -5,7 +5,7 @@
 
 import type React from "react";
 import type { ReactElement } from "react";
-import { useCallback, useRef, useMemo, useState } from "react";
+import { useCallback, useRef, useMemo, useState, useEffect } from "react";
 import { isTauri } from "../../lib/tauriShim";
 import {
   PdfLoader,
@@ -92,6 +92,8 @@ interface PdfViewerProps {
   onHighlightClick: (highlightId: string) => void;
   /** scrollRef を親に渡すコールバック */
   onScrollRefReady: (scrollTo: (highlight: PdfHighlight) => void) => void;
+  /** PDF ドキュメント読み込み完了時のコールバック（ページ数通知） */
+  onDocumentLoaded?: (numPages: number) => void;
 }
 
 /** ポップアップコンテンツ（ハイライトホバー時の表示） */
@@ -120,6 +122,24 @@ const HighlightPopup: React.FC<{
   );
 };
 
+/**
+ * PdfLoader の children 内で pdfDocument.numPages を親に通知するための
+ * 副作用専用ラッパー。PdfLoader は children を (pdfDocument) => JSX.Element
+ * として呼ぶため、useEffect を使うには React コンポーネントが必要。
+ */
+const PdfHighlighterWrapper: React.FC<{
+  pdfDocument: { numPages: number } & Record<string, unknown>;
+  onDocumentLoaded?: (numPages: number) => void;
+  children: React.ReactNode;
+}> = ({ pdfDocument, onDocumentLoaded, children }) => {
+  useEffect(() => {
+    if (pdfDocument && onDocumentLoaded) {
+      onDocumentLoaded(pdfDocument.numPages);
+    }
+  }, [pdfDocument, onDocumentLoaded]);
+  return <>{children}</>;
+};
+
 export const PdfViewer: React.FC<PdfViewerProps> = ({
   pdfUrl,
   highlights,
@@ -128,6 +148,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
   pdfScaleValue,
   onHighlightClick,
   onScrollRefReady,
+  onDocumentLoaded,
 }) => {
   const scrollViewerToRef = useRef<((highlight: PdfHighlight) => void) | null>(
     null,
@@ -287,49 +308,54 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
         }
       >
         {(pdfDocument) => (
-          <PdfHighlighter<PdfHighlight>
-            pdfDocument={pdfDocument}
-            enableAreaSelection={(event) => event.altKey}
-            onScrollChange={handleScrollChange}
-            pdfScaleValue={pdfScaleValue}
-            scrollRef={handleScrollRef}
-            onSelectionFinished={handleSelectionFinished}
-            highlights={pdfHighlights}
-            highlightTransform={(
-              highlight,
-              index,
-              setTip,
-              hideTip,
-              _viewportToScaled,
-              _screenshot,
-              isScrolledTo,
-            ) => {
-              return (
-                <Popup
-                  popupContent={
-                    <HighlightPopup
+          <PdfHighlighterWrapper
+            pdfDocument={pdfDocument as unknown as { numPages: number } & Record<string, unknown>}
+            onDocumentLoaded={onDocumentLoaded}
+          >
+            <PdfHighlighter<PdfHighlight>
+              pdfDocument={pdfDocument}
+              enableAreaSelection={(event) => event.altKey}
+              onScrollChange={handleScrollChange}
+              pdfScaleValue={pdfScaleValue}
+              scrollRef={handleScrollRef}
+              onSelectionFinished={handleSelectionFinished}
+              highlights={pdfHighlights}
+              highlightTransform={(
+                highlight,
+                index,
+                setTip,
+                hideTip,
+                _viewportToScaled,
+                _screenshot,
+                isScrolledTo,
+              ) => {
+                return (
+                  <Popup
+                    popupContent={
+                      <HighlightPopup
+                        comment={highlight.comment}
+                        color={highlight.appColor}
+                      />
+                    }
+                    onMouseOver={(popupContent) =>
+                      setTip(highlight, () => popupContent)
+                    }
+                    onMouseOut={hideTip}
+                    key={index}
+                  >
+                    <PdfHighlightComponent
+                      isScrolledTo={isScrolledTo}
+                      position={highlight.position}
                       comment={highlight.comment}
-                      color={highlight.appColor}
+                      onClick={() => {
+                        onHighlightClick(highlight.id);
+                      }}
                     />
-                  }
-                  onMouseOver={(popupContent) =>
-                    setTip(highlight, () => popupContent)
-                  }
-                  onMouseOut={hideTip}
-                  key={index}
-                >
-                  <PdfHighlightComponent
-                    isScrolledTo={isScrolledTo}
-                    position={highlight.position}
-                    comment={highlight.comment}
-                    onClick={() => {
-                      onHighlightClick(highlight.id);
-                    }}
-                  />
-                </Popup>
-              );
-            }}
-          />
+                  </Popup>
+                );
+              }}
+            />
+          </PdfHighlighterWrapper>
         )}
       </PdfLoader>
 

@@ -649,8 +649,12 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
   /**
    * graphRef を親に公開。
    * ForceGraph2D の ref は最初のレンダリング後にセットされるため、
-   * レンダリング完了を検知する onEngineStop / setTimeout で公開する。
-   * useEffect の依存に ForceGraph2D だけでは ref がまだ null の場合がある。
+   * レンダリング完了を検知する onEngineStop / setTimeout / rAF ポーリングで公開する。
+   *
+   * 【問題】useEffect(() => {}) は依存配列なしで毎レンダリング実行されるが、
+   * graphRef.current がセットされるのは ForceGraph2D の内部処理完了後であり、
+   * React のレンダリングサイクルと同期しないことがある。
+   * そのため requestAnimationFrame でポーリングし、ref が利用可能になった時点で通知する。
    */
   const graphReadyNotifiedRef = useRef(false);
 
@@ -658,15 +662,39 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
     graphReadyNotifiedRef.current = false;
   }, [ForceGraph2D]);
 
-  // レンダリング後に ref をチェックして親に通知
+  // rAF ポーリングで graphRef.current が有効になるのを待って親に通知
   useEffect(() => {
     if (graphReadyNotifiedRef.current) return;
-    if (!graphRef.current || !onGraphReady) return;
+    if (!ForceGraph2D || !onGraphReady) return;
 
-    // ref がセットされたら即座に通知
-    onGraphReady(graphRef.current);
-    graphReadyNotifiedRef.current = true;
-  });
+    // 即座にチェック
+    if (graphRef.current) {
+      onGraphReady(graphRef.current);
+      graphReadyNotifiedRef.current = true;
+      return;
+    }
+
+    // rAF ポーリング（最大2秒間、ref がセットされるのを待つ）
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 120; // 約2秒（16ms × 120）
+
+    function poll() {
+      if (cancelled || graphReadyNotifiedRef.current) return;
+      attempts++;
+      if (graphRef.current && onGraphReady) {
+        onGraphReady(graphRef.current);
+        graphReadyNotifiedRef.current = true;
+        return;
+      }
+      if (attempts < maxAttempts) {
+        requestAnimationFrame(poll);
+      }
+    }
+
+    requestAnimationFrame(poll);
+    return () => { cancelled = true; };
+  }, [ForceGraph2D, onGraphReady]);
 
   /** シミュレーション cooldown 完了時に最終 zoomToFit + graphReady 通知 */
   const handleEngineStop = useCallback(() => {

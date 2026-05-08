@@ -33,9 +33,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
 
   // PDFビューア状態
   const [currentPage, setCurrentPage] = useState(1);
-  // totalPages は HighlightToolbar に渡すが、現時点では PdfHighlighter から
-  // 直接ページ数を取得する API がないため、0 のまま保持する
-  const [totalPages] = useState(0);
+  // totalPages は PdfViewer の onDocumentLoaded コールバックで設定される
+  const [totalPages, setTotalPages] = useState(0);
   const [zoomValue, setZoomValue] = useState("page-width");
   const [selectedColor, setSelectedColor] = useState<HighlightColor>("yellow");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -561,6 +560,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
             pdfScaleValue={zoomValue}
             onHighlightClick={handleHighlightClick}
             onScrollRefReady={handleScrollRefReady}
+            onDocumentLoaded={setTotalPages}
           />
 
           {/* テキスト検索バー（検索オープン時のみ表示） */}

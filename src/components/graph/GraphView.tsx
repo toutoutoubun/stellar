@@ -124,10 +124,18 @@ export const GraphView: React.FC = () => {
     graphMethodsRef.current?.zoomToFit(400, 60);
   }, []);
 
-  /** ForceGraph ref 受け取り */
+  /** ForceGraph ref 受け取り — ref 取得後に zoomToFit を実行 */
   const handleGraphReady = useCallback(
     (methods: ForceGraphMethods<GraphNodeExtended, GraphLink>) => {
       graphMethodsRef.current = methods;
+      // ref が有効になった直後に zoomToFit を段階的に実行
+      // シミュレーションが安定するまで複数回試行
+      setTimeout(() => {
+        try { methods.zoomToFit(400, 60); } catch { /* ignore */ }
+      }, 300);
+      setTimeout(() => {
+        try { methods.zoomToFit(400, 60); } catch { /* ignore */ }
+      }, 1200);
     },
     [],
   );
