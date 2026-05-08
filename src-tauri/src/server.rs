@@ -4,9 +4,7 @@
 // CORS ヘッダーで chrome-extension://* からのアクセスを許可する
 
 use crate::db::get_pool;
-use crate::db::models::*;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
