@@ -936,6 +936,7 @@ const en: TranslationKeys = {
     k_create_bilink: "Create bidirectional link",
     k_link_created: "Link created",
     k_link_create_failed: "Failed to create link",
+    k_shared_tags: "Shared tags",
 
     k_error_title: "An unexpected error occurred",
     k_error_desc: "Something went wrong.\nYou can restart the app or dismiss this error to continue.",

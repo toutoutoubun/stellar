@@ -935,6 +935,7 @@ const fr: TranslationKeys = {
     k_create_bilink: "Créer un lien bidirectionnel",
     k_link_created: "Lien créé",
     k_link_create_failed: "Échec de la création du lien",
+    k_shared_tags: "Tags communs",
 
     k_error_title: "Une erreur inattendue s'est produite",
     k_error_desc: "Quelque chose s'est mal passé.\nVous pouvez redémarrer l'application ou ignorer cette erreur.",

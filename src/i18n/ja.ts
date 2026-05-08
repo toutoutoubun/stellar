@@ -934,6 +934,7 @@ const ja = {
     k_create_bilink: "双方向リンクを作成",
     k_link_created: "リンクを作成しました",
     k_link_create_failed: "リンクの作成に失敗しました",
+    k_shared_tags: "共通タグ",
 
     k_error_title: "予期しないエラーが発生しました",
     k_error_desc: "アプリケーションで問題が発生しました。\nアプリを再起動するか、このエラーを無視して続行できます。",
@@ -1025,7 +1026,6 @@ const ja = {
     k_pdf_select_error: "PDFファイルの選択中にエラーが発生しました",
     k_pdf_saved: "PDFを保存しました",
     k_paper_saved_pdf_failed: "論文は保存されましたが、PDFのダウンロードに失敗しました: ${error}",
-
   },
 
   // ============================================================

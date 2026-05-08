@@ -935,6 +935,7 @@ const af: TranslationKeys = {
     k_create_bilink: "Skep tweerigtingskakel",
     k_link_created: "Skakel geskep",
     k_link_create_failed: "Kon nie skakel skep nie",
+    k_shared_tags: "Gedeelde etikette",
 
     k_error_title: "'n Onverwagte fout het voorgekom",
     k_error_desc: "Iets het verkeerd gegaan.\nJy kan die toepassing herbegin of hierdie fout ignoreer.",

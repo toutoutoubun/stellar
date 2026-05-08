@@ -537,9 +537,10 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
       if (linkedIds.has(note.id) || note.isDraft === 1) continue;
       const overlap = (note.tags ?? []).filter((t: string) => currentTags.has(t));
       if (overlap.length > 0) {
+        const reasonLabel = useI18nStore.getState().t.library.k_shared_tags ?? "Shared tags";
         candidates.push({
           id: note.id, type: "note", title: note.title || "Untitled Note",
-          score: overlap.length, reason: `共通タグ: ${overlap.join(", ")}`,
+          score: overlap.length, reason: `${reasonLabel}: ${overlap.join(", ")}`,
         });
       }
     }
@@ -547,9 +548,10 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
       if (linkedIds.has(paper.id)) continue;
       const overlap = (paper.tags ?? []).filter((t: string) => currentTags.has(t));
       if (overlap.length > 0) {
+        const reasonLabel = useI18nStore.getState().t.library.k_shared_tags ?? "Shared tags";
         candidates.push({
           id: paper.id, type: "paper", title: paper.title || "Untitled Paper",
-          score: overlap.length, reason: `共通タグ: ${overlap.join(", ")}`,
+          score: overlap.length, reason: `${reasonLabel}: ${overlap.join(", ")}`,
         });
       }
     }
