@@ -65,15 +65,18 @@ export const DraftCitationPanel: React.FC<DraftCitationPanelProps> = ({
   const handleInsertCitation = useCallback(
     async (paperId: string, pageRef?: string) => {
       try {
-        const result = await invoke<DraftCitation>("insert_citation", {
+        const result = await invoke<DraftCitation | null>("insert_citation", {
           noteId,
           paperId,
           citationStyle,
           pageRef: pageRef || null,
         });
-        if (result) {
+        if (result && result.id) {
           setCitations((prev) => [...prev, result]);
           toast.success(t.draftMode.citationInserted);
+        } else {
+          // mock が null を返した場合（論文が見つからない等）
+          toast.error(t.draftMode.citationInsertFailed);
         }
       } catch {
         toast.error(t.draftMode.citationInsertFailed);

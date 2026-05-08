@@ -819,7 +819,7 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
     ) => {
       const sourceNode = link.source as unknown as GraphNodeExtended;
       const targetNode = link.target as unknown as GraphNodeExtended;
-      if (!sourceNode?.x || !targetNode?.x) return;
+      if (sourceNode?.x == null || targetNode?.x == null) return;
 
       const sx = sourceNode.x;
       const sy = sourceNode.y ?? 0;

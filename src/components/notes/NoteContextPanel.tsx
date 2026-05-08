@@ -112,59 +112,85 @@ const BacklinksSection: React.FC<{
               {t.notes.k_no_backlinks}
             </div>
           ) : (
-            backlinks.map((bl) => (
-              <button
-                key={bl.id}
-                type="button"
-                onClick={() => onNavigate(bl.sourceId, bl.sourceType)}
-                className="flex flex-col gap-0.5 w-full text-left p-2"
-                style={{
-                  borderRadius: "8px",
-                  border: "1px solid var(--color-border-secondary)",
-                  backgroundColor: "var(--color-bg-primary)",
-                  transition: "background-color 150ms ease-out",
-                  minWidth: 0,
-                  overflow: "hidden",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    "var(--color-bg-hover)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    "var(--color-bg-primary)";
-                }}
-              >
-                <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
-                  <IconItemType
-                    itemType={bl.sourceType as "paper" | "note"}
-                    size={12}
-                    style={{ flexShrink: 0 }}
-                  />
-                  <span
-                    className="text-xs font-medium"
-                    style={{ color: "var(--color-text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}
-                  >
-                    {bl.sourceTitle}
-                  </span>
-                </div>
-                {bl.context && (
-                  <span
-                    className="text-xs"
-                    style={{
-                      color: "var(--color-text-tertiary)",
-                      paddingLeft: "18px",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                      display: "block",
-                    }}
-                  >
-                    {bl.context}
-                  </span>
-                )}
-              </button>
-            ))
+            backlinks.map((bl) => {
+              // 双方向リンクの相手側を特定
+              const isSource = bl.sourceId === noteId;
+              const peerId = isSource ? bl.targetId : bl.sourceId;
+              const peerType = isSource ? bl.targetType : bl.sourceType;
+              const peerTitle = isSource
+                ? (bl.targetTitle ?? bl.sourceTitle)
+                : bl.sourceTitle;
+
+              return (
+                <button
+                  key={bl.id}
+                  type="button"
+                  onClick={() => onNavigate(peerId, peerType)}
+                  className="flex flex-col gap-0.5 w-full text-left p-2"
+                  style={{
+                    borderRadius: "8px",
+                    border: "1px solid var(--color-border-secondary)",
+                    backgroundColor: "var(--color-bg-primary)",
+                    transition: "background-color 150ms ease-out",
+                    minWidth: 0,
+                    overflow: "hidden",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      "var(--color-bg-hover)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      "var(--color-bg-primary)";
+                  }}
+                >
+                  <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
+                    {/* 双方向リンクアイコン */}
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="shrink-0"
+                      style={{ color: "var(--color-accent-primary)" }}
+                    >
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                    </svg>
+                    <IconItemType
+                      itemType={peerType as "paper" | "note"}
+                      size={12}
+                      style={{ flexShrink: 0 }}
+                    />
+                    <span
+                      className="text-xs font-medium"
+                      style={{ color: "var(--color-text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}
+                    >
+                      {peerTitle}
+                    </span>
+                  </div>
+                  {bl.context && (
+                    <span
+                      className="text-xs"
+                      style={{
+                        color: "var(--color-text-tertiary)",
+                        paddingLeft: "30px",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        display: "block",
+                      }}
+                    >
+                      {bl.context}
+                    </span>
+                  )}
+                </button>
+              );
+            })
           )}
         </div>
       )}
@@ -676,7 +702,7 @@ const LinkSuggestionsSection: React.FC<{
                       <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                       <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                     </svg>
-                    {t.notes.k_create_link}
+                    {creating === sg.id ? t.common.loading : t.notes.k_create_link}
                   </button>
                 </div>
               </div>

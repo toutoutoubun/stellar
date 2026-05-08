@@ -928,6 +928,13 @@ const fr: TranslationKeys = {
     k_no_paper_links: "Aucun lien vers cet article",
     k_no_highlights_yet: "Aucun surlignage",
     k_tags_header: "Tags",
+    k_tag_removed: "Tag supprimé",
+    k_tag_remove_failed: "Échec de la suppression du tag",
+    k_link_suggestions: "Suggestions de liens",
+    k_no_suggestions: "Aucune suggestion",
+    k_create_bilink: "Créer un lien bidirectionnel",
+    k_link_created: "Lien créé",
+    k_link_create_failed: "Échec de la création du lien",
 
     k_error_title: "Une erreur inattendue s'est produite",
     k_error_desc: "Quelque chose s'est mal passé.\nVous pouvez redémarrer l'application ou ignorer cette erreur.",

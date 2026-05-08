@@ -927,6 +927,13 @@ const ja = {
     k_no_paper_links: "この論文へのリンクはありません",
     k_no_highlights_yet: "ハイライトはありません",
     k_tags_header: "タグ",
+    k_tag_removed: "タグを削除しました",
+    k_tag_remove_failed: "タグの削除に失敗しました",
+    k_link_suggestions: "リンクサジェスト",
+    k_no_suggestions: "サジェストはありません",
+    k_create_bilink: "双方向リンクを作成",
+    k_link_created: "リンクを作成しました",
+    k_link_create_failed: "リンクの作成に失敗しました",
 
     k_error_title: "予期しないエラーが発生しました",
     k_error_desc: "アプリケーションで問題が発生しました。\nアプリを再起動するか、このエラーを無視して続行できます。",

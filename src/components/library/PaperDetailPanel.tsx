@@ -2,10 +2,11 @@
 // Stellar — 論文詳細パネル（右コンテキストパネル）
 // selectedPaperId が選択されたときに表示される
 // タイトル / 著者 / 年 / ジャーナル / DOI / タグ / アブストラクト / 関連ノート / バックリンク / ハイライト
+// リンクサジェスト / 双方向リンク作成
 
 import type React from "react";
 import { useState, useCallback, useEffect } from "react";
-import type { Paper, Note, Highlight, Link, CitationStyle } from "../../types";
+import type { Paper, Note, Highlight, BacklinkItem, CitationStyle, NodeType } from "../../types";
 import { CITATION_STYLE_LABELS } from "../../types";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
@@ -16,6 +17,7 @@ import { useT } from "../../stores/useI18nStore";
 import { useLibraryStore } from "../../stores/useLibraryStore";
 import { ReadingStatusBadge } from "./ReadingStatusBadge";
 import { CitationNetworkPanel } from "./CitationNetworkPanel";
+import { IconItemType } from "../ui/Icons";
 
 interface PaperDetailPanelProps {
   paper: Paper;
@@ -24,6 +26,7 @@ interface PaperDetailPanelProps {
   onDelete: (paperId: string) => void;
   onAttachPdf?: (paperId: string) => void;
   onEdit?: (paperId: string) => void;
+  onNavigate?: (targetId: string, targetType: NodeType) => void;
 }
 
 /** セクションの折りたたみ可能なヘッダー */
@@ -79,6 +82,210 @@ const Separator: React.FC = () => (
   />
 );
 
+// ============================================================
+// リンクサジェストセクション（論文用 — 双方向リンク作成）
+// ============================================================
+
+interface PaperLinkSuggestion {
+  id: string;
+  type: string;
+  title: string;
+  score: number;
+  reason: string;
+}
+
+const PaperLinkSuggestionsSection: React.FC<{
+  paperId: string;
+  onNavigate?: (targetId: string, targetType: NodeType) => void;
+}> = ({ paperId, onNavigate }) => {
+  const t = useT();
+  const [suggestions, setSuggestions] = useState<PaperLinkSuggestion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(true);
+  const [creating, setCreating] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchSuggestions = async () => {
+      setLoading(true);
+      try {
+        const items = await invoke<PaperLinkSuggestion[]>("get_link_suggestions", {
+          itemId: paperId,
+          itemType: "paper",
+        });
+        if (!cancelled) setSuggestions(items);
+      } catch {
+        // サジェスト取得失敗は静かに処理
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void fetchSuggestions();
+    return () => { cancelled = true; };
+  }, [paperId]);
+
+  /** サジェストから双方向リンクを作成 */
+  const handleCreateLink = useCallback(
+    async (targetId: string, targetType: string) => {
+      setCreating(targetId);
+      try {
+        await invoke("create_link", {
+          sourceId: paperId,
+          sourceType: "paper",
+          targetId,
+          targetType,
+        });
+        toast.success(t.library.k_link_created);
+        // 作成済みサジェストをリストから除去
+        setSuggestions((prev) => prev.filter((s) => s.id !== targetId));
+      } catch {
+        toast.error(t.library.k_link_create_failed);
+      } finally {
+        setCreating(null);
+      }
+    },
+    [paperId, t],
+  );
+
+  return (
+    <div className="py-1">
+      <SectionHeader
+        title={t.library.k_link_suggestions}
+        count={suggestions.length}
+        expanded={expanded}
+        onToggle={() => setExpanded((v) => !v)}
+      />
+      {expanded && (
+        <div className="flex flex-col gap-1.5 mt-1">
+          {loading ? (
+            <div className="flex items-center gap-2 py-2">
+              <div
+                className="w-3 h-3 rounded-full animate-pulse"
+                style={{ backgroundColor: "var(--color-text-disabled)" }}
+              />
+              <span
+                className="text-xs"
+                style={{ color: "var(--color-text-disabled)" }}
+              >
+                {t.common.loading}
+              </span>
+            </div>
+          ) : suggestions.length === 0 ? (
+            <p
+              className="text-xs py-1"
+              style={{ color: "var(--color-text-disabled)" }}
+            >
+              {t.library.k_no_suggestions}
+            </p>
+          ) : (
+            suggestions.map((sg) => (
+              <div
+                key={sg.id}
+                className="flex flex-col gap-1 w-full p-2"
+                style={{
+                  borderRadius: "8px",
+                  border: "1px solid var(--color-border-secondary)",
+                  backgroundColor: "var(--color-bg-primary)",
+                }}
+              >
+                {/* タイトル行 */}
+                <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
+                  <IconItemType
+                    itemType={sg.type as "paper" | "note"}
+                    size={12}
+                    style={{ flexShrink: 0 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onNavigate?.(sg.id, sg.type as NodeType)}
+                    className="text-xs font-medium text-left"
+                    style={{
+                      color: "var(--color-text-primary)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      minWidth: 0,
+                      flex: 1,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = "var(--color-accent-primary)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = "var(--color-text-primary)";
+                    }}
+                  >
+                    {sg.title}
+                  </button>
+                </div>
+                {/* 理由 */}
+                <span
+                  className="text-xs"
+                  style={{
+                    color: "var(--color-text-tertiary)",
+                    fontSize: "10px",
+                    paddingLeft: "18px",
+                  }}
+                >
+                  {sg.reason}
+                </span>
+                {/* 双方向リンク作成ボタン */}
+                <div style={{ paddingLeft: "18px" }}>
+                  <button
+                    type="button"
+                    onClick={() => void handleCreateLink(sg.id, sg.type)}
+                    disabled={creating === sg.id}
+                    className="text-xs inline-flex items-center gap-1"
+                    style={{
+                      color: "var(--color-accent-primary)",
+                      padding: "2px 8px",
+                      borderRadius: "6px",
+                      border: "1px solid var(--color-accent-primary)",
+                      fontSize: "10px",
+                      transition: "all 120ms ease-out",
+                      opacity: creating === sg.id ? 0.5 : 1,
+                      cursor: creating === sg.id ? "wait" : "pointer",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (creating !== sg.id) {
+                        e.currentTarget.style.backgroundColor = "var(--color-accent-primary)";
+                        e.currentTarget.style.color = "#fff";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = "var(--color-accent-primary)";
+                    }}
+                  >
+                    {/* 双方向リンクアイコン */}
+                    <svg
+                      width="10"
+                      height="10"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                    </svg>
+                    {t.library.k_create_bilink}
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============================================================
+// メインコンポーネント
+// ============================================================
+
 export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
   paper,
   onClose,
@@ -86,9 +293,14 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
   onDelete,
   onAttachPdf,
   onEdit,
+  onNavigate,
 }) => {
   const t = useT();
   const updatePaperInStore = useLibraryStore((s) => s.updatePaper);
+
+  // ── ストアから最新の paper を取得（タグ等の更新を即座に反映するため） ──
+  const storePaper = useLibraryStore((s) => s.papers.find((p) => p.id === paper.id));
+  const currentPaper = storePaper ?? paper;
 
   // ── 引用コピーのドロップダウン ──
   const [showCitationDropdown, setShowCitationDropdown] = useState(false);
@@ -101,7 +313,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
 
   // ── 関連データ（Tauri から取得） ──
   const [relatedNotes, setRelatedNotes] = useState<Note[]>([]);
-  const [backlinks, setBacklinks] = useState<Link[]>([]);
+  const [backlinks, setBacklinks] = useState<BacklinkItem[]>([]);
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
 
@@ -119,15 +331,15 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
       try {
         // 並列で関連ノート・バックリンク・ハイライトを取得
         const [notes, links, hlights] = await Promise.all([
-          invoke<{ items: Note[]; totalPages: number; totalItems: number }>("get_notes", { paperId: paper.id, limit: 1000 }).then(r => Array.isArray(r?.items) ? r.items : []).catch(
+          invoke<{ items: Note[]; totalPages: number; totalItems: number }>("get_notes", { paperId: currentPaper.id, limit: 1000 }).then(r => Array.isArray(r?.items) ? r.items : []).catch(
             () => [] as Note[]
           ),
-          invoke<Link[]>("get_backlinks", {
+          invoke<BacklinkItem[]>("get_backlinks", {
             itemType: "paper",
-            itemId: paper.id,
-          }).catch(() => [] as Link[]),
+            itemId: currentPaper.id,
+          }).catch(() => [] as BacklinkItem[]),
           invoke<Highlight[]>("get_highlights", {
-            paperId: paper.id,
+            paperId: currentPaper.id,
           }).catch(() => [] as Highlight[]),
         ]);
 
@@ -150,12 +362,12 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [paper.id]);
+  }, [currentPaper.id]);
 
   // ── 引用コピー ──
   const handleCopyCitation = useCallback(
     async (style: CitationStyle) => {
-      const success = await copyCitationToClipboard(paper, style);
+      const success = await copyCitationToClipboard(currentPaper, style);
       if (success) {
         toast.success(
           t.library.k_nd5w89
@@ -165,33 +377,33 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
       }
       setShowCitationDropdown(false);
     },
-    [paper]
+    [currentPaper]
   );
 
   // ── DOIをブラウザで開く ──
   const handleOpenDoi = useCallback(async () => {
-    if (!paper.doi) return;
+    if (!currentPaper.doi) return;
     try {
       const { shellOpen } = await import("../../lib/tauriShim");
-      await shellOpen(`https://doi.org/${paper.doi}`);
+      await shellOpen(`https://doi.org/${currentPaper.doi}`);
     } catch {
       // フォールバック: window.open
-      window.open(`https://doi.org/${paper.doi}`, "_blank");
+      window.open(`https://doi.org/${currentPaper.doi}`, "_blank");
     }
-  }, [paper.doi]);
+  }, [currentPaper.doi]);
 
   // ── タグ追加（Enter押下） ──
   const handleAddTag = useCallback(
     async (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key !== "Enter") return;
       const tag = newTag.trim();
-      if (tag === "" || paper.tags.includes(tag)) {
+      if (tag === "" || currentPaper.tags.includes(tag)) {
         setNewTag("");
         setShowTagInput(false);
         return;
       }
       try {
-        await updatePaperInStore(paper.id, { tags: [...paper.tags, tag] });
+        await updatePaperInStore(currentPaper.id, { tags: [...currentPaper.tags, tag] });
         toast.success(t.library.k_4ibxuc);
       } catch {
         toast.error(t.library.k_wbna9r);
@@ -199,7 +411,22 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
       setNewTag("");
       setShowTagInput(false);
     },
-    [newTag, paper.id, paper.tags, updatePaperInStore, t]
+    [newTag, currentPaper.id, currentPaper.tags, updatePaperInStore, t]
+  );
+
+  // ── タグ削除 ──
+  const handleRemoveTag = useCallback(
+    async (tagToRemove: string) => {
+      try {
+        await updatePaperInStore(currentPaper.id, {
+          tags: currentPaper.tags.filter((t) => t !== tagToRemove),
+        });
+        toast.success(t.library.k_tag_removed);
+      } catch {
+        toast.error(t.library.k_tag_remove_failed);
+      }
+    },
+    [currentPaper.id, currentPaper.tags, updatePaperInStore, t]
   );
 
   return (
@@ -267,12 +494,12 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
           className="text-base font-semibold leading-snug mb-2"
           style={{ color: "var(--color-text-primary)" }}
         >
-          {paper.title}
+          {currentPaper.title}
         </h2>
 
         {/* 読書ステータスバッジ */}
         <div className="mb-2">
-          <ReadingStatusBadge paperId={paper.id} />
+          <ReadingStatusBadge paperId={currentPaper.id} />
         </div>
 
         {/* 著者 · 年 · ジャーナル */}
@@ -283,21 +510,21 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
             lineHeight: "var(--line-height-relaxed)",
           }}
         >
-          {paper.authors.join(", ") || t.library.k_h81ga7}
+          {currentPaper.authors.join(", ") || t.library.k_h81ga7}
         </p>
         <p
           className="text-xs mb-3"
           style={{ color: "var(--color-text-tertiary)" }}
         >
-          {paper.year ?? t.library.k_e7vv9}
-          {paper.journal && ` · ${paper.journal}`}
-          {paper.volume && `, Vol. ${paper.volume}`}
-          {paper.issue && `(${paper.issue})`}
-          {paper.pages && `, pp. ${paper.pages}`}
+          {currentPaper.year ?? t.library.k_e7vv9}
+          {currentPaper.journal && ` · ${currentPaper.journal}`}
+          {currentPaper.volume && `, Vol. ${currentPaper.volume}`}
+          {currentPaper.issue && `(${currentPaper.issue})`}
+          {currentPaper.pages && `, pp. ${currentPaper.pages}`}
         </p>
 
         {/* DOI（クリックでブラウザ開く） */}
-        {paper.doi && (
+        {currentPaper.doi && (
           <button
             className="text-xs mb-3 inline-flex items-center gap-1"
             style={{
@@ -311,7 +538,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
             onMouseLeave={(e) => {
               e.currentTarget.style.opacity = "1";
             }}
-            title={`https://doi.org/${paper.doi}`}
+            title={`https://doi.org/${currentPaper.doi}`}
           >
             <svg
               width="12"
@@ -327,13 +554,13 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
               <polyline points="15 3 21 3 21 9" />
               <line x1="10" y1="14" x2="21" y2="3" />
             </svg>
-            <span>DOI: {paper.doi}</span>
+            <span>DOI: {currentPaper.doi}</span>
           </button>
         )}
 
         {/* アクションボタン群 */}
         <div className="flex items-center gap-2 mb-3 flex-wrap">
-          {paper.pdfPath ? (
+          {currentPaper.pdfPath ? (
             <Button
               variant="primary"
               size="sm"
@@ -343,7 +570,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                   <polyline points="14 2 14 8 20 8" />
                 </svg>
               }
-              onClick={() => onOpenPdf(paper.id)}
+              onClick={() => onOpenPdf(currentPaper.id)}
             >
               {t.library.k_open_pdf_btn}
             </Button>
@@ -359,7 +586,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                   <line x1="9" y1="15" x2="15" y2="15" />
                 </svg>
               }
-              onClick={() => onAttachPdf?.(paper.id)}
+              onClick={() => onAttachPdf?.(currentPaper.id)}
             >
               {t.library.k_attach_pdf_btn}
             </Button>
@@ -436,7 +663,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                 </svg>
               }
-              onClick={() => onEdit(paper.id)}
+              onClick={() => onEdit(currentPaper.id)}
             >
               {t.common.edit}
             </Button>
@@ -451,7 +678,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
               </svg>
             }
-            onClick={() => onDelete(paper.id)}
+            onClick={() => onDelete(currentPaper.id)}
             style={{ color: "var(--color-accent-danger)" }}
           >
             {t.common.delete}
@@ -460,7 +687,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
 
         <Separator />
 
-        {/* ── タグ ── */}
+        {/* ── タグ（削除可能 + 追加） ── */}
         <div className="py-2">
           <div className="flex items-center justify-between mb-2">
             <span
@@ -469,10 +696,26 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
             >
               {t.library.k_tags_header}
             </span>
+            <span
+              className="text-xs px-1.5 py-0.5"
+              style={{
+                backgroundColor: "var(--color-bg-tertiary)",
+                color: "var(--color-text-tertiary)",
+                borderRadius: "999px",
+              }}
+            >
+              {currentPaper.tags.length}
+            </span>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
-            {paper.tags.map((tag) => (
-              <Badge key={tag}>{tag}</Badge>
+            {currentPaper.tags.map((tag) => (
+              <Badge
+                key={tag}
+                removable
+                onRemove={() => void handleRemoveTag(tag)}
+              >
+                {tag}
+              </Badge>
             ))}
             {/* タグ追加ボタン / 入力 */}
             {showTagInput ? (
@@ -549,13 +792,13 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
             <div
               className="text-xs leading-relaxed mt-1"
               style={{
-                color: paper.abstract
+                color: currentPaper.abstract
                   ? "var(--color-text-secondary)"
                   : "var(--color-text-disabled)",
                 lineHeight: "var(--line-height-relaxed)",
               }}
             >
-              {paper.abstract ?? t.library.k_h0cdlq}
+              {currentPaper.abstract ?? t.library.k_h0cdlq}
             </div>
           )}
         </div>
@@ -604,6 +847,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                       color: "var(--color-text-secondary)",
                       transition: "background-color var(--transition-fast)",
                     }}
+                    onClick={() => onNavigate?.(note.id, "note")}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor =
                         "var(--color-bg-hover)";
@@ -638,7 +882,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
 
         <Separator />
 
-        {/* ── バックリンク ── */}
+        {/* ── バックリンク（双方向リンク表示） ── */}
         <div className="py-1">
           <SectionHeader
             title={t.library.k_4vgs8a}
@@ -671,47 +915,103 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                   {t.library.k_no_paper_links}
                 </p>
               ) : (
-                backlinks.map((link) => (
-                  <div
-                    key={link.id}
-                    className="flex items-center gap-2 px-2 py-1.5 text-xs"
-                    style={{
-                      borderRadius: "var(--radius-button)",
-                      color: "var(--color-text-secondary)",
-                    }}
-                  >
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="shrink-0"
+                backlinks.map((link) => {
+                  // 双方向リンクの相手側を特定
+                  const isSource = link.sourceId === currentPaper.id;
+                  const peerId = isSource ? link.targetId : link.sourceId;
+                  const peerType = isSource ? link.targetType : link.sourceType;
+                  const peerTitle = isSource
+                    ? (link.targetTitle ?? `${peerType}: ${peerId.slice(0, 8)}...`)
+                    : (link.sourceTitle ?? `${peerType}: ${peerId.slice(0, 8)}...`);
+
+                  return (
+                    <button
+                      key={link.id}
+                      type="button"
+                      onClick={() => onNavigate?.(peerId, peerType)}
+                      className="flex flex-col gap-0.5 w-full text-left p-2"
+                      style={{
+                        borderRadius: "8px",
+                        border: "1px solid var(--color-border-secondary)",
+                        backgroundColor: "var(--color-bg-primary)",
+                        transition: "background-color 150ms ease-out",
+                        minWidth: 0,
+                        overflow: "hidden",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor =
+                          "var(--color-bg-hover)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor =
+                          "var(--color-bg-primary)";
+                      }}
                     >
-                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                    </svg>
-                    <span className="truncate">
-                      {link.sourceType === "note" ? t.notes.title : t.settings.data.papers}:{" "}
-                      {link.sourceId.slice(0, 8)}...
-                    </span>
-                    {link.context && (
-                      <span
-                        className="text-xs truncate"
-                        style={{ color: "var(--color-text-disabled)" }}
-                      >
-                        — {link.context}
-                      </span>
-                    )}
-                  </div>
-                ))
+                      <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
+                        {/* 双方向リンクアイコン */}
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="shrink-0"
+                          style={{ color: "var(--color-accent-primary)" }}
+                        >
+                          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                        </svg>
+                        <IconItemType
+                          itemType={peerType as "paper" | "note"}
+                          size={12}
+                          style={{ flexShrink: 0 }}
+                        />
+                        <span
+                          className="text-xs font-medium"
+                          style={{
+                            color: "var(--color-text-primary)",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            minWidth: 0,
+                          }}
+                        >
+                          {peerTitle}
+                        </span>
+                      </div>
+                      {link.context && (
+                        <span
+                          className="text-xs"
+                          style={{
+                            color: "var(--color-text-tertiary)",
+                            paddingLeft: "30px",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            display: "block",
+                          }}
+                        >
+                          {link.context}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })
               )}
             </div>
           )}
         </div>
+
+        <Separator />
+
+        {/* ── リンクサジェスト（双方向リンク候補） ── */}
+        <PaperLinkSuggestionsSection
+          paperId={currentPaper.id}
+          onNavigate={onNavigate}
+        />
 
         <Separator />
 
@@ -801,7 +1101,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
         </div>
 
         {/* ── 引用ネットワーク（参照・被引用・レコメンデーション・エクスポート） ── */}
-        <CitationNetworkPanel paper={paper} />
+        <CitationNetworkPanel paper={currentPaper} />
       </div>
     </aside>
   );

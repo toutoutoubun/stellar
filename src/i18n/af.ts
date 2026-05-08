@@ -928,6 +928,13 @@ const af: TranslationKeys = {
     k_no_paper_links: "Geen skakels na hierdie artikel nie",
     k_no_highlights_yet: "Geen hoogtepunte nie",
     k_tags_header: "Etikette",
+    k_tag_removed: "Etiket verwyder",
+    k_tag_remove_failed: "Kon nie etiket verwyder nie",
+    k_link_suggestions: "Skakelvoorstelle",
+    k_no_suggestions: "Geen voorstelle nie",
+    k_create_bilink: "Skep tweerigtingskakel",
+    k_link_created: "Skakel geskep",
+    k_link_create_failed: "Kon nie skakel skep nie",
 
     k_error_title: "'n Onverwagte fout het voorgekom",
     k_error_desc: "Iets het verkeerd gegaan.\nJy kan die toepassing herbegin of hierdie fout ignoreer.",

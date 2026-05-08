@@ -373,6 +373,9 @@ export interface BacklinkItem {
   sourceType: NodeType;
   sourceId: string;
   sourceTitle: string;
+  targetId: string;
+  targetType: NodeType;
+  targetTitle: string;
   context: string | null;
 }
 
