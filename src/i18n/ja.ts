@@ -929,6 +929,15 @@ const ja = {
     k_error_occurred: "グラフの表示中にエラーが発生しました",
     k_engine_load_failed: "グラフエンジンの読み込みに失敗しました。再試行するか、アプリを再起動してください。",
     k_error_details: "エラー詳細",
+    k_filter: "フィルタ",
+    k_showing: "表示中:",
+    k_display: "表示",
+    k_tags: "タグ",
+    k_link: "リンク",
+    k_node_size_hint: "ノードサイズはリンク数に比例",
+    k_zoom_to_fit: "全体表示",
+    k_link_count_label: "リンク数:",
+    k_last_updated: "最終更新:",
 
   },
 

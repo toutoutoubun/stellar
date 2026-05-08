@@ -50,11 +50,15 @@ interface NodeDetailPopupProps {
 
 /** 日付フォーマット */
 function formatDate(isoStr: string): string {
-
   if (!isoStr) return "—";
   const d = new Date(isoStr);
   if (Number.isNaN(d.getTime())) return "—";
-  return useI18nStore.getState().t.graph.k_gzdkqo;
+  // テンプレートリテラルとして評価し、実際の日付文字列を返す
+  const template = useI18nStore.getState().t.graph.k_gzdkqo;
+  return template
+    .replace("${d.getFullYear()}", String(d.getFullYear()))
+    .replace("${d.getMonth() + 1}", String(d.getMonth() + 1))
+    .replace("${d.getDate()}", String(d.getDate()));
 }
 
 export const NodeDetailPopup: React.FC<NodeDetailPopupProps> = ({
@@ -202,7 +206,7 @@ export const NodeDetailPopup: React.FC<NodeDetailPopupProps> = ({
               className="text-xs"
               style={{ color: "var(--color-text-tertiary)" }}
             >
-              リンク数:
+              {useI18nStore.getState().t.graph.k_link_count_label}
             </span>
             <span
               className="text-xs font-medium"
@@ -217,7 +221,7 @@ export const NodeDetailPopup: React.FC<NodeDetailPopupProps> = ({
                 className="text-xs"
                 style={{ color: "var(--color-text-tertiary)" }}
               >
-                最終更新:
+                {useI18nStore.getState().t.graph.k_last_updated}
               </span>
               <span
                 className="text-xs"

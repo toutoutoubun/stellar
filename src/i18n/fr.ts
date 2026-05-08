@@ -930,6 +930,15 @@ const fr: TranslationKeys = {
     k_error_occurred: "Une erreur s'est produite lors de l'affichage du graphe",
     k_engine_load_failed: "Le chargement du moteur de graphe a échoué. Veuillez réessayer ou redémarrer l'application.",
     k_error_details: "Détails de l'erreur",
+    k_filter: "Filtre",
+    k_showing: "Affichés :",
+    k_display: "Affichage",
+    k_tags: "Tags",
+    k_link: "Lien",
+    k_node_size_hint: "La taille des nœuds est proportionnelle au nombre de liens",
+    k_zoom_to_fit: "Tout afficher",
+    k_link_count_label: "Liens :",
+    k_last_updated: "Dernière mise à jour :",
 
   },
 

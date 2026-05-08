@@ -930,6 +930,15 @@ const af: TranslationKeys = {
     k_error_occurred: "'n Fout het voorgekom tydens die vertoon van die grafiek",
     k_engine_load_failed: "Die grafiekenjin kon nie gelaai word nie. Probeer weer of herbegin die toepassing.",
     k_error_details: "Foutbesonderhede",
+    k_filter: "Filter",
+    k_showing: "Wys:",
+    k_display: "Vertoon",
+    k_tags: "Etikette",
+    k_link: "Skakel",
+    k_node_size_hint: "Nodus-grootte is proporsioneel tot die aantal skakels",
+    k_zoom_to_fit: "Pas alles",
+    k_link_count_label: "Skakels:",
+    k_last_updated: "Laas opgedateer:",
 
   },
 

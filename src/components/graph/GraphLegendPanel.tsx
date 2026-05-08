@@ -96,7 +96,7 @@ export const GraphLegendPanel: React.FC<GraphLegendPanelProps> = ({
               className="text-xs"
               style={{ color: "var(--color-text-primary)" }}
             >
-              リンク
+              {useI18nStore.getState().t.graph.k_link}
             </span>
           </div>
         </div>
@@ -110,7 +110,7 @@ export const GraphLegendPanel: React.FC<GraphLegendPanelProps> = ({
             lineHeight: "1.5",
           }}
         >
-          ノードサイズはリンク数に比例
+          {useI18nStore.getState().t.graph.k_node_size_hint}
         </div>
 
         {/* 統計 */}
@@ -158,7 +158,7 @@ export const GraphLegendPanel: React.FC<GraphLegendPanelProps> = ({
           >
             <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
           </svg>
-          全体表示
+          {useI18nStore.getState().t.graph.k_zoom_to_fit}
         </button>
       </div>
     </div>

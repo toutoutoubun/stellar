@@ -931,6 +931,15 @@ const en: TranslationKeys = {
     k_error_occurred: "An error occurred while displaying the graph",
     k_engine_load_failed: "Failed to load the graph engine. Please retry or restart the app.",
     k_error_details: "Error details",
+    k_filter: "Filter",
+    k_showing: "Showing:",
+    k_display: "Display",
+    k_tags: "Tags",
+    k_link: "Link",
+    k_node_size_hint: "Node size is proportional to link count",
+    k_zoom_to_fit: "Fit all",
+    k_link_count_label: "Links:",
+    k_last_updated: "Last updated:",
 
   },
 

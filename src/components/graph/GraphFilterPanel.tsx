@@ -117,7 +117,7 @@ export const GraphFilterPanel: React.FC<GraphFilterPanelProps> = ({
         >
           <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
         </svg>
-        フィルタ
+        {useI18nStore.getState().t.graph.k_filter}
         {!isDefault && (
           <span
             style={{
@@ -149,7 +149,7 @@ export const GraphFilterPanel: React.FC<GraphFilterPanelProps> = ({
             className="text-xs mb-3"
             style={{ color: "var(--color-text-tertiary)" }}
           >
-            表示中: {filteredNodes} / {totalNodes} {useI18nStore.getState().t.quantResults.str_7dy1n}
+            {useI18nStore.getState().t.graph.k_showing} {filteredNodes} / {totalNodes} {useI18nStore.getState().t.quantResults.str_7dy1n}
           </div>
 
           {/* ── 表示タイプ ── */}
@@ -158,7 +158,7 @@ export const GraphFilterPanel: React.FC<GraphFilterPanelProps> = ({
               className="text-xs font-semibold mb-2 uppercase tracking-wider"
               style={{ color: "var(--color-text-secondary)" }}
             >
-              表示
+              {useI18nStore.getState().t.graph.k_display}
             </div>
             <label className="flex items-center gap-2 cursor-pointer mb-1.5">
               <input
@@ -217,7 +217,7 @@ export const GraphFilterPanel: React.FC<GraphFilterPanelProps> = ({
                 className="text-xs font-semibold mb-2 uppercase tracking-wider"
                 style={{ color: "var(--color-text-secondary)" }}
               >
-                タグ
+                {useI18nStore.getState().t.graph.k_tags}
               </div>
               <div
                 className="flex flex-wrap gap-1"
