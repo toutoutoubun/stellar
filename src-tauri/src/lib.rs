@@ -79,16 +79,35 @@ pub fn run() {
             let handle = app.handle().clone();
 
             // sqlx::SqlitePool を非同期で初期化し、Managed State に登録
+            // 初回失敗時に1回リトライする（マイグレーション途中失敗からの復旧用）
             tauri::async_runtime::block_on(async move {
-                match db::init_db(&handle).await {
-                    Ok(pool) => {
-                        handle.manage(AppDb(Arc::new(pool)));
-                        log::info!("sqlx SqlitePool を初期化しました");
+                let mut last_err = String::new();
+                for attempt in 1..=2 {
+                    match db::init_db(&handle).await {
+                        Ok(pool) => {
+                            handle.manage(AppDb(Arc::new(pool)));
+                            log::info!("sqlx SqlitePool を初期化しました (試行 {})", attempt);
+                            last_err.clear();
+                            break;
+                        }
+                        Err(e) => {
+                            last_err = format!("{}", e);
+                            log::error!(
+                                "DB 初期化に失敗 (試行 {}/2): {}",
+                                attempt, last_err
+                            );
+                            if attempt < 2 {
+                                log::info!("1秒後にリトライします…");
+                                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                            }
+                        }
                     }
-                    Err(e) => {
-                        log::error!("DB 初期化に失敗: {}", e);
-                        // フォールバック: plugin-sql のみで動作（コマンドは使用不可）
-                    }
+                }
+                if !last_err.is_empty() {
+                    log::error!(
+                        "DB 初期化が2回とも失敗しました。アプリは起動しますがデータアクセスはできません: {}",
+                        last_err
+                    );
                 }
             });
 

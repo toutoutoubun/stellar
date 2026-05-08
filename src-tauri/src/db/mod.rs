@@ -82,7 +82,22 @@ async fn run_migrations(pool: &SqlitePool) -> Result<(), Box<dyn std::error::Err
                 if trimmed.is_empty() {
                     continue;
                 }
-                sqlx::query(trimmed).execute(pool).await?;
+                match sqlx::query(trimmed).execute(pool).await {
+                    Ok(_) => {}
+                    Err(e) => {
+                        let msg = e.to_string();
+                        // ALTER TABLE ADD COLUMN / CREATE INDEX が重複した場合は安全にスキップ
+                        // （前回マイグレーションが途中失敗して再実行された場合に発生）
+                        if is_safe_to_ignore(&msg) {
+                            log::warn!(
+                                "マイグレーション {} — ステートメントをスキップ（既に適用済み）: {}",
+                                name, msg
+                            );
+                        } else {
+                            return Err(e.into());
+                        }
+                    }
+                }
             }
 
             sqlx::query(
@@ -97,6 +112,17 @@ async fn run_migrations(pool: &SqlitePool) -> Result<(), Box<dyn std::error::Err
     }
 
     Ok(())
+}
+
+/// マイグレーション実行時に安全に無視できるエラーかどうかを判定する
+/// - "duplicate column name" — ALTER TABLE ADD COLUMN で既にカラムが存在
+/// - "already exists" — CREATE INDEX / CREATE TABLE / CREATE TRIGGER の重複
+fn is_safe_to_ignore(error_msg: &str) -> bool {
+    let lower = error_msg.to_lowercase();
+    lower.contains("duplicate column name")
+        || lower.contains("already exists")
+        || lower.contains("table already exists")
+        || lower.contains("index already exists")
 }
 
 /// セミコロンで SQL 文を分割するヘルパー
