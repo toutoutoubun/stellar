@@ -188,7 +188,7 @@ fn derive_encryption_key(device_id: &str, recovery_code: &str) -> [u8; 32] {
     let key_material = format!("stellar-backup-key:{}:{}", device_id, recovery_code);
     type HmacSha256 = Hmac<Sha256>;
     let mut mac =
-        HmacSha256::new_from_slice(b"stellar-cloud-backup-v2").expect("HMAC can take any size");
+        <HmacSha256 as Mac>::new_from_slice(b"stellar-cloud-backup-v2").expect("HMAC can take any size");
     mac.update(key_material.as_bytes());
     let result = mac.finalize();
     let bytes = result.into_bytes();
@@ -200,7 +200,7 @@ fn derive_encryption_key(device_id: &str, recovery_code: &str) -> [u8; 32] {
 /// デバイスIDからリカバリーコードを導出
 fn derive_recovery_code(device_id: &str) -> String {
     type HmacSha256 = Hmac<Sha256>;
-    let mut mac = HmacSha256::new_from_slice(b"stellar-recovery-code-v2")
+    let mut mac = <HmacSha256 as Mac>::new_from_slice(b"stellar-recovery-code-v2")
         .expect("HMAC can take any size");
     mac.update(device_id.as_bytes());
     let result = mac.finalize();
@@ -678,8 +678,8 @@ pub async fn cloud_backup_set_api_url(
 
 /// データを ZIP 圧縮する
 fn compress_data(data: &[u8]) -> Result<Vec<u8>, String> {
-    let mut encoder = flate2_compress(data)?;
-    Ok(encoder)
+    let compressed = flate2_compress(data)?;
+    Ok(compressed)
 }
 
 /// flate2 互換の圧縮（zip crate の deflate を利用）
@@ -840,7 +840,7 @@ async fn download_backup(
 
 /// ローカルにバックアップを保存（ネットワーク接続が無い場合のフォールバック）
 fn save_backup_locally(
-    config: &CloudBackupConfig,
+    _config: &CloudBackupConfig,
     data: &[u8],
     backup_id: &str,
 ) -> Result<(), String> {
@@ -1006,12 +1006,13 @@ async fn restore_to_db(app: &AppHandle, payload: &BackupPayload) -> Result<Resto
         let abs = paper_val["abstract"].as_str();
         let pdf_path = paper_val["pdfPath"].as_str();
         let tags = paper_val["tags"].to_string();
+        let now_str = chrono::Utc::now().to_rfc3339();
         let created_at = paper_val["createdAt"]
             .as_str()
-            .unwrap_or(&chrono::Utc::now().to_rfc3339());
+            .unwrap_or(&now_str);
         let updated_at = paper_val["updatedAt"]
             .as_str()
-            .unwrap_or(&chrono::Utc::now().to_rfc3339());
+            .unwrap_or(&now_str);
 
         sqlx::query(
             "INSERT OR REPLACE INTO papers (id, title, authors, year, journal, volume, issue, pages, doi, url, abstract, pdf_path, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -1063,12 +1064,13 @@ async fn restore_to_db(app: &AppHandle, payload: &BackupPayload) -> Result<Resto
         let content = note_val["content"].as_str().unwrap_or("");
         let paper_id = note_val["paperId"].as_str();
         let tags = note_val["tags"].to_string();
+        let now_str = chrono::Utc::now().to_rfc3339();
         let created_at = note_val["createdAt"]
             .as_str()
-            .unwrap_or(&chrono::Utc::now().to_rfc3339());
+            .unwrap_or(&now_str);
         let updated_at = note_val["updatedAt"]
             .as_str()
-            .unwrap_or(&chrono::Utc::now().to_rfc3339());
+            .unwrap_or(&now_str);
 
         sqlx::query(
             "INSERT OR REPLACE INTO notes (id, title, content, paper_id, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -1110,9 +1112,10 @@ async fn restore_to_db(app: &AppHandle, payload: &BackupPayload) -> Result<Resto
         let color = hl_val["color"].as_str().unwrap_or("#FFEB3B");
         let page = hl_val["page"].as_i64().unwrap_or(1) as i32;
         let rect = hl_val["rect"].to_string();
+        let now_str = chrono::Utc::now().to_rfc3339();
         let created_at = hl_val["createdAt"]
             .as_str()
-            .unwrap_or(&chrono::Utc::now().to_rfc3339());
+            .unwrap_or(&now_str);
 
         sqlx::query(
             "INSERT OR IGNORE INTO highlights (id, paper_id, text, comment, color, page, rect, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -1154,9 +1157,10 @@ async fn restore_to_db(app: &AppHandle, payload: &BackupPayload) -> Result<Resto
         let target_type = link_val["targetType"].as_str().unwrap_or("note");
         let target_id = link_val["targetId"].as_str().unwrap_or("");
         let context = link_val["context"].as_str();
+        let now_str = chrono::Utc::now().to_rfc3339();
         let created_at = link_val["createdAt"]
             .as_str()
-            .unwrap_or(&chrono::Utc::now().to_rfc3339());
+            .unwrap_or(&now_str);
 
         sqlx::query(
             "INSERT OR IGNORE INTO links (id, source_type, source_id, target_type, target_id, context, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
