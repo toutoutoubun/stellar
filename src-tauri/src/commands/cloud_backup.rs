@@ -31,9 +31,6 @@ use tauri::{AppHandle, Manager};
 /// バックアップAPIのベースURL（将来的にCloudflare R2 Worker を配置）
 const DEFAULT_BACKUP_API_URL: &str = "https://stellar-backup.workers.dev";
 
-/// デバイスID ファイル名
-const DEVICE_ID_FILE: &str = "stellar_device_id";
-
 /// 設定ファイル名
 const CLOUD_BACKUP_CONFIG_FILE: &str = "stellar_cloud_backup.json";
 
