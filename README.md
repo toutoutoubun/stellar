@@ -1,270 +1,465 @@
 # Stellar
 
-**文献管理 + ノート + グラフビュー** を1アプリで完結させる、日本の文系大学院生向け研究支援ツール。
+**人文・社会科学系研究者のためのオールインワン文献管理デスクトップアプリケーション**
 
-Zotero の文献管理 × Obsidian の双方向リンク を単一デスクトップアプリに統合。
+Stellar は、論文の収集・整理・読解・注釈・執筆・分析までの研究ワークフロー全体をひとつのアプリケーションで完結させることを目指して設計されたデスクトップアプリです。ローカルファーストのアーキテクチャにより、データはすべてユーザーの端末に保存され、クラウドへの依存やサブスクリプション課金は一切ありません。
 
-## 設計思想
+---
 
-- **ローカルファースト** — データはすべてローカル SQLite に保存
-- **完全無料** — サブスクリプション不要
-- **AI 機能なし** — 研究者自身の思考を支援するシンプルな設計
-- **美しい多言語 UI** — 4テーマ対応（ホワイト / アイボリー / ダークブルー / ブラック）
-- **多言語対応 (i18n)** — 日本語 / English / Français / Afrikaans の4言語
+## 目次
+
+- [特長](#特長)
+- [スクリーンショット](#スクリーンショット)
+- [機能一覧](#機能一覧)
+  - [文献ライブラリ](#文献ライブラリ)
+  - [PDF リーダー & ハイライト](#pdf-リーダー--ハイライト)
+  - [ノート & エディタ](#ノート--エディタ)
+  - [下書きモード（長文執筆）](#下書きモード長文執筆)
+  - [グラフビュー（知識ネットワーク）](#グラフビュー知識ネットワーク)
+  - [引用ネットワーク](#引用ネットワーク)
+  - [質的分析モジュール](#質的分析モジュール)
+  - [量的分析モジュール（Data Studio）](#量的分析モジュールdata-studio)
+  - [エクスポート & パッケージ](#エクスポート--パッケージ)
+  - [ブラウザ連携](#ブラウザ連携)
+  - [設定 & カスタマイズ](#設定--カスタマイズ)
+- [技術スタック](#技術スタック)
+- [データアーキテクチャ](#データアーキテクチャ)
+- [セットアップ & ビルド](#セットアップ--ビルド)
+- [プロジェクト構成](#プロジェクト構成)
+- [キーボードショートカット](#キーボードショートカット)
+- [ライセンス](#ライセンス)
+
+---
+
+## 特長
+
+| | |
+|---|---|
+| **完全ローカル** | すべてのデータは端末内の SQLite データベースに保存。ネット接続不要で動作 |
+| **完全無料** | サブスクリプション・課金なし。オープンソース（MIT ライセンス） |
+| **AI 非依存** | AI / LLM を使わず、研究者自身の思考を尊重する設計 |
+| **人文系特化** | 史料批判、プロセストレーシング、フレーミング分析など人文・社会科学に特化した分析ツールを内蔵 |
+| **多言語対応** | 日本語・英語・フランス語・アフリカーンス語の 4 言語 UI |
+| **4 テーマ** | White / Ivory / Dark Blue / Black の 4 種類のカラーテーマ |
+| **クロスプラットフォーム** | macOS / Windows / Linux 対応 |
+
+---
+
+## スクリーンショット
+
+> （準備中）
+
+---
+
+## 機能一覧
+
+### 文献ライブラリ
+
+論文のメタデータ（タイトル、著者、出版年、ジャーナル、巻号頁、DOI、URL、アブストラクト、タグ）を管理する中心的な画面です。
+
+- **グリッド / リスト表示**の切り替え
+- タイトル・出版年・作成日・更新日による**ソート**
+- タグ・キーワードによる**フィルタリング**
+- **DOI / CrossRef / OpenAlex** からのメタデータ自動取得
+- **PDF ファイルのインポート**とメタデータ抽出
+- 手動での論文追加・編集・削除
+- **読書ステータス管理**（未読 / 読書中 / 完了 / 再読）
+
+### PDF リーダー & ハイライト
+
+内蔵 PDF ビューアで論文を閲覧し、テキストにハイライトを付けられます。
+
+- PDF の表示・ページ送り・ズーム
+- **4 色ハイライト**（黄・青・緑・ピンク）のテキスト選択
+- ハイライトへの**コメント追加**
+- ハイライトから**ノートを自動生成**
+- ハイライト一覧パネル（論文ごとに集約表示）
+- キーボードショートカット（`1`〜`4` で色選択、`←`/`→` でページ送り、`Cmd/Ctrl+F` で検索）
+
+### ノート & エディタ
+
+Markdown 対応のノートエディタで、論文と紐づくメモや独立したメモを作成できます。
+
+- **CodeMirror 6 ベース**の高機能エディタ
+- Markdown シンタックスハイライト
+- **`[[WikiLink]]` 記法**による論文・ノート間の双方向リンク
+- WikiLink のオートコンプリート候補表示
+- リアルタイム**アウトライン（見出し一覧）**パネル
+- **バックリンク**パネル（当該ノートを参照しているノート・論文を一覧）
+- 論文への紐付け / 独立ノートの切り替え
+- タグ管理
+- **自動保存**（アイドル検知による保存）
+
+### 下書きモード（長文執筆）
+
+論文やレポートの長文執筆に特化したモードです。
+
+- **章（チャプター）管理**による文書構造の整理
+- 章ごとの**語数カウント**・推定読了時間の表示
+- **引用挿入機能** — ライブラリの論文をインライン引用として挿入
+- 4 つの引用スタイル対応：**APA 7th / MLA 9th / Chicago 17th / 一橋スタイル**
+- 著者名順序設定（姓-名 / 名-姓）
+- 引用一覧パネル（ノート内で使用した引用を一括管理）
+- アウトラインパネルとの連携
+
+### グラフビュー（知識ネットワーク）
+
+論文とノートの関係をインタラクティブな**力学グラフ（Force-Directed Graph）**として可視化します。
+
+- ノード：論文（青系）とノート（緑系）を色分け表示
+- エッジ：双方向リンクによる接続を可視化
+- **フィルタパネル**：ノード種別・タグ・最小リンク数で絞り込み
+- **凡例パネル**
+- **ミニマップ**：全体俯瞰ビュー
+- ノードホバーでポップアップ詳細表示
+- ノードクリックで該当論文 / ノートを直接開く
+
+### 引用ネットワーク
+
+論文間の引用関係を可視化・探索する機能です。
+
+- **参考文献 / 被引用文献**の取得（外部学術 API 連携）
+- 引用関係のグラフ可視化
+- **関連論文レコメンデーション**（関連度スコア付き）
+- レコメンド論文のワンクリックインポート
+- 読書ステータス別の論文件数表示
+
+### 質的分析モジュール
+
+人文・社会科学の質的研究に必要な多彩なツール群を内蔵しています。11 のサブタブで構成されます。
+
+| タブ | 機能概要 |
+|---|---|
+| **ダッシュボード** | プロジェクト概要、コード数・ハイライト数などの集計 |
+| **コードブック** | 階層型コードの作成・管理、色分け、ドラッグ＆ドロップ並び替え |
+| **コーディングマトリクス** | コード × 論文のクロス集計表。コーディング状況を俯瞰 |
+| **ICR（評価者間信頼性）** | Cohen's Kappa / 一致率の自動計算、不一致セグメントの特定 |
+| **史料批判シート** | 史料の著者情報、作成年代、真正性、バイアス、信頼性スコアなどを構造化して記録 |
+| **タイムライン** | 歴史的事象を時系列で配置。複数レーン対応、重要度設定 |
+| **アクターマップ** | 政治的アクター（国家・組織・個人など）の関係をネットワーク図で可視化 |
+| **プロセストレーシング** | 仮説の設定、証拠の登録（Hoop / Smoking Gun / Straw / Doubly Decisive テスト）、検証状況の管理 |
+| **比較分析** | MSSD / MDSD デザイン、ケース × 変数マトリクスの構築 |
+| **フレーミング分析** | Entman のフレーミング理論に基づくフレーム定義（問題定義・因果解釈・道徳評価・対処勧告）とハイライトへの割り当て |
+| **レポート** | 分析結果のレポート出力 |
+
+### 量的分析モジュール（Data Studio）
+
+簡易的な量的分析環境を内蔵しています。
+
+- **CSV インポート**によるデータセット作成
+- **変数管理**（尺度型・名義型・順序型・テキスト型・日付型、リッカート尺度設定）
+- データプレビューテーブル
+- **分析ウィザード**（3 ステップ形式）
+  - 記述統計（平均・標準偏差・最小値・最大値など）
+  - 頻度表
+  - 相関分析（相関行列）
+  - t 検定（独立標本 / Mann-Whitney U）
+  - カイ二乗検定
+  - 線形回帰
+- **レポートビルダー**：分析結果を構造化レポートとして出力
+- **テキストマイニング**：トークン頻度・TF-IDF の計算
+
+### エクスポート & パッケージ
+
+研究成果の共有・バックアップに対応する複数のエクスポート形式を提供します。
+
+- **静的サイトエクスポート** — 選択したノートを HTML サイトとして出力（テーマ選択、バックリンク含有オプション）
+- **研究パッケージ（`.stellar` ファイル）** — 論文・ノート・ハイライト・リンク・PDF を一括バンドル。別端末へのインポートに対応
+- **JSON エクスポート** — 全データの JSON 出力
+- **データベースバックアップ** — SQLite ファイルの直接コピー
+- **BibTeX バンドル** — 引用情報の BibTeX 形式出力
+
+### ブラウザ連携
+
+組み込み HTTP サーバー（`127.0.0.1:57321`）を介して、ブラウザ拡張機能から論文を直接インポートできます。
+
+- ブラウザ拡張機能からの論文メタデータ受信
+- PDF の自動ダウンロード（オプション）
+- CORS 対応（Chrome 拡張機能からのアクセスを許可）
+- 設定画面からサーバーステータスの確認・最近のインポート履歴表示
+
+### 設定 & カスタマイズ
+
+5 タブ構成の設定画面を提供します。
+
+| タブ | 内容 |
+|---|---|
+| **外観** | テーマ選択（4 種）、フォントサイズ、行高さ、エディタフォント（6 種類） |
+| **データ** | データサマリー（論文数・ノート数・ハイライト数・ディスク使用量）、データ保存先変更、エクスポート、バックアップ |
+| **ショートカット** | キーボードショートカット一覧 |
+| **引用スタイル** | デフォルト引用フォーマット（APA 7th / MLA 9th / Chicago 17th / 一橋スタイル）、著者名順序 |
+| **言語** | UI 言語切り替え（日本語・英語・フランス語・アフリカーンス語） |
+
+### オンボーディング
+
+初回起動時に 5 ステップのウィザードを表示し、ユーザーが迷わず使い始められるようにします。
+
+1. ウェルカム画面
+2. 言語選択
+3. データ保存先の設定
+4. テーマプレビュー & 選択
+5. セットアップ完了
+
+---
 
 ## 技術スタック
 
-| レイヤー | 技術 |
-|---|---|
-| フレームワーク | Tauri 2.0 (Rust + React) |
-| フロントエンド | React 19 + TypeScript 6 (strict) |
-| スタイリング | Tailwind CSS v4 + CSS Custom Properties |
-| 状態管理 | Zustand 5 (スライスパターン + persist) |
-| データベース | SQLite (tauri-plugin-sql, FTS5 有効) |
-| PDF レンダリング | react-pdf-highlighter 8.0 |
-| テキストエディタ | CodeMirror 6 (@codemirror/lang-markdown) |
-| グラフ描画 | react-force-graph-2d (D3.js ベース) |
-| 仮想スクロール | @tanstack/react-virtual 3 |
-| ビルドツール | Vite 6 |
-| パッケージ管理 | npm / pnpm |
+### バックエンド（Rust）
 
-## プロジェクト構成
+| 技術 | 用途 |
+|---|---|
+| **Rust** | バックエンドロジック、ファイル I/O、データベース操作 |
+| **Tauri 2.0** | デスクトップアプリケーションフレームワーク |
+| **SQLx** | 非同期 SQLite ドライバ |
+| **SQLite** (WAL モード) | ローカルデータベース |
+| **FTS5** (trigram tokenizer) | 日本語部分一致対応の全文検索エンジン |
+| **reqwest** | HTTP クライアント（CrossRef / OpenAlex API 呼び出し） |
+| **lopdf** | PDF メタデータ抽出 |
+| **tokio** | 非同期ランタイム |
+| **chrono / uuid / serde** | ユーティリティ |
+
+### フロントエンド（TypeScript / React）
+
+| 技術 | 用途 |
+|---|---|
+| **React 19** | UI フレームワーク |
+| **TypeScript 5** | 型安全な開発 |
+| **Vite 6** | ビルドツール |
+| **Tailwind CSS v4** | スタイリング |
+| **Zustand 5** | 状態管理（7 ストア） |
+| **CodeMirror 6** | Markdown エディタ |
+| **pdfjs-dist** | PDF レンダリング |
+| **react-force-graph-2d** | 力学グラフ可視化 |
+| **D3.js** | データ可視化補助 |
+| **@dnd-kit** | ドラッグ＆ドロップ |
+
+### Tauri プラグイン
+
+- `tauri-plugin-sql` — SQLite データベースアクセス
+- `tauri-plugin-dialog` — ファイル選択・ディレクトリ選択ダイアログ
+- `tauri-plugin-fs` — ファイルシステム操作
+- `tauri-plugin-shell` — 外部 URL を既定ブラウザで開く
+- `tauri-plugin-process` — アプリ再起動
+- `tauri-plugin-log` — ログ出力
+
+---
+
+## データアーキテクチャ
+
+すべてのデータは単一の SQLite データベース（`stellar.db`）に格納されます。WAL モードで高速な読み書きを実現しています。
+
+### コアテーブル（V001）
 
 ```
-stellar/
-├── src-tauri/                  # Rust バックエンド
-│   ├── src/
-│   │   ├── main.rs             # エントリーポイント
-│   │   ├── lib.rs              # プラグイン登録・DB 初期化・コマンド登録
-│   │   ├── commands/           # Tauri コマンド
-│   │   │   ├── papers.rs       # 論文 CRUD
-│   │   │   ├── notes.rs        # ノート CRUD
-│   │   │   ├── highlights.rs   # ハイライト CRUD
-│   │   │   ├── links.rs        # 双方向リンク CRUD
-│   │   │   └── search.rs       # FTS5 全文検索
-│   │   ├── db/
-│   │   │   ├── migrations/     # SQL マイグレーション
-│   │   │   └── models.rs       # DB モデル定義
-│   │   └── utils/
-│   │       ├── pdf.rs          # PDF ユーティリティ
-│   │       └── metadata.rs     # CrossRef API メタデータ取得
-│   ├── Cargo.toml
-│   └── tauri.conf.json
-│
-└── src/                        # React フロントエンド
-    ├── main.tsx                # エントリーポイント
-    ├── App.tsx                 # ルート (ErrorBoundary + Onboarding + ScreenTransition)
-    ├── components/
-    │   ├── ui/                 # デザインシステム (Button/Card/Input/Modal/Badge/Toast)
-    │   ├── layout/             # レイアウト (Titlebar/Sidebar/MainPane/ContextPanel)
-    │   ├── library/            # 文献ライブラリ (LibraryView/PaperCard/PaperListRow/AddPaperModal/PaperDetailPanel)
-    │   ├── reader/             # PDF リーダー (ReaderView/PdfViewer/HighlightPanel/HighlightCard/HighlightToolbar)
-    │   ├── notes/              # ノートエディタ (NoteEditor/NoteList/StellarEditor/WikiLinkAutoComplete/FocusMode)
-    │   ├── graph/              # グラフビュー (GraphView/ForceGraph/GraphFilterPanel/GraphLegendPanel/GraphMiniMap/NodeDetailPopup)
-    │   ├── search/             # 全文検索 (SearchModal/SearchInput/SearchResults/SearchResultItem)
-    │   ├── settings/           # 設定 (SettingsView/ThemePreviewCard)
-    │   ├── onboarding/         # オンボーディング (OnboardingFlow — 4ステップ)
-    │   └── ErrorBoundary.tsx   # エラーバウンダリ (relaunch 再起動)
-    ├── hooks/
-    │   ├── useGraphData.ts     # グラフデータ + rAF フィルタ
-    │   ├── useHighlights.ts    # ハイライト管理
-    │   ├── useSearch.ts        # 全文検索 (debounce 200ms)
-    │   └── useTauriEvents.ts   # Tauri イベントリスナー
-    ├── stores/
-    │   ├── useLibraryStore.ts  # 論文ライブラリ状態
-    │   ├── useNoteStore.ts     # ノート状態
-    │   ├── useUIStore.ts       # UI 状態 + ナビゲーション履歴
-    │   ├── useThemeStore.ts    # テーマ状態 (localStorage 永続化)
-    │   └── useI18nStore.ts     # i18n 状態 (ロケール永続化 + 翻訳リソース)
-    ├── utils/
-    │   ├── ipc.ts              # 型安全 invoke<T> + API オブジェクト
-    │   ├── citation.ts         # 引用フォーマット生成
-    │   ├── highlight.ts        # ハイライトユーティリティ
-    │   └── highlightColors.ts  # ハイライト色定義
-    ├── i18n/
-    │   ├── index.ts            # i18n エントリポイント (ロケールマッピング)
-    │   ├── ja.ts               # 日本語 (権威ファイル, 1,279行)
-    │   ├── en.ts               # English (1,276行)
-    │   ├── fr.ts               # Français (1,276行)
-    │   └── af.ts               # Afrikaans (1,276行)
-    ├── types/index.ts          # 全型定義
-    └── styles/
-        ├── themes.css          # 4テーマの CSS Custom Properties
-        └── global.css          # リセット・フォント・スクロールバー・禁則処理・アニメーション
+papers          — 論文メタデータ（タイトル、著者、年、DOI など）
+notes           — Markdown ノート（論文紐付け or 独立）
+highlights      — PDF ハイライト（テキスト、色、ページ、矩形座標）
+links           — 論文・ノート間の双方向リンク
+fts_search      — 論文・ノート統合の全文検索インデックス（FTS5 trigram）
+fts_highlights  — ハイライト全文検索インデックス（FTS5 trigram）
 ```
 
-## データモデル
+### 質的分析テーブル（V002）
 
-| テーブル | 説明 |
-|---|---|
-| `papers` | 論文メタデータ (タイトル, 著者, DOI, PDF パス, タグ等) |
-| `notes` | Markdown ノート (論文に紐づけ可能) |
-| `highlights` | PDF ハイライト (テキスト選択 + コメント + 色 + 矩形座標) |
-| `links` | 双方向リンク (ノート↔ノート, ノート↔論文, 論文↔論文) |
-| `fts_search` | FTS5 仮想テーブル (論文・ノートの横断全文検索) |
+```
+projects              — 質的分析プロジェクト
+codes                 — 階層型コード
+highlight_codes       — ハイライト × コード（多対多）
+note_segment_codes    — ノートセグメント × コード
+memos                 — 分析メモ
+source_critiques      — 史料批判シート
+timeline_events       — タイムラインイベント
+actors                — アクター
+actor_relations       — アクター間関係
+pt_hypotheses         — プロセストレーシング仮説
+pt_evidences          — プロセストレーシング証拠
+comparative_designs   — 比較分析デザイン
+comparative_cases     — 比較ケース
+comparative_variables — 比較変数
+comparative_cells     — 比較セル（ケース × 変数）
+frames                — フレーム（Entman のフレーミング分析）
+highlight_frames      — ハイライト × フレーム（多対多）
+```
 
-FTS5 トリガーにより papers / notes の INSERT / UPDATE / DELETE 時に fts_search が自動同期されます。
+### 量的分析テーブル（V003）
 
-## 実装済み機能
+```
+datasets          — データセット
+variables         — 変数定義（尺度型・名義型など）
+data_rows         — データ行
+analyses          — 分析結果
+token_frequencies — トークン頻度（テキストマイニング）
+```
 
-### バックエンド (Rust)
-- [x] 全 Tauri コマンド (papers / notes / highlights / links / search / data / graph)
-- [x] SQLite マイグレーション (FTS5 + トリガー + インデックス)
-- [x] CrossRef API メタデータ取得
-- [x] PDF 管理ユーティリティ
+### 引用ネットワークテーブル（V004）
 
-### フロントエンド共通
-- [x] CSS テーマシステム (4テーマ: white / ivory / dark-blue / black)
-- [x] グローバル CSS (リセット / 日本語フォント / スクロールバー / 禁則処理)
-- [x] TypeScript 型定義 (全データモデル + UI 状態型)
-- [x] Zustand ストア (テーマ / UI / ライブラリ / ノート)
-- [x] UI コンポーネント (Button / Card / Input / Modal / Badge / Toast)
+```
+paper_recommendations — 関連論文レコメンデーション
+papers に追加カラム   — reading_status, references_json, cited_by_json
+```
 
-### レイアウト
-- [x] カスタムタイトルバー (ドラッグ / 最小化 / 最大化 / 閉じる / テーマ切替)
-- [x] サイドバー (library / notes / graph / settings ナビゲーション + 折りたたみ)
-- [x] メインペイン (画面遷移アニメーション付き)
-- [x] コンテキストパネル
+### 下書きモードテーブル（V005）
 
-### App.tsx — ルートコンポーネント
-- [x] Zustand UIStore で画面管理 (library, reader, note, graph, search, settings)
-- [x] navigationHistory による戻る/進む (Cmd+[ / Cmd+])
-- [x] CSS トランジション (data-entering → slideInFromRight 200ms ease-out, data-leaving → slideOutToLeft 200ms)
-- [x] ErrorBoundary ラッパー
-- [x] OnboardingFlow ラッパー (初回起動時のみ)
-- [x] グローバルキーボードショートカット (Cmd+K 検索, Cmd+, 設定)
+```
+draft_citations — 下書き内引用
+draft_chapters  — 章管理
+notes に追加カラム — is_draft, draft_meta, word_count, reading_time_min
+```
 
-### 文献ライブラリ
-- [x] LibraryView (グリッド / リスト表示切替 / ソート / フィルタ)
-- [x] PaperCard (React.memo + カスタム arePropsEqual / IntersectionObserver 遅延サムネイル)
-- [x] PaperListRow (リスト表示用)
-- [x] AddPaperModal (URL / DOI / 手動入力)
-- [x] PaperDetailPanel (論文詳細表示)
+### エクスポート設定テーブル（V006）
 
-### PDF リーダー
-- [x] ReaderView (PDF 表示 + ハイライトパネル)
-- [x] PdfViewer (react-pdf-highlighter 統合)
-- [x] HighlightPanel / HighlightCard / HighlightToolbar
+```
+export_configs — エクスポート設定（静的サイト / 研究パッケージ / BibTeX）
+```
 
-### ノートエディタ
-- [x] NoteEditor (CodeMirror 6 Markdown エディタ)
-- [x] NoteList (ノート一覧)
-- [x] StellarEditor (カスタム CodeMirror ラッパー)
-- [x] WikiLinkAutoComplete ([[ノート名]] オートコンプリート)
-- [x] FocusMode (集中執筆モード)
-- [x] NoteContextPanel (バックリンク + アウトライン)
+### データ整合性
 
-### グラフビュー
-- [x] GraphView (全画面キャンバス + 浮遊パネル)
-- [x] ForceGraph (カスタムノード描画 / Bezier エッジ / ズーム / パン)
-- [x] ノードラベル最適化 (nodeCount > 300 → zoom > 1.5 でのみ表示)
-- [x] useMemo で connectedNodeIds / graphData メモ化
-- [x] requestAnimationFrame ベースのフィルタ再計算
-- [x] GraphFilterPanel (ノード種別 / タグ / 最小リンク数)
-- [x] GraphLegendPanel / GraphMiniMap / NodeDetailPopup
+- **FTS 同期トリガー**：論文・ノート・ハイライトの INSERT / UPDATE / DELETE に連動して全文検索インデックスを自動更新
+- **updated_at 自動更新トリガー**：レコード更新時にタイムスタンプを自動セット
+- **row_count 自動更新トリガー**：データセットの行数を自動集計
+- **外部キー制約**：CASCADE DELETE / SET NULL による参照整合性の維持
+- **ユニーク制約**：リンクの重複防止、コーディングの重複防止
 
-### 全文検索
-- [x] SearchModal (常時マウント + visibility:hidden / Cmd+K 開閉 / ESC 閉じ)
-- [x] 仮想スクロール (@tanstack/react-virtual — >100件で有効化)
-- [x] タブフィルタ (すべて / 論文 / ノート / ハイライト)
-- [x] キーボードナビゲーション (↑↓ 移動 / Enter 開く / Tab タブ切替)
-- [x] デバウンス 200ms リアルタイム検索
+---
 
-### 設定
-- [x] SettingsView (5タブ: 外観 / データ / ショートカット / 引用 / 言語)
-- [x] テーマプレビューカード
-- [x] フォントサイズ・行高さ・エディタフォント設定
-- [x] データパス変更 / エクスポート / バックアップ
-- [x] 引用スタイル選択 (APA 7 / MLA 9 / Chicago 17 / 一橋大学式)
-- [x] 言語切替 UI (4言語: 日本語 / English / Français / Afrikaans)
-
-### 多言語対応 (i18n)
-- [x] 4言語対応: 日本語 (ja) / English (en) / Français (fr) / Afrikaans (af)
-- [x] Zustand persist ストア (useI18nStore) による言語設定の永続化
-- [x] ブラウザ言語自動検出 (detectBrowserLocale)
-- [x] 全1,127翻訳キーが4言語で完全同期
-- [x] 翻訳リソース構造: `src/i18n/` (ja.ts / en.ts / fr.ts / af.ts / index.ts)
-- [x] TutorialOverlay のハードコード日本語を i18n キーに置換
-- [x] TypeScript ビルドエラー 0
-
-### IPC / ユーティリティ
-- [x] ipc.ts: 型安全 invoke<T> ラッパー + api オブジェクト (papers / notes / highlights / links / search / data)
-- [x] citation.ts: 引用フォーマット生成 + クリップボードコピー
-
-### エラー処理 / オンボーディング
-- [x] ErrorBoundary (クラスコンポーネント / 全画面エラー UI / Tauri relaunch() 再起動)
-- [x] OnboardingFlow (localStorage 'stellar-onboarded' / 4ステップ / 250ms フェード / プログレスドット)
-
-### Tauri イベント
-- [x] useTauriEvents (paper-import-request リスナー / トースト通知 / 楽観的追加)
-
-### ビルド
-- [x] TypeScript 6 strict モード — エラー 0
-- [x] Vite 6 ビルド成功 (512MB メモリ制限内, ~13秒)
-- [x] 細粒度チャンク分割 (vendor-react / vendor-codemirror / vendor-pdf / vendor-graph / etc.)
-
-## キーボードショートカット
-
-| キー | 機能 |
-|---|---|
-| `Cmd/Ctrl + K` | 全文検索モーダルを開閉 |
-| `Cmd/Ctrl + ,` | 設定を開く |
-| `Cmd/Ctrl + N` | 新しいノートを作成 |
-| `Cmd/Ctrl + [` | 戻る |
-| `Cmd/Ctrl + ]` | 進む |
-| `Cmd/Ctrl + 0` | グラフを全体表示 |
-| `Esc` | モーダルを閉じる / 選択解除 |
-| `↑↓` | 検索結果を移動 |
-| `Enter` | 検索結果を開く |
-| `Tab` | 検索タブ切替 |
-
-## 開発環境セットアップ
+## セットアップ & ビルド
 
 ### 前提条件
 
-- Node.js 20+
-- npm 10+ (または pnpm 10+)
-- Rust 1.77+
-- Tauri 2.0 システム依存パッケージ
+- **Node.js** 20 以上
+- **pnpm**（推奨）または npm
+- **Rust** 1.77 以上
+- **Tauri 2 の依存関係**（OS ごとに異なります。[公式ドキュメント](https://v2.tauri.app/start/prerequisites/) を参照）
 
 ### インストール
 
 ```bash
 # リポジトリをクローン
-git clone <repository-url> stellar
+git clone <repository-url>
 cd stellar
 
-# フロントエンド依存パッケージ
-npm install
+# フロントエンド依存関係のインストール
+pnpm install
 
-# 開発サーバー起動
-npm run tauri dev
+# 開発サーバーの起動（Tauri + Vite）
+pnpm tauri dev
 ```
 
 ### ビルド
 
 ```bash
-# TypeScript 型チェック
-npx tsc -b --noEmit
+# プロダクションビルド（TS コンパイル + Vite バンドル + Tauri パッケージング）
+pnpm tauri build
+
+# macOS ユニバーサルバイナリ
+pnpm tauri build --target universal-apple-darwin
 
 # フロントエンドのみビルド
-npm run build
-
-# プロダクションビルド (Tauri アプリ)
-npm run tauri build
+pnpm build
 ```
 
-## テーマ
+---
 
-| テーマ | 説明 |
+## プロジェクト構成
+
+```
+stellar/
+├── src/                          # フロントエンド（React + TypeScript）
+│   ├── components/
+│   │   ├── draft/                # 下書きモード（章管理・引用パネル）
+│   │   ├── export/               # エクスポートモーダル（静的サイト・パッケージ）
+│   │   ├── graph/                # グラフビュー（力学グラフ・フィルタ・凡例）
+│   │   ├── layout/               # レイアウト（タイトルバー・サイドバー・メインペイン）
+│   │   ├── library/              # 文献ライブラリ（カード・リスト・詳細・追加モーダル）
+│   │   ├── notes/                # ノート一覧・エディタ・コンテキストパネル
+│   │   ├── onboarding/           # 初回起動ウィザード
+│   │   ├── qualitative/          # 質的分析モジュール（10+ サブコンポーネント）
+│   │   ├── quantitative/         # 量的分析モジュール（Data Studio）
+│   │   ├── reader/               # PDF リーダー・ハイライト
+│   │   ├── search/               # 検索モーダル
+│   │   ├── settings/             # 設定画面（5 タブ）
+│   │   └── ui/                   # 共通 UI 部品（Badge, Button, Modal, Toast など）
+│   ├── hooks/                    # カスタムフック
+│   ├── i18n/                     # 多言語リソース（ja, en, fr, af）
+│   ├── lib/                      # ユーティリティ（tauriShim, 統計計算）
+│   ├── stores/                   # Zustand ストア（7 種）
+│   ├── types/                    # TypeScript 型定義
+│   ├── utils/                    # IPC ラッパー・ヘルパー関数
+│   ├── App.tsx                   # ルートコンポーネント
+│   └── main.tsx                  # エントリポイント
+│
+├── src-tauri/                    # バックエンド（Rust / Tauri 2）
+│   ├── src/
+│   │   ├── commands/             # Tauri コマンド（12 モジュール）
+│   │   │   ├── papers.rs         # 論文 CRUD・PDF インポート
+│   │   │   ├── notes.rs          # ノート CRUD
+│   │   │   ├── highlights.rs     # ハイライト CRUD
+│   │   │   ├── links.rs          # リンク CRUD
+│   │   │   ├── search.rs         # 全文検索・最近の項目
+│   │   │   ├── metadata.rs       # CrossRef メタデータ取得
+│   │   │   ├── citation_network.rs # 引用ネットワーク・レコメンド
+│   │   │   ├── qualitative.rs    # 質的分析（コード・メモ・史料批判など）
+│   │   │   ├── quantitative.rs   # 量的分析（データセット・変数・分析）
+│   │   │   ├── draft.rs          # 下書きモード（章・引用管理）
+│   │   │   ├── export.rs         # エクスポート（静的サイト・パッケージ・PDF・DOCX）
+│   │   │   └── data.rs           # データ管理（サマリー・バックアップ）
+│   │   ├── db/                   # データベース初期化・マイグレーション・モデル
+│   │   ├── utils/                # PDF ユーティリティ・メタデータ抽出
+│   │   ├── server.rs             # ブラウザ拡張連携用 HTTP サーバー
+│   │   └── lib.rs                # Tauri エントリポイント
+│   ├── migrations/               # SQLite マイグレーション（V001〜V006）
+│   └── tauri.conf.json           # Tauri 設定
+│
+├── public/                       # 静的アセット
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+└── tailwind.config.ts
+```
+
+### コード規模
+
+| | ファイル数 | 行数 |
+|---|---|---|
+| **フロントエンド**（TypeScript / TSX） | 132 | 約 54,500 行 |
+| **バックエンド**（Rust） | 23 | 約 11,300 行 |
+| **合計** | 155 | 約 65,800 行 |
+
+---
+
+## キーボードショートカット
+
+### ナビゲーション
+
+| ショートカット | 動作 |
 |---|---|
-| `white` | 清潔感のある純白ベース |
-| `ivory` | 温かみのあるアイボリーベース |
-| `dark-blue` | 落ち着いたダークブルー |
-| `black` | 真の黒ベース (OLED 対応) |
+| `Ctrl/Cmd + K` | 検索を開く |
+| `Ctrl/Cmd + N` | 新規ノート |
+| `Ctrl/Cmd + ,` | 設定を開く |
+| `Ctrl/Cmd + 1` | ライブラリに切り替え |
+| `Ctrl/Cmd + 2` | ノートに切り替え |
+| `Ctrl/Cmd + 3` | グラフビューに切り替え |
 
-テーマ切り替え: タイトルバー右側の太陽/月アイコンをクリック (white → ivory → dark-blue → black → white)
+### エディタ
+
+| ショートカット | 動作 |
+|---|---|
+| `Ctrl/Cmd + S` | 保存 |
+| `Ctrl/Cmd + B` | 太字 |
+| `Ctrl/Cmd + I` | 斜体 |
+| `Ctrl/Cmd + Z` | 元に戻す |
+| `Ctrl/Cmd + Shift + Z` | やり直す |
+
+### PDF リーダー
+
+| ショートカット | 動作 |
+|---|---|
+| `←` / `→` | 前ページ / 次ページ |
+| `Ctrl/Cmd + F` | テキスト検索 |
+| `1`〜`4` | ハイライト色の選択 |
+
+---
 
 ## ライセンス
 
-MIT
+MIT License
