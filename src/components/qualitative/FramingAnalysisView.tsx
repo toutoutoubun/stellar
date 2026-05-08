@@ -46,8 +46,16 @@ export const FramingAnalysisView: React.FC<FramingAnalysisViewProps> = ({
         invoke<Frame[]>("get_frames", { projectId }),
         invoke<FramingMatrix>("get_framing_matrix", { projectId }),
       ]);
-      setFrames(frameList);
-      setMatrix(matrixData);
+      setFrames(Array.isArray(frameList) ? frameList : []);
+      if (matrixData && typeof matrixData === "object") {
+        setMatrix({
+          frames: Array.isArray(matrixData.frames) ? matrixData.frames : [],
+          papers: Array.isArray(matrixData.papers) ? matrixData.papers : [],
+          counts: matrixData.counts && typeof matrixData.counts === "object" ? matrixData.counts : {},
+        });
+      } else {
+        setMatrix(null);
+      }
     } catch (err) {
       console.error(t.qualitative.k_ak5uvd, err);
     } finally {

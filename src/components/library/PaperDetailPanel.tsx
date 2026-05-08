@@ -115,7 +115,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
       try {
         // 並列で関連ノート・バックリンク・ハイライトを取得
         const [notes, links, hlights] = await Promise.all([
-          invoke<{ items: Note[]; totalPages: number; totalItems: number }>("get_notes", { paperId: paper.id, limit: 1000 }).then(r => r.items).catch(
+          invoke<{ items: Note[]; totalPages: number; totalItems: number }>("get_notes", { paperId: paper.id, limit: 1000 }).then(r => Array.isArray(r?.items) ? r.items : []).catch(
             () => [] as Note[]
           ),
           invoke<Link[]>("get_backlinks", {

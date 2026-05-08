@@ -26,7 +26,16 @@ export const CodingMatrixView: React.FC<CodingMatrixViewProps> = ({
       const result = await invoke<CodingMatrix>("get_coding_matrix", {
         projectId,
       });
-      setMatrix(result);
+      // 防御: バックエンドが不完全なデータを返した場合の安全策
+      if (result && typeof result === "object") {
+        setMatrix({
+          rows: Array.isArray(result.rows) ? result.rows : [],
+          cols: Array.isArray(result.cols) ? result.cols : [],
+          cells: result.cells && typeof result.cells === "object" ? result.cells : {},
+        });
+      } else {
+        setMatrix(null);
+      }
     } catch (err) {
       console.error(t.qualitative.k_1375ii, err);
     } finally {

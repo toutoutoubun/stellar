@@ -128,7 +128,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const result = await invoke<{ items: Paper[]; totalPages: number; totalItems: number }>("get_papers", { limit: 1000 });
-      const papers = result.items;
+      const papers = Array.isArray(result?.items) ? result.items : [];
       set({ papers, loading: false });
     } catch (e) {
       set({ error: String(e), loading: false });

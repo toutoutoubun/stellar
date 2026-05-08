@@ -58,8 +58,15 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
         invoke<PtData>("get_pt_data", { projectId }),
         invoke<PtSummary>("get_pt_summary", { projectId }),
       ]);
-      setPtData(data);
-      setSummary(sum);
+      if (data && typeof data === "object") {
+        setPtData({
+          hypotheses: Array.isArray(data.hypotheses) ? data.hypotheses : [],
+          evidences: Array.isArray(data.evidences) ? data.evidences : [],
+        });
+      } else {
+        setPtData(null);
+      }
+      setSummary(sum ?? null);
     } catch (err) {
       console.error(t.qualitative.k_gfgo1w, err);
     } finally {

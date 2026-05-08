@@ -386,7 +386,7 @@ const MOCK_RESPONSES: Record<string, any> = {
   get_graph_data: { nodes: [], links: [] },
 
   // Qualitative — Coding Matrix
-  get_coding_matrix: { rows: [], columns: [], cells: [] },
+  get_coding_matrix: { rows: [], cols: [], cells: {} },
 
   // Qualitative — Source Critique
   get_source_critiques: [],
@@ -448,7 +448,7 @@ const MOCK_RESPONSES: Record<string, any> = {
 
   // Qualitative — Framing Analysis
   get_framing_matrices: [],
-  get_framing_matrix: { frames: [], sources: [], cells: [] },
+  get_framing_matrix: { frames: [], papers: [], counts: {} },
   get_frames: [],
   create_framing_matrix: null,
   create_frame: null,

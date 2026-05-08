@@ -309,7 +309,7 @@ pub struct LinkSuggestion {
 #[serde(rename_all = "camelCase")]
 pub struct GraphData {
     pub nodes: Vec<GraphNode>,
-    pub edges: Vec<GraphEdge>,
+    pub links: Vec<GraphEdge>,
 }
 
 /// グラフノード — 論文またはノート1つ分

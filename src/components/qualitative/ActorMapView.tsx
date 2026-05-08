@@ -85,8 +85,8 @@ export const ActorMapView: React.FC<ActorMapViewProps> = ({ projectId }) => {
     setLoading(true);
     try {
       const data = await invoke<ActorMapData>("get_actor_map", { projectId });
-      setActors(data.actors);
-      setRelations(data.relations);
+      setActors(Array.isArray(data?.actors) ? data.actors : []);
+      setRelations(Array.isArray(data?.relations) ? data.relations : []);
     } catch (err) {
       console.error(t.qualitative.k_2ssr3c, err);
     } finally {

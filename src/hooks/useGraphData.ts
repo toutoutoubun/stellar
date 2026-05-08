@@ -165,7 +165,18 @@ export function useGraphData(): UseGraphDataReturn {
     setError(null);
     try {
       const data = await invoke<GraphData>("get_graph_data");
-      setRawData(data);
+      // 防御: バックエンドが edges を返す可能性への対応
+      if (data && typeof data === "object") {
+        const safeData: GraphData = {
+          nodes: Array.isArray(data.nodes) ? data.nodes : [],
+          links: Array.isArray(data.links) ? data.links
+            : Array.isArray((data as unknown as { edges: GraphLink[] }).edges) ? (data as unknown as { edges: GraphLink[] }).edges
+            : [],
+        };
+        setRawData(safeData);
+      } else {
+        setRawData(null);
+      }
     } catch (e) {
       setError(String(e));
     } finally {

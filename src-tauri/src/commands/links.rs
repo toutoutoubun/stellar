@@ -139,7 +139,7 @@ pub async fn get_graph_data(app: AppHandle) -> Result<GraphData, String> {
     // 各ノードのリンク数を計算するためのカウンタ
     let mut link_counts: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
 
-    let edges: Vec<GraphEdge> = link_rows
+    let links: Vec<GraphEdge> = link_rows
         .iter()
         .filter_map(|row| {
             let id: String = row.try_get("id").ok()?;
@@ -197,7 +197,7 @@ pub async fn get_graph_data(app: AppHandle) -> Result<GraphData, String> {
 
     nodes.extend(note_nodes);
 
-    Ok(GraphData { nodes, edges })
+    Ok(GraphData { nodes, links })
 }
 
 // ────────────────────────────────────────────────────────────
