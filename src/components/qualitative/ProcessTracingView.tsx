@@ -61,7 +61,6 @@ export const ProcessTracingView: React.FC<ProcessTracingViewProps> = ({
       if (data && typeof data === "object") {
         setPtData({
           hypotheses: Array.isArray(data.hypotheses) ? data.hypotheses : [],
-          evidences: Array.isArray(data.evidences) ? data.evidences : [],
         });
       } else {
         setPtData(null);
