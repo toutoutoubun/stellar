@@ -8,6 +8,8 @@ use sqlx::Row;
 use tauri::AppHandle;
 
 const SS_USER_AGENT: &str = "Stellar/0.1.0 (academic research tool; mailto:contact@stellar.app)";
+const SS_PAPER_FIELDS: &str = "paperId,title,url,authors,year,externalIds,references.paperId,references.title,references.url,references.authors,references.year,references.externalIds,citations.paperId,citations.title,citations.url,citations.authors,citations.year,citations.externalIds";
+const SS_RECOMMENDATION_FIELDS: &str = "paperId,title,url,authors,year,externalIds,abstract";
 
 // ════════════════════════════════════════════════════════════
 // 読書ステータス
@@ -111,6 +113,50 @@ fn parse_ss_paper_to_entry(paper: &serde_json::Value) -> CitationEntry {
     }
 }
 
+fn parse_ss_relation_item(item: &serde_json::Value, wrapper_key: &str) -> Option<CitationEntry> {
+    let paper = item.get(wrapper_key).unwrap_or(item);
+    let title = paper.get("title").and_then(|v| v.as_str())?;
+    if title.trim().is_empty() {
+        return None;
+    }
+    Some(parse_ss_paper_to_entry(paper))
+}
+
+fn normalize_doi_identifier(doi: &str) -> String {
+    doi.trim()
+        .trim_start_matches("https://doi.org/")
+        .trim_start_matches("http://doi.org/")
+        .trim_start_matches("doi:")
+        .trim()
+        .to_string()
+}
+
+async fn semantic_scholar_json(
+    client: &reqwest::Client,
+    url: &str,
+    fields: &str,
+) -> Result<serde_json::Value, String> {
+    let response = client
+        .get(url)
+        .query(&[("fields", fields)])
+        .header("User-Agent", SS_USER_AGENT)
+        .send()
+        .await
+        .map_err(|e| format!("Semantic Scholar API への接続に失敗: {}", e))?;
+
+    let status = response.status();
+    if !status.is_success() {
+        let body = response.text().await.unwrap_or_default();
+        let excerpt: String = body.chars().take(240).collect();
+        return Err(format!("Semantic Scholar API エラー: {} {}", status, excerpt));
+    }
+
+    response
+        .json()
+        .await
+        .map_err(|e| format!("Semantic Scholar レスポンスの解析に失敗: {}", e))
+}
+
 /// 引用ネットワーク（参照文献・被引用文献）を取得する
 /// キャッシュ有効期間: 7日
 #[tauri::command]
@@ -143,26 +189,30 @@ pub async fn fetch_citation_network(
                     serde_json::from_str(&refs_json).unwrap_or_default();
                 let cited_by: Vec<CitationEntry> =
                     serde_json::from_str(&cited_json).unwrap_or_default();
-                return Ok(CitationNetworkData {
-                    paper_id,
-                    references,
-                    cited_by,
-                    fetched_at: Some(ts.clone()),
-                });
+                if !references.is_empty() || !cited_by.is_empty() {
+                    return Ok(CitationNetworkData {
+                        paper_id,
+                        references,
+                        cited_by,
+                        fetched_at: Some(ts.clone()),
+                    });
+                }
             }
         }
     }
 
     // DOI or URL で SS API を呼び出す
     let ss_query = if let Some(ref d) = doi {
+        let normalized = normalize_doi_identifier(d);
+        let encoded = urlencoding::encode(&normalized);
         format!(
-            "https://api.semanticscholar.org/graph/v1/paper/DOI:{}?fields=references,citations,title,authors,year,externalIds",
-            d
+            "https://api.semanticscholar.org/graph/v1/paper/DOI:{}",
+            encoded
         )
     } else if let Some(ref u) = url {
         let encoded = urlencoding::encode(u);
         format!(
-            "https://api.semanticscholar.org/graph/v1/paper/URL:{}?fields=references,citations,title,authors,year,externalIds",
+            "https://api.semanticscholar.org/graph/v1/paper/URL:{}",
             encoded
         )
     } else {
@@ -176,39 +226,7 @@ pub async fn fetch_citation_network(
     };
 
     let client = reqwest::Client::new();
-    let response = client
-        .get(&ss_query)
-        .header("User-Agent", SS_USER_AGENT)
-        .send()
-        .await;
-
-    let response = match response {
-        Ok(r) => r,
-        Err(e) => {
-            log::warn!("Semantic Scholar API への接続に失敗: {}", e);
-            return Ok(CitationNetworkData {
-                paper_id,
-                references: vec![],
-                cited_by: vec![],
-                fetched_at: None,
-            });
-        }
-    };
-
-    if !response.status().is_success() {
-        log::warn!("Semantic Scholar API エラー: {}", response.status());
-        return Ok(CitationNetworkData {
-            paper_id,
-            references: vec![],
-            cited_by: vec![],
-            fetched_at: None,
-        });
-    }
-
-    let body: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|e| format!("レスポンスの解析に失敗: {}", e))?;
+    let body = semantic_scholar_json(&client, &ss_query, SS_PAPER_FIELDS).await?;
 
     // ss_paper_id を取得
     let ss_paper_id = body
@@ -222,11 +240,7 @@ pub async fn fetch_citation_network(
         .and_then(|v| v.as_array())
         .map(|arr| {
             arr.iter()
-                .filter_map(|item| {
-                    item.get("citedPaper")
-                        .filter(|p| p.get("title").is_some())
-                        .map(parse_ss_paper_to_entry)
-                })
+                .filter_map(|item| parse_ss_relation_item(item, "citedPaper"))
                 .collect()
         })
         .unwrap_or_default();
@@ -237,11 +251,7 @@ pub async fn fetch_citation_network(
         .and_then(|v| v.as_array())
         .map(|arr| {
             arr.iter()
-                .filter_map(|item| {
-                    item.get("citingPaper")
-                        .filter(|p| p.get("title").is_some())
-                        .map(parse_ss_paper_to_entry)
-                })
+                .filter_map(|item| parse_ss_relation_item(item, "citingPaper"))
                 .collect()
         })
         .unwrap_or_default();
@@ -298,7 +308,7 @@ pub async fn fetch_recommendations(
 
     // ss_paper_id がない場合は fetch_citation_network を通じて取得を試みる
     if ss_paper_id.is_none() {
-        let _ = fetch_citation_network(app.clone(), paper_id.clone()).await;
+        let _ = fetch_citation_network(app.clone(), paper_id.clone()).await?;
         // 再取得
         if let Ok(Some(row2)) =
             sqlx::query("SELECT ss_paper_id FROM papers WHERE id = ?")
@@ -320,36 +330,33 @@ pub async fn fetch_recommendations(
 
     // レコメンデーション API を呼び出す
     let rec_url = format!(
-        "https://api.semanticscholar.org/recommendations/v1/papers/forpaper/{}?fields=title,authors,year,externalIds,abstract&limit=10",
-        ss_id
+        "https://api.semanticscholar.org/recommendations/v1/papers/forpaper/{}",
+        urlencoding::encode(&ss_id)
     );
 
     let client = reqwest::Client::new();
-    let response = match client
+    let response = client
         .get(&rec_url)
+        .query(&[
+            ("fields", SS_RECOMMENDATION_FIELDS),
+            ("limit", "10"),
+        ])
         .header("User-Agent", SS_USER_AGENT)
         .send()
         .await
-    {
-        Ok(r) => r,
-        Err(e) => {
-            log::warn!("レコメンデーション API への接続に失敗: {}", e);
-            return Ok(vec![]);
-        }
-    };
+        .map_err(|e| format!("レコメンデーション API への接続に失敗: {}", e))?;
 
-    if !response.status().is_success() {
-        log::warn!("レコメンデーション API エラー: {}", response.status());
-        return Ok(vec![]);
+    let status = response.status();
+    if !status.is_success() {
+        let body = response.text().await.unwrap_or_default();
+        let excerpt: String = body.chars().take(240).collect();
+        return Err(format!("レコメンデーション API エラー: {} {}", status, excerpt));
     }
 
-    let body: serde_json::Value = match response.json().await {
-        Ok(v) => v,
-        Err(e) => {
-            log::warn!("レコメンデーション レスポンス解析に失敗: {}", e);
-            return Ok(vec![]);
-        }
-    };
+    let body: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|e| format!("レコメンデーション レスポンス解析に失敗: {}", e))?;
 
     let recommended_papers = body
         .get("recommendedPapers")

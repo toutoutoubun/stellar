@@ -344,13 +344,26 @@ export const StellarEditor: React.FC<StellarEditorProps> = ({
           "resolve_wikilink",
           { title: linkText },
         );
+        if (!result?.id) return;
+
+        // WikiLink は保存済みの links テーブルにも同期し、バックリンク/グラフに反映する。
+        await invoke("create_link", {
+          input: {
+            sourceType: "note",
+            sourceId: noteId,
+            targetType: result.itemType,
+            targetId: result.id,
+            context: `[[${linkText}]]`,
+          },
+        }).catch(() => undefined);
+        window.dispatchEvent(new CustomEvent("stellar-links-changed"));
         onLinkClick(result.id, result.itemType);
       } catch {
         // リンク先が見つからない場合、新規ノート作成を促す
         // （将来的に新規ノート自動作成に拡張可能）
       }
     },
-    [onLinkClick],
+    [noteId, onLinkClick],
   );
 
   /** autoSave Extension — キー入力から1秒後に自動保存 */

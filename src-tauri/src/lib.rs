@@ -86,6 +86,7 @@ pub fn run() {
             commands::links::get_graph_data,
             commands::search::full_text_search,
             commands::search::get_link_suggestions,
+            commands::search::resolve_wikilink,
             commands::metadata::fetch_metadata_by_doi,
             commands::metadata::fetch_metadata_from_url,
             commands::metadata::download_pdf_from_url,

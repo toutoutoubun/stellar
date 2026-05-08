@@ -418,22 +418,28 @@ const PaperContextContent: React.FC<{ paperId: string }> = ({ paperId }) => {
         <div className="px-4 pb-3">
           {backlinks.length === 0 ? (
             <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-              {t.library.k_no_tags}
+              {t.library.k_no_paper_links}
             </p>
           ) : (
             <div className="flex flex-col gap-0.5">
-              {backlinks.map((bl) => (
-                <LinkItemButton
-                  key={bl.id}
-                  itemType={bl.sourceType as "paper" | "note"}
-                  title={bl.sourceTitle}
-                  subtitle={bl.context ?? undefined}
-                  onClick={() => {
-                    if (bl.sourceType === "note") openNote(bl.sourceId);
-                    else openPaper(bl.sourceId);
-                  }}
-                />
-              ))}
+              {backlinks.map((bl) => {
+                const isSource = bl.sourceId === paperId;
+                const peerType = isSource ? bl.targetType : bl.sourceType;
+                const peerId = isSource ? bl.targetId : bl.sourceId;
+                const peerTitle = isSource ? bl.targetTitle : bl.sourceTitle;
+                return (
+                  <LinkItemButton
+                    key={bl.id}
+                    itemType={peerType as "paper" | "note"}
+                    title={peerTitle}
+                    subtitle={bl.context ?? undefined}
+                    onClick={() => {
+                      if (peerType === "note") openNote(peerId);
+                      else openPaper(peerId);
+                    }}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
@@ -618,22 +624,28 @@ const NoteContextContent: React.FC<{ noteId: string }> = ({ noteId }) => {
         <div className="px-4 pb-3">
           {backlinks.length === 0 ? (
             <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-              {t.library.k_no_tags}
+              {t.notes.k_no_backlinks}
             </p>
           ) : (
             <div className="flex flex-col gap-0.5">
-              {backlinks.map((bl) => (
-                <LinkItemButton
-                  key={bl.id}
-                  itemType={bl.sourceType as "paper" | "note"}
-                  title={bl.sourceTitle}
-                  subtitle={bl.context ?? undefined}
-                  onClick={() => {
-                    if (bl.sourceType === "note") openNote(bl.sourceId);
-                    else openPaper(bl.sourceId);
-                  }}
-                />
-              ))}
+              {backlinks.map((bl) => {
+                const isSource = bl.sourceId === noteId;
+                const peerType = isSource ? bl.targetType : bl.sourceType;
+                const peerId = isSource ? bl.targetId : bl.sourceId;
+                const peerTitle = isSource ? bl.targetTitle : bl.sourceTitle;
+                return (
+                  <LinkItemButton
+                    key={bl.id}
+                    itemType={peerType as "paper" | "note"}
+                    title={peerTitle}
+                    subtitle={bl.context ?? undefined}
+                    onClick={() => {
+                      if (peerType === "note") openNote(peerId);
+                      else openPaper(peerId);
+                    }}
+                  />
+                );
+              })}
             </div>
           )}
         </div>

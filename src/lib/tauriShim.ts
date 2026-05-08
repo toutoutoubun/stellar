@@ -381,9 +381,25 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
   // ── Graph Data（動的生成）──
   if (cmd === "get_graph_data") {
     // mockStore のノートと論文からグラフデータを動的に生成
+    const normalizeTitle = (title: string) => title.trim().toLowerCase();
+    const extractWikiLinks = (content: string): string[] => {
+      const titles: string[] = [];
+      const re = /\[\[([^\]]+)\]\]/g;
+      let match: RegExpExecArray | null;
+      while ((match = re.exec(content)) !== null) {
+        const target = String(match[1] ?? "").split("|")[0]?.trim();
+        if (target) titles.push(target);
+      }
+      return titles;
+    };
+
     const nodes: any[] = [];
+    const noteTitleToId = new Map<string, string>();
+    const paperTitleToId = new Map<string, string>();
+
     for (const note of mockStore.notes) {
       if (note.isDraft === 1) continue; // 草稿は除外
+      noteTitleToId.set(normalizeTitle(note.title || ""), note.id);
       nodes.push({
         id: note.id,
         name: note.title || "Untitled Note",
@@ -394,6 +410,7 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
       });
     }
     for (const paper of mockStore.papers) {
+      paperTitleToId.set(normalizeTitle(paper.title || ""), paper.id);
       nodes.push({
         id: paper.id,
         name: paper.title || "Untitled Paper",
@@ -403,17 +420,55 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
         updatedAt: paper.updatedAt ?? "",
       });
     }
-    // mockStore.links からリンクを生成
+
     const nodeIdSet = new Set(nodes.map((n: any) => n.id));
-    const links = mockStore.links
-      .filter((l: any) => nodeIdSet.has(l.sourceId) && nodeIdSet.has(l.targetId))
-      .map((l: any) => ({ source: l.sourceId, target: l.targetId }));
+    const seen = new Set<string>();
+    const links: any[] = [];
+    const linkCounts = new Map<string, number>();
+    const addLink = (id: string, source: string, target: string) => {
+      if (!source || !target || source === target) return;
+      if (!nodeIdSet.has(source) || !nodeIdSet.has(target)) return;
+      const key = source < target ? `${source}|${target}` : `${target}|${source}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      links.push({ id, source, target });
+      linkCounts.set(source, (linkCounts.get(source) ?? 0) + 1);
+      linkCounts.set(target, (linkCounts.get(target) ?? 0) + 1);
+    };
+
+    // 1. 明示的に作成されたリンク
+    for (const link of mockStore.links as any[]) {
+      addLink(link.id, link.sourceId, link.targetId);
+    }
+
+    // 2. ノートと論文の紐づけ
+    for (const note of mockStore.notes as any[]) {
+      if (note.isDraft === 1) continue;
+      if (note.paperId) addLink(`paper-note:${note.id}:${note.paperId}`, note.id, note.paperId);
+    }
+
+    // 3. ノート本文の [[WikiLink]]
+    for (const note of mockStore.notes as any[]) {
+      if (note.isDraft === 1) continue;
+      for (const title of extractWikiLinks(note.content ?? "")) {
+        const key = normalizeTitle(title);
+        const targetId = noteTitleToId.get(key) ?? paperTitleToId.get(key);
+        if (targetId) addLink(`wikilink:${note.id}:${targetId}`, note.id, targetId);
+      }
+    }
+
+    for (const node of nodes) {
+      const count = linkCounts.get(node.id) ?? 0;
+      node.linkCount = count;
+      node.val = Math.max(1, count);
+    }
+
     return { handled: true, result: { nodes, links } };
   }
 
   // ── Links CRUD ──
   if (cmd === "create_link") {
-    const a = (args ?? {}) as any;
+    const a = ((args as any)?.input ?? args ?? {}) as any;
     const link = {
       id: mockId(),
       sourceId: a.sourceId ?? a.source_id ?? "",
@@ -525,13 +580,13 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     const paperId = (args?.paperId ?? "") as string;
     // シードデータに基づいたサンプル参照文献・被引用文献を生成
     const references = [
-      { ssPaperId: "mock-ref-001", title: "Social Capital: A Multifaceted Perspective", authors: ["Dasgupta, P.", "Serageldin, I."], year: 2000, doi: "10.1596/0-8213-4562-1", url: null, citationCount: 342 },
-      { ssPaperId: "mock-ref-002", title: "The Forms of Capital", authors: ["Bourdieu, P."], year: 1986, doi: null, url: "https://example.com/bourdieu1986", citationCount: 5210 },
-      { ssPaperId: "mock-ref-003", title: "Trust: The Social Virtues and the Creation of Prosperity", authors: ["Fukuyama, F."], year: 1995, doi: null, url: null, citationCount: 1820 },
+      { ssPaperId: "mock-ref-001", title: "[Preview mock] Social Capital: A Multifaceted Perspective", authors: ["Dasgupta, P.", "Serageldin, I."], year: 2000, doi: "10.1596/0-8213-4562-1", url: null, citationCount: 342 },
+      { ssPaperId: "mock-ref-002", title: "[Preview mock] The Forms of Capital", authors: ["Bourdieu, P."], year: 1986, doi: null, url: "https://example.com/bourdieu1986", citationCount: 5210 },
+      { ssPaperId: "mock-ref-003", title: "[Preview mock] Trust: The Social Virtues and the Creation of Prosperity", authors: ["Fukuyama, F."], year: 1995, doi: null, url: null, citationCount: 1820 },
     ];
     const citedBy = [
-      { ssPaperId: "mock-cite-001", title: "Community and Social Capital in the Digital Age", authors: ["Wellman, B.", "Haase, A."], year: 2019, doi: "10.1177/0002764219876543", url: null, citationCount: 78 },
-      { ssPaperId: "mock-cite-002", title: "Bridging and Bonding Social Capital Revisited", authors: ["Claridge, T."], year: 2020, doi: null, url: "https://example.com/claridge2020", citationCount: 45 },
+      { ssPaperId: "mock-cite-001", title: "[Preview mock] Community and Social Capital in the Digital Age", authors: ["Wellman, B.", "Haase, A."], year: 2019, doi: "10.1177/0002764219876543", url: null, citationCount: 78 },
+      { ssPaperId: "mock-cite-002", title: "[Preview mock] Bridging and Bonding Social Capital Revisited", authors: ["Claridge, T."], year: 2020, doi: null, url: "https://example.com/claridge2020", citationCount: 45 },
     ];
     return {
       handled: true,
@@ -547,9 +602,9 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
   if (cmd === "fetch_recommendations") {
     // シードデータに基づいたレコメンデーションを生成
     const recs = [
-      { id: "mock-rec-001", title: "Making Democracy Work: Civic Traditions in Modern Italy", authors: JSON.stringify(["Robert D. Putnam", "Robert Leonardi", "Raffaella Y. Nanetti"]), year: 1993, doi: "10.1515/9781400820740", url: null, abstract: "This book examines the conditions for creating strong, responsive, effective representative institutions and how social capital contributes to civic engagement.", relevanceScore: 0.92, isImported: 0 },
-      { id: "mock-rec-002", title: "The Logic of Collective Action: Public Goods and the Theory of Groups", authors: JSON.stringify(["Mancur Olson"]), year: 1965, doi: null, url: "https://example.com/olson1965", abstract: "A foundational work on how individuals in groups interact to pursue common goals, and the problem of free-riding.", relevanceScore: 0.85, isImported: 0 },
-      { id: "mock-rec-003", title: "Social Capital in the Creation of Human Capital", authors: JSON.stringify(["James S. Coleman"]), year: 1988, doi: "10.1086/228943", url: null, abstract: "Coleman introduces the concept of social capital in the context of education and human capital formation.", relevanceScore: 0.78, isImported: 0 },
+      { id: "mock-rec-001", title: "[Preview mock] Making Democracy Work: Civic Traditions in Modern Italy", authors: JSON.stringify(["Robert D. Putnam", "Robert Leonardi", "Raffaella Y. Nanetti"]), year: 1993, doi: "10.1515/9781400820740", url: null, abstract: "This browser-preview item is mock data. The Tauri app fetches real recommendations from Semantic Scholar.", relevanceScore: 0.92, isImported: 0 },
+      { id: "mock-rec-002", title: "[Preview mock] The Logic of Collective Action: Public Goods and the Theory of Groups", authors: JSON.stringify(["Mancur Olson"]), year: 1965, doi: null, url: "https://example.com/olson1965", abstract: "This browser-preview item is mock data. The Tauri app fetches real recommendations from Semantic Scholar.", relevanceScore: 0.85, isImported: 0 },
+      { id: "mock-rec-003", title: "[Preview mock] Social Capital in the Creation of Human Capital", authors: JSON.stringify(["James S. Coleman"]), year: 1988, doi: "10.1086/228943", url: null, abstract: "This browser-preview item is mock data. The Tauri app fetches real recommendations from Semantic Scholar.", relevanceScore: 0.78, isImported: 0 },
     ];
     return { handled: true, result: recs };
   }
@@ -612,6 +667,33 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
 
   // ── Link Suggestions（リンクサジェスト）──
   if (cmd === "get_link_suggestions") {
+    const query = (args?.query ?? "") as string;
+    if (query.trim()) {
+      const q = query.trim().toLowerCase();
+      const notes = mockStore.notes
+        .filter((n: any) => n.isDraft !== 1 && String(n.title ?? "").toLowerCase().includes(q))
+        .slice(0, 10)
+        .map((n: any) => ({
+          id: n.id,
+          type: "note",
+          title: n.title || "Untitled Note",
+          detail: (n.tags ?? []).length > 0 ? `ノート - ${(n.tags ?? []).join(", ")}` : "ノート",
+        }));
+      const papers = mockStore.papers
+        .filter((p: any) => String(p.title ?? "").toLowerCase().includes(q))
+        .slice(0, 10)
+        .map((p: any) => {
+          const authors = (p.authors ?? []).slice(0, 2).join(", ");
+          return {
+            id: p.id,
+            type: "paper",
+            title: p.title || "Untitled Paper",
+            detail: authors && p.year ? `${authors} (${p.year})` : authors || (p.year ? `論文 (${p.year})` : "論文"),
+          };
+        });
+      return { handled: true, result: [...notes, ...papers].slice(0, 10) };
+    }
+
     const itemId = (args?.itemId ?? args?.item_id ?? "") as string;
     const itemType = (args?.itemType ?? args?.item_type ?? "note") as string;
     const linkedIds = new Set<string>();
@@ -624,7 +706,7 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
       ? mockStore.notes.find((n: any) => n.id === itemId)
       : mockStore.papers.find((p: any) => p.id === itemId);
     const currentTags = new Set<string>(currentItem?.tags ?? []);
-    const candidates: { id: string; type: string; title: string; score: number; reason: string }[] = [];
+    const candidates: { id: string; type: string; title: string; detail: string; score: number; reason: string }[] = [];
     for (const note of mockStore.notes) {
       if (linkedIds.has(note.id) || note.isDraft === 1) continue;
       const overlap = (note.tags ?? []).filter((t: string) => currentTags.has(t));
@@ -632,7 +714,7 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
         const reasonLabel = useI18nStore.getState().t.library.k_shared_tags ?? "Shared tags";
         candidates.push({
           id: note.id, type: "note", title: note.title || "Untitled Note",
-          score: overlap.length, reason: `${reasonLabel}: ${overlap.join(", ")}`,
+          detail: "ノート", score: overlap.length, reason: `${reasonLabel}: ${overlap.join(", ")}`,
         });
       }
     }
@@ -643,12 +725,21 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
         const reasonLabel = useI18nStore.getState().t.library.k_shared_tags ?? "Shared tags";
         candidates.push({
           id: paper.id, type: "paper", title: paper.title || "Untitled Paper",
-          score: overlap.length, reason: `${reasonLabel}: ${overlap.join(", ")}`,
+          detail: paper.year ? `論文 (${paper.year})` : "論文", score: overlap.length, reason: `${reasonLabel}: ${overlap.join(", ")}`,
         });
       }
     }
     candidates.sort((a, b) => b.score - a.score);
     return { handled: true, result: candidates.slice(0, 5) };
+  }
+
+  if (cmd === "resolve_wikilink") {
+    const title = String(args?.title ?? "").trim().toLowerCase();
+    const note = mockStore.notes.find((n: any) => n.isDraft !== 1 && String(n.title ?? "").trim().toLowerCase() === title);
+    if (note) return { handled: true, result: { id: note.id, itemType: "note" } };
+    const paper = mockStore.papers.find((p: any) => String(p.title ?? "").trim().toLowerCase() === title);
+    if (paper) return { handled: true, result: { id: paper.id, itemType: "paper" } };
+    return { handled: true, result: null };
   }
 
   // ── メタデータ取得（ブラウザ開発用モック）──

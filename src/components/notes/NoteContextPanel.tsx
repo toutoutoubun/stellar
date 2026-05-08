@@ -36,25 +36,33 @@ const BacklinksSection: React.FC<{
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    const fetch = async () => {
-      setLoading(true);
-      try {
-        const items = await invoke<BacklinkItem[]>("get_backlinks", {
-          itemType: "note" as NodeType,
-          itemId: noteId,
-        });
-        if (!cancelled) setBacklinks(items);
-      } catch {
-        // バックリンク取得失敗は静かに処理
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    void fetch();
-    return () => { cancelled = true; };
+  const fetchBacklinks = useCallback(async (cancelledRef?: { current: boolean }) => {
+    setLoading(true);
+    try {
+      const items = await invoke<BacklinkItem[]>("get_backlinks", {
+        itemType: "note" as NodeType,
+        itemId: noteId,
+      });
+      if (!cancelledRef?.current) setBacklinks(items);
+    } catch {
+      // バックリンク取得失敗は静かに処理
+    } finally {
+      if (!cancelledRef?.current) setLoading(false);
+    }
   }, [noteId]);
+
+  useEffect(() => {
+    const cancelledRef = { current: false };
+    const refresh = () => {
+      void fetchBacklinks(cancelledRef);
+    };
+    refresh();
+    window.addEventListener("stellar-links-changed", refresh);
+    return () => {
+      cancelledRef.current = true;
+      window.removeEventListener("stellar-links-changed", refresh);
+    };
+  }, [fetchBacklinks]);
 
   return (
     <section>
@@ -537,12 +545,15 @@ const LinkSuggestionsSection: React.FC<{
       setCreating(targetId);
       try {
         await invoke("create_link", {
-          sourceId: noteId,
-          sourceType: "note",
-          targetId,
-          targetType,
+          input: {
+            sourceId: noteId,
+            sourceType: "note",
+            targetId,
+            targetType,
+          },
         });
         toast.success(t.notes.k_link_created);
+        window.dispatchEvent(new CustomEvent("stellar-links-changed"));
         // 作成済みサジェストをリストから除去
         setSuggestions((prev) => prev.filter((s) => s.id !== targetId));
       } catch {

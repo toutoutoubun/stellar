@@ -130,12 +130,15 @@ const PaperLinkSuggestionsSection: React.FC<{
       setCreating(targetId);
       try {
         await invoke("create_link", {
-          sourceId: paperId,
-          sourceType: "paper",
-          targetId,
-          targetType,
+          input: {
+            sourceId: paperId,
+            sourceType: "paper",
+            targetId,
+            targetType,
+          },
         });
         toast.success(t.library.k_link_created);
+        window.dispatchEvent(new CustomEvent("stellar-links-changed"));
         // 作成済みサジェストをリストから除去
         setSuggestions((prev) => prev.filter((s) => s.id !== targetId));
       } catch {
@@ -358,9 +361,11 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
     };
 
     void fetchRelatedData();
+    window.addEventListener("stellar-links-changed", fetchRelatedData);
 
     return () => {
       cancelled = true;
+      window.removeEventListener("stellar-links-changed", fetchRelatedData);
     };
   }, [currentPaper.id]);
 
