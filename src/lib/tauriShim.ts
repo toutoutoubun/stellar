@@ -416,7 +416,7 @@ const MOCK_RESPONSES: Record<string, any> = {
 
   // Qualitative — Process Tracing
   get_pt_hypotheses: [],
-  get_pt_data: { hypotheses: [], evidences: [] },
+  get_pt_data: { hypotheses: [] },
   get_pt_summary: null,
   create_pt_hypothesis: null,
   update_pt_hypothesis: null,
@@ -529,9 +529,16 @@ export async function invoke<T>(
     return null as T;
   }
 
-  // Tauri 環境: 本物の invoke を呼ぶ
+  // Tauri 環境: 本物の invoke を呼ぶ（タイムアウト付き）
   const { invoke: tauriInvoke } = await import("@tauri-apps/api/core");
-  return tauriInvoke<T>(cmd, args);
+  const TIMEOUT_MS = 15000; // 15秒タイムアウト
+  const result = await Promise.race([
+    tauriInvoke<T>(cmd, args),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`[invoke] "${cmd}" timed out after ${TIMEOUT_MS}ms`)), TIMEOUT_MS)
+    ),
+  ]);
+  return result;
 }
 
 // ── 安全な listen ──────────────────────────────────

@@ -14,7 +14,7 @@ use tauri::AppHandle;
 /// 下書きノートを新規作成する（is_draft=1）
 #[tauri::command]
 pub async fn create_draft(app: AppHandle, input: CreateDraftDto) -> Result<DraftResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
     let tags_json = serde_json::to_string(&input.tags).map_err(|e| e.to_string())?;
@@ -51,7 +51,7 @@ pub async fn create_draft(app: AppHandle, input: CreateDraftDto) -> Result<Draft
 /// 下書きノート一覧を取得する（is_draft=1 のノートのみ）
 #[tauri::command]
 pub async fn get_drafts(app: AppHandle) -> Result<Vec<DraftResponse>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let rows = sqlx::query(
         "SELECT * FROM notes WHERE is_draft = 1 ORDER BY updated_at DESC",
     )
@@ -72,7 +72,7 @@ pub async fn get_draft_chapters(
     app: AppHandle,
     note_id: String,
 ) -> Result<Vec<DraftChapterResponse>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let rows = sqlx::query(
         "SELECT * FROM draft_chapters WHERE note_id = ? ORDER BY order_index ASC",
     )
@@ -90,7 +90,7 @@ pub async fn create_draft_chapter(
     app: AppHandle,
     input: CreateDraftChapterDto,
 ) -> Result<DraftChapterResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -125,7 +125,7 @@ pub async fn update_draft_chapter(
     id: String,
     input: UpdateDraftChapterDto,
 ) -> Result<DraftChapterResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let now = chrono::Utc::now().to_rfc3339();
 
     // 現在のデータを取得
@@ -168,7 +168,7 @@ pub async fn update_draft_chapter(
 /// 下書きの章を削除する
 #[tauri::command]
 pub async fn delete_draft_chapter(app: AppHandle, id: String) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     sqlx::query("DELETE FROM draft_chapters WHERE id = ?")
         .bind(&id)
         .execute(pool.as_ref())
@@ -185,7 +185,7 @@ pub async fn reorder_draft_chapters(
     app: AppHandle,
     chapter_ids: Vec<String>,
 ) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     for (idx, chapter_id) in chapter_ids.iter().enumerate() {
         sqlx::query(
@@ -629,7 +629,7 @@ pub async fn insert_citation(
     app: AppHandle,
     input: InsertCitationDto,
 ) -> Result<DraftCitationResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // 論文データを取得
     let row = sqlx::query("SELECT * FROM papers WHERE id = ?")
@@ -785,7 +785,7 @@ pub async fn get_citations_for_note(
     app: AppHandle,
     note_id: String,
 ) -> Result<Vec<DraftCitationResponse>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let rows = sqlx::query(
         "SELECT * FROM draft_citations WHERE note_id = ? ORDER BY created_at ASC",
     )
@@ -800,7 +800,7 @@ pub async fn get_citations_for_note(
 /// 引用を削除する
 #[tauri::command]
 pub async fn delete_citation(app: AppHandle, id: String) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     sqlx::query("DELETE FROM draft_citations WHERE id = ?")
         .bind(&id)
         .execute(pool.as_ref())
@@ -816,7 +816,7 @@ pub async fn generate_bibliography(
     app: AppHandle,
     note_id: String,
 ) -> Result<String, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // ノートの引用スタイルを draft_meta から取得（デフォルト: apa7）
     let note_row = sqlx::query("SELECT draft_meta FROM notes WHERE id = ?")
@@ -883,7 +883,7 @@ pub async fn sync_word_count(
     note_id: String,
     word_count: i32,
 ) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // 読了時間を計算（大まかな推定: 250語/分）
     let reading_time_min = ((word_count as f64) / 250.0).ceil() as i32;

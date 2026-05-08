@@ -80,6 +80,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       const notes = Array.isArray(result?.items) ? result.items : [];
       set({ notes, loading: false });
     } catch (e) {
+      console.error("[fetchNotes] failed:", e);
       set({ error: String(e), loading: false });
     }
   },

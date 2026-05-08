@@ -366,7 +366,7 @@ pub async fn export_static_site(
     include_backlinks: bool,
     theme: String,
 ) -> Result<String, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     if note_ids.is_empty() {
         return Err("エクスポートするノートが指定されていません".to_string());
@@ -581,7 +581,7 @@ pub async fn export_stellar_package(
     include_pdfs: bool,
     output_path: String,
 ) -> Result<String, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // 論文を取得
     let papers: Vec<PaperResponse> = if paper_ids.is_empty() {
@@ -758,7 +758,7 @@ pub async fn import_stellar_package(
     app: AppHandle,
     package_path: String,
 ) -> Result<ImportResult, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let file = std::fs::File::open(&package_path)
         .map_err(|e| format!("ZIP ファイルを開けません: {}", e))?;

@@ -15,7 +15,7 @@ pub async fn get_highlights(
     app: AppHandle,
     paper_id: String,
 ) -> Result<Vec<HighlightResponse>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let rows = sqlx::query(
         "SELECT * FROM highlights WHERE paper_id = ? ORDER BY page ASC, created_at ASC",
@@ -39,7 +39,7 @@ pub async fn create_highlight(
     app: AppHandle,
     input: CreateHighlightDto,
 ) -> Result<HighlightResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
     let rect_json = serde_json::to_string(&input.rect).map_err(|e| e.to_string())?;
@@ -81,7 +81,7 @@ pub async fn update_highlight_comment(
     id: String,
     comment: String,
 ) -> Result<HighlightResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let row = sqlx::query("SELECT * FROM highlights WHERE id = ?")
         .bind(&id)
@@ -118,7 +118,7 @@ pub async fn update_highlight_comment(
 
 #[tauri::command]
 pub async fn delete_highlight(app: AppHandle, id: String) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     sqlx::query("DELETE FROM highlights WHERE id = ?")
         .bind(&id)

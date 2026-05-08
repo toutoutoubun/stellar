@@ -26,7 +26,7 @@ pub async fn get_notes(
     paper_id: Option<String>,
     tag: Option<String>,
 ) -> Result<PaginatedResult<NoteResponse>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let page = page.unwrap_or(1).max(1);
     let limit = limit.unwrap_or(20).clamp(1, 10000);
     let offset = (page - 1) * limit;
@@ -108,7 +108,7 @@ pub async fn get_notes(
 
 #[tauri::command]
 pub async fn get_note(app: AppHandle, id: String) -> Result<NoteDetail, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // ノート本体を取得
     let row = sqlx::query("SELECT * FROM notes WHERE id = ?")
@@ -153,7 +153,7 @@ pub async fn get_note(app: AppHandle, id: String) -> Result<NoteDetail, String> 
 
 #[tauri::command]
 pub async fn create_note(app: AppHandle, input: CreateNoteDto) -> Result<NoteResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
     let tags_json = serde_json::to_string(&input.tags).map_err(|e| e.to_string())?;
@@ -198,7 +198,7 @@ pub async fn update_note(
     id: String,
     input: UpdateNoteDto,
 ) -> Result<NoteResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let now = chrono::Utc::now().to_rfc3339();
 
     // 現在のノートデータを取得
@@ -256,7 +256,7 @@ pub async fn update_note(
 
 #[tauri::command]
 pub async fn delete_note(app: AppHandle, id: String) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // リンクテーブルから手動削除
     sqlx::query(
@@ -290,7 +290,7 @@ pub async fn create_note_from_highlights(
     paper_id: String,
     highlight_ids: Vec<String>,
 ) -> Result<NoteResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     if highlight_ids.is_empty() {
         return Err("ハイライトが指定されていません".to_string());

@@ -4,7 +4,7 @@
 // 改善: より直感的な空状態、洗練されたローディング表示、アクション誘導
 
 import type React from "react";
-import { Suspense, lazy } from "react";
+import { Component, Suspense, lazy } from "react";
 import { useUIStore } from "../../stores/useUIStore";
 import { LibraryView } from "../library/LibraryView";
 import { NoteEditor } from "../notes/NoteEditor";
@@ -16,6 +16,57 @@ import { SplitView } from "./SplitView";
 import { GraphView } from "../graph/GraphView";
 import { useI18nStore } from "../../stores/useI18nStore";
 import { SearchResultsView } from "../search/SearchResultsView";
+
+// ── ビュー単位の ErrorBoundary ──────────────────────────
+// 質的/量的分析ビュー等のクラッシュがライブラリ・ノートに波及しないようにする
+interface ViewErrorBoundaryProps { label: string; children: React.ReactNode; }
+interface ViewErrorBoundaryState { hasError: boolean; error: Error | null; }
+class ViewErrorBoundary extends Component<ViewErrorBoundaryProps, ViewErrorBoundaryState> {
+  constructor(props: ViewErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error(`[ViewErrorBoundary:${this.props.label}]`, error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full gap-4" style={{ color: "var(--color-text-tertiary)" }}>
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <p className="text-sm" style={{ maxWidth: 360, textAlign: "center" }}>
+            {this.props.label} でエラーが発生しました。
+          </p>
+          <p className="text-xs" style={{ color: "var(--color-text-tertiary)", opacity: 0.7 }}>
+            {this.state.error?.message}
+          </p>
+          <button
+            type="button"
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className="text-xs px-3 py-1.5"
+            style={{
+              backgroundColor: "var(--color-bg-tertiary)",
+              border: "1px solid var(--color-border-secondary)",
+              borderRadius: "6px",
+              cursor: "pointer",
+              color: "var(--color-text-secondary)",
+            }}
+          >
+            再試行
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const ReaderView = lazy(() =>
   import("../reader/ReaderView").then((m) => ({ default: m.ReaderView }))
@@ -172,18 +223,22 @@ export const MainPane: React.FC = () => {
     // サイドバーが「質的分析」ビューの場合
     if (sidebarView === "qualitative") {
       return (
-        <Suspense fallback={<LazyFallback />}>
-          <QualitativeView />
-        </Suspense>
+        <ViewErrorBoundary label="質的分析">
+          <Suspense fallback={<LazyFallback />}>
+            <QualitativeView />
+          </Suspense>
+        </ViewErrorBoundary>
       );
     }
 
     // サイドバーが「量的分析」ビューの場合
     if (sidebarView === "quantitative") {
       return (
-        <Suspense fallback={<LazyFallback />}>
-          <DataStudioView />
-        </Suspense>
+        <ViewErrorBoundary label="量的分析">
+          <Suspense fallback={<LazyFallback />}>
+            <DataStudioView />
+          </Suspense>
+        </ViewErrorBoundary>
       );
     }
 
@@ -247,15 +302,19 @@ export const MainPane: React.FC = () => {
         );
       case "qualitative":
         return (
-          <Suspense fallback={<LazyFallback />}>
-            <QualitativeView />
-          </Suspense>
+          <ViewErrorBoundary label="質的分析">
+            <Suspense fallback={<LazyFallback />}>
+              <QualitativeView />
+            </Suspense>
+          </ViewErrorBoundary>
         );
       case "quantitative":
         return (
-          <Suspense fallback={<LazyFallback />}>
-            <DataStudioView />
-          </Suspense>
+          <ViewErrorBoundary label="量的分析">
+            <Suspense fallback={<LazyFallback />}>
+              <DataStudioView />
+            </Suspense>
+          </ViewErrorBoundary>
         );
       case "search":
         return <SearchResultsView />;

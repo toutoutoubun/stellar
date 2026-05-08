@@ -28,7 +28,7 @@ pub struct DataSummary {
 
 #[tauri::command]
 pub async fn get_data_summary(app: AppHandle) -> Result<DataSummary, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let row = sqlx::query(
         "SELECT
@@ -65,7 +65,7 @@ pub async fn get_data_summary(app: AppHandle) -> Result<DataSummary, String> {
 
 #[tauri::command]
 pub async fn get_highlight_count(app: AppHandle) -> Result<u32, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let row = sqlx::query("SELECT COUNT(*) AS cnt FROM highlights")
         .fetch_one(pool.as_ref())
@@ -104,7 +104,7 @@ pub async fn change_data_path(
     app: AppHandle,
     new_path: String,
 ) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // 設定テーブルがなければ作成
     sqlx::query(
@@ -139,7 +139,7 @@ pub async fn change_data_path(
 #[tauri::command]
 pub async fn export_data(app: AppHandle) -> Result<String, String> {
     use crate::db::models::*;
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // 全論文を取得
     let paper_rows = sqlx::query("SELECT * FROM papers ORDER BY updated_at DESC")

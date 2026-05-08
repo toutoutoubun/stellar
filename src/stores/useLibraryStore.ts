@@ -131,6 +131,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       const papers = Array.isArray(result?.items) ? result.items : [];
       set({ papers, loading: false });
     } catch (e) {
+      console.error("[fetchPapers] failed:", e);
       set({ error: String(e), loading: false });
     }
   },

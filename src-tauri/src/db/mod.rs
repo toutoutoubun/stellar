@@ -14,14 +14,13 @@ use tauri::{AppHandle, Manager};
 pub struct AppDb(pub Arc<SqlitePool>);
 
 /// AppHandle から SqlitePool への参照を取得するヘルパー
-/// DB 未初期化時（setup 失敗時）は明確なエラーメッセージで panic する
-/// （Tauri コマンドは panic を自動的にエラーレスポンスに変換する）
-pub fn get_pool(app: &AppHandle) -> Arc<SqlitePool> {
+/// DB 未初期化時は Result::Err を返す（panic しない）
+pub fn get_pool(app: &AppHandle) -> Result<Arc<SqlitePool>, String> {
     match app.try_state::<AppDb>() {
-        Some(db) => db.0.clone(),
-        None => panic!(
+        Some(db) => Ok(db.0.clone()),
+        None => Err(
             "データベースが初期化されていません。アプリを再起動してください。\
-             （AppDb が Managed State に登録されていません）"
+             （AppDb が Managed State に登録されていません）".to_string()
         ),
     }
 }

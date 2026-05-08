@@ -28,7 +28,7 @@ pub async fn get_papers(
     year: Option<i32>,
     has_pdf: Option<bool>,
 ) -> Result<PaginatedResult<PaperResponse>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let page = page.unwrap_or(1).max(1);
     let limit = limit.unwrap_or(20).clamp(1, 10000);
     let offset = (page - 1) * limit;
@@ -119,7 +119,7 @@ pub async fn get_papers(
 
 #[tauri::command]
 pub async fn get_paper(app: AppHandle, id: String) -> Result<PaperWithLinks, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // 論文本体を取得
     let row = sqlx::query("SELECT * FROM papers WHERE id = ?")
@@ -164,7 +164,7 @@ pub async fn get_paper(app: AppHandle, id: String) -> Result<PaperWithLinks, Str
 
 #[tauri::command]
 pub async fn create_paper(app: AppHandle, input: CreatePaperDto) -> Result<PaperResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
     let authors_json = serde_json::to_string(&input.authors).map_err(|e| e.to_string())?;
@@ -221,7 +221,7 @@ pub async fn update_paper(
     id: String,
     input: UpdatePaperDto,
 ) -> Result<PaperResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let now = chrono::Utc::now().to_rfc3339();
 
     // 現在の論文データを取得
@@ -299,7 +299,7 @@ pub async fn update_paper(
 /// links は CASCADE 対象外のため手動削除、notes の paper_id は SET NULL
 #[tauri::command]
 pub async fn delete_paper(app: AppHandle, id: String) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // リンクテーブルから手動削除
     sqlx::query(
@@ -331,7 +331,7 @@ pub async fn attach_pdf(
     id: String,
     pdf_path: String,
 ) -> Result<PaperResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let now = chrono::Utc::now().to_rfc3339();
 
     // 論文が存在することを確認
@@ -407,7 +407,7 @@ pub async fn extract_metadata_from_pdf(
 /// 論文の tags カラムは JSON 配列文字列なので json_each() で展開・集計する
 #[tauri::command]
 pub async fn get_all_tags(app: AppHandle) -> Result<Vec<TagCount>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let rows = sqlx::query(
         "SELECT j.value AS name, COUNT(*) AS count

@@ -17,7 +17,7 @@ use tauri::AppHandle;
 /// 既に存在する場合はエラーを返す。自己リンクも防止する。
 #[tauri::command]
 pub async fn create_link(app: AppHandle, input: CreateLinkDto) -> Result<LinkResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // 自己リンクの防止
     if input.source_type == input.target_type && input.source_id == input.target_id {
@@ -86,7 +86,7 @@ pub async fn get_backlinks(
     item_type: String,
     item_id: String,
 ) -> Result<Vec<LinkWithSource>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     fetch_backlinks_for(pool.as_ref(), &item_type, &item_id).await
 }
 
@@ -96,7 +96,7 @@ pub async fn get_backlinks(
 
 #[tauri::command]
 pub async fn delete_link(app: AppHandle, id: String) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     sqlx::query("DELETE FROM links WHERE id = ?")
         .bind(&id)
@@ -115,7 +115,7 @@ pub async fn delete_link(app: AppHandle, id: String) -> Result<(), String> {
 /// 各ノードにはリンク数（link_count）を含む。
 #[tauri::command]
 pub async fn get_graph_data(app: AppHandle) -> Result<GraphData, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // 全論文をノードとして取得
     let paper_rows = sqlx::query("SELECT id, title, tags FROM papers ORDER BY title ASC")

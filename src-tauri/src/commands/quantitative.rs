@@ -19,7 +19,7 @@ pub async fn create_dataset(
     app: AppHandle,
     input: CreateDatasetInput,
 ) -> Result<Dataset, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -52,7 +52,7 @@ pub async fn create_dataset(
 
 #[tauri::command]
 pub async fn get_datasets(app: AppHandle) -> Result<Vec<Dataset>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let rows = sqlx::query_as::<_, Dataset>(
         "SELECT id, name, description, source_type, source_ref, row_count, created_at, updated_at
@@ -67,7 +67,7 @@ pub async fn get_datasets(app: AppHandle) -> Result<Vec<Dataset>, String> {
 
 #[tauri::command]
 pub async fn get_dataset(app: AppHandle, id: String) -> Result<Dataset, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     sqlx::query_as::<_, Dataset>(
         "SELECT id, name, description, source_type, source_ref, row_count, created_at, updated_at
@@ -87,7 +87,7 @@ pub async fn update_dataset(
     name: String,
     description: Option<String>,
 ) -> Result<Dataset, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let now = chrono::Utc::now().to_rfc3339();
 
     sqlx::query(
@@ -106,7 +106,7 @@ pub async fn update_dataset(
 
 #[tauri::command]
 pub async fn delete_dataset(app: AppHandle, id: String) -> Result<bool, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let result = sqlx::query("DELETE FROM datasets WHERE id = ?")
         .bind(&id)
@@ -126,7 +126,7 @@ pub async fn create_variable(
     app: AppHandle,
     input: CreateVariableInput,
 ) -> Result<Variable, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
 
     sqlx::query(
@@ -166,7 +166,7 @@ pub async fn get_variables(
     app: AppHandle,
     dataset_id: String,
 ) -> Result<Vec<Variable>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     sqlx::query_as::<_, Variable>(
         "SELECT id, dataset_id, column_index, name, label, var_type, unit, likert_min, likert_max, likert_labels
@@ -187,7 +187,7 @@ pub async fn update_variable(
     unit: Option<String>,
     likert_labels: Option<String>,
 ) -> Result<Variable, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     sqlx::query(
         "UPDATE variables SET label = ?, var_type = ?, unit = ?, likert_labels = ? WHERE id = ?",
@@ -214,7 +214,7 @@ pub async fn update_variable(
 
 #[tauri::command]
 pub async fn delete_variable(app: AppHandle, id: String) -> Result<bool, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let result = sqlx::query("DELETE FROM variables WHERE id = ?")
         .bind(&id)
@@ -235,7 +235,7 @@ pub async fn auto_detect_variable_types(
     app: AppHandle,
     dataset_id: String,
 ) -> Result<Vec<Variable>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // 変数一覧を取得
     let variables = sqlx::query_as::<_, Variable>(
@@ -347,7 +347,7 @@ pub async fn insert_data_rows(
     dataset_id: String,
     rows: Vec<serde_json::Value>,
 ) -> Result<usize, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // 現在の最大 row_index を取得
     let max_row: i64 = sqlx::query("SELECT COALESCE(MAX(row_index), -1) as max_idx FROM data_rows WHERE dataset_id = ?")
@@ -389,7 +389,7 @@ pub async fn get_data_rows(
     offset: i64,
     limit: i64,
 ) -> Result<Vec<DataRow>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     sqlx::query_as::<_, DataRow>(
         "SELECT id, dataset_id, row_index, \"values\", created_at
@@ -407,7 +407,7 @@ pub async fn get_data_rows(
 
 #[tauri::command]
 pub async fn delete_data_rows(app: AppHandle, dataset_id: String) -> Result<bool, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let result = sqlx::query("DELETE FROM data_rows WHERE dataset_id = ?")
         .bind(&dataset_id)
@@ -429,7 +429,7 @@ pub async fn import_csv(
     app: AppHandle,
     input: ImportCsvInput,
 ) -> Result<ImportCsvResult, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let mut warnings: Vec<String> = Vec::new();
 
     // エンコーディング検出 — UTF-8 で失敗したら Shift-JIS を試みる
@@ -594,7 +594,7 @@ pub async fn save_analysis(
     app: AppHandle,
     input: SaveAnalysisInput,
 ) -> Result<Analysis, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -631,7 +631,7 @@ pub async fn get_analyses(
     app: AppHandle,
     dataset_id: String,
 ) -> Result<Vec<Analysis>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     sqlx::query_as::<_, Analysis>(
         "SELECT id, dataset_id, analysis_type, name, parameters, result, interpretation, created_at
@@ -645,7 +645,7 @@ pub async fn get_analyses(
 
 #[tauri::command]
 pub async fn get_analysis(app: AppHandle, id: String) -> Result<Analysis, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     sqlx::query_as::<_, Analysis>(
         "SELECT id, dataset_id, analysis_type, name, parameters, result, interpretation, created_at
@@ -660,7 +660,7 @@ pub async fn get_analysis(app: AppHandle, id: String) -> Result<Analysis, String
 
 #[tauri::command]
 pub async fn delete_analysis(app: AppHandle, id: String) -> Result<bool, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let result = sqlx::query("DELETE FROM analyses WHERE id = ?")
         .bind(&id)
@@ -680,7 +680,7 @@ pub async fn save_token_frequencies(
     app: AppHandle,
     input: SaveTokenFrequenciesInput,
 ) -> Result<usize, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // 既存のトークン頻度をクリア（同一 dataset_id + variable_id の組み合わせ）
     sqlx::query(
@@ -725,7 +725,7 @@ pub async fn get_token_frequencies(
     variable_id: String,
     limit: i64,
 ) -> Result<Vec<TokenFrequency>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     sqlx::query_as::<_, TokenFrequency>(
         "SELECT id, dataset_id, variable_id, token, frequency, tf_idf, pos, document_count
@@ -755,7 +755,7 @@ pub async fn create_dataset_from_codes(
     project_id: String,
     dataset_name: String,
 ) -> Result<Dataset, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // 1. データセットを作成
     let ds_id = uuid::Uuid::new_v4().to_string();
@@ -934,7 +934,7 @@ pub async fn create_dataset_from_highlights(
     app: AppHandle,
     paper_id: Option<String>,
 ) -> Result<Dataset, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // 1. データセットを作成
     let ds_id = uuid::Uuid::new_v4().to_string();

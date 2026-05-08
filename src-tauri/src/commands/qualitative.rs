@@ -18,7 +18,7 @@ pub async fn create_project(
     app: AppHandle,
     input: CreateProjectDto,
 ) -> Result<ProjectResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -47,7 +47,7 @@ pub async fn create_project(
 
 #[tauri::command]
 pub async fn get_projects(app: AppHandle) -> Result<Vec<ProjectResponse>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let rows = sqlx::query("SELECT * FROM projects ORDER BY updated_at DESC")
         .fetch_all(pool.as_ref())
         .await
@@ -62,7 +62,7 @@ pub async fn update_project(
     id: String,
     input: UpdateProjectDto,
 ) -> Result<ProjectResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let now = chrono::Utc::now().to_rfc3339();
 
     let row = sqlx::query("SELECT * FROM projects WHERE id = ?")
@@ -99,7 +99,7 @@ pub async fn update_project(
 
 #[tauri::command]
 pub async fn delete_project(app: AppHandle, id: String) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     sqlx::query("DELETE FROM projects WHERE id = ?")
         .bind(&id)
         .execute(pool.as_ref())
@@ -117,7 +117,7 @@ pub async fn get_code_tree(
     app: AppHandle,
     project_id: String,
 ) -> Result<Vec<CodeNode>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // 全コードを取得
     let rows = sqlx::query(
@@ -164,7 +164,7 @@ pub async fn create_code(
     app: AppHandle,
     input: CreateCodeDto,
 ) -> Result<CodeResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -205,7 +205,7 @@ pub async fn update_code(
     id: String,
     input: UpdateCodeDto,
 ) -> Result<CodeResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let now = chrono::Utc::now().to_rfc3339();
 
     let row = sqlx::query("SELECT * FROM codes WHERE id = ?")
@@ -257,7 +257,7 @@ pub async fn update_code(
 
 #[tauri::command]
 pub async fn delete_code(app: AppHandle, id: String) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     sqlx::query("DELETE FROM codes WHERE id = ?")
         .bind(&id)
         .execute(pool.as_ref())
@@ -272,7 +272,7 @@ pub async fn assign_code_to_highlight(
     highlight_id: String,
     code_id: String,
 ) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
 
     sqlx::query(
@@ -294,7 +294,7 @@ pub async fn remove_code_from_highlight(
     highlight_id: String,
     code_id: String,
 ) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     sqlx::query("DELETE FROM highlight_codes WHERE highlight_id = ? AND code_id = ?")
         .bind(&highlight_id)
         .bind(&code_id)
@@ -309,7 +309,7 @@ pub async fn get_highlights_by_code(
     app: AppHandle,
     code_id: String,
 ) -> Result<Vec<HighlightWithContext>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let rows = sqlx::query(
         "SELECT h.id, h.paper_id, h.text, h.comment, h.color, h.page, h.created_at, p.title as paper_title
@@ -349,7 +349,7 @@ pub async fn get_coding_matrix(
     app: AppHandle,
     project_id: String,
 ) -> Result<CodingMatrix, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // コード一覧（行）
     let code_rows = sqlx::query(
@@ -423,7 +423,7 @@ pub async fn calculate_icr(
     project_id: String,
     imported_codings: Vec<ImportedCoding>,
 ) -> Result<IcrResult, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // メインコーダーのコーディングを取得
     let main_rows = sqlx::query(
@@ -593,7 +593,7 @@ pub async fn get_source_critique(
     app: AppHandle,
     paper_id: String,
 ) -> Result<Option<SourceCritiqueResponse>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let row = sqlx::query("SELECT * FROM source_critiques WHERE paper_id = ?")
         .bind(&paper_id)
@@ -612,7 +612,7 @@ pub async fn upsert_source_critique(
     app: AppHandle,
     dto: SourceCritiqueDto,
 ) -> Result<SourceCritiqueResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let now = chrono::Utc::now().to_rfc3339();
 
     // 既存チェック
@@ -707,7 +707,7 @@ pub async fn get_timeline_events(
     app: AppHandle,
     project_id: String,
 ) -> Result<Vec<TimelineEventResponse>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let rows = sqlx::query(
         "SELECT * FROM timeline_events WHERE project_id = ? ORDER BY event_date ASC",
@@ -725,7 +725,7 @@ pub async fn create_timeline_event(
     app: AppHandle,
     input: CreateTimelineEventDto,
 ) -> Result<TimelineEventResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -770,7 +770,7 @@ pub async fn update_timeline_event(
     id: String,
     input: UpdateTimelineEventDto,
 ) -> Result<TimelineEventResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let row = sqlx::query("SELECT * FROM timeline_events WHERE id = ?")
         .bind(&id)
@@ -831,7 +831,7 @@ pub async fn update_timeline_event(
 
 #[tauri::command]
 pub async fn delete_timeline_event(app: AppHandle, id: String) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     sqlx::query("DELETE FROM timeline_events WHERE id = ?")
         .bind(&id)
         .execute(pool.as_ref())
@@ -845,7 +845,7 @@ pub async fn get_timeline_lanes(
     app: AppHandle,
     project_id: String,
 ) -> Result<Vec<String>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let rows = sqlx::query(
         "SELECT DISTINCT lane FROM timeline_events WHERE project_id = ? AND lane IS NOT NULL AND lane != '' ORDER BY lane ASC",
@@ -867,7 +867,7 @@ pub async fn get_actor_map(
     app: AppHandle,
     project_id: String,
 ) -> Result<ActorMapData, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let actor_rows = sqlx::query("SELECT * FROM actors WHERE project_id = ? ORDER BY name ASC")
         .bind(&project_id)
@@ -909,7 +909,7 @@ pub async fn create_actor(
     app: AppHandle,
     input: CreateActorDto,
 ) -> Result<ActorResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -952,7 +952,7 @@ pub async fn update_actor(
     id: String,
     input: UpdateActorDto,
 ) -> Result<ActorResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let row = sqlx::query("SELECT * FROM actors WHERE id = ?")
         .bind(&id)
@@ -1004,7 +1004,7 @@ pub async fn update_actor(
 
 #[tauri::command]
 pub async fn delete_actor(app: AppHandle, id: String) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     sqlx::query("DELETE FROM actors WHERE id = ?")
         .bind(&id)
         .execute(pool.as_ref())
@@ -1018,7 +1018,7 @@ pub async fn create_actor_relation(
     app: AppHandle,
     input: CreateActorRelationDto,
 ) -> Result<ActorRelationResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -1053,7 +1053,7 @@ pub async fn create_actor_relation(
 
 #[tauri::command]
 pub async fn delete_actor_relation(app: AppHandle, id: String) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     sqlx::query("DELETE FROM actor_relations WHERE id = ?")
         .bind(&id)
         .execute(pool.as_ref())
@@ -1071,7 +1071,7 @@ pub async fn get_pt_data(
     app: AppHandle,
     project_id: String,
 ) -> Result<PtData, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let hyp_rows = sqlx::query(
         "SELECT * FROM pt_hypotheses WHERE project_id = ? ORDER BY is_main DESC, sort_order ASC",
@@ -1113,7 +1113,7 @@ pub async fn create_pt_hypothesis(
     app: AppHandle,
     input: CreatePtHypothesisDto,
 ) -> Result<PtHypothesisResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -1147,7 +1147,7 @@ pub async fn add_pt_evidence(
     app: AppHandle,
     input: CreatePtEvidenceDto,
 ) -> Result<PtEvidenceResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -1184,7 +1184,7 @@ pub async fn update_pt_evidence_result(
     id: String,
     result: String,
 ) -> Result<PtEvidenceResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     sqlx::query("UPDATE pt_evidences SET result = ? WHERE id = ?")
         .bind(&result)
@@ -1207,7 +1207,7 @@ pub async fn get_pt_summary(
     app: AppHandle,
     project_id: String,
 ) -> Result<PtSummary, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // 主仮説の証拠を取得
     let rows = sqlx::query(
@@ -1275,7 +1275,7 @@ pub async fn get_comparative_design(
     app: AppHandle,
     project_id: String,
 ) -> Result<Vec<ComparativeDesignFull>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let design_rows = sqlx::query(
         "SELECT * FROM comparative_designs WHERE project_id = ? ORDER BY created_at ASC",
@@ -1347,7 +1347,7 @@ pub async fn create_comparative_design(
     app: AppHandle,
     input: CreateComparativeDesignDto,
 ) -> Result<ComparativeDesignResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -1379,7 +1379,7 @@ pub async fn add_comparative_case(
     name: String,
     sort_order: i32,
 ) -> Result<ComparativeCaseResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
 
     sqlx::query(
@@ -1409,7 +1409,7 @@ pub async fn add_comparative_variable(
     var_type: String,
     sort_order: i32,
 ) -> Result<ComparativeVariableResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
 
     sqlx::query(
@@ -1441,7 +1441,7 @@ pub async fn upsert_comparative_cell(
     value: String,
     paper_id: Option<String>,
 ) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let existing = sqlx::query(
         "SELECT id FROM comparative_cells WHERE case_id = ? AND variable_id = ?",
@@ -1484,7 +1484,7 @@ pub async fn export_qca_csv(
     app: AppHandle,
     design_id: String,
 ) -> Result<String, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let case_rows = sqlx::query(
         "SELECT * FROM comparative_cases WHERE design_id = ? ORDER BY sort_order ASC",
@@ -1550,7 +1550,7 @@ pub async fn get_frames(
     app: AppHandle,
     project_id: String,
 ) -> Result<Vec<FrameResponse>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     let rows = sqlx::query("SELECT * FROM frames WHERE project_id = ? ORDER BY created_at ASC")
         .bind(&project_id)
@@ -1566,7 +1566,7 @@ pub async fn create_frame(
     app: AppHandle,
     input: CreateFrameDto,
 ) -> Result<FrameResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -1605,7 +1605,7 @@ pub async fn assign_frame_to_highlight(
     highlight_id: String,
     frame_id: String,
 ) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
 
     sqlx::query(
@@ -1626,7 +1626,7 @@ pub async fn get_framing_matrix(
     app: AppHandle,
     project_id: String,
 ) -> Result<FramingMatrix, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // フレーム一覧
     let frame_rows = sqlx::query(
@@ -1694,7 +1694,7 @@ pub async fn get_framing_matrix(
 
 #[tauri::command]
 pub async fn delete_pt_hypothesis(app: AppHandle, id: String) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     sqlx::query("DELETE FROM pt_hypotheses WHERE id = ?")
         .bind(&id)
         .execute(pool.as_ref())
@@ -1705,7 +1705,7 @@ pub async fn delete_pt_hypothesis(app: AppHandle, id: String) -> Result<(), Stri
 
 #[tauri::command]
 pub async fn delete_pt_evidence(app: AppHandle, id: String) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     sqlx::query("DELETE FROM pt_evidences WHERE id = ?")
         .bind(&id)
         .execute(pool.as_ref())
@@ -1716,7 +1716,7 @@ pub async fn delete_pt_evidence(app: AppHandle, id: String) -> Result<(), String
 
 #[tauri::command]
 pub async fn delete_comparative_case(app: AppHandle, id: String) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     sqlx::query("DELETE FROM comparative_cases WHERE id = ?")
         .bind(&id)
         .execute(pool.as_ref())
@@ -1727,7 +1727,7 @@ pub async fn delete_comparative_case(app: AppHandle, id: String) -> Result<(), S
 
 #[tauri::command]
 pub async fn delete_comparative_variable(app: AppHandle, id: String) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     sqlx::query("DELETE FROM comparative_variables WHERE id = ?")
         .bind(&id)
         .execute(pool.as_ref())
@@ -1738,7 +1738,7 @@ pub async fn delete_comparative_variable(app: AppHandle, id: String) -> Result<(
 
 #[tauri::command]
 pub async fn delete_frame(app: AppHandle, id: String) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     sqlx::query("DELETE FROM frames WHERE id = ?")
         .bind(&id)
         .execute(pool.as_ref())
@@ -1753,7 +1753,7 @@ pub async fn remove_frame_from_highlight(
     highlight_id: String,
     frame_id: String,
 ) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     sqlx::query("DELETE FROM highlight_frames WHERE highlight_id = ? AND frame_id = ?")
         .bind(&highlight_id)
         .bind(&frame_id)
@@ -1777,7 +1777,7 @@ pub async fn get_highlight_frames(
     app: AppHandle,
     project_id: String,
 ) -> Result<Vec<HighlightFrameRow>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let rows = sqlx::query(
         "SELECT hf.* FROM highlight_frames hf
          JOIN frames f ON f.id = hf.frame_id
@@ -1805,7 +1805,7 @@ pub async fn get_source_critiques_by_project(
     app: AppHandle,
     project_id: String,
 ) -> Result<Vec<SourceCritiqueResponse>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     // project_idに紐づくpaperのsource_critiquesを取得
     // Note: source_critiquesはpaper_idでリンクされているが、
     // プロジェクトスコープではハイライト経由で紐づく論文を使う
@@ -1829,7 +1829,7 @@ pub async fn get_source_critiques_by_project(
 
 #[tauri::command]
 pub async fn delete_source_critique(app: AppHandle, id: String) -> Result<(), String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     sqlx::query("DELETE FROM source_critiques WHERE id = ?")
         .bind(&id)
         .execute(pool.as_ref())
@@ -1848,7 +1848,7 @@ pub async fn generate_analysis_report(
     project_id: String,
     sections: Vec<String>,
 ) -> Result<String, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // プロジェクト情報
     let proj_row = sqlx::query("SELECT * FROM projects WHERE id = ?")

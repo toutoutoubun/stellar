@@ -27,7 +27,7 @@ pub async fn full_text_search(
     item_types: Option<Vec<String>>,
     limit: Option<u32>,
 ) -> Result<SearchResults, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let max_results = limit.unwrap_or(20).clamp(1, 100);
 
     // 空クエリの場合は空結果を返す
@@ -103,7 +103,7 @@ pub async fn get_link_suggestions(
     app: AppHandle,
     query: String,
 ) -> Result<Vec<LinkSuggestion>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     if query.trim().is_empty() {
         return Ok(vec![]);
@@ -560,7 +560,7 @@ pub async fn get_recent_items(
     app: AppHandle,
     limit: Option<u32>,
 ) -> Result<Vec<RecentItem>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let limit = limit.unwrap_or(8).clamp(1, 50) as i64;
 
     // 論文とノートを UNION ALL で結合して updated_at 降順

@@ -28,7 +28,7 @@ pub async fn update_reading_status(
         ));
     }
 
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     sqlx::query("UPDATE papers SET reading_status = ?, updated_at = datetime('now') WHERE id = ?")
         .bind(&status)
         .bind(&paper_id)
@@ -42,7 +42,7 @@ pub async fn update_reading_status(
 /// 読書ステータス別の論文件数を取得する
 #[tauri::command]
 pub async fn get_reading_status_counts(app: AppHandle) -> Result<serde_json::Value, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let rows =
         sqlx::query("SELECT reading_status, COUNT(*) as cnt FROM papers GROUP BY reading_status")
             .fetch_all(pool.as_ref())
@@ -118,7 +118,7 @@ pub async fn fetch_citation_network(
     app: AppHandle,
     paper_id: String,
 ) -> Result<CitationNetworkData, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // 論文を取得
     let row = sqlx::query("SELECT * FROM papers WHERE id = ?")
@@ -284,7 +284,7 @@ pub async fn fetch_recommendations(
     app: AppHandle,
     paper_id: String,
 ) -> Result<Vec<PaperRecommendation>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // ss_paper_id を取得
     let row = sqlx::query("SELECT ss_paper_id, doi, url FROM papers WHERE id = ?")
@@ -473,7 +473,7 @@ pub async fn get_recommendations(
     app: AppHandle,
     paper_id: String,
 ) -> Result<Vec<PaperRecommendation>, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let rows = sqlx::query(
         "SELECT * FROM paper_recommendations WHERE paper_id = ? ORDER BY relevance_score DESC",
     )
@@ -491,7 +491,7 @@ pub async fn import_recommendation(
     app: AppHandle,
     recommendation_id: String,
 ) -> Result<PaperResponse, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
 
     // レコメンデーションを取得
     let row = sqlx::query("SELECT * FROM paper_recommendations WHERE id = ?")
@@ -564,7 +564,7 @@ pub async fn import_recommendation(
 /// ライブラリ全体の引用ネットワークグラフデータを構築する
 #[tauri::command]
 pub async fn get_citation_graph_data(app: AppHandle) -> Result<serde_json::Value, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let rows = sqlx::query(
         "SELECT id, title, year, ss_paper_id, references_json FROM papers WHERE references_json != '[]'",
     )
@@ -713,7 +713,7 @@ fn format_bibtex_authors(authors: &[String]) -> String {
 /// 選択した論文を BibTeX 形式でエクスポートする
 #[tauri::command]
 pub async fn export_bibtex(app: AppHandle, paper_ids: Vec<String>) -> Result<String, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let mut output = String::new();
 
     for pid in &paper_ids {
@@ -780,7 +780,7 @@ pub async fn export_bibtex(app: AppHandle, paper_ids: Vec<String>) -> Result<Str
 /// 選択した論文を RIS 形式でエクスポートする
 #[tauri::command]
 pub async fn export_ris(app: AppHandle, paper_ids: Vec<String>) -> Result<String, String> {
-    let pool = get_pool(&app);
+    let pool = get_pool(&app)?;
     let mut output = String::new();
 
     for pid in &paper_ids {
