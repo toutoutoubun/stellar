@@ -1,8 +1,9 @@
-import { useI18nStore } from "../stores/useI18nStore";
 // src/lib/tauriShim.ts
 // Stellar — Tauri 環境検出 + 安全な invoke / listen / convertFileSrc
 // Tauri ランタイムが存在しない環境（ブラウザプレビュー等）では
 // 即座に空データを返し、loading が永遠に終わらない問題を防ぐ。
+
+import { useI18nStore } from "../stores/useI18nStore";
 
 // ── Tauri 環境検出 ─────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -701,7 +702,8 @@ export async function openDirectoryDialog(
         title: options?.title,
       });
       if (typeof result === "string") return result;
-      if (Array.isArray(result) && result.length > 0) return String(result[0]);
+      // multiple: true の場合は配列が返る可能性がある
+      if (Array.isArray(result) && (result as string[]).length > 0) return String((result as string[])[0]);
       return null;
     } catch (err) {
       console.error("[tauriShim] Tauri directory dialog open() failed:", err);
