@@ -26,7 +26,7 @@ export function useTauriEvents(): void {
 
   useEffect(() => {
     // paper-import-request: 外部からの論文インポートリクエスト
-    const unlisten = listen<PaperImportPayload>(
+    const unlistenImport = listen<PaperImportPayload>(
       "paper-import-request",
       (event) => {
         const payload = event.payload;
@@ -48,9 +48,23 @@ export function useTauriEvents(): void {
       },
     );
 
+    // db-error: バックエンドの DB 初期化失敗通知
+    // ファイル DB に接続できずインメモリ DB にフォールバックした場合に発火される。
+    // ユーザーに明示的に警告し、データが保存されないことを伝える。
+    const unlistenDbError = listen<string>(
+      "db-error",
+      (event) => {
+        toast.error(
+          "データベースの初期化に問題が発生しました。データが保存されない可能性があります。アプリを再起動してください。",
+          10000,
+        );
+        console.error("[db-error]", event.payload);
+      },
+    );
+
     return () => {
-      // クリーンアップ: リスナー解除
-      void unlisten.then((fn) => fn());
+      void unlistenImport.then((fn) => fn());
+      void unlistenDbError.then((fn) => fn());
     };
   }, [openPaper]);
 }

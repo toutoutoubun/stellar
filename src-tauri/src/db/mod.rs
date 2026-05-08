@@ -3,10 +3,11 @@
 // sqlx::SqlitePool を自前管理し、Tauri Managed State として共有する
 //
 // ╔══════════════════════════════════════════════════════════════════╗
-// ║ 設計原則: init_db は **絶対に失敗しない**                        ║
-// ║ • プール接続が失敗 → リトライ後、最終手段でインメモリ DB を使用   ║
+// ║ 設計原則:                                                        ║
+// ║ • init_db は必ず SqlitePool を返す（AppDb 未登録を構造的に防ぐ）  ║
+// ║ • ファイル DB 接続: 最大 3 回リトライ。失敗時はエラーダイアログ   ║
+// ║   を表示してからインメモリ DB にフォールバック（DB 機能は制限的）  ║
 // ║ • マイグレーションエラー → 全てログに記録してスキップ            ║
-// ║ • これにより「DB未初期化」エラーでアプリが使えなくなる事態を防ぐ  ║
 // ╚══════════════════════════════════════════════════════════════════╝
 
 pub mod models;
@@ -33,19 +34,43 @@ pub fn get_pool(app: &AppHandle) -> Result<Arc<SqlitePool>, String> {
 }
 
 /// アプリケーション初期化時に SqlitePool を作成する
-/// **絶対に失敗しない** — あらゆるエラーを吸収して必ず SqlitePool を返す
+/// **必ず SqlitePool を返す** — AppDb 未登録を構造的に防ぐ
+///
+/// ファイル DB 接続を最大3回リトライし、それでも失敗した場合は
+/// ユーザーにダイアログで通知した上でインメモリ DB にフォールバックする。
+/// インメモリ DB ではデータは永続化されないが、アプリの起動自体は保証する。
 pub async fn init_db(app: &AppHandle) -> SqlitePool {
-    // ── 1. ファイルベース DB への接続を試行（最大2回）──
+    // ── 1. ファイルベース DB への接続を試行（最大3回）──
     match try_file_db(app).await {
-        Some(pool) => {
-            // マイグレーション実行（全エラーを吸収）
+        Ok(pool) => {
             run_migrations_safe(&pool).await;
             pool
         }
-        None => {
-            // ── 2. ファイル DB が完全に失敗 → インメモリ DB にフォールバック ──
-            log::error!("ファイル DB への接続に失敗。インメモリ DB にフォールバックします");
-            log::error!("データは永続化されません。アプリの再インストールを検討してください");
+        Err(err_detail) => {
+            // ── 2. ファイル DB に接続できなかった ──
+            // ユーザーにダイアログで明示的に警告する
+            log::error!("ファイル DB への接続に失敗: {}", err_detail);
+
+            let msg = format!(
+                "データベースファイルを開けませんでした。\n\n\
+                 原因: {}\n\n\
+                 このまま起動するとデータは保存されません。\n\
+                 以下を試してください:\n\
+                 1. アプリを終了して再起動\n\
+                 2. ~/Library/Application Support/com.stellar.app/ の\n\
+                    stellar.db を削除して再起動（データはリセットされます）\n\
+                 3. ディスク容量・権限を確認",
+                err_detail
+            );
+
+            // Tauri ダイアログで通知（非同期だがブロックしない）
+            if let Some(window) = app.get_webview_window("main") {
+                use tauri::Emitter;
+                let _ = window.emit("db-error", &msg);
+            }
+            log::error!("{}", msg);
+
+            // インメモリ DB にフォールバック（アプリは起動するがデータは永続化されない）
             let pool = SqlitePoolOptions::new()
                 .max_connections(1)
                 .connect("sqlite::memory:")
@@ -57,42 +82,51 @@ pub async fn init_db(app: &AppHandle) -> SqlitePool {
     }
 }
 
-/// ファイルベース DB への接続を最大2回試行する
-async fn try_file_db(app: &AppHandle) -> Option<SqlitePool> {
-    let app_path = match app.path().app_config_dir() {
-        Ok(p) => p,
-        Err(e) => {
-            log::error!("アプリ設定ディレクトリの取得に失敗: {}", e);
-            return None;
-        }
-    };
+/// ファイルベース DB への接続を最大3回試行する
+/// 成功時は Ok(pool)、全リトライ失敗時は Err(エラー詳細文字列) を返す
+async fn try_file_db(app: &AppHandle) -> Result<SqlitePool, String> {
+    let app_path = app.path().app_config_dir()
+        .map_err(|e| format!("アプリ設定ディレクトリの取得に失敗: {}", e))?;
 
-    if let Err(e) = std::fs::create_dir_all(&app_path) {
-        log::error!("ディレクトリ作成に失敗: {}", e);
-        return None;
-    }
+    std::fs::create_dir_all(&app_path)
+        .map_err(|e| format!("ディレクトリ作成に失敗 ({}): {}", app_path.display(), e))?;
 
     let db_path = app_path.join("stellar.db");
     log::info!("DB パス: {}", db_path.display());
     let db_url = format!("sqlite:{}?mode=rwc", db_path.display());
 
-    for attempt in 1..=2 {
-        log::info!("DB 接続試行 {}/2", attempt);
+    let max_attempts = 3;
+    let mut last_err = String::new();
+
+    for attempt in 1..=max_attempts {
+        log::info!("DB 接続試行 {}/{}", attempt, max_attempts);
         match connect_pool(&db_url).await {
             Ok(pool) => {
-                log::info!("DB 接続成功 (試行 {})", attempt);
-                return Some(pool);
-            }
-            Err(e) => {
-                log::error!("DB 接続失敗 (試行 {}/2): {}", attempt, e);
-                if attempt < 2 {
-                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                // 接続確認: 簡単なクエリを実行して本当に使えるか検証
+                match sqlx::query("SELECT 1").execute(&pool).await {
+                    Ok(_) => {
+                        log::info!("DB 接続成功 (試行 {})", attempt);
+                        return Ok(pool);
+                    }
+                    Err(e) => {
+                        last_err = format!("接続後のヘルスチェック失敗: {}", e);
+                        log::error!("DB ヘルスチェック失敗 (試行 {}/{}): {}", attempt, max_attempts, e);
+                    }
                 }
             }
+            Err(e) => {
+                last_err = format!("{}", e);
+                log::error!("DB 接続失敗 (試行 {}/{}): {}", attempt, max_attempts, e);
+            }
+        }
+        if attempt < max_attempts {
+            let wait = attempt as u64; // 1秒、2秒と段階的に待機
+            log::info!("{}秒後にリトライ…", wait);
+            tokio::time::sleep(std::time::Duration::from_secs(wait)).await;
         }
     }
 
-    None
+    Err(last_err)
 }
 
 /// SqlitePool を作成する（WAL モード、外部キー有効）
