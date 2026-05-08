@@ -5,14 +5,11 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Stellar</title>
-    <!-- external モジュールを CDN で解決（Vite build の rollupOptions.external 対応） -->
+    <!-- kuromoji のみ external（動的インポートで遅延ロード） -->
+    <!-- pdfjs-dist / marked / docx はバンドルに含まれるため importmap 不要 -->
     <script type="importmap">
       {
         "imports": {
-          "pdfjs-dist": "https://esm.sh/pdfjs-dist@4.4.168",
-          "pdfjs-dist/": "https://esm.sh/pdfjs-dist@4.4.168/",
-          "marked": "https://esm.sh/marked@18.0.3",
-          "docx": "https://esm.sh/docx@9.6.1",
           "kuromoji": "https://esm.sh/kuromoji@0.1.2"
         }
       }

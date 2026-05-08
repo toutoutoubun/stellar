@@ -60,14 +60,18 @@ export default defineConfig({
     // CSS コード分割を無効化（メモリ節約）
     cssCodeSplit: false,
     rollupOptions: {
-      // 巨大依存をexternalにしてバンドルから除外 → OOM回避
-      // ブラウザでは index.html の importmap で CDN にマッピング
-      external: ["kuromoji", "pdfjs-dist", "docx", "marked"],
+      // kuromoji (18MB CJS辞書) のみ external — 動的importで遅延ロード
+      // pdfjs-dist / marked / docx はバンドルに含める（Tauri の CSP で CDN がブロックされるため）
+      external: ["kuromoji"],
       output: {
         manualChunks(id) {
           if (id.includes("node_modules/react-dom") || id.includes("node_modules/react/") || id.includes("node_modules/scheduler")) return "vendor-react";
           if (id.includes("node_modules/@codemirror/") || id.includes("node_modules/@uiw/") || id.includes("node_modules/@lezer/") || id.includes("node_modules/style-mod") || id.includes("node_modules/crelt") || id.includes("node_modules/w3c-keyname")) return "vendor-codemirror";
           if (id.includes("node_modules/@tauri-apps/")) return "vendor-tauri";
+          // pdfjs-dist は大きいので専用チャンクに分離
+          if (id.includes("node_modules/pdfjs-dist")) return "vendor-pdfjs";
+          // docx / marked はエクスポート時のみ使用 — 専用チャンクに分離
+          if (id.includes("node_modules/docx") || id.includes("node_modules/marked")) return "vendor-export";
           if (id.includes("node_modules/")) return "vendor-misc";
           return undefined;
         },
