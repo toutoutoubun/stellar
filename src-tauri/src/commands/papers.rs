@@ -30,7 +30,7 @@ pub async fn get_papers(
 ) -> Result<PaginatedResult<PaperResponse>, String> {
     let pool = get_pool(&app);
     let page = page.unwrap_or(1).max(1);
-    let limit = limit.unwrap_or(20).clamp(1, 100);
+    let limit = limit.unwrap_or(20).clamp(1, 10000);
     let offset = (page - 1) * limit;
 
     // WHERE 句の動的構築

@@ -477,7 +477,7 @@ const MOCK_RESPONSES: Record<string, any> = {
   sync_word_count: undefined,
 
   // PDF metadata extraction
-  extract_metadata_from_pdf: { title: "Sample Paper", authors: ["Author A"], year: 2024, tags: [] },
+  extract_metadata_from_pdf: { title: "Sample Paper", authors: ["Author A"], year: 2024, abstract: null, pdfPath: "/mock/sample.pdf", tags: [] },
 
   // Export / Import
   export_static_site: "/mock/export/static-site",
