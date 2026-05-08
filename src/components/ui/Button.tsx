@@ -1,6 +1,6 @@
 // src/components/ui/Button.tsx
 // Stellar — 汎用ボタンコンポーネント
-// variant / size / disabled / loading 状態に対応
+// 改善: ホバー時の視覚フィードバック強化、アクティブ押し込みエフェクト、アイコンアライメント
 
 import type React from "react";
 import { clsx } from "clsx";
@@ -20,45 +20,78 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 /** バリアント別のスタイル */
-const variantStyles: Record<ButtonVariant, React.CSSProperties> = {
+const variantStyles: Record<ButtonVariant, {
+  base: React.CSSProperties;
+  hover: React.CSSProperties;
+}> = {
   primary: {
-    backgroundColor: "var(--color-accent-primary)",
-    color: "var(--color-text-inverse)",
-    border: "none",
+    base: {
+      backgroundColor: "var(--color-accent-primary)",
+      color: "var(--color-text-inverse)",
+      border: "none",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+    },
+    hover: {
+      backgroundColor: "var(--color-accent-primary-hover)",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
+    },
   },
   secondary: {
-    backgroundColor: "var(--color-bg-secondary)",
-    color: "var(--color-text-primary)",
-    border: "1px solid var(--color-border-primary)",
+    base: {
+      backgroundColor: "var(--color-bg-secondary)",
+      color: "var(--color-text-primary)",
+      border: "1px solid var(--color-border-primary)",
+    },
+    hover: {
+      backgroundColor: "var(--color-bg-hover)",
+      borderColor: "var(--color-border-focus)",
+    },
   },
   ghost: {
-    backgroundColor: "transparent",
-    color: "var(--color-text-secondary)",
-    border: "none",
+    base: {
+      backgroundColor: "transparent",
+      color: "var(--color-text-secondary)",
+      border: "1px solid transparent",
+    },
+    hover: {
+      backgroundColor: "var(--color-bg-hover)",
+      color: "var(--color-text-primary)",
+    },
   },
   danger: {
-    backgroundColor: "var(--color-accent-danger)",
-    color: "var(--color-text-inverse)",
-    border: "none",
+    base: {
+      backgroundColor: "var(--color-accent-danger)",
+      color: "var(--color-text-inverse)",
+      border: "none",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+    },
+    hover: {
+      backgroundColor: "var(--color-accent-danger)",
+      opacity: "0.9",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
+    },
   },
 };
 
 /** サイズ別のスタイル */
 const sizeStyles: Record<ButtonSize, React.CSSProperties> = {
   sm: {
-    padding: "var(--space-1) var(--space-2)",
+    padding: "5px 10px",
     fontSize: "var(--font-size-xs)",
     gap: "var(--space-1)",
+    height: "28px",
   },
   md: {
-    padding: "var(--space-2) var(--space-3)",
+    padding: "6px 14px",
     fontSize: "var(--font-size-sm)",
-    gap: "var(--space-2)",
+    gap: "6px",
+    height: "34px",
   },
   lg: {
-    padding: "var(--space-3) var(--space-4)",
+    padding: "8px 18px",
     fontSize: "var(--font-size-base)",
     gap: "var(--space-2)",
+    height: "40px",
   },
 };
 
@@ -74,6 +107,7 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const isDisabled = disabled || loading;
+  const vStyle = variantStyles[variant];
 
   return (
     <button
@@ -87,27 +121,40 @@ export const Button: React.FC<ButtonProps> = ({
         transition: "all var(--transition-fast)",
         opacity: isDisabled ? 0.5 : 1,
         cursor: isDisabled ? "not-allowed" : "pointer",
-        ...variantStyles[variant],
+        whiteSpace: "nowrap",
+        ...vStyle.base,
         ...sizeStyles[size],
         ...style,
       }}
       disabled={isDisabled}
+      onMouseEnter={(e) => {
+        if (!isDisabled) {
+          Object.assign(e.currentTarget.style, vStyle.hover);
+        }
+        props.onMouseEnter?.(e);
+      }}
+      onMouseLeave={(e) => {
+        if (!isDisabled) {
+          Object.assign(e.currentTarget.style, vStyle.base, style);
+        }
+        props.onMouseLeave?.(e);
+      }}
       {...props}
     >
       {loading ? (
         <svg
-          className="animate-spin"
           width="14"
           height="14"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
+          style={{ animation: "spin 0.8s linear infinite" }}
         >
           <path d="M21 12a9 9 0 1 1-6.219-8.56" />
         </svg>
       ) : icon ? (
-        <span className="shrink-0">{icon}</span>
+        <span className="shrink-0 flex items-center">{icon}</span>
       ) : null}
       {children && <span>{children}</span>}
     </button>

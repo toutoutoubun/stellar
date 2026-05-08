@@ -1,7 +1,6 @@
 // src/components/ui/Modal.tsx
 // Stellar — モーダルコンポーネント
-// オーバーレイ付きのモーダルダイアログ
-// ESC キーで閉じる・オーバーレイクリックで閉じる対応
+// 改善: backdrop-blur 強化、スムーズなスケールイン、ヘッダーの視覚階層
 
 import type React from "react";
 import { useEffect, useCallback, useRef } from "react";
@@ -15,6 +14,8 @@ interface ModalProps {
   onClose: () => void;
   /** モーダルのタイトル */
   title?: string;
+  /** タイトル左のアイコン */
+  titleIcon?: React.ReactNode;
   /** モーダルの幅 */
   width?: string;
   /** 子要素 */
@@ -29,6 +30,7 @@ export const Modal: React.FC<ModalProps> = ({
   open,
   onClose,
   title,
+  titleIcon,
   width = "480px",
   children,
   footer,
@@ -68,8 +70,9 @@ export const Modal: React.FC<ModalProps> = ({
       <div
         className="fixed inset-0 animate-fade-in"
         style={{
-          backgroundColor: "rgba(0, 0, 0, 0.4)",
-          backdropFilter: "blur(4px)",
+          backgroundColor: "rgba(0, 0, 0, 0.45)",
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
           zIndex: "var(--z-modal-overlay)",
         }}
         onClick={closeOnOverlayClick ? onClose : undefined}
@@ -87,13 +90,14 @@ export const Modal: React.FC<ModalProps> = ({
           style={{
             width,
             maxWidth: "90vw",
-            maxHeight: "80vh",
+            maxHeight: "85vh",
             backgroundColor: "var(--color-bg-modal)",
             borderRadius: "var(--radius-modal)",
             boxShadow: "var(--shadow-modal)",
             border: "1px solid var(--color-border-secondary)",
             pointerEvents: "auto",
             outline: "none",
+            overflow: "hidden",
           }}
           role="dialog"
           aria-modal="true"
@@ -103,31 +107,49 @@ export const Modal: React.FC<ModalProps> = ({
           {/* ヘッダー */}
           {title && (
             <div
-              className="flex items-center justify-between px-6 py-4 shrink-0"
+              className="flex items-center justify-between shrink-0"
               style={{
+                padding: "var(--space-4) var(--space-6)",
                 borderBottom: "1px solid var(--color-border-secondary)",
+                backgroundColor: "var(--color-bg-secondary)",
               }}
             >
-              <h2
-                className="text-base font-semibold"
-                style={{ color: "var(--color-text-primary)" }}
-              >
-                {title}
-              </h2>
+              <div className="flex items-center gap-2.5">
+                {titleIcon && (
+                  <span
+                    className="flex items-center justify-center shrink-0"
+                    style={{ color: "var(--color-accent-primary)" }}
+                  >
+                    {titleIcon}
+                  </span>
+                )}
+                <h2
+                  className="font-semibold"
+                  style={{
+                    color: "var(--color-text-primary)",
+                    fontSize: "var(--font-size-md)",
+                  }}
+                >
+                  {title}
+                </h2>
+              </div>
               <button
                 onClick={onClose}
-                className="flex items-center justify-center w-7 h-7"
+                className="flex items-center justify-center"
                 style={{
+                  width: "28px",
+                  height: "28px",
                   borderRadius: "var(--radius-button)",
                   color: "var(--color-text-tertiary)",
                   transition: "all var(--transition-fast)",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    "var(--color-bg-hover)";
+                  e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+                  e.currentTarget.style.color = "var(--color-text-secondary)";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = "transparent";
+                  e.currentTarget.style.color = "var(--color-text-tertiary)";
                 }}
                 aria-label={t.common.close}
               >
@@ -150,7 +172,10 @@ export const Modal: React.FC<ModalProps> = ({
 
           {/* コンテンツ */}
           <div
-            className="flex-1 overflow-y-auto px-6 py-4 selectable"
+            className="flex-1 overflow-y-auto selectable"
+            style={{
+              padding: "var(--space-5) var(--space-6)",
+            }}
             data-selectable="true"
           >
             {children}
@@ -159,9 +184,11 @@ export const Modal: React.FC<ModalProps> = ({
           {/* フッター */}
           {footer && (
             <div
-              className="flex items-center justify-end gap-2 px-6 py-4 shrink-0"
+              className="flex items-center justify-end gap-2 shrink-0"
               style={{
+                padding: "var(--space-3) var(--space-6)",
                 borderTop: "1px solid var(--color-border-secondary)",
+                backgroundColor: "var(--color-bg-secondary)",
               }}
             >
               {footer}

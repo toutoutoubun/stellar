@@ -1,7 +1,7 @@
 // src/components/layout/Titlebar.tsx
 // Stellar — カスタムタイトルバー
 // Tauri の decorations: false に対応したドラッグ可能なタイトルバー
-// ウィンドウ操作ボタン（最小化・最大化・閉じる）を含む
+// 改善: 検索バーをより目立たせ、ウィンドウ操作ボタンを洗練
 
 import type React from "react";
 import { useCallback } from "react";
@@ -20,8 +20,6 @@ export const Titlebar: React.FC<TitlebarProps> = ({ onOpenTutorial }) => {
   const t = useT();
   const toggleSearchModal = useUIStore((s) => s.toggleSearchModal);
 
-  // getCurrentWindow() は tauriShim 経由で安全に呼び出す
-  // 非 Tauri 環境では noop
   const handleMinimize = useCallback(async () => {
     const win = await getCurrentWindow();
     void win.minimize();
@@ -52,66 +50,68 @@ export const Titlebar: React.FC<TitlebarProps> = ({ onOpenTutorial }) => {
       }}
     >
       {/* 左側: アプリロゴ & タイトル */}
-      <div className="flex items-center gap-2" data-tauri-drag-region>
+      <div className="flex items-center gap-2.5" data-tauri-drag-region>
         <StellarIcon size={20} />
         <span
-          className="text-sm font-semibold"
-          style={{ color: "var(--color-text-primary)" }}
+          className="text-sm font-semibold tracking-tight"
+          style={{
+            color: "var(--color-text-primary)",
+            letterSpacing: "-0.01em",
+          }}
           data-tauri-drag-region
         >
           Stellar
         </span>
       </div>
 
-      {/* 中央: 検索バー（クリックで検索モーダルを開く） */}
+      {/* 中央: 検索バー — クリックで検索モーダルを開く */}
       <button
         onClick={toggleSearchModal}
-        className="flex items-center gap-2 px-3 py-1 text-xs"
+        className="flex items-center gap-2.5 px-3"
         style={{
           backgroundColor: "var(--color-bg-tertiary)",
           color: "var(--color-text-tertiary)",
           borderRadius: "var(--radius-input)",
           border: "1px solid var(--color-border-secondary)",
-          minWidth: "240px",
+          minWidth: "260px",
+          height: "28px",
           transition: "all var(--transition-fast)",
+          fontSize: "var(--font-size-xs)",
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.borderColor = "var(--color-border-focus)";
+          e.currentTarget.style.backgroundColor = "var(--color-bg-input)";
+          e.currentTarget.style.boxShadow = "0 0 0 3px var(--color-bg-selection)";
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.borderColor = "var(--color-border-secondary)";
+          e.currentTarget.style.backgroundColor = "var(--color-bg-tertiary)";
+          e.currentTarget.style.boxShadow = "none";
         }}
       >
         {/* 検索アイコン */}
         <svg
-          width="14"
-          height="14"
+          width="13"
+          height="13"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          strokeWidth="2"
+          strokeWidth="2.2"
           strokeLinecap="round"
           strokeLinejoin="round"
+          style={{ opacity: 0.6 }}
         >
           <circle cx="11" cy="11" r="8" />
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
-        <span>{t.layout.str_kn3fs}</span>
-        <kbd
-          className="ml-auto text-xs px-1 py-0.5"
-          style={{
-            backgroundColor: "var(--color-bg-hover)",
-            borderRadius: "4px",
-            color: "var(--color-text-tertiary)",
-            fontSize: "10px",
-          }}
-        >
-          Ctrl+K
-        </kbd>
+        <span style={{ opacity: 0.8 }}>{t.layout.str_kn3fs}</span>
+        <span className="kbd-hint ml-auto">
+          <span style={{ fontSize: "9px" }}>&#8984;</span>K
+        </span>
       </button>
 
-      {/* 右側: テーマ切替 & ウィンドウ操作ボタン */}
-      <div className="flex items-center">
+      {/* 右側: ヘルプ / テーマ / ウィンドウ操作ボタン */}
+      <div className="flex items-center gap-0.5">
         {/* ヘルプボタン */}
         {onOpenTutorial && <HelpButton onClick={onOpenTutorial} />}
 
@@ -120,110 +120,94 @@ export const Titlebar: React.FC<TitlebarProps> = ({ onOpenTutorial }) => {
 
         {/* セパレーター */}
         <div
-          className="w-px h-4 mx-1"
-          style={{ backgroundColor: "var(--color-border-secondary)" }}
+          className="w-px mx-1.5"
+          style={{
+            height: "14px",
+            backgroundColor: "var(--color-border-secondary)",
+          }}
         />
 
-        {/* 最小化ボタン */}
-        <button
-          onClick={handleMinimize}
-          className="flex items-center justify-center w-8 h-8"
-          style={{
-            borderRadius: "var(--radius-button)",
-            color: "var(--color-text-secondary)",
-            transition: "all var(--transition-fast)",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "transparent";
-          }}
-          title={t.layout.str_fj8br}
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12">
-            <rect
-              x="2"
-              y="5.5"
-              width="8"
-              height="1"
-              fill="currentColor"
-              rx="0.5"
-            />
-          </svg>
-        </button>
+        {/* ウィンドウ操作ボタン — macOS 風の丸ボタン */}
+        <div className="flex items-center gap-1.5 px-1">
+          {/* 最小化 */}
+          <button
+            onClick={handleMinimize}
+            className="flex items-center justify-center"
+            style={{
+              width: "28px",
+              height: "28px",
+              borderRadius: "var(--radius-button)",
+              color: "var(--color-text-tertiary)",
+              transition: "all var(--transition-fast)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+              e.currentTarget.style.color = "var(--color-text-secondary)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.color = "var(--color-text-tertiary)";
+            }}
+            title={t.layout.str_fj8br}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12">
+              <rect x="2" y="5.5" width="8" height="1" fill="currentColor" rx="0.5" />
+            </svg>
+          </button>
 
-        {/* 最大化ボタン */}
-        <button
-          onClick={handleMaximize}
-          className="flex items-center justify-center w-8 h-8"
-          style={{
-            borderRadius: "var(--radius-button)",
-            color: "var(--color-text-secondary)",
-            transition: "all var(--transition-fast)",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "transparent";
-          }}
-          title={t.layout.str_fiqj3}
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12">
-            <rect
-              x="2"
-              y="2"
-              width="8"
-              height="8"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1"
-              rx="1"
-            />
-          </svg>
-        </button>
+          {/* 最大化 */}
+          <button
+            onClick={handleMaximize}
+            className="flex items-center justify-center"
+            style={{
+              width: "28px",
+              height: "28px",
+              borderRadius: "var(--radius-button)",
+              color: "var(--color-text-tertiary)",
+              transition: "all var(--transition-fast)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+              e.currentTarget.style.color = "var(--color-text-secondary)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.color = "var(--color-text-tertiary)";
+            }}
+            title={t.layout.str_fiqj3}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12">
+              <rect x="2" y="2" width="8" height="8" fill="none" stroke="currentColor" strokeWidth="1" rx="1.5" />
+            </svg>
+          </button>
 
-        {/* 閉じるボタン */}
-        <button
-          onClick={handleClose}
-          className="flex items-center justify-center w-8 h-8"
-          style={{
-            borderRadius: "var(--radius-button)",
-            color: "var(--color-text-secondary)",
-            transition: "all var(--transition-fast)",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "var(--color-accent-danger)";
-            e.currentTarget.style.color = "var(--color-text-inverse)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "transparent";
-            e.currentTarget.style.color = "var(--color-text-secondary)";
-          }}
-          title={t.common.close}
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12">
-            <line
-              x1="3"
-              y1="3"
-              x2="9"
-              y2="9"
-              stroke="currentColor"
-              strokeWidth="1.2"
-              strokeLinecap="round"
-            />
-            <line
-              x1="9"
-              y1="3"
-              x2="3"
-              y2="9"
-              stroke="currentColor"
-              strokeWidth="1.2"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
+          {/* 閉じる */}
+          <button
+            onClick={handleClose}
+            className="flex items-center justify-center"
+            style={{
+              width: "28px",
+              height: "28px",
+              borderRadius: "var(--radius-button)",
+              color: "var(--color-text-tertiary)",
+              transition: "all var(--transition-fast)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-accent-danger)";
+              e.currentTarget.style.color = "var(--color-text-inverse)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+              e.currentTarget.style.color = "var(--color-text-tertiary)";
+            }}
+            title={t.common.close}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12">
+              <line x1="3" y1="3" x2="9" y2="9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+              <line x1="9" y1="3" x2="3" y2="9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
       </div>
     </header>
   );

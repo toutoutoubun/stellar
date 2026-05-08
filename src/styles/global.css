@@ -420,6 +420,52 @@ pre {
 }
 
 /* ============================================================
+   8.5 ツールチップシステム
+   ============================================================ */
+
+/* CSS-only ツールチップ（data-tooltip 属性ベース） */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%) scale(0.92);
+  padding: 5px 10px;
+  background-color: var(--color-bg-tooltip);
+  color: var(--color-text-on-tooltip);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  border-radius: var(--radius-tooltip);
+  box-shadow: var(--shadow-tooltip);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms ease, transform 150ms ease;
+  z-index: var(--z-tooltip);
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+  transition-delay: 400ms;
+}
+
+/* 下方向ツールチップ */
+[data-tooltip-pos="bottom"]::after {
+  left: 50%;
+  top: calc(100% + 6px);
+  transform: translateX(-50%) scale(0.92);
+}
+[data-tooltip-pos="bottom"]:hover::after {
+  transform: translateX(-50%) scale(1);
+}
+
+/* ============================================================
    9. ユーティリティ
    ============================================================ */
 
@@ -500,4 +546,164 @@ pre {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
+}
+
+/* ============================================================
+   10. スケルトンローディング
+   ============================================================ */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-tertiary) 25%,
+    var(--color-bg-hover) 37%,
+    var(--color-bg-tertiary) 63%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+  border-radius: var(--radius-button);
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+.skeleton-text {
+  height: 14px;
+  margin-bottom: 8px;
+}
+
+.skeleton-text:last-child {
+  width: 60%;
+}
+
+.skeleton-circle {
+  border-radius: 50%;
+}
+
+/* ============================================================
+   11. トースト進捗バーアニメーション
+   ============================================================ */
+
+@keyframes toast-progress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+.toast-progress-bar {
+  animation: toast-progress var(--toast-duration, 4000ms) linear forwards;
+}
+
+/* ============================================================
+   12. 改善されたインタラクション
+   ============================================================ */
+
+/* ボタンアクティブ押し込みエフェクト */
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* リスト行のストライプ風ホバー */
+.list-row-hover {
+  transition: background-color var(--transition-fast);
+}
+.list-row-hover:hover {
+  background-color: var(--color-bg-hover);
+}
+
+/* ナビゲーションバッジ（通知カウント等） */
+.nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--color-text-inverse);
+  background-color: var(--color-accent-primary);
+  border-radius: 999px;
+}
+
+/* セクション区切りライン */
+.section-divider {
+  height: 1px;
+  background-color: var(--color-border-secondary);
+  margin: var(--space-2) var(--space-3);
+}
+
+/* セクションラベル */
+.section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  padding: var(--space-3) var(--space-3) var(--space-1);
+  user-select: none;
+}
+
+/* 空状態コンテナ */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: var(--space-6);
+  padding: var(--space-8);
+  color: var(--color-text-tertiary);
+  user-select: none;
+  animation: fade-in 400ms ease both;
+}
+
+.empty-state-icon {
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    var(--color-bg-tertiary),
+    var(--color-bg-hover)
+  );
+  color: var(--color-accent-primary);
+  opacity: 0.7;
+}
+
+.empty-state-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.empty-state-desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  text-align: center;
+  line-height: var(--line-height-relaxed);
+  max-width: 360px;
+}
+
+/* キーボードショートカットヒント */
+.kbd-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px 6px;
+  font-size: 10px;
+  font-family: var(--font-family-mono);
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  background-color: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 5px;
+  line-height: 1.6;
+  box-shadow: 0 1px 0 var(--color-border-secondary);
 }

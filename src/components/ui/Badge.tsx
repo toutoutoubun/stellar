@@ -1,6 +1,6 @@
 // src/components/ui/Badge.tsx
 // Stellar — バッジ / タグコンポーネント
-// 論文・ノートのタグ表示に使用する
+// 改善: ホバーエフェクト追加、削除ボタンの視認性向上、角丸の統一
 
 import type React from "react";
 import { clsx } from "clsx";
@@ -13,6 +13,8 @@ interface BadgeProps {
   removable?: boolean;
   /** 削除時のコールバック */
   onRemove?: () => void;
+  /** クリックイベント */
+  onClick?: () => void;
   /** カスタムクラス */
   className?: string;
   /** カスタムスタイル */
@@ -23,6 +25,7 @@ export const Badge: React.FC<BadgeProps> = ({
   children,
   removable = false,
   onRemove,
+  onClick,
   className,
   style,
 }) => {
@@ -31,6 +34,7 @@ export const Badge: React.FC<BadgeProps> = ({
     <span
       className={clsx(
         "inline-flex items-center gap-1 text-xs font-medium select-none",
+        onClick && "cursor-pointer",
         className
       )}
       style={{
@@ -38,11 +42,27 @@ export const Badge: React.FC<BadgeProps> = ({
         color: "var(--color-tag-text)",
         border: "1px solid var(--color-tag-border)",
         borderRadius: "var(--radius-tag)",
-        padding: "2px 8px",
+        padding: "3px 10px",
         lineHeight: "1.4",
         whiteSpace: "nowrap",
+        transition: "all var(--transition-fast)",
         ...style,
       }}
+      onClick={onClick}
+      onMouseEnter={(e) => {
+        if (onClick) {
+          e.currentTarget.style.opacity = "0.85";
+          e.currentTarget.style.transform = "scale(1.02)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (onClick) {
+          e.currentTarget.style.opacity = "1";
+          e.currentTarget.style.transform = "scale(1)";
+        }
+      }}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
     >
       <span>{children}</span>
       {removable && onRemove && (
@@ -53,18 +73,20 @@ export const Badge: React.FC<BadgeProps> = ({
           }}
           className="flex items-center justify-center shrink-0 -mr-1"
           style={{
-            width: "14px",
-            height: "14px",
+            width: "16px",
+            height: "16px",
             borderRadius: "999px",
             color: "var(--color-tag-text)",
-            opacity: 0.6,
-            transition: "opacity var(--transition-fast)",
+            opacity: 0.5,
+            transition: "all var(--transition-fast)",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.opacity = "1";
+            e.currentTarget.style.backgroundColor = "var(--color-tag-border)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.opacity = "0.6";
+            e.currentTarget.style.opacity = "0.5";
+            e.currentTarget.style.backgroundColor = "transparent";
           }}
           aria-label={t.ui.str_g5a39h}
         >

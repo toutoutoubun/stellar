@@ -1,11 +1,10 @@
 /* eslint-disable react-refresh/only-export-components */
 // src/components/ui/Toast.tsx
 // Stellar — トースト通知コンポーネント
-// 操作結果のフィードバック（成功・エラー・情報）を画面右下に表示する
-// 自動消去タイマー付き
+// 改善: 自動消去プログレスバー、スライドイン/アウトアニメーション、ホバー時一時停止
 
 import type React from "react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { clsx } from "clsx";
 import { useT } from "../../stores/useI18nStore";
 
@@ -21,21 +20,20 @@ interface ToastItem {
 }
 
 /** トーストの種別ごとのスタイル */
-const typeStyles: Record<ToastType, { bg: string; border: string; icon: React.ReactNode }> = {
+const typeStyles: Record<ToastType, { color: string; icon: React.ReactNode }> = {
   success: {
-    bg: "var(--color-accent-secondary)",
-    border: "var(--color-accent-secondary)",
+    color: "var(--color-accent-secondary)",
     icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="20 6 9 17 4 12" />
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+        <polyline points="22 4 12 14.01 9 11.01" />
       </svg>
     ),
   },
   error: {
-    bg: "var(--color-accent-danger)",
-    border: "var(--color-accent-danger)",
+    color: "var(--color-accent-danger)",
     icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" />
         <line x1="15" y1="9" x2="9" y2="15" />
         <line x1="9" y1="9" x2="15" y2="15" />
@@ -43,10 +41,9 @@ const typeStyles: Record<ToastType, { bg: string; border: string; icon: React.Re
     ),
   },
   info: {
-    bg: "var(--color-accent-info)",
-    border: "var(--color-accent-info)",
+    color: "var(--color-accent-info)",
     icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" />
         <line x1="12" y1="16" x2="12" y2="12" />
         <line x1="12" y1="8" x2="12.01" y2="8" />
@@ -54,10 +51,9 @@ const typeStyles: Record<ToastType, { bg: string; border: string; icon: React.Re
     ),
   },
   warning: {
-    bg: "var(--color-accent-warning)",
-    border: "var(--color-accent-warning)",
+    color: "var(--color-accent-warning)",
     icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
         <line x1="12" y1="9" x2="12" y2="13" />
         <line x1="12" y1="17" x2="12.01" y2="17" />
@@ -67,7 +63,7 @@ const typeStyles: Record<ToastType, { bg: string; border: string; icon: React.Re
 };
 
 // ============================================================
-// トースト管理のシングルトン（Zustand 外でシンプルに管理）
+// トースト管理のシングルトン
 // ============================================================
 
 type ToastListener = (toasts: ToastItem[]) => void;
@@ -77,7 +73,6 @@ let listeners: ToastListener[] = [];
 let counter = 0;
 
 const emitChange = () => {
-
   listeners.forEach((listener) => listener([...toasts]));
 };
 
@@ -88,7 +83,6 @@ export const toast = {
     toasts = [...toasts, { id, type, message, duration }];
     emitChange();
 
-    // 自動消去
     if (duration > 0) {
       setTimeout(() => {
         toast.dismiss(id);
@@ -107,7 +101,6 @@ export const toast = {
     toasts = toasts.filter((t) => t.id !== id);
     emitChange();
   },
-  /** リスナーを登録する（コンポーネント内から呼び出す） */
   subscribe: (listener: ToastListener) => {
     listeners = [...listeners, listener];
     return () => {
@@ -117,11 +110,129 @@ export const toast = {
 };
 
 // ============================================================
-// トーストコンテナコンポーネント（App.tsx に配置する）
+// 個別トーストアイテムコンポーネント
+// ============================================================
+
+const ToastItemComponent: React.FC<{
+  item: ToastItem;
+  onDismiss: (id: string) => void;
+}> = ({ item, onDismiss }) => {
+  const t = useT();
+  const styles = typeStyles[item.type];
+  const [paused, setPaused] = useState(false);
+  const progressRef = useRef<HTMLDivElement>(null);
+
+  // ホバー時にプログレスバーを一時停止
+  useEffect(() => {
+    if (progressRef.current) {
+      progressRef.current.style.animationPlayState = paused ? "paused" : "running";
+    }
+  }, [paused]);
+
+  return (
+    <div
+      className={clsx("flex flex-col overflow-hidden animate-slide-in-right")}
+      style={{
+        backgroundColor: "var(--color-bg-card)",
+        borderRadius: "12px",
+        boxShadow: "var(--shadow-dropdown)",
+        border: "1px solid var(--color-border-secondary)",
+        color: "var(--color-text-primary)",
+        minWidth: "280px",
+      }}
+      role="alert"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      {/* コンテンツ行 */}
+      <div className="flex items-start gap-3 px-4 py-3">
+        {/* アイコン */}
+        <span
+          className="shrink-0 mt-0.5 flex items-center justify-center"
+          style={{
+            color: styles.color,
+            width: "20px",
+            height: "20px",
+          }}
+        >
+          {styles.icon}
+        </span>
+
+        {/* メッセージ */}
+        <span
+          className="flex-1 text-sm"
+          style={{ lineHeight: "var(--line-height-normal)" }}
+        >
+          {item.message}
+        </span>
+
+        {/* 閉じるボタン */}
+        <button
+          onClick={() => onDismiss(item.id)}
+          className="shrink-0 mt-0.5 flex items-center justify-center"
+          style={{
+            width: "20px",
+            height: "20px",
+            borderRadius: "4px",
+            color: "var(--color-text-tertiary)",
+            transition: "all var(--transition-fast)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = "var(--color-text-primary)";
+            e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = "var(--color-text-tertiary)";
+            e.currentTarget.style.backgroundColor = "transparent";
+          }}
+          aria-label={t.common.close}
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+
+      {/* プログレスバー（自動消去タイマー） */}
+      {item.duration && item.duration > 0 && (
+        <div
+          style={{
+            height: "2px",
+            backgroundColor: "var(--color-bg-tertiary)",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            ref={progressRef}
+            className="toast-progress-bar"
+            style={{
+              height: "100%",
+              backgroundColor: styles.color,
+              opacity: 0.6,
+              ["--toast-duration" as string]: `${item.duration}ms`,
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============================================================
+// トーストコンテナ
 // ============================================================
 
 export const ToastContainer: React.FC = () => {
-  const t = useT();
   const [items, setItems] = useState<ToastItem[]>([]);
 
   useEffect(() => {
@@ -139,74 +250,15 @@ export const ToastContainer: React.FC = () => {
   return (
     <div
       className="fixed bottom-4 right-4 flex flex-col gap-2"
-      style={{ zIndex: "var(--z-toast)", maxWidth: "380px" }}
+      style={{ zIndex: "var(--z-toast)", maxWidth: "400px" }}
     >
-      {items.map((item) => {
-        const styles = typeStyles[item.type];
-        return (
-          <div
-            key={item.id}
-            className={clsx(
-              "flex items-start gap-3 px-4 py-3 text-sm animate-slide-in-right"
-            )}
-            style={{
-              backgroundColor: "var(--color-bg-card)",
-              borderRadius: "var(--radius-card)",
-              boxShadow: "var(--shadow-dropdown)",
-              borderLeft: `3px solid ${styles.border}`,
-              color: "var(--color-text-primary)",
-            }}
-            role="alert"
-          >
-            {/* アイコン */}
-            <span
-              className="shrink-0 mt-0.5"
-              style={{ color: styles.bg }}
-            >
-              {styles.icon}
-            </span>
-
-            {/* メッセージ */}
-            <span
-              className="flex-1"
-              style={{ lineHeight: "var(--line-height-normal)" }}
-            >
-              {item.message}
-            </span>
-
-            {/* 閉じるボタン */}
-            <button
-              onClick={() => handleDismiss(item.id)}
-              className="shrink-0 mt-0.5"
-              style={{
-                color: "var(--color-text-tertiary)",
-                transition: "color var(--transition-fast)",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = "var(--color-text-primary)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = "var(--color-text-tertiary)";
-              }}
-              aria-label={t.common.close}
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </div>
-        );
-      })}
+      {items.map((item) => (
+        <ToastItemComponent
+          key={item.id}
+          item={item}
+          onDismiss={handleDismiss}
+        />
+      ))}
     </div>
   );
 };

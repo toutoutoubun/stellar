@@ -1,7 +1,8 @@
 // src/components/layout/Sidebar.tsx
 // Stellar — サイドバー
-// ナビゲーション（文献・ノート・グラフ）とビューの切り替えを行う
-// 折りたたみ対応: collapsed 状態ではアイコンのみ表示
+// ナビゲーション（文献・ノート・グラフ・質的・量的）とビューの切り替え
+// セクション分け: メイン / 分析 / システム
+// 折りたたみ対応: collapsed 状態ではアイコン + ツールチップ表示
 
 import type React from "react";
 import { useCallback } from "react";
@@ -13,17 +14,20 @@ import type { SidebarView } from "../../types";
 /** サイドバーのナビゲーションアイテム定義 */
 interface NavItem {
   view: SidebarView;
-  label: string;
+  labelKey: string;
   icon: React.ReactNode;
-  /** 下部に配置するか */
-  bottom?: boolean;
+  /** セクション区分 */
+  section: "main" | "analysis" | "system";
+  /** キーボードショートカットヒント */
+  shortcut?: string;
 }
 
-/** ナビゲーションアイコン群（Lucide 風の SVG）— label はプレースホルダ、実行時に t() で上書き */
+/** ナビゲーションアイコン群（Lucide 風の SVG） */
 const NAV_ITEMS: NavItem[] = [
   {
     view: "library",
-    label: "__library__",
+    labelKey: "library",
+    section: "main",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
@@ -33,7 +37,8 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     view: "notes",
-    label: "__notes__",
+    labelKey: "notes",
+    section: "main",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -46,7 +51,8 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     view: "graph",
-    label: "__graph__",
+    labelKey: "graph",
+    section: "main",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3" />
@@ -63,7 +69,8 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     view: "qualitative",
-    label: "__qualitative__",
+    labelKey: "qualitative",
+    section: "analysis",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
@@ -73,7 +80,8 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     view: "quantitative",
-    label: "__quantitative__",
+    labelKey: "quantitative",
+    section: "analysis",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <line x1="18" y1="20" x2="18" y2="10" />
@@ -84,8 +92,9 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     view: "settings",
-    label: "__settings__",
-    bottom: true,
+    labelKey: "settings",
+    section: "system",
+    shortcut: "Ctrl+,",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3" />
@@ -94,6 +103,116 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
 ];
+
+/** セクションラベルのマッピング */
+const SECTION_LABELS: Record<string, string> = {
+  main: "WORKSPACE",
+  analysis: "ANALYSIS",
+};
+
+/** ナビゲーションボタン */
+const NavButton: React.FC<{
+  item: NavItem;
+  isActive: boolean;
+  isCollapsed: boolean;
+  label: string;
+  onClick: () => void;
+}> = ({ item, isActive, isCollapsed, label, onClick }) => {
+  const tooltipLabel = item.shortcut ? `${label}  (${item.shortcut})` : label;
+
+  return (
+    <button
+      onClick={onClick}
+      className={clsx(
+        "flex items-center gap-3 text-sm font-medium",
+        "transition-all relative group"
+      )}
+      style={{
+        borderRadius: "var(--radius-button)",
+        padding: isCollapsed ? "10px" : "9px 12px",
+        color: isActive
+          ? "var(--color-accent-primary)"
+          : "var(--color-text-secondary)",
+        backgroundColor: isActive
+          ? "var(--color-bg-hover)"
+          : "transparent",
+        justifyContent: isCollapsed ? "center" : "flex-start",
+        transition: "all var(--transition-fast)",
+        width: "100%",
+      }}
+      onMouseEnter={(e) => {
+        if (!isActive) {
+          e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+          e.currentTarget.style.color = "var(--color-text-primary)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isActive) {
+          e.currentTarget.style.backgroundColor = "transparent";
+          e.currentTarget.style.color = "var(--color-text-secondary)";
+        }
+      }}
+      {...(isCollapsed ? { "data-tooltip": tooltipLabel } : {})}
+      title={isCollapsed ? undefined : tooltipLabel}
+    >
+      {/* アクティブインジケーター — 太い左ボーダー */}
+      <span
+        style={{
+          position: "absolute",
+          left: "0",
+          top: "50%",
+          transform: "translateY(-50%)",
+          width: "3px",
+          height: isActive ? "20px" : "0px",
+          borderRadius: "0 3px 3px 0",
+          backgroundColor: "var(--color-accent-primary)",
+          transition: "height var(--transition-normal)",
+        }}
+      />
+
+      {/* アイコン */}
+      <span
+        className="shrink-0 flex items-center justify-center"
+        style={{
+          opacity: isActive ? 1 : 0.65,
+          transition: "opacity var(--transition-fast), transform var(--transition-fast)",
+          transform: isActive ? "scale(1.05)" : "scale(1)",
+          width: "20px",
+          height: "20px",
+        }}
+      >
+        {item.icon}
+      </span>
+
+      {/* ラベル */}
+      {!isCollapsed && (
+        <span
+          style={{
+            opacity: isActive ? 1 : 0.85,
+            fontWeight: isActive ? 600 : 500,
+            transition: "opacity var(--transition-fast)",
+          }}
+        >
+          {label}
+        </span>
+      )}
+
+      {/* アクティブ時の右側ドット */}
+      {isActive && !isCollapsed && (
+        <span
+          style={{
+            marginLeft: "auto",
+            width: "6px",
+            height: "6px",
+            borderRadius: "50%",
+            backgroundColor: "var(--color-accent-primary)",
+            opacity: 0.6,
+          }}
+        />
+      )}
+    </button>
+  );
+};
 
 export const Sidebar: React.FC = () => {
   const t = useT();
@@ -114,42 +233,20 @@ export const Sidebar: React.FC = () => {
   const setSidebarView = useUIStore((s) => s.setSidebarView);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const openGraph = useUIStore((s) => s.openGraph);
-
   const openSettings = useUIStore((s) => s.openSettings);
   const openQualitative = useUIStore((s) => s.openQualitative);
   const openQuantitative = useUIStore((s) => s.openQuantitative);
-
   const setMainPaneContent = useUIStore((s) => s.setMainPaneContent);
 
   const handleNavClick = useCallback(
     (view: SidebarView) => {
-      // グラフビューの場合はメインペインも切り替え
-      if (view === "graph") {
-        openGraph();
-        return;
-      }
-      // 設定ビューの場合はメインペインも切り替え
-      if (view === "settings") {
-        openSettings();
-        return;
-      }
-      // 質的分析ビューの場合はメインペインも切り替え
-      if (view === "qualitative") {
-        openQualitative();
-        return;
-      }
-      // 量的分析ビューの場合はメインペインも切り替え
-      if (view === "quantitative") {
-        openQuantitative();
-        return;
-      }
-      // 文献・ノートの場合: sidebarView を変更し、
-      // mainPaneContent がそのビューと無関係な場合はリセット
+      if (view === "graph") { openGraph(); return; }
+      if (view === "settings") { openSettings(); return; }
+      if (view === "qualitative") { openQualitative(); return; }
+      if (view === "quantitative") { openQuantitative(); return; }
+
       setSidebarView(view);
-      // 文献ビュー → paper 以外の mainPaneContent はリセット
-      // ノートビュー → note 以外の mainPaneContent はリセット
       if (view === "library") {
-        // paper 表示中ならそのまま、それ以外は空に
         const current = useUIStore.getState().mainPaneContent;
         if (current.type !== "paper" && current.type !== "empty") {
           setMainPaneContent({ type: "empty" });
@@ -163,6 +260,11 @@ export const Sidebar: React.FC = () => {
     },
     [setSidebarView, openGraph, openSettings, openQualitative, openQuantitative, setMainPaneContent]
   );
+
+  /** セクション別にアイテムをグループ化 */
+  const mainItems = NAV_ITEMS.filter((i) => i.section === "main");
+  const analysisItems = NAV_ITEMS.filter((i) => i.section === "analysis");
+  const systemItems = NAV_ITEMS.filter((i) => i.section === "system");
 
   return (
     <aside
@@ -179,149 +281,94 @@ export const Sidebar: React.FC = () => {
         zIndex: "var(--z-sticky)",
       }}
     >
-      {/* ナビゲーションアイテム */}
-      <nav className="flex flex-col gap-0.5 p-2 flex-1">
-        {/* 上部: メインナビ */}
-        {NAV_ITEMS.filter((item) => !item.bottom).map((item) => {
-          const isActive = sidebarView === item.view;
-          return (
-            <button
+      <nav className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden"
+        style={{ padding: "var(--space-2)" }}
+      >
+        {/* ── メインセクション ── */}
+        {!sidebarCollapsed && (
+          <div className="section-label">{SECTION_LABELS.main}</div>
+        )}
+        {sidebarCollapsed && <div style={{ height: "var(--space-1)" }} />}
+        <div className="flex flex-col gap-0.5">
+          {mainItems.map((item) => (
+            <NavButton
               key={item.view}
+              item={item}
+              isActive={sidebarView === item.view}
+              isCollapsed={sidebarCollapsed}
+              label={labelMap[item.view]}
               onClick={() => handleNavClick(item.view)}
-              className={clsx(
-                "flex items-center gap-3 text-sm font-medium",
-                "transition-all relative"
-              )}
-              style={{
-                borderRadius: "var(--radius-button)",
-                padding: sidebarCollapsed ? "10px" : "9px 12px",
-                color: isActive
-                  ? "var(--color-accent-primary)"
-                  : "var(--color-text-secondary)",
-                backgroundColor: isActive
-                  ? "var(--color-bg-hover)"
-                  : "transparent",
-                justifyContent: sidebarCollapsed ? "center" : "flex-start",
-                transition: "all var(--transition-fast)",
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.backgroundColor =
-                    "var(--color-bg-hover)";
-                  e.currentTarget.style.color = "var(--color-text-primary)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                  e.currentTarget.style.color = "var(--color-text-secondary)";
-                }
-              }}
-              title={sidebarCollapsed ? labelMap[item.view] : undefined}
-            >
-              {/* アクティブインジケーター */}
-              {isActive && !sidebarCollapsed && (
-                <span
-                  style={{
-                    position: "absolute",
-                    left: "0",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    width: "3px",
-                    height: "18px",
-                    borderRadius: "0 3px 3px 0",
-                    backgroundColor: "var(--color-accent-primary)",
-                  }}
-                />
-              )}
-              <span className="shrink-0" style={{ opacity: isActive ? 1 : 0.7 }}>{item.icon}</span>
-              {!sidebarCollapsed && <span>{labelMap[item.view]}</span>}
-            </button>
-          );
-        })}
+            />
+          ))}
+        </div>
 
-        {/* スペーサー */}
+        {/* ── 区切り線 ── */}
+        <div className="section-divider" />
+
+        {/* ── 分析セクション ── */}
+        {!sidebarCollapsed && (
+          <div className="section-label">{SECTION_LABELS.analysis}</div>
+        )}
+        <div className="flex flex-col gap-0.5">
+          {analysisItems.map((item) => (
+            <NavButton
+              key={item.view}
+              item={item}
+              isActive={sidebarView === item.view}
+              isCollapsed={sidebarCollapsed}
+              label={labelMap[item.view]}
+              onClick={() => handleNavClick(item.view)}
+            />
+          ))}
+        </div>
+
+        {/* ── スペーサー ── */}
         <div className="flex-1" />
 
-        {/* 下部: 設定ナビ */}
-        {NAV_ITEMS.filter((item) => item.bottom).map((item) => {
-          const isActive = sidebarView === item.view;
-          return (
-            <button
+        {/* ── 区切り線 ── */}
+        <div className="section-divider" />
+
+        {/* ── システムセクション（設定） ── */}
+        <div className="flex flex-col gap-0.5">
+          {systemItems.map((item) => (
+            <NavButton
               key={item.view}
+              item={item}
+              isActive={sidebarView === item.view}
+              isCollapsed={sidebarCollapsed}
+              label={labelMap[item.view]}
               onClick={() => handleNavClick(item.view)}
-              className={clsx(
-                "flex items-center gap-3 text-sm font-medium",
-                "transition-all relative"
-              )}
-              style={{
-                borderRadius: "var(--radius-button)",
-                padding: sidebarCollapsed ? "10px" : "9px 12px",
-                color: isActive
-                  ? "var(--color-accent-primary)"
-                  : "var(--color-text-secondary)",
-                backgroundColor: isActive
-                  ? "var(--color-bg-hover)"
-                  : "transparent",
-                justifyContent: sidebarCollapsed ? "center" : "flex-start",
-                transition: "all var(--transition-fast)",
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.backgroundColor =
-                    "var(--color-bg-hover)";
-                  e.currentTarget.style.color = "var(--color-text-primary)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                  e.currentTarget.style.color = "var(--color-text-secondary)";
-                }
-              }}
-              title={sidebarCollapsed ? labelMap[item.view] : undefined}
-            >
-              {isActive && !sidebarCollapsed && (
-                <span
-                  style={{
-                    position: "absolute",
-                    left: "0",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    width: "3px",
-                    height: "18px",
-                    borderRadius: "0 3px 3px 0",
-                    backgroundColor: "var(--color-accent-primary)",
-                  }}
-                />
-              )}
-              <span className="shrink-0" style={{ opacity: isActive ? 1 : 0.7 }}>{item.icon}</span>
-              {!sidebarCollapsed && <span>{labelMap[item.view]}</span>}
-            </button>
-          );
-        })}
+            />
+          ))}
+        </div>
       </nav>
 
       {/* 下部: 折りたたみトグル */}
       <div
-        className="p-2"
-        style={{ borderTop: "1px solid var(--color-border-secondary)" }}
+        style={{
+          padding: "var(--space-2)",
+          borderTop: "1px solid var(--color-border-secondary)",
+        }}
       >
         <button
           onClick={toggleSidebar}
-          className="flex items-center justify-center w-full py-2 text-sm"
+          className="flex items-center justify-center w-full"
           style={{
             borderRadius: "var(--radius-button)",
             color: "var(--color-text-tertiary)",
             transition: "all var(--transition-fast)",
+            padding: "8px",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+            e.currentTarget.style.color = "var(--color-text-secondary)";
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = "transparent";
+            e.currentTarget.style.color = "var(--color-text-tertiary)";
           }}
           title={sidebarCollapsed ? t.sidebar.expandSidebar : t.sidebar.collapseSidebar}
+          {...(sidebarCollapsed ? { "data-tooltip": t.sidebar.expandSidebar } : {})}
         >
           <svg
             width="16"
@@ -340,6 +387,14 @@ export const Sidebar: React.FC = () => {
             <polyline points="11 17 6 12 11 7" />
             <polyline points="18 17 13 12 18 7" />
           </svg>
+          {!sidebarCollapsed && (
+            <span
+              className="ml-2 text-xs"
+              style={{ opacity: 0.7 }}
+            >
+              {t.sidebar.collapseSidebar}
+            </span>
+          )}
         </button>
       </div>
     </aside>
