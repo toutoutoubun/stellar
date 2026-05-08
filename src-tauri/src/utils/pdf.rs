@@ -118,7 +118,7 @@ fn extract_year_from_pdf_date(date_str: &str) -> Option<i32> {
 fn pdf_object_to_string(obj: &lopdf::Object) -> Option<String> {
     match obj {
         lopdf::Object::String(bytes, _) => Some(decode_pdf_bytes(bytes)),
-        lopdf::Object::Name(s) => Some(s.clone()),
+        lopdf::Object::Name(s) => Some(decode_pdf_bytes(s)),
         _ => None,
     }
 }
