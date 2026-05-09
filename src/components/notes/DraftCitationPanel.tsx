@@ -34,7 +34,7 @@ export const DraftCitationPanel: React.FC<DraftCitationPanelProps> = ({
       try {
         const [cites, paperResult] = await Promise.all([
           invoke<DraftCitation[]>("get_citations_for_note", { noteId }),
-          invoke<{ items: Paper[] }>("get_papers", {}),
+          invoke<{ items: Paper[] }>("get_papers", { page: 1, limit: 10000 }),
         ]);
         if (!cancelled) {
           setCitations(cites);
@@ -66,13 +66,19 @@ export const DraftCitationPanel: React.FC<DraftCitationPanelProps> = ({
     async (paperId: string, pageRef?: string) => {
       try {
         const result = await invoke<DraftCitation | null>("insert_citation", {
-          noteId,
-          paperId,
-          citationStyle,
-          pageRef: pageRef || null,
+          input: {
+            noteId,
+            paperId,
+            citationStyle,
+            pageRef: pageRef || null,
+          },
         });
         if (result && result.id) {
-          setCitations((prev) => [...prev, result]);
+          setCitations((prev) => {
+            const existingIndex = prev.findIndex((c) => c.id === result.id);
+            if (existingIndex === -1) return [...prev, result];
+            return prev.map((c) => (c.id === result.id ? result : c));
+          });
           toast.success(t.draftMode.citationInserted);
         } else {
           // mock が null を返した場合（論文が見つからない等）

@@ -682,7 +682,7 @@ pub async fn insert_citation(
                 paper.doi.as_deref(),
             ),
         ),
-        "japanese" => (
+        "hitotsubashi" | "japanese" => (
             format_japanese_inline(&paper.authors, paper.year),
             format_japanese_bibliography(
                 &paper.authors,
@@ -696,7 +696,7 @@ pub async fn insert_citation(
         ),
         _ => {
             return Err(format!(
-                "未対応の引用スタイル '{}' — 有効値: apa7, mla9, chicago17, japanese",
+                "未対応の引用スタイル '{}' — 有効値: apa7, mla9, chicago17, hitotsubashi",
                 input.citation_style
             ));
         }

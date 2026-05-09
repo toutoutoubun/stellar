@@ -8,8 +8,11 @@ use sqlx::Row;
 use tauri::AppHandle;
 
 const SS_USER_AGENT: &str = "Stellar/0.1.0 (academic research tool; mailto:contact@stellar.app)";
-const SS_PAPER_FIELDS: &str = "paperId,title,url,authors,year,externalIds,references.paperId,references.title,references.url,references.authors,references.year,references.externalIds,citations.paperId,citations.title,citations.url,citations.authors,citations.year,citations.externalIds";
+const SS_LOOKUP_FIELDS: &str = "paperId,title,url,authors,year,externalIds";
+const SS_REFERENCE_FIELDS: &str = "paperId,title,url,authors,year,externalIds";
+const SS_CITATION_FIELDS: &str = "paperId,title,url,authors,year,externalIds";
 const SS_RECOMMENDATION_FIELDS: &str = "paperId,title,url,authors,year,externalIds,abstract";
+const SS_RELATION_LIMIT: &str = "50";
 
 // ════════════════════════════════════════════════════════════
 // 読書ステータス
@@ -135,14 +138,82 @@ fn normalize_doi_identifier(doi: &str) -> String {
         .to_string()
 }
 
-async fn semantic_scholar_json(
+fn build_semantic_scholar_identifier(
+    ss_paper_id: Option<&str>,
+    doi: Option<&str>,
+    url: Option<&str>,
+) -> Option<String> {
+    if let Some(id) = ss_paper_id.map(str::trim).filter(|s| !s.is_empty()) {
+        return Some(id.to_string());
+    }
+
+    if let Some(doi) = doi.map(str::trim).filter(|s| !s.is_empty()) {
+        return Some(format!("DOI:{}", normalize_doi_identifier(doi)));
+    }
+
+    if let Some(url) = url.map(str::trim).filter(|s| !s.is_empty()) {
+        return Some(format!("URL:{}", url));
+    }
+
+    None
+}
+
+fn encode_semantic_scholar_identifier(identifier: &str) -> String {
+    if let Some((prefix, value)) = identifier.split_once(':') {
+        if matches!(
+            prefix,
+            "DOI" | "URL" | "ARXIV" | "MAG" | "ACL" | "PMID" | "PMCID" | "CorpusId"
+        ) {
+            return format!("{}:{}", prefix, urlencoding::encode(value));
+        }
+    }
+
+    urlencoding::encode(identifier).to_string()
+}
+
+fn graph_paper_url(identifier: &str) -> String {
+    format!(
+        "https://api.semanticscholar.org/graph/v1/paper/{}",
+        encode_semantic_scholar_identifier(identifier)
+    )
+}
+
+fn normalize_title_for_match(title: &str) -> String {
+    title
+        .chars()
+        .filter(|c| c.is_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect()
+}
+
+fn titles_are_close_enough(expected: &str, actual: &str) -> bool {
+    let expected = normalize_title_for_match(expected);
+    let actual = normalize_title_for_match(actual);
+
+    if expected.is_empty() || actual.is_empty() {
+        return false;
+    }
+    if expected == actual {
+        return true;
+    }
+
+    let (shorter, longer) = if expected.len() <= actual.len() {
+        (&expected, &actual)
+    } else {
+        (&actual, &expected)
+    };
+
+    shorter.len() >= 20 && longer.contains(shorter) && shorter.len() * 100 >= longer.len() * 80
+}
+
+async fn semantic_scholar_get_json(
     client: &reqwest::Client,
     url: &str,
-    fields: &str,
+    query: &[(&str, &str)],
 ) -> Result<serde_json::Value, String> {
     let response = client
         .get(url)
-        .query(&[("fields", fields)])
+        .query(query)
         .header("User-Agent", SS_USER_AGENT)
         .send()
         .await
@@ -164,6 +235,122 @@ async fn semantic_scholar_json(
         .map_err(|e| format!("Semantic Scholar レスポンスの解析に失敗: {}", e))
 }
 
+async fn semantic_scholar_json(
+    client: &reqwest::Client,
+    url: &str,
+    fields: &str,
+) -> Result<serde_json::Value, String> {
+    semantic_scholar_get_json(client, url, &[("fields", fields)]).await
+}
+
+async fn resolve_semantic_scholar_paper_id(
+    client: &reqwest::Client,
+    pool: &sqlx::SqlitePool,
+    paper_id: &str,
+    title: &str,
+    ss_paper_id: Option<&str>,
+    doi: Option<&str>,
+    url: Option<&str>,
+) -> Result<Option<String>, String> {
+    if let Some(id) = ss_paper_id.map(str::trim).filter(|s| !s.is_empty()) {
+        return Ok(Some(id.to_string()));
+    }
+
+    if let Some(identifier) = build_semantic_scholar_identifier(None, doi, url) {
+        let detail_url = graph_paper_url(&identifier);
+        match semantic_scholar_json(client, &detail_url, SS_LOOKUP_FIELDS).await {
+            Ok(body) => {
+                if let Some(id) = body.get("paperId").and_then(|v| v.as_str()) {
+                    let id = id.to_string();
+                    let _ = sqlx::query(
+                        "UPDATE papers SET ss_paper_id = ?, updated_at = datetime('now') WHERE id = ?",
+                    )
+                    .bind(&id)
+                    .bind(paper_id)
+                    .execute(pool)
+                    .await;
+                    return Ok(Some(id));
+                }
+                return Ok(Some(identifier));
+            }
+            Err(e) => {
+                log::warn!("Semantic Scholar identifier lookup failed: {}", e);
+            }
+        }
+    }
+
+    let title = title.trim();
+    if title.is_empty() {
+        return Ok(None);
+    }
+
+    let search_url = "https://api.semanticscholar.org/graph/v1/paper/search";
+    let body = semantic_scholar_get_json(
+        client,
+        search_url,
+        &[
+            ("query", title),
+            ("fields", SS_LOOKUP_FIELDS),
+            ("limit", "1"),
+        ],
+    )
+    .await?;
+
+    let matched = body
+        .get("data")
+        .and_then(|v| v.as_array())
+        .and_then(|arr| arr.first())
+        .and_then(|paper| {
+            let found_title = paper.get("title").and_then(|v| v.as_str())?;
+            if !titles_are_close_enough(title, found_title) {
+                return None;
+            }
+            paper.get("paperId").and_then(|v| v.as_str())
+        })
+        .map(|s| s.to_string());
+
+    if let Some(ref id) = matched {
+        let _ = sqlx::query(
+            "UPDATE papers SET ss_paper_id = ?, updated_at = datetime('now') WHERE id = ?",
+        )
+        .bind(id)
+        .bind(paper_id)
+        .execute(pool)
+        .await;
+    }
+
+    Ok(matched)
+}
+
+async fn fetch_paper_relations(
+    client: &reqwest::Client,
+    ss_paper_id: &str,
+    endpoint: &str,
+    wrapper_key: &str,
+    fields: &str,
+) -> Result<Vec<CitationEntry>, String> {
+    let url = format!("{}/{}", graph_paper_url(ss_paper_id), endpoint);
+    let body = semantic_scholar_get_json(
+        client,
+        &url,
+        &[("fields", fields), ("limit", SS_RELATION_LIMIT)],
+    )
+    .await?;
+
+    let entries = body
+        .get("data")
+        .and_then(|v| v.as_array())
+        .or_else(|| body.get(endpoint).and_then(|v| v.as_array()))
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|item| parse_ss_relation_item(item, wrapper_key))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    Ok(entries)
+}
+
 /// 引用ネットワーク（参照文献・被引用文献）を取得する
 /// キャッシュ有効期間: 7日
 #[tauri::command]
@@ -181,8 +368,10 @@ pub async fn fetch_citation_network(
         .map_err(|e| format!("論文の取得に失敗: {}", e))?
         .ok_or_else(|| format!("論文が見つかりません: {}", paper_id))?;
 
+    let title = col_str(&row, "title");
     let doi = col_opt_str(&row, "doi");
     let url = col_opt_str(&row, "url");
+    let stored_ss_paper_id = col_opt_str(&row, "ss_paper_id");
     let fetched_at = col_opt_str(&row, "references_fetched_at");
 
     // キャッシュが7日以内なら DB のデータを返す
@@ -208,22 +397,25 @@ pub async fn fetch_citation_network(
         }
     }
 
-    // DOI or URL で SS API を呼び出す
-    let ss_query = if let Some(ref d) = doi {
-        let normalized = normalize_doi_identifier(d);
-        let encoded = urlencoding::encode(&normalized);
-        format!(
-            "https://api.semanticscholar.org/graph/v1/paper/DOI:{}",
-            encoded
-        )
-    } else if let Some(ref u) = url {
-        let encoded = urlencoding::encode(u);
-        format!(
-            "https://api.semanticscholar.org/graph/v1/paper/URL:{}",
-            encoded
-        )
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| format!("HTTP クライアントの初期化に失敗: {}", e))?;
+
+    let ss_paper_id = resolve_semantic_scholar_paper_id(
+        &client,
+        pool.as_ref(),
+        &paper_id,
+        &title,
+        stored_ss_paper_id.as_deref(),
+        doi.as_deref(),
+        url.as_deref(),
+    )
+    .await?;
+
+    let ss_paper_id = if let Some(id) = ss_paper_id {
+        id
     } else {
-        // DOI も URL もない場合は空データを返す
         return Ok(CitationNetworkData {
             paper_id,
             references: vec![],
@@ -232,36 +424,23 @@ pub async fn fetch_citation_network(
         });
     };
 
-    let client = reqwest::Client::new();
-    let body = semantic_scholar_json(&client, &ss_query, SS_PAPER_FIELDS).await?;
+    let references = fetch_paper_relations(
+        &client,
+        &ss_paper_id,
+        "references",
+        "citedPaper",
+        SS_REFERENCE_FIELDS,
+    )
+    .await?;
 
-    // ss_paper_id を取得
-    let ss_paper_id = body
-        .get("paperId")
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-
-    // references を解析
-    let references: Vec<CitationEntry> = body
-        .get("references")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|item| parse_ss_relation_item(item, "citedPaper"))
-                .collect()
-        })
-        .unwrap_or_default();
-
-    // citations を解析
-    let cited_by: Vec<CitationEntry> = body
-        .get("citations")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|item| parse_ss_relation_item(item, "citingPaper"))
-                .collect()
-        })
-        .unwrap_or_default();
+    let cited_by = fetch_paper_relations(
+        &client,
+        &ss_paper_id,
+        "citations",
+        "citingPaper",
+        SS_CITATION_FIELDS,
+    )
+    .await?;
 
     // DB に保存
     let now = chrono::Utc::now().to_rfc3339();
@@ -303,28 +482,34 @@ pub async fn fetch_recommendations(
 ) -> Result<Vec<PaperRecommendation>, String> {
     let pool = get_pool(&app)?;
 
-    // ss_paper_id を取得
-    let row = sqlx::query("SELECT ss_paper_id, doi, url FROM papers WHERE id = ?")
+    // ss_paper_id を取得（未保存の場合は DOI/URL/タイトルから解決する）
+    let row = sqlx::query("SELECT title, ss_paper_id, doi, url FROM papers WHERE id = ?")
         .bind(&paper_id)
         .fetch_optional(pool.as_ref())
         .await
         .map_err(|e| format!("論文の取得に失敗: {}", e))?
         .ok_or_else(|| format!("論文が見つかりません: {}", paper_id))?;
 
-    let mut ss_paper_id: Option<String> = col_opt_str(&row, "ss_paper_id");
+    let title = col_str(&row, "title");
+    let stored_ss_paper_id = col_opt_str(&row, "ss_paper_id");
+    let doi = col_opt_str(&row, "doi");
+    let url = col_opt_str(&row, "url");
 
-    // ss_paper_id がない場合は fetch_citation_network を通じて取得を試みる
-    if ss_paper_id.is_none() {
-        let _ = fetch_citation_network(app.clone(), paper_id.clone()).await?;
-        // 再取得
-        if let Ok(Some(row2)) = sqlx::query("SELECT ss_paper_id FROM papers WHERE id = ?")
-            .bind(&paper_id)
-            .fetch_optional(pool.as_ref())
-            .await
-        {
-            ss_paper_id = col_opt_str(&row2, "ss_paper_id");
-        }
-    }
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| format!("HTTP クライアントの初期化に失敗: {}", e))?;
+
+    let ss_paper_id = resolve_semantic_scholar_paper_id(
+        &client,
+        pool.as_ref(),
+        &paper_id,
+        &title,
+        stored_ss_paper_id.as_deref(),
+        doi.as_deref(),
+        url.as_deref(),
+    )
+    .await?;
 
     let ss_id = match ss_paper_id {
         Some(id) => id,
@@ -337,10 +522,9 @@ pub async fn fetch_recommendations(
     // レコメンデーション API を呼び出す
     let rec_url = format!(
         "https://api.semanticscholar.org/recommendations/v1/papers/forpaper/{}",
-        urlencoding::encode(&ss_id)
+        encode_semantic_scholar_identifier(&ss_id)
     );
 
-    let client = reqwest::Client::new();
     let response = client
         .get(&rec_url)
         .query(&[("fields", SS_RECOMMENDATION_FIELDS), ("limit", "10")])
@@ -350,6 +534,9 @@ pub async fn fetch_recommendations(
         .map_err(|e| format!("レコメンデーション API への接続に失敗: {}", e))?;
 
     let status = response.status();
+    if status.as_u16() == 404 {
+        return Ok(vec![]);
+    }
     if !status.is_success() {
         let body = response.text().await.unwrap_or_default();
         let excerpt: String = body.chars().take(240).collect();
