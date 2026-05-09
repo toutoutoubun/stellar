@@ -80,7 +80,11 @@ fn parse_ss_paper_to_entry(paper: &serde_json::Value) -> CitationEntry {
         .and_then(|a| a.as_array())
         .map(|arr| {
             arr.iter()
-                .filter_map(|a| a.get("name").and_then(|n| n.as_str()).map(|s| s.to_string()))
+                .filter_map(|a| {
+                    a.get("name")
+                        .and_then(|n| n.as_str())
+                        .map(|s| s.to_string())
+                })
                 .collect()
         })
         .unwrap_or_default();
@@ -148,7 +152,10 @@ async fn semantic_scholar_json(
     if !status.is_success() {
         let body = response.text().await.unwrap_or_default();
         let excerpt: String = body.chars().take(240).collect();
-        return Err(format!("Semantic Scholar API エラー: {} {}", status, excerpt));
+        return Err(format!(
+            "Semantic Scholar API エラー: {} {}",
+            status, excerpt
+        ));
     }
 
     response
@@ -310,11 +317,10 @@ pub async fn fetch_recommendations(
     if ss_paper_id.is_none() {
         let _ = fetch_citation_network(app.clone(), paper_id.clone()).await?;
         // 再取得
-        if let Ok(Some(row2)) =
-            sqlx::query("SELECT ss_paper_id FROM papers WHERE id = ?")
-                .bind(&paper_id)
-                .fetch_optional(pool.as_ref())
-                .await
+        if let Ok(Some(row2)) = sqlx::query("SELECT ss_paper_id FROM papers WHERE id = ?")
+            .bind(&paper_id)
+            .fetch_optional(pool.as_ref())
+            .await
         {
             ss_paper_id = col_opt_str(&row2, "ss_paper_id");
         }
@@ -337,10 +343,7 @@ pub async fn fetch_recommendations(
     let client = reqwest::Client::new();
     let response = client
         .get(&rec_url)
-        .query(&[
-            ("fields", SS_RECOMMENDATION_FIELDS),
-            ("limit", "10"),
-        ])
+        .query(&[("fields", SS_RECOMMENDATION_FIELDS), ("limit", "10")])
         .header("User-Agent", SS_USER_AGENT)
         .send()
         .await
@@ -350,7 +353,10 @@ pub async fn fetch_recommendations(
     if !status.is_success() {
         let body = response.text().await.unwrap_or_default();
         let excerpt: String = body.chars().take(240).collect();
-        return Err(format!("レコメンデーション API エラー: {} {}", status, excerpt));
+        return Err(format!(
+            "レコメンデーション API エラー: {} {}",
+            status, excerpt
+        ));
     }
 
     let body: serde_json::Value = response
@@ -386,7 +392,11 @@ pub async fn fetch_recommendations(
             .and_then(|a| a.as_array())
             .map(|arr| {
                 arr.iter()
-                    .filter_map(|a| a.get("name").and_then(|n| n.as_str()).map(|s| s.to_string()))
+                    .filter_map(|a| {
+                        a.get("name")
+                            .and_then(|n| n.as_str())
+                            .map(|s| s.to_string())
+                    })
                     .collect()
             })
             .unwrap_or_default();
@@ -584,10 +594,11 @@ pub async fn get_citation_graph_data(app: AppHandle) -> Result<serde_json::Value
     let mut seen_nodes = std::collections::HashSet::new();
 
     // ライブラリ内の ss_paper_id → paper_id マッピング
-    let all_papers_rows = sqlx::query("SELECT id, ss_paper_id FROM papers WHERE ss_paper_id IS NOT NULL")
-        .fetch_all(pool.as_ref())
-        .await
-        .unwrap_or_default();
+    let all_papers_rows =
+        sqlx::query("SELECT id, ss_paper_id FROM papers WHERE ss_paper_id IS NOT NULL")
+            .fetch_all(pool.as_ref())
+            .await
+            .unwrap_or_default();
     let ss_to_local: std::collections::HashMap<String, String> = all_papers_rows
         .iter()
         .filter_map(|r| {
@@ -613,8 +624,7 @@ pub async fn get_citation_graph_data(app: AppHandle) -> Result<serde_json::Value
         }
 
         // references を展開
-        let references: Vec<CitationEntry> =
-            serde_json::from_str(&refs_json).unwrap_or_default();
+        let references: Vec<CitationEntry> = serde_json::from_str(&refs_json).unwrap_or_default();
 
         for entry in &references {
             let ref_node_id = if let Some(ref ss_id) = entry.ss_paper_id {
@@ -675,15 +685,14 @@ fn generate_cite_key(authors: &[String], year: Option<i32>) -> String {
             if a.contains(',') {
                 a.split(',').next().unwrap_or("Unknown").trim().to_string()
             } else {
-                a.split_whitespace()
-                    .last()
-                    .unwrap_or("Unknown")
-                    .to_string()
+                a.split_whitespace().last().unwrap_or("Unknown").to_string()
             }
         })
         .unwrap_or_else(|| "Unknown".to_string());
 
-    let year_str = year.map(|y| y.to_string()).unwrap_or_else(|| "XXXX".to_string());
+    let year_str = year
+        .map(|y| y.to_string())
+        .unwrap_or_else(|| "XXXX".to_string());
 
     // ASCII 英数字のみにサニタイズ
     let sanitized: String = first_author

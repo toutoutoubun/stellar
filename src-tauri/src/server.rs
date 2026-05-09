@@ -88,12 +88,17 @@ async fn handle_connection(
     let first_line = request.lines().next().unwrap_or("");
     let parts: Vec<&str> = first_line.split_whitespace().collect();
     if parts.len() < 2 {
-        send_response(&mut stream, 400, &ApiResponse {
-            ok: false,
-            paper_id: None,
-            version: None,
-            error: Some("Bad Request".to_string()),
-        }).await?;
+        send_response(
+            &mut stream,
+            400,
+            &ApiResponse {
+                ok: false,
+                paper_id: None,
+                version: None,
+                error: Some("Bad Request".to_string()),
+            },
+        )
+        .await?;
         return Ok(());
     }
 
@@ -102,44 +107,62 @@ async fn handle_connection(
 
     match (method, path) {
         ("GET", "/api/status") => {
-            send_response(&mut stream, 200, &ApiResponse {
-                ok: true,
-                paper_id: None,
-                version: Some(SERVER_VERSION.to_string()),
-                error: None,
-            }).await?;
+            send_response(
+                &mut stream,
+                200,
+                &ApiResponse {
+                    ok: true,
+                    paper_id: None,
+                    version: Some(SERVER_VERSION.to_string()),
+                    error: None,
+                },
+            )
+            .await?;
         }
         ("POST", "/api/papers") => {
             // リクエストボディを抽出
             let body = extract_body(&request);
             match serde_json::from_str::<CreatePaperRequest>(&body) {
-                Ok(dto) => {
-                    match handle_create_paper(app, dto).await {
-                        Ok(paper_id) => {
-                            send_response(&mut stream, 200, &ApiResponse {
+                Ok(dto) => match handle_create_paper(app, dto).await {
+                    Ok(paper_id) => {
+                        send_response(
+                            &mut stream,
+                            200,
+                            &ApiResponse {
                                 ok: true,
                                 paper_id: Some(paper_id),
                                 version: None,
                                 error: None,
-                            }).await?;
-                        }
-                        Err(e) => {
-                            send_response(&mut stream, 500, &ApiResponse {
+                            },
+                        )
+                        .await?;
+                    }
+                    Err(e) => {
+                        send_response(
+                            &mut stream,
+                            500,
+                            &ApiResponse {
                                 ok: false,
                                 paper_id: None,
                                 version: None,
                                 error: Some(e),
-                            }).await?;
-                        }
+                            },
+                        )
+                        .await?;
                     }
-                }
+                },
                 Err(e) => {
-                    send_response(&mut stream, 400, &ApiResponse {
-                        ok: false,
-                        paper_id: None,
-                        version: None,
-                        error: Some(format!("リクエストのパースに失敗: {}", e)),
-                    }).await?;
+                    send_response(
+                        &mut stream,
+                        400,
+                        &ApiResponse {
+                            ok: false,
+                            paper_id: None,
+                            version: None,
+                            error: Some(format!("リクエストのパースに失敗: {}", e)),
+                        },
+                    )
+                    .await?;
                 }
             }
         }
@@ -148,12 +171,17 @@ async fn handle_connection(
             send_cors_preflight(&mut stream).await?;
         }
         _ => {
-            send_response(&mut stream, 404, &ApiResponse {
-                ok: false,
-                paper_id: None,
-                version: None,
-                error: Some("Not Found".to_string()),
-            }).await?;
+            send_response(
+                &mut stream,
+                404,
+                &ApiResponse {
+                    ok: false,
+                    paper_id: None,
+                    version: None,
+                    error: Some("Not Found".to_string()),
+                },
+            )
+            .await?;
         }
     }
 
@@ -173,10 +201,7 @@ fn extract_body(request: &str) -> String {
 }
 
 /// 論文を作成する（DB に挿入、オプションで PDF をダウンロード）
-async fn handle_create_paper(
-    app: AppHandle,
-    dto: CreatePaperRequest,
-) -> Result<String, String> {
+async fn handle_create_paper(app: AppHandle, dto: CreatePaperRequest) -> Result<String, String> {
     let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
@@ -221,11 +246,7 @@ async fn handle_create_paper(
 }
 
 /// PDF をダウンロードしてアプリデータディレクトリに保存する
-async fn download_pdf(
-    app: &AppHandle,
-    url: &str,
-    paper_id: &str,
-) -> Result<String, String> {
+async fn download_pdf(app: &AppHandle, url: &str, paper_id: &str) -> Result<String, String> {
     let client = reqwest::Client::new();
     let response = client
         .get(url)
@@ -235,7 +256,10 @@ async fn download_pdf(
         .map_err(|e| format!("PDF ダウンロードリクエストに失敗: {}", e))?;
 
     if !response.status().is_success() {
-        return Err(format!("PDF ダウンロードに失敗: HTTP {}", response.status()));
+        return Err(format!(
+            "PDF ダウンロードに失敗: HTTP {}",
+            response.status()
+        ));
     }
 
     let bytes = response
@@ -284,7 +308,10 @@ async fn send_response(
          Connection: close\r\n\
          \r\n\
          {}",
-        status, status_text, body_json.len(), body_json
+        status,
+        status_text,
+        body_json.len(),
+        body_json
     );
 
     stream.write_all(response.as_bytes()).await?;

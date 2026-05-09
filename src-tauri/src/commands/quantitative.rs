@@ -15,10 +15,7 @@ use tauri::AppHandle;
 // ════════════════════════════════════════════════════════════════
 
 #[tauri::command]
-pub async fn create_dataset(
-    app: AppHandle,
-    input: CreateDatasetInput,
-) -> Result<Dataset, String> {
+pub async fn create_dataset(app: AppHandle, input: CreateDatasetInput) -> Result<Dataset, String> {
     let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
@@ -90,16 +87,14 @@ pub async fn update_dataset(
     let pool = get_pool(&app)?;
     let now = chrono::Utc::now().to_rfc3339();
 
-    sqlx::query(
-        "UPDATE datasets SET name = ?, description = ?, updated_at = ? WHERE id = ?",
-    )
-    .bind(&name)
-    .bind(&description)
-    .bind(&now)
-    .bind(&id)
-    .execute(pool.as_ref())
-    .await
-    .map_err(|e| format!("データセット更新に失敗: {}", e))?;
+    sqlx::query("UPDATE datasets SET name = ?, description = ?, updated_at = ? WHERE id = ?")
+        .bind(&name)
+        .bind(&description)
+        .bind(&now)
+        .bind(&id)
+        .execute(pool.as_ref())
+        .await
+        .map_err(|e| format!("データセット更新に失敗: {}", e))?;
 
     get_dataset(app, id).await
 }
@@ -162,10 +157,7 @@ pub async fn create_variable(
 }
 
 #[tauri::command]
-pub async fn get_variables(
-    app: AppHandle,
-    dataset_id: String,
-) -> Result<Vec<Variable>, String> {
+pub async fn get_variables(app: AppHandle, dataset_id: String) -> Result<Vec<Variable>, String> {
     let pool = get_pool(&app)?;
 
     sqlx::query_as::<_, Variable>(
@@ -350,13 +342,15 @@ pub async fn insert_data_rows(
     let pool = get_pool(&app)?;
 
     // 現在の最大 row_index を取得
-    let max_row: i64 = sqlx::query("SELECT COALESCE(MAX(row_index), -1) as max_idx FROM data_rows WHERE dataset_id = ?")
-        .bind(&dataset_id)
-        .fetch_one(pool.as_ref())
-        .await
-        .map_err(|e| format!("最大行インデックス取得に失敗: {}", e))?
-        .try_get::<i64, _>("max_idx")
-        .unwrap_or(-1);
+    let max_row: i64 = sqlx::query(
+        "SELECT COALESCE(MAX(row_index), -1) as max_idx FROM data_rows WHERE dataset_id = ?",
+    )
+    .bind(&dataset_id)
+    .fetch_one(pool.as_ref())
+    .await
+    .map_err(|e| format!("最大行インデックス取得に失敗: {}", e))?
+    .try_get::<i64, _>("max_idx")
+    .unwrap_or(-1);
 
     let mut inserted = 0usize;
     for (i, row_value) in rows.iter().enumerate() {
@@ -425,26 +419,23 @@ pub async fn delete_data_rows(app: AppHandle, dataset_id: String) -> Result<bool
 /// CSV テキストをパースしてデータセットにインポートする
 /// UTF-8 / Shift-JIS のエンコーディング自動検出に対応
 #[tauri::command]
-pub async fn import_csv(
-    app: AppHandle,
-    input: ImportCsvInput,
-) -> Result<ImportCsvResult, String> {
+pub async fn import_csv(app: AppHandle, input: ImportCsvInput) -> Result<ImportCsvResult, String> {
     let pool = get_pool(&app)?;
     let mut warnings: Vec<String> = Vec::new();
 
     // エンコーディング検出 — UTF-8 で失敗したら Shift-JIS を試みる
-    let csv_text = if input.csv_text.is_ascii() || std::str::from_utf8(input.csv_text.as_bytes()).is_ok() {
-        // 既に有効な UTF-8
-        input.csv_text.clone()
-    } else {
-        // Shift-JIS (Windows-31J) としてデコードを試みる
-        let (decoded, _, had_errors) =
-            encoding_rs::SHIFT_JIS.decode(input.csv_text.as_bytes());
-        if had_errors {
-            warnings.push("エンコーディング変換中に一部文字が置換されました".to_string());
-        }
-        decoded.into_owned()
-    };
+    let csv_text =
+        if input.csv_text.is_ascii() || std::str::from_utf8(input.csv_text.as_bytes()).is_ok() {
+            // 既に有効な UTF-8
+            input.csv_text.clone()
+        } else {
+            // Shift-JIS (Windows-31J) としてデコードを試みる
+            let (decoded, _, had_errors) = encoding_rs::SHIFT_JIS.decode(input.csv_text.as_bytes());
+            if had_errors {
+                warnings.push("エンコーディング変換中に一部文字が置換されました".to_string());
+            }
+            decoded.into_owned()
+        };
 
     // デリミタ文字を取得
     let delimiter = if input.delimiter.is_empty() {
@@ -480,7 +471,11 @@ pub async fn import_csv(
         match result {
             Ok(record) => records.push(record),
             Err(e) => {
-                warnings.push(format!("行 {} の読み取りをスキップ: {}", records.len() + 1, e));
+                warnings.push(format!(
+                    "行 {} の読み取りをスキップ: {}",
+                    records.len() + 1,
+                    e
+                ));
             }
         }
     }
@@ -571,11 +566,13 @@ pub async fn import_csv(
     }
 
     // source_type を csv に更新
-    sqlx::query("UPDATE datasets SET source_type = 'csv', updated_at = datetime('now') WHERE id = ?")
-        .bind(&input.dataset_id)
-        .execute(pool.as_ref())
-        .await
-        .map_err(|e| format!("データセット更新に失敗: {}", e))?;
+    sqlx::query(
+        "UPDATE datasets SET source_type = 'csv', updated_at = datetime('now') WHERE id = ?",
+    )
+    .bind(&input.dataset_id)
+    .execute(pool.as_ref())
+    .await
+    .map_err(|e| format!("データセット更新に失敗: {}", e))?;
 
     Ok(ImportCsvResult {
         dataset_id: input.dataset_id,
@@ -590,10 +587,7 @@ pub async fn import_csv(
 // ════════════════════════════════════════════════════════════════
 
 #[tauri::command]
-pub async fn save_analysis(
-    app: AppHandle,
-    input: SaveAnalysisInput,
-) -> Result<Analysis, String> {
+pub async fn save_analysis(app: AppHandle, input: SaveAnalysisInput) -> Result<Analysis, String> {
     let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
@@ -627,10 +621,7 @@ pub async fn save_analysis(
 }
 
 #[tauri::command]
-pub async fn get_analyses(
-    app: AppHandle,
-    dataset_id: String,
-) -> Result<Vec<Analysis>, String> {
+pub async fn get_analyses(app: AppHandle, dataset_id: String) -> Result<Vec<Analysis>, String> {
     let pool = get_pool(&app)?;
 
     sqlx::query_as::<_, Analysis>(
@@ -683,14 +674,12 @@ pub async fn save_token_frequencies(
     let pool = get_pool(&app)?;
 
     // 既存のトークン頻度をクリア（同一 dataset_id + variable_id の組み合わせ）
-    sqlx::query(
-        "DELETE FROM token_frequencies WHERE dataset_id = ? AND variable_id = ?",
-    )
-    .bind(&input.dataset_id)
-    .bind(&input.variable_id)
-    .execute(pool.as_ref())
-    .await
-    .map_err(|e| format!("既存トークン頻度のクリアに失敗: {}", e))?;
+    sqlx::query("DELETE FROM token_frequencies WHERE dataset_id = ? AND variable_id = ?")
+        .bind(&input.dataset_id)
+        .bind(&input.variable_id)
+        .execute(pool.as_ref())
+        .await
+        .map_err(|e| format!("既存トークン頻度のクリアに失敗: {}", e))?;
 
     let mut inserted = 0usize;
     for item in &input.tokens {
@@ -776,11 +765,12 @@ pub async fn create_dataset_from_codes(
     .map_err(|e| format!("データセット作成に失敗: {}", e))?;
 
     // 2. プロジェクトに属するコード一覧を取得
-    let code_rows = sqlx::query("SELECT id, name FROM codes WHERE project_id = ? ORDER BY sort_order ASC")
-        .bind(&project_id)
-        .fetch_all(pool.as_ref())
-        .await
-        .map_err(|e| format!("コード取得に失敗: {}", e))?;
+    let code_rows =
+        sqlx::query("SELECT id, name FROM codes WHERE project_id = ? ORDER BY sort_order ASC")
+            .bind(&project_id)
+            .fetch_all(pool.as_ref())
+            .await
+            .map_err(|e| format!("コード取得に失敗: {}", e))?;
 
     if code_rows.is_empty() {
         return Err("プロジェクトにコードが登録されていません".to_string());
@@ -855,25 +845,23 @@ pub async fn create_dataset_from_codes(
         let text = col_str(highlight, "text");
 
         // このハイライトに割り当てられたコードID集合を取得
-        let assigned_rows = sqlx::query(
-            "SELECT code_id FROM highlight_codes WHERE highlight_id = ?",
-        )
-        .bind(&h_id)
-        .fetch_all(pool.as_ref())
-        .await
-        .map_err(|e| format!("コード割り当て取得に失敗: {}", e))?;
+        let assigned_rows =
+            sqlx::query("SELECT code_id FROM highlight_codes WHERE highlight_id = ?")
+                .bind(&h_id)
+                .fetch_all(pool.as_ref())
+                .await
+                .map_err(|e| format!("コード割り当て取得に失敗: {}", e))?;
 
-        let assigned_code_ids: HashSet<String> =
-            assigned_rows.iter().map(|r| col_str(r, "code_id")).collect();
+        let assigned_code_ids: HashSet<String> = assigned_rows
+            .iter()
+            .map(|r| col_str(r, "code_id"))
+            .collect();
 
         // values マップを構築
         let mut values_map = serde_json::Map::new();
 
         // メタ変数
-        values_map.insert(
-            variable_ids[0].clone(),
-            serde_json::Value::String(paper_id),
-        );
+        values_map.insert(variable_ids[0].clone(), serde_json::Value::String(paper_id));
         values_map.insert(
             variable_ids[1].clone(),
             serde_json::Value::String(text.len().to_string()),
@@ -1017,10 +1005,7 @@ pub async fn create_dataset_from_highlights(
             variable_ids[0].clone(),
             serde_json::Value::String(h_paper_id),
         );
-        values_map.insert(
-            variable_ids[1].clone(),
-            serde_json::Value::String(color),
-        );
+        values_map.insert(variable_ids[1].clone(), serde_json::Value::String(color));
         values_map.insert(
             variable_ids[2].clone(),
             serde_json::Value::String(page.to_string()),
