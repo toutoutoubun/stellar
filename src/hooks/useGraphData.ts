@@ -184,10 +184,18 @@ export function useGraphData(): UseGraphDataReturn {
     }
   }, []);
 
-  // 初回読み込み
+  // 初回読み込み + リンク更新時の再読み込み
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
     void fetchData();
+
+    const handleLinksChanged = () => {
+      void fetchData();
+    };
+    window.addEventListener("stellar-links-changed", handleLinksChanged);
+    return () => {
+      window.removeEventListener("stellar-links-changed", handleLinksChanged);
+    };
   }, [fetchData]);
 
   /** リンク数レコード */

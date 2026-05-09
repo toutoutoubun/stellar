@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { invoke } from "../../lib/tauriShim";
 import type { Note, BacklinkItem, OutlineHeading, NodeType } from "../../types";
 import { useNoteStore } from "../../stores/useNoteStore";
+import { useLibraryStore } from "../../stores/useLibraryStore";
 import { Badge } from "../ui/Badge";
 import { toast } from "../ui/Toast";
 import { IconItemType } from "../ui/Icons";
@@ -199,6 +200,158 @@ const BacklinksSection: React.FC<{
                 </button>
               );
             })
+          )}
+        </div>
+      )}
+    </section>
+  );
+};
+
+// ============================================================
+// 関連論文セクション
+// ============================================================
+
+const RelatedPapersSection: React.FC<{
+  note: Note;
+  onNavigate: (targetId: string, targetType: NodeType) => void;
+}> = ({ note, onNavigate }) => {
+  const t = useT();
+  const papers = useLibraryStore((s) => s.papers);
+  const [relatedPapers, setRelatedPapers] = useState<Array<{ id: string; title: string }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
+
+  const fetchRelatedPapers = useCallback(async (cancelledRef?: { current: boolean }) => {
+    setLoading(true);
+    try {
+      const items = await invoke<BacklinkItem[]>("get_backlinks", {
+        itemType: "note" as NodeType,
+        itemId: note.id,
+      });
+      const papersById = new Map<string, { id: string; title: string }>();
+      if (note.paperId) {
+        papersById.set(note.paperId, {
+          id: note.paperId,
+          title: papers.find((paper) => paper.id === note.paperId)?.title ?? t.settings.data.papers,
+        });
+      }
+      for (const link of items) {
+        const isSource = link.sourceId === note.id;
+        const peerType = isSource ? link.targetType : link.sourceType;
+        const peerId = isSource ? link.targetId : link.sourceId;
+        const peerTitle = isSource ? link.targetTitle : link.sourceTitle;
+        if (peerType === "paper" && !papersById.has(peerId)) {
+          papersById.set(peerId, {
+            id: peerId,
+            title: peerTitle || "Untitled Paper",
+          });
+        }
+      }
+      if (!cancelledRef?.current) setRelatedPapers(Array.from(papersById.values()));
+    } catch {
+      if (!cancelledRef?.current) setRelatedPapers([]);
+    } finally {
+      if (!cancelledRef?.current) setLoading(false);
+    }
+  }, [note.id, note.paperId, papers, t.settings.data.papers]);
+
+  useEffect(() => {
+    const cancelledRef = { current: false };
+    const refresh = () => {
+      void fetchRelatedPapers(cancelledRef);
+    };
+    refresh();
+    window.addEventListener("stellar-links-changed", refresh);
+    return () => {
+      cancelledRef.current = true;
+      window.removeEventListener("stellar-links-changed", refresh);
+    };
+  }, [fetchRelatedPapers]);
+
+  return (
+    <section>
+      <button
+        type="button"
+        onClick={() => setCollapsed((p) => !p)}
+        className="flex items-center gap-2 w-full text-left py-1.5"
+        style={{ color: "var(--color-text-secondary)" }}
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{
+            transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)",
+            transition: "transform 150ms ease-out",
+          }}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+        <span className="text-xs font-semibold uppercase tracking-wider">
+          関連する{t.settings.data.papers}
+        </span>
+        <span
+          className="text-xs px-1.5 py-0.5 ml-auto"
+          style={{
+            backgroundColor: "var(--color-bg-tertiary)",
+            color: "var(--color-text-tertiary)",
+            borderRadius: "999px",
+          }}
+        >
+          {relatedPapers.length}
+        </span>
+      </button>
+
+      {!collapsed && (
+        <div className="flex flex-col gap-1.5 mt-1">
+          {loading ? (
+            <div className="text-xs py-2" style={{ color: "var(--color-text-tertiary)" }}>
+              {t.layout.loading}
+            </div>
+          ) : relatedPapers.length === 0 ? (
+            <div className="text-xs py-2" style={{ color: "var(--color-text-tertiary)" }}>
+              {t.library.k_no_paper_links}
+            </div>
+          ) : (
+            relatedPapers.map((paper) => (
+              <button
+                key={paper.id}
+                type="button"
+                onClick={() => onNavigate(paper.id, "paper")}
+                className="flex items-center gap-1.5 w-full text-left p-2"
+                style={{
+                  borderRadius: "8px",
+                  border: "1px solid var(--color-border-secondary)",
+                  backgroundColor: "var(--color-bg-primary)",
+                  transition: "background-color 150ms ease-out",
+                  minWidth: 0,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "var(--color-bg-primary)";
+                }}
+              >
+                <IconItemType itemType="paper" size={12} style={{ flexShrink: 0 }} />
+                <span
+                  className="text-xs font-medium"
+                  style={{
+                    color: "var(--color-text-primary)",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {paper.title}
+                </span>
+              </button>
+            ))
           )}
         </div>
       )}
@@ -749,6 +902,17 @@ export const NoteContextPanel: React.FC<NoteContextPanelProps> = ({
       }}
     >
       <div className="flex flex-col gap-5">
+        {/* 関連論文 */}
+        <RelatedPapersSection note={note} onNavigate={onNavigate} />
+
+        {/* セパレータ */}
+        <div
+          style={{
+            height: "1px",
+            backgroundColor: "var(--color-border-secondary)",
+          }}
+        />
+
         {/* バックリンク */}
         <BacklinksSection noteId={note.id} onNavigate={onNavigate} />
 

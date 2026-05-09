@@ -16,6 +16,7 @@ import {
   useState,
   useMemo,
 } from "react";
+import { forceCollide, forceX, forceY } from "d3";
 import type { ForceGraphMethods } from "react-force-graph-2d";
 import type { GraphNodeExtended, GraphLink } from "../../types";
 import { useT, useI18nStore } from "../../stores/useI18nStore";
@@ -81,6 +82,8 @@ interface ForceGraphProps {
   height: number;
   /** zoomToFit トリガー用コールバック（ref公開） */
   onGraphReady?: (methods: ForceGraphMethods<GraphNodeExtended, GraphLink>) => void;
+  /** シミュレーション後の座標を親に通知（ミニマップ用） */
+  onNodePositionsChange?: (nodes: GraphNodeExtended[]) => void;
 }
 
 // ============================================================
@@ -129,8 +132,13 @@ interface CanvasFallbackProps {
   height: number;
   selectedNodeId: string | null;
   onNodeClick: (node: GraphNodeExtended) => void;
+  onNodeDoubleClick?: (node: GraphNodeExtended) => void;
+  onNodeHover?: (node: GraphNodeExtended | null) => void;
+  onBackgroundClick?: () => void;
+  onNodePositionsChange?: (nodes: GraphNodeExtended[]) => void;
   onRetry: () => void;
   errorMessage: string;
+  showFallbackBadge?: boolean;
 }
 
 /** 簡易 Force-Directed Layout を Canvas で描画 */
@@ -141,8 +149,13 @@ const CanvasFallbackGraph: React.FC<CanvasFallbackProps> = ({
   height,
   selectedNodeId,
   onNodeClick,
+  onNodeDoubleClick,
+  onNodeHover,
+  onBackgroundClick,
+  onNodePositionsChange,
   onRetry,
   errorMessage,
+  showFallbackBadge = true,
 }) => {
   const t = useT();
   const simpleModeLabel = t.graph.k_simple_mode;
@@ -151,6 +164,19 @@ const CanvasFallbackGraph: React.FC<CanvasFallbackProps> = ({
   const positionsRef = useRef<Map<string, { x: number; y: number; vx: number; vy: number }>>(new Map());
   const rafRef = useRef(0);
   const tickRef = useRef(0);
+  const hoveredNodeRef = useRef<string | null>(null);
+  const lastClickRef = useRef<{ nodeId: string; time: number } | null>(null);
+
+  const emitPositions = useCallback(() => {
+    if (!onNodePositionsChange) return;
+    const pos = positionsRef.current;
+    onNodePositionsChange(
+      inputNodes.map((node) => {
+        const p = pos.get(node.id);
+        return p ? { ...node, x: p.x, y: p.y } : node;
+      }),
+    );
+  }, [inputNodes, onNodePositionsChange]);
 
   // ノード位置の初期化
   useEffect(() => {
@@ -246,9 +272,11 @@ const CanvasFallbackGraph: React.FC<CanvasFallbackProps> = ({
         p.vy *= 0.9;
         p.x += p.vx;
         p.y += p.vy;
-        // 画面内に収める
-        p.x = Math.max(20, Math.min(width - 20, p.x));
-        p.y = Math.max(20, Math.min(height - 20, p.y));
+        // ラベルが端で切れないよう、少し余白を残して画面内に収める
+        const marginX = Math.min(90, Math.max(32, width * 0.08));
+        const marginY = Math.min(70, Math.max(28, height * 0.08));
+        p.x = Math.max(marginX, Math.min(width - marginX, p.x));
+        p.y = Math.max(marginY, Math.min(height - marginY, p.y));
       }
 
       tickRef.current++;
@@ -319,14 +347,15 @@ const CanvasFallbackGraph: React.FC<CanvasFallbackProps> = ({
         ctx.globalAlpha = 1;
       }
 
-      // フォールバック表示のバッジ
-      ctx.fillStyle = labelColor;
-      ctx.globalAlpha = 0.3;
-      ctx.font = '9px "Inter", sans-serif';
-      ctx.textAlign = "right";
-      ctx.textBaseline = "bottom";
-      ctx.fillText("Canvas fallback mode", width - 8, height - 8);
-      ctx.globalAlpha = 1;
+      if (showFallbackBadge) {
+        ctx.fillStyle = labelColor;
+        ctx.globalAlpha = 0.3;
+        ctx.font = '9px "Inter", sans-serif';
+        ctx.textAlign = "right";
+        ctx.textBaseline = "bottom";
+        ctx.fillText("Canvas fallback mode", width - 8, height - 8);
+        ctx.globalAlpha = 1;
+      }
     }
 
     function loop() {
@@ -334,12 +363,14 @@ const CanvasFallbackGraph: React.FC<CanvasFallbackProps> = ({
       draw();
       if (tickRef.current < 300) {
         rafRef.current = requestAnimationFrame(loop);
+      } else {
+        emitPositions();
       }
     }
 
     rafRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [inputNodes, inputLinks, width, height, selectedNodeId]);
+  }, [emitPositions, inputNodes, inputLinks, width, height, selectedNodeId, showFallbackBadge]);
 
   // ノードクリック検出
   const handleCanvasClick = useCallback(
@@ -357,12 +388,50 @@ const CanvasFallbackGraph: React.FC<CanvasFallbackProps> = ({
         const dx = mx - p.x;
         const dy = my - p.y;
         if (dx * dx + dy * dy <= size * size) {
-          onNodeClick(node);
+          const now = Date.now();
+          const last = lastClickRef.current;
+          if (last && last.nodeId === node.id && now - last.time < 400) {
+            lastClickRef.current = null;
+            onNodeDoubleClick?.(node);
+          } else {
+            lastClickRef.current = { nodeId: node.id, time: now };
+            onNodeClick(node);
+          }
           return;
         }
       }
+      onBackgroundClick?.();
     },
-    [inputNodes, onNodeClick],
+    [inputNodes, onBackgroundClick, onNodeClick, onNodeDoubleClick],
+  );
+
+  const handleCanvasMove = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const pos = positionsRef.current;
+      let nextHover: GraphNodeExtended | null = null;
+
+      for (const node of inputNodes) {
+        const p = pos.get(node.id);
+        if (!p) continue;
+        const size = (node.type === "note" ? 6 : 8) + Math.sqrt(node.linkCount ?? 0) * 2 + 6;
+        const dx = mx - p.x;
+        const dy = my - p.y;
+        if (dx * dx + dy * dy <= size * size) {
+          nextHover = node;
+          break;
+        }
+      }
+
+      if (hoveredNodeRef.current !== (nextHover?.id ?? null)) {
+        hoveredNodeRef.current = nextHover?.id ?? null;
+        onNodeHover?.(nextHover);
+      }
+    },
+    [inputNodes, onNodeHover],
   );
 
   return (
@@ -372,44 +441,51 @@ const CanvasFallbackGraph: React.FC<CanvasFallbackProps> = ({
         width={width}
         height={height}
         onClick={handleCanvasClick}
+        onMouseMove={handleCanvasMove}
+        onMouseLeave={() => {
+          hoveredNodeRef.current = null;
+          onNodeHover?.(null);
+        }}
         style={{ cursor: "pointer" }}
       />
-      <div
-        style={{
-          position: "absolute",
-          top: 8,
-          right: 8,
-          display: "flex",
-          gap: 6,
-          alignItems: "center",
-        }}
-      >
-        <span
+      {showFallbackBadge && (
+        <div
           style={{
-            fontSize: 9,
-            color: "var(--color-text-tertiary)",
-            opacity: 0.6,
-          }}
-          title={errorMessage}
-        >
-          {simpleModeLabel}
-        </span>
-        <button
-          type="button"
-          onClick={onRetry}
-          style={{
-            fontSize: 10,
-            color: "var(--color-accent-primary)",
-            background: "transparent",
-            border: "1px solid var(--color-accent-primary)",
-            borderRadius: 6,
-            padding: "2px 8px",
-            cursor: "pointer",
+            position: "absolute",
+            top: 8,
+            right: 8,
+            display: "flex",
+            gap: 6,
+            alignItems: "center",
           }}
         >
-          {retryLabel}
-        </button>
-      </div>
+          <span
+            style={{
+              fontSize: 9,
+              color: "var(--color-text-tertiary)",
+              opacity: 0.6,
+            }}
+            title={errorMessage}
+          >
+            {simpleModeLabel}
+          </span>
+          <button
+            type="button"
+            onClick={onRetry}
+            style={{
+              fontSize: 10,
+              color: "var(--color-accent-primary)",
+              background: "transparent",
+              border: "1px solid var(--color-accent-primary)",
+              borderRadius: 6,
+              padding: "2px 8px",
+              cursor: "pointer",
+            }}
+          >
+            {retryLabel}
+          </button>
+        </div>
+      )}
     </div>
   );
 };
@@ -429,6 +505,7 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
   width,
   height,
   onGraphReady,
+  onNodePositionsChange,
 }) => {
   const t = useT();
   const graphRef = useRef<ForceGraphMethods<GraphNodeExtended, GraphLink>>(undefined);
@@ -578,6 +655,12 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
     return data;
   }, [nodes, links]);
 
+  const emitNodePositions = useCallback(() => {
+    if (!onNodePositionsChange) return;
+    const currentNodes = prevGraphDataRef.current?.nodes ?? graphData.nodes;
+    onNodePositionsChange(currentNodes);
+  }, [graphData.nodes, onNodePositionsChange]);
+
   /** シミュレーション安定後に zoomToFit する回数制限付きフラグ */
   const hasZoomedRef = useRef(false);
   /** ノードID構成の前回値（Force再設定をトリガーする判定用） */
@@ -605,21 +688,28 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
     prevForceNodeKeyRef.current = nodeKey;
 
     try {
-      // 斥力: ノード間を十分に離す（デフォルト -30 では密集してしまう）
+      // 斥力: ノード間を十分に離す。ただし孤立ノードが画面外へ散りすぎないよう、
+      // x/y の弱い中心力と衝突判定で読みやすい範囲に保つ。
       // d3-force の forceManyBody().strength() は fluent API
       const charge = fg.d3Force("charge");
       if (charge && typeof charge.strength === "function") {
-        charge.strength(-300);
+        charge.strength(nodes.length > 80 ? -140 : -240);
       }
 
       // リンク距離: ノード間の理想距離
       const link = fg.d3Force("link");
       if (link && typeof link.distance === "function") {
-        link.distance(100);
+        link.distance(nodes.length > 80 ? 72 : 110);
       }
 
-      // center force はデフォルトの (0,0) を使用。
-      // forceCenter は x(), y() のみ持ち、strength() は持たない。
+      fg.d3Force(
+        "collide",
+        forceCollide<GraphNodeExtended>()
+          .radius((node) => (node.type === "note" ? 16 : 20) + Math.sqrt(node.linkCount ?? 0) * 3)
+          .strength(0.8),
+      );
+      fg.d3Force("x", forceX<GraphNodeExtended>(0).strength(0.045));
+      fg.d3Force("y", forceY<GraphNodeExtended>(0).strength(0.045));
 
       // 【核心】force 設定後にシミュレーションを再加熱して、
       // 新しい force パラメータでノードを再配置させる
@@ -635,15 +725,15 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
       const timers = [
         // 早期: シミュレーションがある程度進んだ段階で初回フィット
         setTimeout(() => {
-          try { fg.zoomToFit(400, 80); } catch { /* ignore */ }
+          try { fg.zoomToFit(400, 60); } catch { /* ignore */ }
         }, 800),
         // 中期: レイアウトがほぼ安定した段階で再フィット
         setTimeout(() => {
-          try { fg.zoomToFit(400, 80); } catch { /* ignore */ }
+          try { fg.zoomToFit(400, 60); } catch { /* ignore */ }
         }, 2000),
         // 後期: 完全に安定した後の最終フィット
         setTimeout(() => {
-          try { fg.zoomToFit(400, 80); } catch { /* ignore */ }
+          try { fg.zoomToFit(400, 60); } catch { /* ignore */ }
         }, 4000),
       ];
 
@@ -708,15 +798,24 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
       // エンジン停止 = シミュレーション完全収束後。
       // この時点でノードは最終位置にあるため、最も信頼性の高い zoomToFit。
       try {
-        graphRef.current?.zoomToFit(600, 80);
+        graphRef.current?.zoomToFit(600, 60);
       } catch { /* ignore */ }
     }
+    emitNodePositions();
     // エンジン停止時に ref が確実にセットされているので、ここでも通知
     if (!graphReadyNotifiedRef.current && graphRef.current && onGraphReady) {
       onGraphReady(graphRef.current);
       graphReadyNotifiedRef.current = true;
     }
-  }, [onGraphReady]);
+  }, [emitNodePositions, onGraphReady]);
+
+  const engineTickCountRef = useRef(0);
+  const handleEngineTick = useCallback(() => {
+    engineTickCountRef.current += 1;
+    if (engineTickCountRef.current % 12 === 0) {
+      emitNodePositions();
+    }
+  }, [emitNodePositions]);
 
   /** カスタムノード描画 */
   const nodeCanvasObject = useCallback(
@@ -741,7 +840,7 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
 
       // サイズ計算
       const baseSize = node.type === "note" ? 6 : 8;
-      const size = baseSize + Math.sqrt(linkCount) * 2;
+      const size = Math.max(baseSize + Math.sqrt(linkCount) * 2, 5 / Math.max(globalScale, 0.1));
       const renderSize = isHovered ? size * 1.3 : size;
 
       // 透過度
@@ -963,6 +1062,29 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
 
   // ── ロード中 / エラー時のフォールバック ──
 
+  // Tauri/WebKit で react-force-graph-2d の内部 canvas が生成されない環境があるため、
+  // 安定して描画できる Canvas レンダラを通常経路として使う。
+  const preferStableCanvasRenderer = nodes.length >= 0;
+  if (preferStableCanvasRenderer) {
+    return (
+      <CanvasFallbackGraph
+        nodes={nodes}
+        links={links}
+        width={width}
+        height={height}
+        selectedNodeId={selectedNodeId}
+        onNodeClick={onNodeClick}
+        onNodeDoubleClick={onNodeDoubleClick}
+        onNodeHover={onNodeHover}
+        onBackgroundClick={onBackgroundClick}
+        onNodePositionsChange={onNodePositionsChange}
+        onRetry={() => setRetryCount((c) => c + 1)}
+        errorMessage=""
+        showFallbackBadge={false}
+      />
+    );
+  }
+
   if (loadErr) {
     return (
       <CanvasFallbackGraph
@@ -973,7 +1095,7 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
         selectedNodeId={selectedNodeId}
         onNodeClick={onNodeClick}
         onRetry={() => setRetryCount((c) => c + 1)}
-        errorMessage={loadErr.message}
+        errorMessage={loadErr?.message ?? ""}
       />
     );
   }
@@ -1046,8 +1168,9 @@ export const ForceGraph: React.FC<ForceGraphProps> = ({
         // cooldownTicks: シミュレーションの収束判定ティック数
         cooldownTicks={300}
         warmupTicks={0}
+        onEngineTick={handleEngineTick}
         onEngineStop={handleEngineStop}
-        minZoom={0.1}
+        minZoom={0.25}
         maxZoom={12}
       />
   );

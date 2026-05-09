@@ -59,10 +59,15 @@ export const GraphMiniMap: React.FC<GraphMiniMapProps> = ({
     for (const node of nodes) {
       const x = node.x ?? 0;
       const y = node.y ?? 0;
+      if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
       if (x < minX) minX = x;
       if (x > maxX) maxX = x;
       if (y < minY) minY = y;
       if (y > maxY) maxY = y;
+    }
+
+    if (!Number.isFinite(minX) || !Number.isFinite(maxX) || !Number.isFinite(minY) || !Number.isFinite(maxY)) {
+      return { minX: -50, maxX: 50, minY: -50, maxY: 50 };
     }
 
     // パディング追加
@@ -128,11 +133,11 @@ export const GraphMiniMap: React.FC<GraphMiniMapProps> = ({
           ? nodes.find((n) => n.id === link.target)
           : (link.target as unknown as GraphNodeExtended);
 
-      if (!src?.x || !tgt?.x) continue;
+      if (src?.x == null || src.y == null || tgt?.x == null || tgt.y == null) continue;
 
       ctx.beginPath();
-      ctx.moveTo(toMiniX(src.x), toMiniY(src.y ?? 0));
-      ctx.lineTo(toMiniX(tgt.x), toMiniY(tgt.y ?? 0));
+      ctx.moveTo(toMiniX(src.x), toMiniY(src.y));
+      ctx.lineTo(toMiniX(tgt.x), toMiniY(tgt.y));
       ctx.stroke();
     }
 
