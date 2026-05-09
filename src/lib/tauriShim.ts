@@ -7,7 +7,25 @@ import { useI18nStore } from "../stores/useI18nStore";
 
 // ── Tauri 環境検出 ─────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const isTauri: boolean = !!(window as any).__TAURI_INTERNALS__;
+function detectTauriRuntime(): boolean {
+  if (typeof window === "undefined") return false;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const w = window as any;
+  return Boolean(
+    w.__TAURI_INTERNALS__ ||
+    w.__TAURI__ ||
+    typeof w.__TAURI_IPC__ === "function" ||
+    window.location.protocol === "tauri:" ||
+    navigator.userAgent.includes("Tauri"),
+  );
+}
+
+export let isTauri: boolean = detectTauriRuntime();
+
+function hasTauriRuntime(): boolean {
+  isTauri = detectTauriRuntime();
+  return isTauri;
+}
 
 // ── インメモリ CRUD ストア（非 Tauri 環境用）─────────
 // ブラウザプレビューでも create / get / update / delete が動作するように
@@ -575,6 +593,68 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     return { handled: true, result: bib };
   }
 
+  // ── Stellar Package（ブラウザプレビュー用）──
+  if (cmd === "export_stellar_package") {
+    const paperIds = ((args?.paperIds ?? []) as string[]).filter(Boolean);
+    const noteIds = ((args?.noteIds ?? []) as string[]).filter(Boolean);
+    const includePdfs = Boolean(args?.includePdfs);
+    const papers = mockStore.papers.filter((p: any) => paperIds.includes(p.id));
+    const notes = mockStore.notes.filter((n: any) => noteIds.includes(n.id));
+    const linkedIds = new Set([...paperIds, ...noteIds]);
+    const highlights = mockStore.highlights.filter((h: any) => linkedIds.has(h.paperId));
+    const links = mockStore.links.filter((l: any) => linkedIds.has(l.sourceId) || linkedIds.has(l.targetId));
+    const sizeBytes = Math.max(512, JSON.stringify({ papers, notes, highlights, links }).length);
+    const manifest = {
+      version: "1.0.0",
+      createdAt: now(),
+      paperCount: papers.length,
+      noteCount: notes.length,
+      highlightCount: highlights.length,
+      linkCount: links.length,
+      hasPdfs: includePdfs,
+      fileSizeBytes: sizeBytes,
+    };
+    return {
+      handled: true,
+      result: {
+        path: (args?.outputPath ?? "/mock/export/package.stellar") as string,
+        sizeBytes,
+        manifest,
+      },
+    };
+  }
+
+  if (cmd === "inspect_stellar_package") {
+    const sizeBytes = Math.max(512, JSON.stringify(mockStore).length);
+    return {
+      handled: true,
+      result: {
+        version: "1.0.0",
+        createdAt: now(),
+        paperCount: mockStore.papers.length,
+        noteCount: mockStore.notes.length,
+        highlightCount: mockStore.highlights.length,
+        linkCount: mockStore.links.length,
+        hasPdfs: mockStore.papers.some((p: any) => Boolean(p.pdfPath)),
+        fileSizeBytes: sizeBytes,
+      },
+    };
+  }
+
+  if (cmd === "import_stellar_package") {
+    return {
+      handled: true,
+      result: {
+        papersImported: 0,
+        notesImported: 0,
+        highlightsImported: 0,
+        linksImported: 0,
+        pdfsExtracted: 0,
+        conflicts: [],
+      },
+    };
+  }
+
   // ── Citation Network（動的生成）──
   if (cmd === "fetch_citation_network") {
     const paperId = (args?.paperId ?? "") as string;
@@ -889,7 +969,7 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
 
 // ── 初期シードデータ（非 Tauri 環境でのブラウザプレビュー用）────
 // グラフビュー等が空にならないように最小限のデモデータを投入
-if (!isTauri) {
+if (!hasTauriRuntime()) {
   const seedNotes = [
     { id: "seed-note-001", title: "研究ノート: 社会関係資本の理論的枠組み", content: "Putnam (2000) の議論を整理する…", tags: ["theory", "social-capital"], isDraft: 0, draftMeta: "{}", wordCount: 320, readingTimeMin: 2, createdAt: "2025-04-01T10:00:00Z", updatedAt: "2025-04-15T08:30:00Z" },
     { id: "seed-note-002", title: "フィールドワーク記録 (2025-03)", content: "インタビュー結果のまとめ…", tags: ["fieldwork", "interview"], isDraft: 0, draftMeta: "{}", wordCount: 580, readingTimeMin: 3, createdAt: "2025-03-20T14:00:00Z", updatedAt: "2025-04-10T11:00:00Z" },
@@ -1041,7 +1121,8 @@ const MOCK_RESPONSES: Record<string, any> = {
 
   // Export / Import
   export_static_site: "/mock/export/static-site",
-  export_stellar_package: "/mock/export/package.stellar",
+  export_stellar_package: { path: "/mock/export/package.stellar", sizeBytes: 0 },
+  inspect_stellar_package: { version: "1.0.0", createdAt: new Date().toISOString(), paperCount: 0, noteCount: 0, highlightCount: 0, linkCount: 0, hasPdfs: false, fileSizeBytes: 0 },
   import_stellar_package: { papersImported: 0, notesImported: 0, highlightsImported: 0, linksImported: 0, pdfsExtracted: 0, conflicts: [] },
 
   // Citation Network
@@ -1064,7 +1145,7 @@ export async function invoke<T>(
   cmd: string,
   args?: Record<string, unknown>,
 ): Promise<T> {
-  if (!isTauri) {
+  if (!hasTauriRuntime()) {
     // 1) 動的ハンドラで処理を試みる（インメモリ CRUD）
     const dynamic = handleDynamic(cmd, args);
     if (dynamic.handled) {
@@ -1117,7 +1198,7 @@ export async function listen<T>(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   handler: (event: any) => void,
 ): Promise<UnlistenFn> {
-  if (!isTauri) {
+  if (!hasTauriRuntime()) {
     return () => {};
   }
   const { listen: tauriListen } = await import("@tauri-apps/api/event");
@@ -1129,7 +1210,7 @@ export async function listen<T>(
  * 安全な convertFileSrc ラッパー。非 Tauri 環境ではパスをそのまま返す。
  */
 export function convertFileSrc(filePath: string, protocol?: string): string {
-  if (!isTauri) {
+  if (!hasTauriRuntime()) {
     return filePath;
   }
   // Tauri の convertFileSrc は同期関数だが、動的importは非同期なので
@@ -1164,7 +1245,7 @@ const noopWindow: WindowHandle = {
  * 安全な getCurrentWindow。非 Tauri 環境では noop を返す。
  */
 export async function getCurrentWindow(): Promise<WindowHandle> {
-  if (!isTauri) return noopWindow;
+  if (!hasTauriRuntime()) return noopWindow;
   const { getCurrentWindow: tauriGetCurrentWindow } = await import("@tauri-apps/api/window");
   return tauriGetCurrentWindow() as unknown as WindowHandle;
 }
@@ -1195,7 +1276,7 @@ interface OpenFileDialogOptions {
 export async function openFileDialog(
   options?: OpenFileDialogOptions,
 ): Promise<string | string[] | null> {
-  if (isTauri) {
+  if (hasTauriRuntime()) {
     try {
       const { open } = await import("@tauri-apps/plugin-dialog");
       const result = await open({
@@ -1268,7 +1349,7 @@ interface OpenDirectoryDialogOptions {
 export async function openDirectoryDialog(
   options?: OpenDirectoryDialogOptions,
 ): Promise<string | null> {
-  if (isTauri) {
+  if (hasTauriRuntime()) {
     try {
       const { open } = await import("@tauri-apps/plugin-dialog");
       const result = await open({
@@ -1308,7 +1389,7 @@ interface SaveFileDialogOptions {
 export async function saveFileDialog(
   options?: SaveFileDialogOptions,
 ): Promise<string | null> {
-  if (isTauri) {
+  if (hasTauriRuntime()) {
     try {
       const { save } = await import("@tauri-apps/plugin-dialog");
       const result = await save({
@@ -1335,7 +1416,7 @@ export async function saveFileDialog(
  * 非 Tauri 環境では window.open() にフォールバックする。
  */
 export async function shellOpen(url: string): Promise<void> {
-  if (isTauri) {
+  if (hasTauriRuntime()) {
     try {
       const { open } = await import("@tauri-apps/plugin-shell");
       await open(url);
@@ -1358,7 +1439,7 @@ export async function shellOpen(url: string): Promise<void> {
  * 非 Tauri 環境では window.location.reload() にフォールバックする。
  */
 export async function relaunch(): Promise<void> {
-  if (isTauri) {
+  if (hasTauriRuntime()) {
     try {
       const { relaunch: tauriRelaunch } = await import("@tauri-apps/plugin-process");
       await tauriRelaunch();

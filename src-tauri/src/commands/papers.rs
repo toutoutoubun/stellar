@@ -3,9 +3,9 @@
 // フロントエンドから invoke() で呼び出される論文管理コマンド群
 // ページネーション・フィルタ・バックリンク付き詳細・PDF関連付け・タグ集計を提供
 
-use crate::db::models::*;
-use crate::db::get_pool;
 use crate::commands::links::fetch_backlinks_for;
+use crate::db::get_pool;
+use crate::db::models::*;
 use sqlx::Row;
 use tauri::AppHandle;
 
@@ -369,10 +369,10 @@ pub async fn attach_pdf(
 /// フロントエンドの AddPaperModal から呼び出される。
 /// 抽出に失敗した場合はファイル名からタイトルを推定し、部分的なメタデータを返す。
 #[tauri::command]
-pub async fn extract_metadata_from_pdf(
-    pdf_path: String,
-) -> Result<serde_json::Value, String> {
-    use crate::utils::pdf::{is_valid_pdf_path, extract_title_from_filename, extract_metadata_from_file};
+pub async fn extract_metadata_from_pdf(pdf_path: String) -> Result<serde_json::Value, String> {
+    use crate::utils::pdf::{
+        extract_metadata_from_file, extract_title_from_filename, is_valid_pdf_path,
+    };
 
     if !is_valid_pdf_path(&pdf_path) {
         return Err("指定されたファイルはPDFではありません".to_string());
@@ -386,7 +386,9 @@ pub async fn extract_metadata_from_pdf(
     let meta = extract_metadata_from_file(&pdf_path);
 
     // タイトルが取得できなければファイル名から推定
-    let title = meta.title.unwrap_or_else(|| extract_title_from_filename(&pdf_path));
+    let title = meta
+        .title
+        .unwrap_or_else(|| extract_title_from_filename(&pdf_path));
 
     let result = serde_json::json!({
         "title": title,
@@ -455,14 +457,17 @@ pub async fn import_pdf(
     }
 
     // アプリデータ内の pdfs ディレクトリ
-    let app_path = app.path().app_config_dir()
+    let app_path = app
+        .path()
+        .app_config_dir()
         .map_err(|e| format!("アプリディレクトリの取得に失敗: {}", e))?;
     let pdfs_dir = app_path.join("pdfs");
     std::fs::create_dir_all(&pdfs_dir)
         .map_err(|e| format!("PDFディレクトリの作成に失敗: {}", e))?;
 
     // ファイル名: paper_id + 元のファイル名拡張子
-    let original_name = src.file_name()
+    let original_name = src
+        .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| format!("{}.pdf", paper_id));
 
@@ -471,8 +476,7 @@ pub async fn import_pdf(
     let dest_path = pdfs_dir.join(&dest_name);
 
     // コピー実行
-    std::fs::copy(&source_path, &dest_path)
-        .map_err(|e| format!("PDFのコピーに失敗: {}", e))?;
+    std::fs::copy(&source_path, &dest_path).map_err(|e| format!("PDFのコピーに失敗: {}", e))?;
 
     let saved_path = dest_path.to_string_lossy().to_string();
     log::info!("PDFをインポートしました: {} -> {}", source_path, saved_path);
@@ -496,7 +500,9 @@ pub async fn save_note_attachment(
     use tauri::Manager;
 
     // アプリデータ内の attachments ディレクトリ
-    let app_path = app.path().app_config_dir()
+    let app_path = app
+        .path()
+        .app_config_dir()
         .map_err(|e| format!("アプリディレクトリの取得に失敗: {}", e))?;
     let attachments_dir = app_path.join("attachments").join(&note_id);
     std::fs::create_dir_all(&attachments_dir)
@@ -504,17 +510,23 @@ pub async fn save_note_attachment(
 
     // ユニークなファイル名を生成
     let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
-    let safe_name = file_name.replace(|c: char| !c.is_alphanumeric() && c != '.' && c != '-' && c != '_', "_");
+    let safe_name = file_name.replace(
+        |c: char| !c.is_alphanumeric() && c != '.' && c != '-' && c != '_',
+        "_",
+    );
     let dest_name = format!("{}_{}", timestamp, safe_name);
     let dest_path = attachments_dir.join(&dest_name);
 
     // ファイル書き込み
-    std::fs::write(&dest_path, &data)
-        .map_err(|e| format!("添付ファイルの保存に失敗: {}", e))?;
+    std::fs::write(&dest_path, &data).map_err(|e| format!("添付ファイルの保存に失敗: {}", e))?;
 
     // Tauri の convertFileSrc 互換パスを返す
     let saved_path = dest_path.to_string_lossy().to_string();
-    log::info!("添付ファイルを保存しました: {} ({} bytes)", saved_path, data.len());
+    log::info!(
+        "添付ファイルを保存しました: {} ({} bytes)",
+        saved_path,
+        data.len()
+    );
 
     Ok(saved_path)
 }

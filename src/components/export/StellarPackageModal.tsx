@@ -28,12 +28,33 @@ interface ImportResult {
 }
 
 interface PackageInfo {
+  version?: string;
+  createdAt?: string;
   paperCount: number;
   noteCount: number;
   highlightCount: number;
   linkCount: number;
   hasPdfs: boolean;
-  fileSize: string;
+  fileSizeBytes: number;
+}
+
+interface ExportPackageResult {
+  path: string;
+  sizeBytes: number;
+  manifest?: PackageInfo;
+}
+
+const formatFileSize = (bytes: number): string => {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  const digits = value >= 10 || unitIndex === 0 ? 0 : 1;
+  return `${value.toFixed(digits)} ${units[unitIndex]}`;
 }
 
 export const StellarPackageModal: React.FC<StellarPackageModalProps> = ({
@@ -58,6 +79,7 @@ export const StellarPackageModal: React.FC<StellarPackageModalProps> = ({
   // ── Import ──
   const [importFilePath, setImportFilePath] = useState("");
   const [packageInfo, setPackageInfo] = useState<PackageInfo | null>(null);
+  const [loadingPackageInfo, setLoadingPackageInfo] = useState(false);
   const [skipDuplicates, setSkipDuplicates] = useState(true);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
@@ -94,6 +116,7 @@ export const StellarPackageModal: React.FC<StellarPackageModalProps> = ({
       setExportResult(null);
       setImportFilePath("");
       setPackageInfo(null);
+      setLoadingPackageInfo(false);
       setImportResult(null);
       setIncludePdfs(false);
       setSkipDuplicates(true);
@@ -157,7 +180,7 @@ export const StellarPackageModal: React.FC<StellarPackageModalProps> = ({
       if (!filePath) return;
 
       setExporting(true);
-      const resultPath = await invoke<string>("export_stellar_package", {
+      const result = await invoke<ExportPackageResult>("export_stellar_package", {
         paperIds: Array.from(selectedPaperIds),
         noteIds: Array.from(selectedNoteIds),
         includePdfs,
@@ -165,8 +188,8 @@ export const StellarPackageModal: React.FC<StellarPackageModalProps> = ({
       });
 
       setExportResult({
-        path: resultPath,
-        size: `${((selectedPaperIds.size + selectedNoteIds.size) * 12).toFixed(1)} KB`,
+        path: result.path,
+        size: formatFileSize(result.sizeBytes),
       });
       toast.success(t.exportImport.exportSuccess);
     } catch (err) {
@@ -191,20 +214,25 @@ export const StellarPackageModal: React.FC<StellarPackageModalProps> = ({
       if (selected && typeof selected === "string") {
         setImportFilePath(selected);
         setImportResult(null);
-        // パッケージ情報を読み込み（モック）
-        setPackageInfo({
-          paperCount: 12,
-          noteCount: 8,
-          highlightCount: 45,
-          linkCount: 23,
-          hasPdfs: true,
-          fileSize: "24.3 MB",
-        });
+        setPackageInfo(null);
+        setLoadingPackageInfo(true);
+        try {
+          const info = await invoke<PackageInfo>("inspect_stellar_package", {
+            packagePath: selected,
+          });
+          setPackageInfo(info);
+        } catch (err) {
+          setImportFilePath("");
+          const msg = err instanceof Error ? err.message : t.exportImport.importFailed;
+          toast.error(msg);
+        } finally {
+          setLoadingPackageInfo(false);
+        }
       }
     } catch {
       // cancel
     }
-  }, []);
+  }, [t]);
 
   // ── Import: 実行 ──
   const handleImport = useCallback(async () => {
@@ -212,7 +240,7 @@ export const StellarPackageModal: React.FC<StellarPackageModalProps> = ({
     setImporting(true);
     try {
       const result = await invoke<ImportResult>("import_stellar_package", {
-        filePath: importFilePath,
+        packagePath: importFilePath,
         skipDuplicates,
       });
       setImportResult(result);
@@ -273,18 +301,18 @@ export const StellarPackageModal: React.FC<StellarPackageModalProps> = ({
                   : (t.exportImport.k_createPackage ?? "Create Package")}
               </button>
             )}
-            {mode === "import" && importFilePath && !importResult && (
+            {mode === "import" && importFilePath && packageInfo && !importResult && (
               <button
                 type="button"
                 onClick={() => void handleImport()}
-                disabled={importing}
+                disabled={importing || loadingPackageInfo}
                 className="px-4 py-1.5 text-xs font-medium"
                 style={{
                   backgroundColor: "var(--color-accent-primary)",
                   color: "var(--color-text-inverse)",
                   borderRadius: "var(--radius-button)",
-                  opacity: importing ? 0.5 : 1,
-                  cursor: importing ? "not-allowed" : "pointer",
+                  opacity: importing || loadingPackageInfo ? 0.5 : 1,
+                  cursor: importing || loadingPackageInfo ? "not-allowed" : "pointer",
                 }}
               >
                 {importing
@@ -651,6 +679,20 @@ export const StellarPackageModal: React.FC<StellarPackageModalProps> = ({
           </div>
 
           {/* パッケージ情報 */}
+          {loadingPackageInfo && (
+            <div
+              className="p-4 text-xs"
+              style={{
+                backgroundColor: "var(--color-bg-secondary)",
+                borderRadius: "var(--radius-input)",
+                border: "1px solid var(--color-border-secondary)",
+                color: "var(--color-text-tertiary)",
+              }}
+            >
+              {t.common.loading}
+            </div>
+          )}
+
           {packageInfo && (
             <div
               className="p-4 flex flex-col gap-2"
@@ -667,7 +709,9 @@ export const StellarPackageModal: React.FC<StellarPackageModalProps> = ({
                 { label: t.settings.data.papers, value: `${packageInfo.paperCount} ${t.common.items}` },
                 { label: t.settings.data.notes, value: `${packageInfo.noteCount} ${t.common.items}` },
                 { label: t.settings.data.highlights, value: `${packageInfo.highlightCount} ${t.common.items}` },
-                { label: t.exportImport.k_fileSize ?? "File size", value: packageInfo.fileSize },
+                { label: t.settings.data.links, value: `${packageInfo.linkCount} ${t.common.items}` },
+                { label: "PDF", value: packageInfo.hasPdfs ? "Yes" : "No" },
+                { label: t.exportImport.k_fileSize ?? "File size", value: formatFileSize(packageInfo.fileSizeBytes) },
               ].map((row) => (
                 <div key={row.label} className="flex items-center justify-between">
                   <span className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>{row.label}</span>

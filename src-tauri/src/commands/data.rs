@@ -34,7 +34,7 @@ pub async fn get_data_summary(app: AppHandle) -> Result<DataSummary, String> {
         "SELECT
             (SELECT COUNT(*) FROM papers) AS paper_count,
             (SELECT COUNT(*) FROM notes) AS note_count,
-            (SELECT COUNT(*) FROM highlights) AS highlight_count"
+            (SELECT COUNT(*) FROM highlights) AS highlight_count",
     )
     .fetch_one(pool.as_ref())
     .await
@@ -100,15 +100,12 @@ pub async fn get_data_path(app: AppHandle) -> Result<String, String> {
 // ────────────────────────────────────────────────────────────
 
 #[tauri::command]
-pub async fn change_data_path(
-    app: AppHandle,
-    new_path: String,
-) -> Result<(), String> {
+pub async fn change_data_path(app: AppHandle, new_path: String) -> Result<(), String> {
     let pool = get_pool(&app)?;
 
     // 設定テーブルがなければ作成
     sqlx::query(
-        "CREATE TABLE IF NOT EXISTS _stellar_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
+        "CREATE TABLE IF NOT EXISTS _stellar_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
     )
     .execute(pool.as_ref())
     .await
@@ -116,12 +113,15 @@ pub async fn change_data_path(
 
     // パスの存在確認
     if !std::path::Path::new(&new_path).is_dir() {
-        return Err(format!("指定されたディレクトリが存在しません: {}", new_path));
+        return Err(format!(
+            "指定されたディレクトリが存在しません: {}",
+            new_path
+        ));
     }
 
     sqlx::query(
         "INSERT INTO _stellar_settings (key, value) VALUES ('data_path', ?)
-         ON CONFLICT(key) DO UPDATE SET value = excluded.value"
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value",
     )
     .bind(&new_path)
     .execute(pool.as_ref())
@@ -146,21 +146,30 @@ pub async fn export_data(app: AppHandle) -> Result<String, String> {
         .fetch_all(pool.as_ref())
         .await
         .map_err(|e| format!("論文の取得に失敗: {}", e))?;
-    let papers: Vec<PaperResponse> = paper_rows.iter().map(parse_paper_sqlx).collect::<Result<_, _>>()?;
+    let papers: Vec<PaperResponse> = paper_rows
+        .iter()
+        .map(parse_paper_sqlx)
+        .collect::<Result<_, _>>()?;
 
     // 全ノートを取得
     let note_rows = sqlx::query("SELECT * FROM notes ORDER BY updated_at DESC")
         .fetch_all(pool.as_ref())
         .await
         .map_err(|e| format!("ノートの取得に失敗: {}", e))?;
-    let notes: Vec<NoteResponse> = note_rows.iter().map(parse_note_sqlx).collect::<Result<_, _>>()?;
+    let notes: Vec<NoteResponse> = note_rows
+        .iter()
+        .map(parse_note_sqlx)
+        .collect::<Result<_, _>>()?;
 
     // 全ハイライトを取得
     let hl_rows = sqlx::query("SELECT * FROM highlights ORDER BY created_at DESC")
         .fetch_all(pool.as_ref())
         .await
         .map_err(|e| format!("ハイライトの取得に失敗: {}", e))?;
-    let highlights: Vec<HighlightResponse> = hl_rows.iter().map(parse_highlight_sqlx).collect::<Result<_, _>>()?;
+    let highlights: Vec<HighlightResponse> = hl_rows
+        .iter()
+        .map(parse_highlight_sqlx)
+        .collect::<Result<_, _>>()?;
 
     // エクスポートデータを JSON 化
     let export_data = serde_json::json!({
@@ -172,12 +181,16 @@ pub async fn export_data(app: AppHandle) -> Result<String, String> {
     });
 
     // 出力先: ドキュメントディレクトリまたはアプリデータディレクトリ
-    let export_dir = app.path().app_config_dir()
+    let export_dir = app
+        .path()
+        .app_config_dir()
         .map_err(|e| format!("アプリディレクトリの取得に失敗: {}", e))?;
-    std::fs::create_dir_all(&export_dir)
-        .map_err(|e| format!("ディレクトリの作成に失敗: {}", e))?;
+    std::fs::create_dir_all(&export_dir).map_err(|e| format!("ディレクトリの作成に失敗: {}", e))?;
 
-    let filename = format!("stellar_export_{}.json", chrono::Utc::now().format("%Y%m%d_%H%M%S"));
+    let filename = format!(
+        "stellar_export_{}.json",
+        chrono::Utc::now().format("%Y%m%d_%H%M%S")
+    );
     let export_path = export_dir.join(&filename);
 
     let json_string = serde_json::to_string_pretty(&export_data)
@@ -196,7 +209,9 @@ pub async fn export_data(app: AppHandle) -> Result<String, String> {
 
 #[tauri::command]
 pub async fn create_backup(app: AppHandle) -> Result<String, String> {
-    let app_path = app.path().app_config_dir()
+    let app_path = app
+        .path()
+        .app_config_dir()
         .map_err(|e| format!("アプリディレクトリの取得に失敗: {}", e))?;
 
     let db_path = app_path.join("stellar.db");

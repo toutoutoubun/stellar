@@ -113,10 +113,7 @@ pub async fn delete_project(app: AppHandle, id: String) -> Result<(), String> {
 // ════════════════════════════════════════════════════════════════
 
 #[tauri::command]
-pub async fn get_code_tree(
-    app: AppHandle,
-    project_id: String,
-) -> Result<Vec<CodeNode>, String> {
+pub async fn get_code_tree(app: AppHandle, project_id: String) -> Result<Vec<CodeNode>, String> {
     let pool = get_pool(&app)?;
 
     // 全コードを取得
@@ -160,10 +157,7 @@ pub async fn get_code_tree(
 }
 
 #[tauri::command]
-pub async fn create_code(
-    app: AppHandle,
-    input: CreateCodeDto,
-) -> Result<CodeResponse, String> {
+pub async fn create_code(app: AppHandle, input: CreateCodeDto) -> Result<CodeResponse, String> {
     let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
@@ -345,10 +339,7 @@ pub async fn get_highlights_by_code(
 // ════════════════════════════════════════════════════════════════
 
 #[tauri::command]
-pub async fn get_coding_matrix(
-    app: AppHandle,
-    project_id: String,
-) -> Result<CodingMatrix, String> {
+pub async fn get_coding_matrix(app: AppHandle, project_id: String) -> Result<CodingMatrix, String> {
     let pool = get_pool(&app)?;
 
     // コード一覧（行）
@@ -709,13 +700,12 @@ pub async fn get_timeline_events(
 ) -> Result<Vec<TimelineEventResponse>, String> {
     let pool = get_pool(&app)?;
 
-    let rows = sqlx::query(
-        "SELECT * FROM timeline_events WHERE project_id = ? ORDER BY event_date ASC",
-    )
-    .bind(&project_id)
-    .fetch_all(pool.as_ref())
-    .await
-    .map_err(|e| format!("タイムライン取得に失敗: {}", e))?;
+    let rows =
+        sqlx::query("SELECT * FROM timeline_events WHERE project_id = ? ORDER BY event_date ASC")
+            .bind(&project_id)
+            .fetch_all(pool.as_ref())
+            .await
+            .map_err(|e| format!("タイムライン取得に失敗: {}", e))?;
 
     rows.iter().map(parse_timeline_event).collect()
 }
@@ -841,10 +831,7 @@ pub async fn delete_timeline_event(app: AppHandle, id: String) -> Result<(), Str
 }
 
 #[tauri::command]
-pub async fn get_timeline_lanes(
-    app: AppHandle,
-    project_id: String,
-) -> Result<Vec<String>, String> {
+pub async fn get_timeline_lanes(app: AppHandle, project_id: String) -> Result<Vec<String>, String> {
     let pool = get_pool(&app)?;
 
     let rows = sqlx::query(
@@ -863,10 +850,7 @@ pub async fn get_timeline_lanes(
 // ════════════════════════════════════════════════════════════════
 
 #[tauri::command]
-pub async fn get_actor_map(
-    app: AppHandle,
-    project_id: String,
-) -> Result<ActorMapData, String> {
+pub async fn get_actor_map(app: AppHandle, project_id: String) -> Result<ActorMapData, String> {
     let pool = get_pool(&app)?;
 
     let actor_rows = sqlx::query("SELECT * FROM actors WHERE project_id = ? ORDER BY name ASC")
@@ -875,7 +859,10 @@ pub async fn get_actor_map(
         .await
         .map_err(|e| format!("アクター取得に失敗: {}", e))?;
 
-    let actors: Vec<ActorResponse> = actor_rows.iter().map(parse_actor).collect::<Result<_, _>>()?;
+    let actors: Vec<ActorResponse> = actor_rows
+        .iter()
+        .map(parse_actor)
+        .collect::<Result<_, _>>()?;
 
     let actor_ids: Vec<String> = actors.iter().map(|a| a.id.clone()).collect();
     let relations = if actor_ids.is_empty() {
@@ -898,17 +885,17 @@ pub async fn get_actor_map(
             .await
             .map_err(|e| format!("アクター関係取得に失敗: {}", e))?;
 
-        rel_rows.iter().map(parse_actor_relation).collect::<Result<_, _>>()?
+        rel_rows
+            .iter()
+            .map(parse_actor_relation)
+            .collect::<Result<_, _>>()?
     };
 
     Ok(ActorMapData { actors, relations })
 }
 
 #[tauri::command]
-pub async fn create_actor(
-    app: AppHandle,
-    input: CreateActorDto,
-) -> Result<ActorResponse, String> {
+pub async fn create_actor(app: AppHandle, input: CreateActorDto) -> Result<ActorResponse, String> {
     let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
@@ -1067,10 +1054,7 @@ pub async fn delete_actor_relation(app: AppHandle, id: String) -> Result<(), Str
 // ════════════════════════════════════════════════════════════════
 
 #[tauri::command]
-pub async fn get_pt_data(
-    app: AppHandle,
-    project_id: String,
-) -> Result<PtData, String> {
+pub async fn get_pt_data(app: AppHandle, project_id: String) -> Result<PtData, String> {
     let pool = get_pool(&app)?;
 
     let hyp_rows = sqlx::query(
@@ -1203,10 +1187,7 @@ pub async fn update_pt_evidence_result(
 }
 
 #[tauri::command]
-pub async fn get_pt_summary(
-    app: AppHandle,
-    project_id: String,
-) -> Result<PtSummary, String> {
+pub async fn get_pt_summary(app: AppHandle, project_id: String) -> Result<PtSummary, String> {
     let pool = get_pool(&app)?;
 
     // 主仮説の証拠を取得
@@ -1443,14 +1424,13 @@ pub async fn upsert_comparative_cell(
 ) -> Result<(), String> {
     let pool = get_pool(&app)?;
 
-    let existing = sqlx::query(
-        "SELECT id FROM comparative_cells WHERE case_id = ? AND variable_id = ?",
-    )
-    .bind(&case_id)
-    .bind(&variable_id)
-    .fetch_optional(pool.as_ref())
-    .await
-    .map_err(|e| format!("比較セル確認に失敗: {}", e))?;
+    let existing =
+        sqlx::query("SELECT id FROM comparative_cells WHERE case_id = ? AND variable_id = ?")
+            .bind(&case_id)
+            .bind(&variable_id)
+            .fetch_optional(pool.as_ref())
+            .await
+            .map_err(|e| format!("比較セル確認に失敗: {}", e))?;
 
     if let Some(row) = existing {
         let existing_id = col_str(&row, "id");
@@ -1480,19 +1460,15 @@ pub async fn upsert_comparative_cell(
 }
 
 #[tauri::command]
-pub async fn export_qca_csv(
-    app: AppHandle,
-    design_id: String,
-) -> Result<String, String> {
+pub async fn export_qca_csv(app: AppHandle, design_id: String) -> Result<String, String> {
     let pool = get_pool(&app)?;
 
-    let case_rows = sqlx::query(
-        "SELECT * FROM comparative_cases WHERE design_id = ? ORDER BY sort_order ASC",
-    )
-    .bind(&design_id)
-    .fetch_all(pool.as_ref())
-    .await
-    .map_err(|e| format!("ケース取得に失敗: {}", e))?;
+    let case_rows =
+        sqlx::query("SELECT * FROM comparative_cases WHERE design_id = ? ORDER BY sort_order ASC")
+            .bind(&design_id)
+            .fetch_all(pool.as_ref())
+            .await
+            .map_err(|e| format!("ケース取得に失敗: {}", e))?;
 
     let var_rows = sqlx::query(
         "SELECT * FROM comparative_variables WHERE design_id = ? ORDER BY sort_order ASC",
@@ -1515,7 +1491,11 @@ pub async fn export_qca_csv(
     // セルマップ: "case_id:variable_id" → value
     let mut cell_map: HashMap<String, String> = HashMap::new();
     for row in &cell_rows {
-        let key = format!("{}:{}", col_str(row, "case_id"), col_str(row, "variable_id"));
+        let key = format!(
+            "{}:{}",
+            col_str(row, "case_id"),
+            col_str(row, "variable_id")
+        );
         cell_map.insert(key, col_str(row, "value"));
     }
 
@@ -1546,10 +1526,7 @@ pub async fn export_qca_csv(
 // ════════════════════════════════════════════════════════════════
 
 #[tauri::command]
-pub async fn get_frames(
-    app: AppHandle,
-    project_id: String,
-) -> Result<Vec<FrameResponse>, String> {
+pub async fn get_frames(app: AppHandle, project_id: String) -> Result<Vec<FrameResponse>, String> {
     let pool = get_pool(&app)?;
 
     let rows = sqlx::query("SELECT * FROM frames WHERE project_id = ? ORDER BY created_at ASC")
@@ -1562,10 +1539,7 @@ pub async fn get_frames(
 }
 
 #[tauri::command]
-pub async fn create_frame(
-    app: AppHandle,
-    input: CreateFrameDto,
-) -> Result<FrameResponse, String> {
+pub async fn create_frame(app: AppHandle, input: CreateFrameDto) -> Result<FrameResponse, String> {
     let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
@@ -1629,15 +1603,17 @@ pub async fn get_framing_matrix(
     let pool = get_pool(&app)?;
 
     // フレーム一覧
-    let frame_rows = sqlx::query(
-        "SELECT * FROM frames WHERE project_id = ? ORDER BY created_at ASC",
-    )
-    .bind(&project_id)
-    .fetch_all(pool.as_ref())
-    .await
-    .map_err(|e| format!("フレーム取得に失敗: {}", e))?;
+    let frame_rows =
+        sqlx::query("SELECT * FROM frames WHERE project_id = ? ORDER BY created_at ASC")
+            .bind(&project_id)
+            .fetch_all(pool.as_ref())
+            .await
+            .map_err(|e| format!("フレーム取得に失敗: {}", e))?;
 
-    let frames: Vec<FrameResponse> = frame_rows.iter().map(parse_frame).collect::<Result<_, _>>()?;
+    let frames: Vec<FrameResponse> = frame_rows
+        .iter()
+        .map(parse_frame)
+        .collect::<Result<_, _>>()?;
 
     // 論文一覧
     let paper_rows = sqlx::query(
@@ -1888,7 +1864,10 @@ pub async fn generate_analysis_report(
                         let code_type = col_str(row, "code_type");
                         let count: i64 = row.try_get("count").unwrap_or(0);
                         let desc = col_opt_str(row, "description").unwrap_or_default();
-                        report.push_str(&format!("| {} | {} | {} | {} |\n", name, code_type, count, desc));
+                        report.push_str(&format!(
+                            "| {} | {} | {} | {} |\n",
+                            name, code_type, count, desc
+                        ));
                     }
                     report.push('\n');
                 }
@@ -1900,14 +1879,30 @@ pub async fn generate_analysis_report(
                     report.push_str("*データなし*\n\n");
                 } else {
                     // ヘッダー
-                    let headers: Vec<String> = matrix.cols.iter().map(|c| c.paper_title.clone()).collect();
+                    let headers: Vec<String> =
+                        matrix.cols.iter().map(|c| c.paper_title.clone()).collect();
                     report.push_str(&format!("| コード | {} |\n", headers.join(" | ")));
-                    report.push_str(&format!("|-{}-|\n", headers.iter().map(|_| "---").collect::<Vec<_>>().join("-|-")));
+                    report.push_str(&format!(
+                        "|-{}-|\n",
+                        headers
+                            .iter()
+                            .map(|_| "---")
+                            .collect::<Vec<_>>()
+                            .join("-|-")
+                    ));
                     for row in &matrix.rows {
-                        let vals: Vec<String> = matrix.cols.iter().map(|col| {
-                            let key = format!("{}:{}", row.code_id, col.paper_id);
-                            matrix.cells.get(&key).map(|v| v.to_string()).unwrap_or_else(|| "0".to_string())
-                        }).collect();
+                        let vals: Vec<String> = matrix
+                            .cols
+                            .iter()
+                            .map(|col| {
+                                let key = format!("{}:{}", row.code_id, col.paper_id);
+                                matrix
+                                    .cells
+                                    .get(&key)
+                                    .map(|v| v.to_string())
+                                    .unwrap_or_else(|| "0".to_string())
+                            })
+                            .collect();
                         report.push_str(&format!("| {} | {} |\n", row.code_name, vals.join(" | ")));
                     }
                     report.push('\n');
@@ -1920,7 +1915,11 @@ pub async fn generate_analysis_report(
                     report.push_str("*イベントが登録されていません*\n\n");
                 } else {
                     for event in &events {
-                        let date_marker = if event.date_type == "approximate" { "頃" } else { "" };
+                        let date_marker = if event.date_type == "approximate" {
+                            "頃"
+                        } else {
+                            ""
+                        };
                         report.push_str(&format!(
                             "- **{}{}** — {} (重要度: {}/5)\n",
                             event.event_date, date_marker, event.title, event.importance
@@ -1943,14 +1942,21 @@ pub async fn generate_analysis_report(
                     for actor in &map.actors {
                         report.push_str(&format!(
                             "| {} | {} | {} | {}/5 | {} |\n",
-                            actor.name, actor.actor_type, actor.position, actor.influence, actor.level
+                            actor.name,
+                            actor.actor_type,
+                            actor.position,
+                            actor.influence,
+                            actor.level
                         ));
                     }
                     report.push('\n');
                     if !map.relations.is_empty() {
                         report.push_str("### 関係\n\n");
                         for rel in &map.relations {
-                            report.push_str(&format!("- {} → {} ({})\n", rel.actor_from, rel.actor_to, rel.relation_type));
+                            report.push_str(&format!(
+                                "- {} → {} ({})\n",
+                                rel.actor_from, rel.actor_to, rel.relation_type
+                            ));
                         }
                         report.push('\n');
                     }
@@ -1964,7 +1970,11 @@ pub async fn generate_analysis_report(
                 report.push_str(&format!("**総合評価**: {}\n\n", summary.overall_verdict));
 
                 for hw in &pt.hypotheses {
-                    let hyp_type = if hw.hypothesis.is_main { "主仮説" } else { "対抗仮説" };
+                    let hyp_type = if hw.hypothesis.is_main {
+                        "主仮説"
+                    } else {
+                        "対抗仮説"
+                    };
                     report.push_str(&format!("### {} ({})\n\n", hw.hypothesis.title, hyp_type));
                     if let Some(desc) = &hw.hypothesis.description {
                         report.push_str(&format!("{}\n\n", desc));
@@ -1973,7 +1983,10 @@ pub async fn generate_analysis_report(
                         report.push_str("| テスト種別 | 説明 | 結果 |\n");
                         report.push_str("|------------|------|------|\n");
                         for ev in &hw.evidences {
-                            report.push_str(&format!("| {} | {} | {} |\n", ev.test_type, ev.description, ev.result));
+                            report.push_str(&format!(
+                                "| {} | {} | {} |\n",
+                                ev.test_type, ev.description, ev.result
+                            ));
                         }
                         report.push('\n');
                     }
@@ -1986,19 +1999,41 @@ pub async fn generate_analysis_report(
                     report.push_str("*比較デザインが登録されていません*\n\n");
                 } else {
                     for d in &designs {
-                        report.push_str(&format!("### {} ({})\n\n", d.design.title, d.design.design_type));
+                        report.push_str(&format!(
+                            "### {} ({})\n\n",
+                            d.design.title, d.design.design_type
+                        ));
                         if !d.cases.is_empty() && !d.variables.is_empty() {
-                            let var_names: Vec<&str> = d.variables.iter().map(|v| v.name.as_str()).collect();
+                            let var_names: Vec<&str> =
+                                d.variables.iter().map(|v| v.name.as_str()).collect();
                             report.push_str(&format!("| ケース | {} |\n", var_names.join(" | ")));
-                            report.push_str(&format!("|-{}-|\n", var_names.iter().map(|_| "---").collect::<Vec<_>>().join("-|-")));
+                            report.push_str(&format!(
+                                "|-{}-|\n",
+                                var_names
+                                    .iter()
+                                    .map(|_| "---")
+                                    .collect::<Vec<_>>()
+                                    .join("-|-")
+                            ));
                             for case in &d.cases {
-                                let vals: Vec<String> = d.variables.iter().map(|var| {
-                                    d.cells.iter()
-                                        .find(|c| c.case_id == case.id && c.variable_id == var.id)
-                                        .and_then(|c| c.value.clone())
-                                        .unwrap_or_else(|| "-".to_string())
-                                }).collect();
-                                report.push_str(&format!("| {} | {} |\n", case.name, vals.join(" | ")));
+                                let vals: Vec<String> = d
+                                    .variables
+                                    .iter()
+                                    .map(|var| {
+                                        d.cells
+                                            .iter()
+                                            .find(|c| {
+                                                c.case_id == case.id && c.variable_id == var.id
+                                            })
+                                            .and_then(|c| c.value.clone())
+                                            .unwrap_or_else(|| "-".to_string())
+                                    })
+                                    .collect();
+                                report.push_str(&format!(
+                                    "| {} | {} |\n",
+                                    case.name,
+                                    vals.join(" | ")
+                                ));
                             }
                             report.push('\n');
                         }
@@ -2071,9 +2106,6 @@ pub async fn delete_qual_project(app: AppHandle, id: String) -> Result<(), Strin
 
 /// get_codes — get_code_tree のエイリアス（フロントエンドが get_codes で呼ぶ場合の互換）
 #[tauri::command]
-pub async fn get_codes(
-    app: AppHandle,
-    project_id: String,
-) -> Result<Vec<CodeNode>, String> {
+pub async fn get_codes(app: AppHandle, project_id: String) -> Result<Vec<CodeNode>, String> {
     get_code_tree(app, project_id).await
 }

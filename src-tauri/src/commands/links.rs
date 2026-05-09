@@ -3,8 +3,8 @@
 // ノート・論文間の双方向リンクを管理する（グラフビューの基盤データ）
 // 重複チェック・バックリンク（LinkWithSource）・グラフデータ取得を提供
 
-use crate::db::models::*;
 use crate::db::get_pool;
+use crate::db::models::*;
 use sqlx::Row;
 use std::collections::{HashMap, HashSet};
 use tauri::AppHandle;
@@ -30,9 +30,11 @@ pub async fn create_link(
     let input = match input {
         Some(input) => input,
         None => CreateLinkDto {
-            source_type: source_type.ok_or_else(|| "sourceType が指定されていません".to_string())?,
+            source_type: source_type
+                .ok_or_else(|| "sourceType が指定されていません".to_string())?,
             source_id: source_id.ok_or_else(|| "sourceId が指定されていません".to_string())?,
-            target_type: target_type.ok_or_else(|| "targetType が指定されていません".to_string())?,
+            target_type: target_type
+                .ok_or_else(|| "targetType が指定されていません".to_string())?,
             target_id: target_id.ok_or_else(|| "targetId が指定されていません".to_string())?,
             context,
         },

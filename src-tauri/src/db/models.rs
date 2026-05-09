@@ -527,7 +527,9 @@ pub fn parse_link_sqlx(row: &sqlx::sqlite::SqliteRow) -> Result<LinkResponse, St
 }
 
 /// sqlx::SqliteRow → LinkWithSource（JOIN 結果用 — source_title / target_title カラムを含む）
-pub fn parse_link_with_source_sqlx(row: &sqlx::sqlite::SqliteRow) -> Result<LinkWithSource, String> {
+pub fn parse_link_with_source_sqlx(
+    row: &sqlx::sqlite::SqliteRow,
+) -> Result<LinkWithSource, String> {
     Ok(LinkWithSource {
         id: col_str(row, "id"),
         source_type: col_str(row, "source_type"),
@@ -814,7 +816,9 @@ fn default_reliability_score() -> i32 {
     3
 }
 
-pub fn parse_source_critique(row: &sqlx::sqlite::SqliteRow) -> Result<SourceCritiqueResponse, String> {
+pub fn parse_source_critique(
+    row: &sqlx::sqlite::SqliteRow,
+) -> Result<SourceCritiqueResponse, String> {
     Ok(SourceCritiqueResponse {
         id: col_str(row, "id"),
         paper_id: col_str(row, "paper_id"),
@@ -874,9 +878,15 @@ pub struct CreateTimelineEventDto {
     pub highlight_id: Option<String>,
 }
 
-fn default_date_type() -> String { "exact".to_string() }
-fn default_event_type() -> String { "political".to_string() }
-fn default_importance() -> i32 { 3 }
+fn default_date_type() -> String {
+    "exact".to_string()
+}
+fn default_event_type() -> String {
+    "political".to_string()
+}
+fn default_importance() -> i32 {
+    3
+}
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -892,7 +902,9 @@ pub struct UpdateTimelineEventDto {
     pub highlight_id: Option<Option<String>>,
 }
 
-pub fn parse_timeline_event(row: &sqlx::sqlite::SqliteRow) -> Result<TimelineEventResponse, String> {
+pub fn parse_timeline_event(
+    row: &sqlx::sqlite::SqliteRow,
+) -> Result<TimelineEventResponse, String> {
     Ok(TimelineEventResponse {
         id: col_str(row, "id"),
         project_id: col_str(row, "project_id"),
@@ -945,9 +957,15 @@ pub struct CreateActorDto {
     pub y_position: Option<f64>,
 }
 
-fn default_actor_type() -> String { "state".to_string() }
-fn default_position() -> String { "neutral".to_string() }
-fn default_level() -> String { "national".to_string() }
+fn default_actor_type() -> String {
+    "state".to_string()
+}
+fn default_position() -> String {
+    "neutral".to_string()
+}
+fn default_level() -> String {
+    "national".to_string()
+}
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -1006,7 +1024,9 @@ pub struct CreateActorRelationDto {
     pub paper_id: Option<String>,
 }
 
-pub fn parse_actor_relation(row: &sqlx::sqlite::SqliteRow) -> Result<ActorRelationResponse, String> {
+pub fn parse_actor_relation(
+    row: &sqlx::sqlite::SqliteRow,
+) -> Result<ActorRelationResponse, String> {
     Ok(ActorRelationResponse {
         id: col_str(row, "id"),
         actor_from: col_str(row, "actor_from"),
@@ -1053,7 +1073,9 @@ pub struct CreatePtHypothesisDto {
     pub sort_order: i32,
 }
 
-fn default_is_main() -> bool { true }
+fn default_is_main() -> bool {
+    true
+}
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -1080,7 +1102,9 @@ pub struct CreatePtEvidenceDto {
     pub highlight_id: Option<String>,
 }
 
-fn default_pt_result() -> String { "pending".to_string() }
+fn default_pt_result() -> String {
+    "pending".to_string()
+}
 
 pub fn parse_pt_hypothesis(row: &sqlx::sqlite::SqliteRow) -> Result<PtHypothesisResponse, String> {
     Ok(PtHypothesisResponse {
@@ -1150,7 +1174,9 @@ pub struct CreateComparativeDesignDto {
     pub design_type: String,
 }
 
-fn default_design_type() -> String { "MSSD".to_string() }
+fn default_design_type() -> String {
+    "MSSD".to_string()
+}
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -1191,7 +1217,9 @@ pub struct ComparativeDesignFull {
     pub cells: Vec<ComparativeCellResponse>,
 }
 
-pub fn parse_comparative_design(row: &sqlx::sqlite::SqliteRow) -> Result<ComparativeDesignResponse, String> {
+pub fn parse_comparative_design(
+    row: &sqlx::sqlite::SqliteRow,
+) -> Result<ComparativeDesignResponse, String> {
     Ok(ComparativeDesignResponse {
         id: col_str(row, "id"),
         project_id: col_str(row, "project_id"),
@@ -1201,7 +1229,9 @@ pub fn parse_comparative_design(row: &sqlx::sqlite::SqliteRow) -> Result<Compara
     })
 }
 
-pub fn parse_comparative_case(row: &sqlx::sqlite::SqliteRow) -> Result<ComparativeCaseResponse, String> {
+pub fn parse_comparative_case(
+    row: &sqlx::sqlite::SqliteRow,
+) -> Result<ComparativeCaseResponse, String> {
     Ok(ComparativeCaseResponse {
         id: col_str(row, "id"),
         design_id: col_str(row, "design_id"),
@@ -1210,7 +1240,9 @@ pub fn parse_comparative_case(row: &sqlx::sqlite::SqliteRow) -> Result<Comparati
     })
 }
 
-pub fn parse_comparative_variable(row: &sqlx::sqlite::SqliteRow) -> Result<ComparativeVariableResponse, String> {
+pub fn parse_comparative_variable(
+    row: &sqlx::sqlite::SqliteRow,
+) -> Result<ComparativeVariableResponse, String> {
     Ok(ComparativeVariableResponse {
         id: col_str(row, "id"),
         design_id: col_str(row, "design_id"),
@@ -1220,7 +1252,9 @@ pub fn parse_comparative_variable(row: &sqlx::sqlite::SqliteRow) -> Result<Compa
     })
 }
 
-pub fn parse_comparative_cell(row: &sqlx::sqlite::SqliteRow) -> Result<ComparativeCellResponse, String> {
+pub fn parse_comparative_cell(
+    row: &sqlx::sqlite::SqliteRow,
+) -> Result<ComparativeCellResponse, String> {
     Ok(ComparativeCellResponse {
         id: col_str(row, "id"),
         case_id: col_str(row, "case_id"),
@@ -1259,7 +1293,9 @@ pub struct CreateFrameDto {
     pub color: String,
 }
 
-fn default_frame_color() -> String { "#8B5CF6".to_string() }
+fn default_frame_color() -> String {
+    "#8B5CF6".to_string()
+}
 
 pub fn parse_frame(row: &sqlx::sqlite::SqliteRow) -> Result<FrameResponse, String> {
     Ok(FrameResponse {
@@ -1341,7 +1377,9 @@ pub fn parse_recommendation(row: &sqlx::sqlite::SqliteRow) -> Result<PaperRecomm
         url: col_opt_str(row, "url"),
         r#abstract: col_opt_str(row, "abstract"),
         ss_paper_id: col_opt_str(row, "ss_paper_id"),
-        relevance_score: row.try_get::<Option<f64>, _>("relevance_score").unwrap_or(None),
+        relevance_score: row
+            .try_get::<Option<f64>, _>("relevance_score")
+            .unwrap_or(None),
         is_imported: col_i64(row, "is_imported"),
         created_at: col_str(row, "created_at"),
     })
@@ -1458,7 +1496,9 @@ pub struct DraftCitationResponse {
 }
 
 /// sqlx::SqliteRow → DraftCitationResponse
-pub fn parse_draft_citation(row: &sqlx::sqlite::SqliteRow) -> Result<DraftCitationResponse, String> {
+pub fn parse_draft_citation(
+    row: &sqlx::sqlite::SqliteRow,
+) -> Result<DraftCitationResponse, String> {
     Ok(DraftCitationResponse {
         id: col_str(row, "id"),
         note_id: col_str(row, "note_id"),
