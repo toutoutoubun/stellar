@@ -514,7 +514,7 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
 
   // ── Citations（草稿引用）──
   if (cmd === "insert_citation") {
-    const a = (args ?? {}) as any;
+    const a = ((args as any)?.input ?? args ?? {}) as any;
     const noteId = a.noteId ?? "";
     const paperId = a.paperId ?? "";
     const style = a.citationStyle ?? "apa7";
@@ -1091,7 +1091,11 @@ export async function invoke<T>(
 
   // Tauri 環境: 本物の invoke を呼ぶ（タイムアウト付き）
   const { invoke: tauriInvoke } = await import("@tauri-apps/api/core");
-  const TIMEOUT_MS = 15000; // 15秒タイムアウト
+  const COMMAND_TIMEOUTS: Record<string, number> = {
+    fetch_citation_network: 45000,
+    fetch_recommendations: 45000,
+  };
+  const TIMEOUT_MS = COMMAND_TIMEOUTS[cmd] ?? 15000;
   const result = await Promise.race([
     tauriInvoke<T>(cmd, args),
     new Promise<never>((_, reject) =>

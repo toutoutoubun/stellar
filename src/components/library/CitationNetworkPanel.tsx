@@ -345,7 +345,7 @@ export const CitationNetworkPanel: React.FC<CitationNetworkPanelProps> = ({
 
   // ── 引用データ取得 ──
   const handleFetchCitations = useCallback(async () => {
-    if (!paper.doi && !paper.url) {
+    if (!paper.doi && !paper.url && !paper.title.trim()) {
       toast.info(t.citationNetwork.noDoi);
       return;
     }
@@ -354,7 +354,7 @@ export const CitationNetworkPanel: React.FC<CitationNetworkPanelProps> = ({
     } catch {
       toast.error(t.citationNetwork.fetchFailed);
     }
-  }, [paper.id, paper.doi, paper.url, fetchCitationNetwork, t]);
+  }, [paper.id, paper.doi, paper.url, paper.title, fetchCitationNetwork, t]);
 
   // ── レコメンデーション取得 ──
   const handleFetchRecs = useCallback(async () => {
@@ -382,7 +382,7 @@ export const CitationNetworkPanel: React.FC<CitationNetworkPanelProps> = ({
     [paper.id, exportBibtex, exportRis, t]
   );
 
-  const hasDoi = !!paper.doi || !!paper.url;
+  const canLookup = !!paper.doi || !!paper.url || !!paper.title.trim();
 
   return (
     <div>
@@ -416,7 +416,7 @@ export const CitationNetworkPanel: React.FC<CitationNetworkPanelProps> = ({
               variant="secondary"
               size="sm"
               loading={fetchingCitation}
-              disabled={!hasDoi}
+              disabled={!canLookup}
               icon={
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
@@ -428,7 +428,7 @@ export const CitationNetworkPanel: React.FC<CitationNetworkPanelProps> = ({
                 ? t.citationNetwork.fetchingCitations
                 : t.citationNetwork.fetchCitations}
             </Button>
-            {!hasDoi && (
+            {!canLookup && (
               <p
                 className="text-xs mt-1"
                 style={{ color: "var(--color-text-disabled)" }}
