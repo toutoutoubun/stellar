@@ -125,6 +125,53 @@ const LinkItemButton: React.FC<{
   </button>
 );
 
+function peerFromBacklink(link: BacklinkItem, currentId: string) {
+  const isSource = link.sourceId === currentId;
+  return {
+    id: isSource ? link.targetId : link.sourceId,
+    type: isSource ? link.targetType : link.sourceType,
+    title: isSource ? link.targetTitle : link.sourceTitle,
+  };
+}
+
+function mergeLinkedNotes(baseNotes: Note[], links: BacklinkItem[], currentPaperId: string): Note[] {
+  const notesById = new Map(baseNotes.map((note) => [note.id, note]));
+  for (const link of links) {
+    const peer = peerFromBacklink(link, currentPaperId);
+    if (peer.type !== "note" || notesById.has(peer.id)) continue;
+    notesById.set(peer.id, {
+      id: peer.id,
+      title: peer.title || "Untitled Note",
+      content: "",
+      paperId: currentPaperId,
+      tags: [],
+      createdAt: "",
+      updatedAt: "",
+    });
+  }
+  return Array.from(notesById.values());
+}
+
+function mergeLinkedPapers(
+  currentNoteId: string,
+  links: BacklinkItem[],
+  primaryPaper?: { id: string; title: string } | null,
+): Array<{ id: string; title: string }> {
+  const papersById = new Map<string, { id: string; title: string }>();
+  if (primaryPaper) papersById.set(primaryPaper.id, primaryPaper);
+
+  for (const link of links) {
+    const peer = peerFromBacklink(link, currentNoteId);
+    if (peer.type !== "paper" || papersById.has(peer.id)) continue;
+    papersById.set(peer.id, {
+      id: peer.id,
+      title: peer.title || "Untitled Paper",
+    });
+  }
+
+  return Array.from(papersById.values());
+}
+
 // ============================================================
 // 論文詳細セクション
 // ============================================================
@@ -163,24 +210,35 @@ const PaperContextContent: React.FC<{ paperId: string }> = ({ paperId }) => {
         } catch { if (!cancelled) setHighlights([]); }
 
         // 関連ノート取得（紐付けノート）
+        let noteItems: Note[] = [];
         try {
           const result = await invoke<{ items: Note[] }>("get_notes", { paperId, limit: 100 });
-          if (!cancelled) setRelatedNotes(result?.items ?? []);
-        } catch { if (!cancelled) setRelatedNotes([]); }
+          noteItems = result?.items ?? [];
+        } catch { noteItems = []; }
 
         // バックリンク取得
+        let backlinkItems: BacklinkItem[] = [];
         try {
           const bl = await invoke<BacklinkItem[]>("get_backlinks", {
             itemType: "paper" as NodeType, itemId: paperId,
           });
-          if (!cancelled) setBacklinks(bl ?? []);
-        } catch { if (!cancelled) setBacklinks([]); }
+          backlinkItems = bl ?? [];
+        } catch { backlinkItems = []; }
+
+        if (!cancelled) {
+          setRelatedNotes(mergeLinkedNotes(noteItems, backlinkItems, paperId));
+          setBacklinks(backlinkItems);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
     void fetchData();
-    return () => { cancelled = true; };
+    window.addEventListener("stellar-links-changed", fetchData);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("stellar-links-changed", fetchData);
+    };
   }, [paperId, papers]);
 
   if (loading) return <LoadingSpinner />;
@@ -385,7 +443,7 @@ const PaperContextContent: React.FC<{ paperId: string }> = ({ paperId }) => {
 
       {/* 関連ノートセクション */}
       <CollapsibleSection
-        title={`${t.library.k_z75cmx} (${relatedNotes.length})`}
+        title={`関連する${t.settings.data.notes} (${relatedNotes.length})`}
         open={notesOpen}
         onToggle={() => setNotesOpen((v) => !v)}
       >
@@ -455,15 +513,18 @@ const PaperContextContent: React.FC<{ paperId: string }> = ({ paperId }) => {
 const NoteContextContent: React.FC<{ noteId: string }> = ({ noteId }) => {
   const t = useI18nStore.getState().t;
   const notes = useNoteStore((s) => s.notes);
+  const papers = useLibraryStore((s) => s.papers);
   const openNote = useUIStore((s) => s.openNote);
   const openPaper = useUIStore((s) => s.openPaper);
 
   const [note, setNote] = useState<Note | null>(null);
   const [backlinks, setBacklinks] = useState<BacklinkItem[]>([]);
+  const [relatedPapers, setRelatedPapers] = useState<Array<{ id: string; title: string }>>([]);
   const [loading, setLoading] = useState(true);
 
   const [infoOpen, setInfoOpen] = useState(true);
   const [tagsOpen, setTagsOpen] = useState(true);
+  const [papersOpen, setPapersOpen] = useState(true);
   const [backlinksOpen, setBacklinksOpen] = useState(true);
 
   useEffect(() => {
@@ -474,19 +535,35 @@ const NoteContextContent: React.FC<{ noteId: string }> = ({ noteId }) => {
         const found = notes.find((n) => n.id === noteId);
         if (found && !cancelled) setNote(found);
 
+        let backlinkItems: BacklinkItem[] = [];
         try {
           const bl = await invoke<BacklinkItem[]>("get_backlinks", {
             itemType: "note" as NodeType, itemId: noteId,
           });
-          if (!cancelled) setBacklinks(bl ?? []);
-        } catch { if (!cancelled) setBacklinks([]); }
+          backlinkItems = bl ?? [];
+        } catch { backlinkItems = []; }
+
+        if (!cancelled) {
+          const primaryPaper = found?.paperId
+            ? {
+                id: found.paperId,
+                title: papers.find((paper) => paper.id === found.paperId)?.title ?? t.settings.data.papers,
+              }
+            : null;
+          setBacklinks(backlinkItems);
+          setRelatedPapers(mergeLinkedPapers(noteId, backlinkItems, primaryPaper));
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
     void fetchData();
-    return () => { cancelled = true; };
-  }, [noteId, notes]);
+    window.addEventListener("stellar-links-changed", fetchData);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("stellar-links-changed", fetchData);
+    };
+  }, [noteId, notes, papers, t.settings.data.papers]);
 
   if (loading) return <LoadingSpinner />;
 
@@ -609,6 +686,32 @@ const NoteContextContent: React.FC<{ noteId: string }> = ({ noteId }) => {
             <div className="flex flex-wrap gap-1">
               {note.tags.map((tag) => (
                 <Badge key={tag}>{tag}</Badge>
+              ))}
+            </div>
+          )}
+        </div>
+      </CollapsibleSection>
+
+      {/* バックリンクセクション */}
+      <CollapsibleSection
+        title={`関連する${t.settings.data.papers} (${relatedPapers.length})`}
+        open={papersOpen}
+        onToggle={() => setPapersOpen((v) => !v)}
+      >
+        <div className="px-4 pb-3">
+          {relatedPapers.length === 0 ? (
+            <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>
+              {t.library.k_no_paper_links}
+            </p>
+          ) : (
+            <div className="flex flex-col gap-0.5">
+              {relatedPapers.map((paper) => (
+                <LinkItemButton
+                  key={paper.id}
+                  itemType="paper"
+                  title={paper.title}
+                  onClick={() => openPaper(paper.id)}
+                />
               ))}
             </div>
           )}

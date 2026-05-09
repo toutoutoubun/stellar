@@ -52,12 +52,10 @@ pub async fn create_draft(app: AppHandle, input: CreateDraftDto) -> Result<Draft
 #[tauri::command]
 pub async fn get_drafts(app: AppHandle) -> Result<Vec<DraftResponse>, String> {
     let pool = get_pool(&app)?;
-    let rows = sqlx::query(
-        "SELECT * FROM notes WHERE is_draft = 1 ORDER BY updated_at DESC",
-    )
-    .fetch_all(pool.as_ref())
-    .await
-    .map_err(|e| format!("下書き一覧の取得に失敗: {}", e))?;
+    let rows = sqlx::query("SELECT * FROM notes WHERE is_draft = 1 ORDER BY updated_at DESC")
+        .fetch_all(pool.as_ref())
+        .await
+        .map_err(|e| format!("下書き一覧の取得に失敗: {}", e))?;
 
     rows.iter().map(parse_draft).collect()
 }
@@ -73,13 +71,12 @@ pub async fn get_draft_chapters(
     note_id: String,
 ) -> Result<Vec<DraftChapterResponse>, String> {
     let pool = get_pool(&app)?;
-    let rows = sqlx::query(
-        "SELECT * FROM draft_chapters WHERE note_id = ? ORDER BY order_index ASC",
-    )
-    .bind(&note_id)
-    .fetch_all(pool.as_ref())
-    .await
-    .map_err(|e| format!("章一覧の取得に失敗: {}", e))?;
+    let rows =
+        sqlx::query("SELECT * FROM draft_chapters WHERE note_id = ? ORDER BY order_index ASC")
+            .bind(&note_id)
+            .fetch_all(pool.as_ref())
+            .await
+            .map_err(|e| format!("章一覧の取得に失敗: {}", e))?;
 
     rows.iter().map(parse_draft_chapter).collect()
 }
@@ -213,10 +210,7 @@ fn generate_citation_key(authors: &[String], year: Option<i32>) -> String {
             if a.contains(',') {
                 a.split(',').next().unwrap_or("Unknown").trim().to_string()
             } else {
-                a.split_whitespace()
-                    .last()
-                    .unwrap_or("Unknown")
-                    .to_string()
+                a.split_whitespace().last().unwrap_or("Unknown").to_string()
             }
         })
         .unwrap_or_else(|| "Unknown".to_string());
@@ -254,9 +248,7 @@ fn format_apa7_inline(authors: &[String], year: Option<i32>) -> String {
 
 /// MLA 9th のインライン引用テキストを生成する
 fn format_mla9_inline(authors: &[String], page_ref: Option<&str>) -> String {
-    let page_part = page_ref
-        .map(|p| format!(" {}", p))
-        .unwrap_or_default();
+    let page_part = page_ref.map(|p| format!(" {}", p)).unwrap_or_default();
 
     match authors.len() {
         0 => format!("(Unknown{})", page_part),
@@ -323,7 +315,12 @@ fn format_japanese_inline(authors: &[String], year: Option<i32>) -> String {
 /// 著者名から姓を抽出するヘルパー
 fn extract_surname(author: &str) -> String {
     if author.contains(',') {
-        author.split(',').next().unwrap_or(author).trim().to_string()
+        author
+            .split(',')
+            .next()
+            .unwrap_or(author)
+            .trim()
+            .to_string()
     } else {
         author
             .split_whitespace()
@@ -786,13 +783,12 @@ pub async fn get_citations_for_note(
     note_id: String,
 ) -> Result<Vec<DraftCitationResponse>, String> {
     let pool = get_pool(&app)?;
-    let rows = sqlx::query(
-        "SELECT * FROM draft_citations WHERE note_id = ? ORDER BY created_at ASC",
-    )
-    .bind(&note_id)
-    .fetch_all(pool.as_ref())
-    .await
-    .map_err(|e| format!("引用一覧の取得に失敗: {}", e))?;
+    let rows =
+        sqlx::query("SELECT * FROM draft_citations WHERE note_id = ? ORDER BY created_at ASC")
+            .bind(&note_id)
+            .fetch_all(pool.as_ref())
+            .await
+            .map_err(|e| format!("引用一覧の取得に失敗: {}", e))?;
 
     rows.iter().map(parse_draft_citation).collect()
 }
@@ -812,10 +808,7 @@ pub async fn delete_citation(app: AppHandle, id: String) -> Result<(), String> {
 
 /// ノートの全引用から Markdown 参考文献リストを生成する
 #[tauri::command]
-pub async fn generate_bibliography(
-    app: AppHandle,
-    note_id: String,
-) -> Result<String, String> {
+pub async fn generate_bibliography(app: AppHandle, note_id: String) -> Result<String, String> {
     let pool = get_pool(&app)?;
 
     // ノートの引用スタイルを draft_meta から取得（デフォルト: apa7）
@@ -836,13 +829,12 @@ pub async fn generate_bibliography(
         .unwrap_or_else(|| "apa7".to_string());
 
     // 引用一覧を取得（citation_key でソート）
-    let rows = sqlx::query(
-        "SELECT * FROM draft_citations WHERE note_id = ? ORDER BY citation_key ASC",
-    )
-    .bind(&note_id)
-    .fetch_all(pool.as_ref())
-    .await
-    .map_err(|e| format!("引用の取得に失敗: {}", e))?;
+    let rows =
+        sqlx::query("SELECT * FROM draft_citations WHERE note_id = ? ORDER BY citation_key ASC")
+            .bind(&note_id)
+            .fetch_all(pool.as_ref())
+            .await
+            .map_err(|e| format!("引用の取得に失敗: {}", e))?;
 
     if rows.is_empty() {
         return Ok(String::new());

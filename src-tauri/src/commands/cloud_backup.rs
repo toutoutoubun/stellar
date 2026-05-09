@@ -184,8 +184,8 @@ fn get_config_dir(app: &AppHandle) -> Result<std::path::PathBuf, String> {
 fn derive_encryption_key(device_id: &str, recovery_code: &str) -> [u8; 32] {
     let key_material = format!("stellar-backup-key:{}:{}", device_id, recovery_code);
     type HmacSha256 = Hmac<Sha256>;
-    let mut mac =
-        <HmacSha256 as Mac>::new_from_slice(b"stellar-cloud-backup-v2").expect("HMAC can take any size");
+    let mut mac = <HmacSha256 as Mac>::new_from_slice(b"stellar-cloud-backup-v2")
+        .expect("HMAC can take any size");
     mac.update(key_material.as_bytes());
     let result = mac.finalize();
     let bytes = result.into_bytes();
@@ -222,8 +222,8 @@ fn derive_recovery_code(device_id: &str) -> String {
 
 /// データを AES-256-GCM で暗号化
 fn encrypt_data(plaintext: &[u8], key: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), String> {
-    let cipher = Aes256Gcm::new_from_slice(key)
-        .map_err(|e| format!("暗号化キーの作成に失敗: {}", e))?;
+    let cipher =
+        Aes256Gcm::new_from_slice(key).map_err(|e| format!("暗号化キーの作成に失敗: {}", e))?;
 
     let mut nonce_bytes = [0u8; 12];
     OsRng.fill_bytes(&mut nonce_bytes);
@@ -238,14 +238,14 @@ fn encrypt_data(plaintext: &[u8], key: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8>), 
 
 /// データを AES-256-GCM で復号
 fn decrypt_data(ciphertext: &[u8], key: &[u8; 32], nonce_bytes: &[u8]) -> Result<Vec<u8>, String> {
-    let cipher = Aes256Gcm::new_from_slice(key)
-        .map_err(|e| format!("復号キーの作成に失敗: {}", e))?;
+    let cipher =
+        Aes256Gcm::new_from_slice(key).map_err(|e| format!("復号キーの作成に失敗: {}", e))?;
 
     let nonce = Nonce::from_slice(nonce_bytes);
 
-    cipher
-        .decrypt(nonce, ciphertext)
-        .map_err(|_| "データの復号に失敗しました。リカバリーコードが正しいか確認してください。".to_string())
+    cipher.decrypt(nonce, ciphertext).map_err(|_| {
+        "データの復号に失敗しました。リカバリーコードが正しいか確認してください。".to_string()
+    })
 }
 
 /// 設定を読み込む
@@ -260,8 +260,8 @@ fn load_config(app: &AppHandle) -> Result<Option<CloudBackupConfig>, String> {
     let content = std::fs::read_to_string(&config_path)
         .map_err(|e| format!("設定ファイルの読み込みに失敗: {}", e))?;
 
-    let config: CloudBackupConfig = serde_json::from_str(&content)
-        .map_err(|e| format!("設定ファイルのパースに失敗: {}", e))?;
+    let config: CloudBackupConfig =
+        serde_json::from_str(&content).map_err(|e| format!("設定ファイルのパースに失敗: {}", e))?;
 
     Ok(Some(config))
 }
@@ -442,8 +442,8 @@ pub async fn cloud_backup_create(app: AppHandle) -> Result<CloudBackupResult, St
     let summary = payload.summary.clone();
 
     // 2. JSON シリアライズ
-    let json_data = serde_json::to_vec(&payload)
-        .map_err(|e| format!("データのシリアライズに失敗: {}", e))?;
+    let json_data =
+        serde_json::to_vec(&payload).map_err(|e| format!("データのシリアライズに失敗: {}", e))?;
 
     // 3. ZIP 圧縮
     let compressed = compress_data(&json_data)?;
@@ -492,8 +492,7 @@ pub async fn cloud_backup_create(app: AppHandle) -> Result<CloudBackupResult, St
 /// バックアップ一覧を取得
 #[tauri::command]
 pub async fn cloud_backup_list(app: AppHandle) -> Result<BackupListResponse, String> {
-    let config = load_config(&app)?
-        .ok_or("クラウドバックアップが未設定です。")?;
+    let config = load_config(&app)?.ok_or("クラウドバックアップが未設定です。")?;
 
     let backups = fetch_backup_list(&config).await?;
     let total_count = backups.len();
@@ -511,8 +510,7 @@ pub async fn cloud_backup_restore(
     backup_id: String,
     recovery_code: String,
 ) -> Result<RestoreResult, String> {
-    let config = load_config(&app)?
-        .ok_or("クラウドバックアップが未設定です。")?;
+    let config = load_config(&app)?.ok_or("クラウドバックアップが未設定です。")?;
 
     // 1. バックアップをダウンロード
     log::info!("クラウドバックアップ: ダウンロード中 ({})", backup_id);
@@ -608,10 +606,7 @@ pub async fn cloud_backup_recover(
     };
     save_config(&app, &config)?;
 
-    log::info!(
-        "リカバリー成功: device_id={}",
-        &recover_resp.device_id[..8]
-    );
+    log::info!("リカバリー成功: device_id={}", &recover_resp.device_id[..8]);
 
     Ok(CloudBackupStatus {
         is_configured: true,
@@ -629,13 +624,15 @@ pub async fn cloud_backup_toggle_auto(
     app: AppHandle,
     enabled: bool,
 ) -> Result<CloudBackupStatus, String> {
-    let mut config = load_config(&app)?
-        .ok_or("クラウドバックアップが未設定です。")?;
+    let mut config = load_config(&app)?.ok_or("クラウドバックアップが未設定です。")?;
 
     config.auto_backup_enabled = enabled;
     save_config(&app, &config)?;
 
-    log::info!("自動バックアップ: {}", if enabled { "有効" } else { "無効" });
+    log::info!(
+        "自動バックアップ: {}",
+        if enabled { "有効" } else { "無効" }
+    );
 
     Ok(CloudBackupStatus {
         is_configured: true,
@@ -653,8 +650,7 @@ pub async fn cloud_backup_set_api_url(
     app: AppHandle,
     api_url: String,
 ) -> Result<CloudBackupStatus, String> {
-    let mut config = load_config(&app)?
-        .ok_or("クラウドバックアップが未設定です。")?;
+    let mut config = load_config(&app)?.ok_or("クラウドバックアップが未設定です。")?;
 
     config.api_url = api_url;
     save_config(&app, &config)?;
@@ -705,8 +701,8 @@ fn flate2_compress(data: &[u8]) -> Result<Vec<u8>, String> {
 fn decompress_data(compressed: &[u8]) -> Result<Vec<u8>, String> {
     use std::io::Cursor;
     let cursor = Cursor::new(compressed);
-    let mut archive =
-        zip::ZipArchive::new(cursor).map_err(|e| format!("ZIP アーカイブの読み込みに失敗: {}", e))?;
+    let mut archive = zip::ZipArchive::new(cursor)
+        .map_err(|e| format!("ZIP アーカイブの読み込みに失敗: {}", e))?;
 
     let mut entry = archive
         .by_name("backup.json")
@@ -727,10 +723,7 @@ fn decompress_data(compressed: &[u8]) -> Result<Vec<u8>, String> {
 /// バックアップをアップロード
 async fn upload_backup(config: &CloudBackupConfig, data: &[u8]) -> Result<String, String> {
     let client = reqwest::Client::new();
-    let backup_id = format!(
-        "backup_{}",
-        chrono::Utc::now().format("%Y%m%d_%H%M%S")
-    );
+    let backup_id = format!("backup_{}", chrono::Utc::now().format("%Y%m%d_%H%M%S"));
 
     let resp = client
         .put(format!(
@@ -750,15 +743,15 @@ async fn upload_backup(config: &CloudBackupConfig, data: &[u8]) -> Result<String
 
         // ネットワーク未接続やサーバー未配置の場合はローカルにも保存
         if status.as_u16() >= 500 || status.as_u16() == 0 {
-            log::warn!("クラウドアップロード失敗 (HTTP {}), ローカルに保存します", status);
+            log::warn!(
+                "クラウドアップロード失敗 (HTTP {}), ローカルに保存します",
+                status
+            );
             save_backup_locally(&config, data, &backup_id)?;
             return Ok(format!("local:{}", backup_id));
         }
 
-        return Err(format!(
-            "アップロードに失敗 (HTTP {}): {}",
-            status, body
-        ));
+        return Err(format!("アップロードに失敗 (HTTP {}): {}", status, body));
     }
 
     Ok(backup_id)
@@ -794,10 +787,7 @@ async fn fetch_backup_list(config: &CloudBackupConfig) -> Result<Vec<BackupEntry
 }
 
 /// バックアップをダウンロード
-async fn download_backup(
-    config: &CloudBackupConfig,
-    backup_id: &str,
-) -> Result<Vec<u8>, String> {
+async fn download_backup(config: &CloudBackupConfig, backup_id: &str) -> Result<Vec<u8>, String> {
     // ローカルバックアップの場合
     if backup_id.starts_with("local:") {
         let local_id = &backup_id[6..];
@@ -904,9 +894,7 @@ fn list_local_backups(_config: &CloudBackupConfig) -> Result<Vec<BackupEntry>, S
                 backup_id: format!("local:{}", filename),
                 created_at: metadata
                     .and_then(|m| m.modified().ok())
-                    .map(|t| {
-                        chrono::DateTime::<chrono::Utc>::from(t).to_rfc3339()
-                    })
+                    .map(|t| chrono::DateTime::<chrono::Utc>::from(t).to_rfc3339())
                     .unwrap_or_default(),
                 size_bytes: size,
                 summary,
@@ -975,13 +963,12 @@ async fn restore_to_db(app: &AppHandle, payload: &BackupPayload) -> Result<Resto
         if existing.is_some() {
             // 既存の場合は更新（バックアップの方が新しければ）
             let backup_updated = paper_val["updatedAt"].as_str().unwrap_or("");
-            let current: Option<String> =
-                sqlx::query("SELECT updated_at FROM papers WHERE id = ?")
-                    .bind(id)
-                    .fetch_optional(pool.as_ref())
-                    .await
-                    .map_err(|e| format!("更新日時の取得に失敗: {}", e))?
-                    .and_then(|row| row.try_get("updated_at").ok());
+            let current: Option<String> = sqlx::query("SELECT updated_at FROM papers WHERE id = ?")
+                .bind(id)
+                .fetch_optional(pool.as_ref())
+                .await
+                .map_err(|e| format!("更新日時の取得に失敗: {}", e))?
+                .and_then(|row| row.try_get("updated_at").ok());
 
             if let Some(ref current_updated) = current {
                 if backup_updated <= current_updated.as_str() {
@@ -1004,12 +991,8 @@ async fn restore_to_db(app: &AppHandle, payload: &BackupPayload) -> Result<Resto
         let pdf_path = paper_val["pdfPath"].as_str();
         let tags = paper_val["tags"].to_string();
         let now_str = chrono::Utc::now().to_rfc3339();
-        let created_at = paper_val["createdAt"]
-            .as_str()
-            .unwrap_or(&now_str);
-        let updated_at = paper_val["updatedAt"]
-            .as_str()
-            .unwrap_or(&now_str);
+        let created_at = paper_val["createdAt"].as_str().unwrap_or(&now_str);
+        let updated_at = paper_val["updatedAt"].as_str().unwrap_or(&now_str);
 
         sqlx::query(
             "INSERT OR REPLACE INTO papers (id, title, authors, year, journal, volume, issue, pages, doi, url, abstract, pdf_path, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -1062,12 +1045,8 @@ async fn restore_to_db(app: &AppHandle, payload: &BackupPayload) -> Result<Resto
         let paper_id = note_val["paperId"].as_str();
         let tags = note_val["tags"].to_string();
         let now_str = chrono::Utc::now().to_rfc3339();
-        let created_at = note_val["createdAt"]
-            .as_str()
-            .unwrap_or(&now_str);
-        let updated_at = note_val["updatedAt"]
-            .as_str()
-            .unwrap_or(&now_str);
+        let created_at = note_val["createdAt"].as_str().unwrap_or(&now_str);
+        let updated_at = note_val["updatedAt"].as_str().unwrap_or(&now_str);
 
         sqlx::query(
             "INSERT OR REPLACE INTO notes (id, title, content, paper_id, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -1110,9 +1089,7 @@ async fn restore_to_db(app: &AppHandle, payload: &BackupPayload) -> Result<Resto
         let page = hl_val["page"].as_i64().unwrap_or(1) as i32;
         let rect = hl_val["rect"].to_string();
         let now_str = chrono::Utc::now().to_rfc3339();
-        let created_at = hl_val["createdAt"]
-            .as_str()
-            .unwrap_or(&now_str);
+        let created_at = hl_val["createdAt"].as_str().unwrap_or(&now_str);
 
         sqlx::query(
             "INSERT OR IGNORE INTO highlights (id, paper_id, text, comment, color, page, rect, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -1155,9 +1132,7 @@ async fn restore_to_db(app: &AppHandle, payload: &BackupPayload) -> Result<Resto
         let target_id = link_val["targetId"].as_str().unwrap_or("");
         let context = link_val["context"].as_str();
         let now_str = chrono::Utc::now().to_rfc3339();
-        let created_at = link_val["createdAt"]
-            .as_str()
-            .unwrap_or(&now_str);
+        let created_at = link_val["createdAt"].as_str().unwrap_or(&now_str);
 
         sqlx::query(
             "INSERT OR IGNORE INTO links (id, source_type, source_id, target_type, target_id, context, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",

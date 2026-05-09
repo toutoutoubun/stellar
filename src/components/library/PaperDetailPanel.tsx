@@ -94,6 +94,35 @@ interface PaperLinkSuggestion {
   reason: string;
 }
 
+function peerFromBacklink(link: BacklinkItem, currentId: string) {
+  const isSource = link.sourceId === currentId;
+  return {
+    id: isSource ? link.targetId : link.sourceId,
+    type: isSource ? link.targetType : link.sourceType,
+    title: isSource ? link.targetTitle : link.sourceTitle,
+  };
+}
+
+function mergeLinkedNotes(baseNotes: Note[], links: BacklinkItem[], currentPaperId: string): Note[] {
+  const notesById = new Map(baseNotes.map((note) => [note.id, note]));
+
+  for (const link of links) {
+    const peer = peerFromBacklink(link, currentPaperId);
+    if (peer.type !== "note" || notesById.has(peer.id)) continue;
+    notesById.set(peer.id, {
+      id: peer.id,
+      title: peer.title || "Untitled Note",
+      content: "",
+      paperId: currentPaperId,
+      tags: [],
+      createdAt: "",
+      updatedAt: "",
+    });
+  }
+
+  return Array.from(notesById.values());
+}
+
 const PaperLinkSuggestionsSection: React.FC<{
   paperId: string;
   onNavigate?: (targetId: string, targetType: NodeType) => void;
@@ -347,7 +376,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
         ]);
 
         if (!cancelled) {
-          setRelatedNotes(notes);
+          setRelatedNotes(mergeLinkedNotes(notes, links, currentPaper.id));
           setBacklinks(links);
           setHighlights(hlights);
         }
@@ -813,7 +842,7 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
         {/* ── 関連ノート ── */}
         <div className="py-1">
           <SectionHeader
-            title={t.library.k_z75cmx}
+            title={`関連する${t.settings.data.notes}`}
             count={relatedNotes.length}
             expanded={notesExpanded}
             onToggle={() => setNotesExpanded((v) => !v)}

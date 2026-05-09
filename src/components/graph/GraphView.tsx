@@ -44,6 +44,7 @@ export const GraphView: React.FC = () => {
   const [hoveredNode, setHoveredNode] = useState<GraphNodeExtended | null>(
     null,
   );
+  const [positionedNodes, setPositionedNodes] = useState<GraphNodeExtended[]>([]);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const graphMethodsRef = useRef<ForceGraphMethods<
@@ -137,6 +138,14 @@ export const GraphView: React.FC = () => {
     [],
   );
 
+  const handleNodePositionsChange = useCallback((nodes: GraphNodeExtended[]) => {
+    setPositionedNodes([...nodes]);
+  }, []);
+
+  useEffect(() => {
+    setPositionedNodes([]);
+  }, [filteredNodes]);
+
   /** ミニマップからグラフ中心を移動 */
   const handleMiniMapCenterAt = useCallback(
     (x: number, y: number) => {
@@ -144,6 +153,15 @@ export const GraphView: React.FC = () => {
     },
     [],
   );
+
+  const graphWidth =
+    containerSize.width ||
+    containerRef.current?.clientWidth ||
+    (typeof window !== "undefined" ? Math.max(320, window.innerWidth - 280) : 800);
+  const graphHeight =
+    containerSize.height ||
+    containerRef.current?.clientHeight ||
+    (typeof window !== "undefined" ? Math.max(320, window.innerHeight - 40) : 600);
 
   /** キーボードショートカット */
   useEffect(() => {
@@ -301,7 +319,7 @@ export const GraphView: React.FC = () => {
       style={{ backgroundColor: "var(--color-bg-primary)" }}
     >
       {/* グラフキャンバス */}
-      {containerSize.width > 0 && containerSize.height > 0 && (
+      {graphWidth > 0 && graphHeight > 0 && (
         <ForceGraph
           nodes={filteredNodes}
           links={filteredLinks}
@@ -310,9 +328,10 @@ export const GraphView: React.FC = () => {
           onNodeHover={handleNodeHover}
           onBackgroundClick={handleBackgroundClick}
           selectedNodeId={selectedNodeId}
-          width={containerSize.width}
-          height={containerSize.height}
+          width={graphWidth}
+          height={graphHeight}
           onGraphReady={handleGraphReady}
+          onNodePositionsChange={handleNodePositionsChange}
         />
       )}
 
@@ -338,7 +357,7 @@ export const GraphView: React.FC = () => {
       {/* ミニマップ（右下） */}
       {filteredNodes.length > 0 && (
         <GraphMiniMap
-          nodes={filteredNodes}
+          nodes={positionedNodes.length === filteredNodes.length ? positionedNodes : filteredNodes}
           links={filteredLinks}
           selectedNodeId={selectedNodeId}
           width={200}
@@ -352,8 +371,8 @@ export const GraphView: React.FC = () => {
         node={hoveredNode}
         mouseX={mousePos.x}
         mouseY={mousePos.y}
-        containerWidth={containerSize.width}
-        containerHeight={containerSize.height}
+        containerWidth={graphWidth}
+        containerHeight={graphHeight}
       />
 
       {/* 選択中ノード情報バー（下部） */}

@@ -3,9 +3,9 @@
 // Markdown ノートの作成・取得・更新・削除を管理する
 // ページネーション・NoteDetail（バックリンク+アウトライン）・ハイライトからの自動生成を提供
 
-use crate::db::models::*;
-use crate::db::get_pool;
 use crate::commands::links::fetch_backlinks_for;
+use crate::db::get_pool;
+use crate::db::models::*;
 use sqlx::Row;
 use tauri::AppHandle;
 
@@ -221,18 +221,16 @@ pub async fn update_note(
     let tags = input.tags.unwrap_or(current.tags);
     let tags_json = serde_json::to_string(&tags).map_err(|e| e.to_string())?;
 
-    sqlx::query(
-        "UPDATE notes SET title=?, content=?, paper_id=?, tags=?, updated_at=? WHERE id=?",
-    )
-    .bind(&title)
-    .bind(&content)
-    .bind(&paper_id)
-    .bind(&tags_json)
-    .bind(&now)
-    .bind(&id)
-    .execute(pool.as_ref())
-    .await
-    .map_err(|e| format!("ノートの更新に失敗: {}", e))?;
+    sqlx::query("UPDATE notes SET title=?, content=?, paper_id=?, tags=?, updated_at=? WHERE id=?")
+        .bind(&title)
+        .bind(&content)
+        .bind(&paper_id)
+        .bind(&tags_json)
+        .bind(&now)
+        .bind(&id)
+        .execute(pool.as_ref())
+        .await
+        .map_err(|e| format!("ノートの更新に失敗: {}", e))?;
 
     Ok(NoteResponse {
         id,

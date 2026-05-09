@@ -409,13 +409,10 @@ pub async fn export_static_site(
     let mut backlinks_map: HashMap<String, Vec<LinkWithSource>> = HashMap::new();
     if include_backlinks {
         for note in &notes {
-            let backlinks = crate::commands::links::fetch_backlinks_for(
-                pool.as_ref(),
-                "note",
-                &note.id,
-            )
-            .await
-            .unwrap_or_default();
+            let backlinks =
+                crate::commands::links::fetch_backlinks_for(pool.as_ref(), "note", &note.id)
+                    .await
+                    .unwrap_or_default();
             backlinks_map.insert(note.id.clone(), backlinks);
         }
     }
@@ -529,8 +526,10 @@ pub async fn export_static_site(
 
     // CSS テーマ: "light" / "dark" / "auto"(default) に対応
     let css_content = match theme.as_str() {
-        "light" => CSS_TEMPLATE
-            .replace("@media (prefers-color-scheme: dark) {", "/* dark theme disabled */\n@media (prefers-color-scheme: __disabled__) {"),
+        "light" => CSS_TEMPLATE.replace(
+            "@media (prefers-color-scheme: dark) {",
+            "/* dark theme disabled */\n@media (prefers-color-scheme: __disabled__) {",
+        ),
         "dark" => {
             // dark テーマの値をデフォルトにする
             CSS_TEMPLATE
@@ -573,6 +572,43 @@ struct PackageManifest {
     includes_pdfs: bool,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PackageInfoResponse {
+    version: String,
+    created_at: String,
+    paper_count: usize,
+    note_count: usize,
+    highlight_count: usize,
+    link_count: usize,
+    has_pdfs: bool,
+    file_size_bytes: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportPackageResult {
+    path: String,
+    size_bytes: u64,
+    manifest: PackageInfoResponse,
+}
+
+fn package_info_from_manifest(
+    manifest: &PackageManifest,
+    file_size_bytes: u64,
+) -> PackageInfoResponse {
+    PackageInfoResponse {
+        version: manifest.version.clone(),
+        created_at: manifest.created_at.clone(),
+        paper_count: manifest.paper_count,
+        note_count: manifest.note_count,
+        highlight_count: manifest.highlight_count,
+        link_count: manifest.link_count,
+        has_pdfs: manifest.includes_pdfs,
+        file_size_bytes,
+    }
+}
+
 #[tauri::command]
 pub async fn export_stellar_package(
     app: AppHandle,
@@ -580,7 +616,7 @@ pub async fn export_stellar_package(
     note_ids: Vec<String>,
     include_pdfs: bool,
     output_path: String,
-) -> Result<String, String> {
+) -> Result<ExportPackageResult, String> {
     let pool = get_pool(&app)?;
 
     // 論文を取得
@@ -588,13 +624,21 @@ pub async fn export_stellar_package(
         vec![]
     } else {
         let placeholders: Vec<String> = paper_ids.iter().map(|_| "?".to_string()).collect();
-        let sql = format!("SELECT * FROM papers WHERE id IN ({})", placeholders.join(", "));
+        let sql = format!(
+            "SELECT * FROM papers WHERE id IN ({})",
+            placeholders.join(", ")
+        );
         let mut query = sqlx::query(&sql);
         for id in &paper_ids {
             query = query.bind(id);
         }
-        let rows = query.fetch_all(pool.as_ref()).await.map_err(|e| format!("論文の取得に失敗: {}", e))?;
-        rows.iter().map(parse_paper_sqlx).collect::<Result<Vec<_>, _>>()?
+        let rows = query
+            .fetch_all(pool.as_ref())
+            .await
+            .map_err(|e| format!("論文の取得に失敗: {}", e))?;
+        rows.iter()
+            .map(parse_paper_sqlx)
+            .collect::<Result<Vec<_>, _>>()?
     };
 
     // ノートを取得
@@ -602,13 +646,21 @@ pub async fn export_stellar_package(
         vec![]
     } else {
         let placeholders: Vec<String> = note_ids.iter().map(|_| "?".to_string()).collect();
-        let sql = format!("SELECT * FROM notes WHERE id IN ({})", placeholders.join(", "));
+        let sql = format!(
+            "SELECT * FROM notes WHERE id IN ({})",
+            placeholders.join(", ")
+        );
         let mut query = sqlx::query(&sql);
         for id in &note_ids {
             query = query.bind(id);
         }
-        let rows = query.fetch_all(pool.as_ref()).await.map_err(|e| format!("ノートの取得に失敗: {}", e))?;
-        rows.iter().map(parse_note_sqlx).collect::<Result<Vec<_>, _>>()?
+        let rows = query
+            .fetch_all(pool.as_ref())
+            .await
+            .map_err(|e| format!("ノートの取得に失敗: {}", e))?;
+        rows.iter()
+            .map(parse_note_sqlx)
+            .collect::<Result<Vec<_>, _>>()?
     };
 
     // ハイライトを取得（紐づく論文の分）
@@ -624,8 +676,13 @@ pub async fn export_stellar_package(
         for id in &paper_ids {
             query = query.bind(id);
         }
-        let rows = query.fetch_all(pool.as_ref()).await.map_err(|e| format!("ハイライトの取得に失敗: {}", e))?;
-        rows.iter().map(parse_highlight_sqlx).collect::<Result<Vec<_>, _>>()?
+        let rows = query
+            .fetch_all(pool.as_ref())
+            .await
+            .map_err(|e| format!("ハイライトの取得に失敗: {}", e))?;
+        rows.iter()
+            .map(parse_highlight_sqlx)
+            .collect::<Result<Vec<_>, _>>()?
     };
 
     // リンクを取得（関連する論文・ノート）
@@ -646,8 +703,13 @@ pub async fn export_stellar_package(
         for id in &all_ids {
             query = query.bind(*id);
         }
-        let rows = query.fetch_all(pool.as_ref()).await.map_err(|e| format!("リンクの取得に失敗: {}", e))?;
-        rows.iter().map(parse_link_sqlx).collect::<Result<Vec<_>, _>>()?
+        let rows = query
+            .fetch_all(pool.as_ref())
+            .await
+            .map_err(|e| format!("リンクの取得に失敗: {}", e))?;
+        rows.iter()
+            .map(parse_link_sqlx)
+            .collect::<Result<Vec<_>, _>>()?
     };
 
     // ZIP ファイルを作成
@@ -721,10 +783,46 @@ pub async fn export_stellar_package(
         }
     }
 
-    zip.finish()
+    let finished_file = zip
+        .finish()
         .map_err(|e| format!("ZIP ファイルの完了に失敗: {}", e))?;
+    let size_bytes = finished_file.metadata().map(|m| m.len()).unwrap_or(0);
 
-    Ok(output_path)
+    Ok(ExportPackageResult {
+        path: output_path,
+        size_bytes,
+        manifest: package_info_from_manifest(&manifest, size_bytes),
+    })
+}
+
+#[tauri::command]
+pub async fn inspect_stellar_package(package_path: String) -> Result<PackageInfoResponse, String> {
+    let file_size_bytes = std::fs::metadata(&package_path)
+        .map_err(|e| format!("パッケージファイルの情報を取得できません: {}", e))?
+        .len();
+    let file = std::fs::File::open(&package_path)
+        .map_err(|e| format!("ZIP ファイルを開けません: {}", e))?;
+    let mut archive =
+        zip::ZipArchive::new(file).map_err(|e| format!("ZIP アーカイブの読み込みに失敗: {}", e))?;
+    let manifest: PackageManifest = {
+        let mut entry = archive
+            .by_name("manifest.json")
+            .map_err(|_| "manifest.json が見つかりません".to_string())?;
+        let mut buf = String::new();
+        entry
+            .read_to_string(&mut buf)
+            .map_err(|e| format!("manifest.json の読み込みに失敗: {}", e))?;
+        serde_json::from_str(&buf).map_err(|e| format!("manifest.json のパースに失敗: {}", e))?
+    };
+
+    if !manifest.version.starts_with("1.") {
+        return Err(format!(
+            "非対応のパッケージバージョン: {}",
+            manifest.version
+        ));
+    }
+
+    Ok(package_info_from_manifest(&manifest, file_size_bytes))
 }
 
 // ============================================================
@@ -757,13 +855,15 @@ pub struct ImportConflict {
 pub async fn import_stellar_package(
     app: AppHandle,
     package_path: String,
+    skip_duplicates: Option<bool>,
 ) -> Result<ImportResult, String> {
     let pool = get_pool(&app)?;
+    let skip_duplicates = skip_duplicates.unwrap_or(true);
 
     let file = std::fs::File::open(&package_path)
         .map_err(|e| format!("ZIP ファイルを開けません: {}", e))?;
-    let mut archive = zip::ZipArchive::new(file)
-        .map_err(|e| format!("ZIP アーカイブの読み込みに失敗: {}", e))?;
+    let mut archive =
+        zip::ZipArchive::new(file).map_err(|e| format!("ZIP アーカイブの読み込みに失敗: {}", e))?;
 
     // manifest.json を読み込み・検証
     let manifest: PackageManifest = {
@@ -806,8 +906,7 @@ pub async fn import_stellar_package(
         if let Ok(mut entry) = archive.by_name("papers.json") {
             let mut buf = String::new();
             entry.read_to_string(&mut buf).map_err(|e| e.to_string())?;
-            serde_json::from_str(&buf)
-                .map_err(|e| format!("papers.json のパースに失敗: {}", e))?
+            serde_json::from_str(&buf).map_err(|e| format!("papers.json のパースに失敗: {}", e))?
         } else {
             Vec::new()
         }
@@ -817,8 +916,7 @@ pub async fn import_stellar_package(
         if let Ok(mut entry) = archive.by_name("notes.json") {
             let mut buf = String::new();
             entry.read_to_string(&mut buf).map_err(|e| e.to_string())?;
-            serde_json::from_str(&buf)
-                .map_err(|e| format!("notes.json のパースに失敗: {}", e))?
+            serde_json::from_str(&buf).map_err(|e| format!("notes.json のパースに失敗: {}", e))?
         } else {
             Vec::new()
         }
@@ -839,8 +937,7 @@ pub async fn import_stellar_package(
         if let Ok(mut entry) = archive.by_name("links.json") {
             let mut buf = String::new();
             entry.read_to_string(&mut buf).map_err(|e| e.to_string())?;
-            serde_json::from_str(&buf)
-                .map_err(|e| format!("links.json のパースに失敗: {}", e))?
+            serde_json::from_str(&buf).map_err(|e| format!("links.json のパースに失敗: {}", e))?
         } else {
             Vec::new()
         }
@@ -888,23 +985,25 @@ pub async fn import_stellar_package(
     // papers のインポート
     for paper in papers {
         // DOI で既存論文をチェック
-        if let Some(ref doi) = paper.doi {
-            let existing = sqlx::query("SELECT id FROM papers WHERE doi = ?")
-                .bind(doi)
-                .fetch_optional(pool.as_ref())
-                .await
-                .map_err(|e| format!("DOI チェックに失敗: {}", e))?;
+        if skip_duplicates {
+            if let Some(ref doi) = paper.doi {
+                let existing = sqlx::query("SELECT id FROM papers WHERE doi = ?")
+                    .bind(doi)
+                    .fetch_optional(pool.as_ref())
+                    .await
+                    .map_err(|e| format!("DOI チェックに失敗: {}", e))?;
 
-            if let Some(row) = existing {
-                let existing_id: String = row.try_get("id").unwrap_or_default();
-                id_map.insert(paper.id.clone(), existing_id);
-                result.conflicts.push(ImportConflict {
-                    item_type: "paper".to_string(),
-                    original_id: paper.id.clone(),
-                    title: paper.title.clone(),
-                    reason: format!("DOI 重複: {}", doi),
-                });
-                continue;
+                if let Some(row) = existing {
+                    let existing_id: String = row.try_get("id").unwrap_or_default();
+                    id_map.insert(paper.id.clone(), existing_id);
+                    result.conflicts.push(ImportConflict {
+                        item_type: "paper".to_string(),
+                        original_id: paper.id.clone(),
+                        title: paper.title.clone(),
+                        reason: format!("DOI 重複: {}", doi),
+                    });
+                    continue;
+                }
             }
         }
 

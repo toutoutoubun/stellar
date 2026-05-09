@@ -213,6 +213,7 @@ pub fn run() {
             // エクスポート・インポート
             commands::export::export_static_site,
             commands::export::export_stellar_package,
+            commands::export::inspect_stellar_package,
             commands::export::import_stellar_package,
             // データ管理コマンド
             commands::data::get_data_summary,

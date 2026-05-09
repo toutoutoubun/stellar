@@ -122,7 +122,10 @@ pub fn extract_metadata_from_file(path: &str) -> PdfMetadata {
 
 /// PDF の日付文字列 (例: "D:20231015120000+09'00'") から年(i32)を抽出する
 fn extract_year_from_pdf_date(date_str: &str) -> Option<i32> {
-    let s = date_str.trim().strip_prefix("D:").unwrap_or(date_str.trim());
+    let s = date_str
+        .trim()
+        .strip_prefix("D:")
+        .unwrap_or(date_str.trim());
     if s.len() >= 4 {
         s[..4].parse::<i32>().ok()
     } else {
@@ -186,7 +189,10 @@ mod tests {
 
     #[test]
     fn test_extract_year_from_pdf_date() {
-        assert_eq!(extract_year_from_pdf_date("D:20231015120000+09'00'"), Some(2023));
+        assert_eq!(
+            extract_year_from_pdf_date("D:20231015120000+09'00'"),
+            Some(2023)
+        );
         assert_eq!(extract_year_from_pdf_date("D:2024"), Some(2024));
         assert_eq!(extract_year_from_pdf_date("2021"), Some(2021));
         assert_eq!(extract_year_from_pdf_date(""), None);

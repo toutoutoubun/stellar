@@ -4,8 +4,8 @@
 // item_types フィルタ・カテゴリ別 SearchResults・snippet [[match]] ラップ・
 // オートコンプリート用 get_link_suggestions を提供
 
-use crate::db::models::*;
 use crate::db::get_pool;
+use crate::db::models::*;
 use sqlx::Row;
 use tauri::AppHandle;
 
@@ -226,10 +226,7 @@ pub async fn get_link_suggestions(
 /// WikiLink の表示テキストからノートまたは論文を解決する。
 /// 同名がある場合は、ユーザーの執筆体験に合わせてノートを優先する。
 #[tauri::command]
-pub async fn resolve_wikilink(
-    app: AppHandle,
-    title: String,
-) -> Result<ResolvedWikiLink, String> {
+pub async fn resolve_wikilink(app: AppHandle, title: String) -> Result<ResolvedWikiLink, String> {
     let pool = get_pool(&app)?;
     let trimmed = title.trim();
     if trimmed.is_empty() {
@@ -282,7 +279,11 @@ async fn get_context_link_suggestions(
     item_id: &str,
     item_type: &str,
 ) -> Result<Vec<LinkSuggestion>, String> {
-    let item_type = if item_type == "paper" { "paper" } else { "note" };
+    let item_type = if item_type == "paper" {
+        "paper"
+    } else {
+        "note"
+    };
 
     let linked_rows = sqlx::query(
         "SELECT source_type, source_id, target_type, target_id
@@ -359,9 +360,14 @@ async fn get_context_link_suggestions(
         let title = col_str(row, "title");
         let body = col_str(row, "body");
         let tags = col_string_vec(row, "tags");
-        if let Some((score, reason)) =
-            score_link_candidate(&current_title, &current_text, &current_tags, &title, &body, &tags)
-        {
+        if let Some((score, reason)) = score_link_candidate(
+            &current_title,
+            &current_text,
+            &current_tags,
+            &title,
+            &body,
+            &tags,
+        ) {
             suggestions.push(LinkSuggestion {
                 id,
                 item_type: "note".to_string(),
@@ -390,9 +396,14 @@ async fn get_context_link_suggestions(
         let title = col_str(row, "title");
         let body = col_str(row, "body");
         let tags = col_string_vec(row, "tags");
-        if let Some((mut score, mut reason)) =
-            score_link_candidate(&current_title, &current_text, &current_tags, &title, &body, &tags)
-        {
+        if let Some((mut score, mut reason)) = score_link_candidate(
+            &current_title,
+            &current_text,
+            &current_tags,
+            &title,
+            &body,
+            &tags,
+        ) {
             let authors = col_string_vec(row, "authors");
             let author_overlap = authors
                 .iter()
@@ -885,7 +896,7 @@ pub async fn get_recent_items(
          FROM notes
          WHERE is_draft = 0 OR is_draft IS NULL
          ORDER BY accessed_at DESC
-         LIMIT ?"
+         LIMIT ?",
     )
     .bind(limit)
     .fetch_all(pool.as_ref())

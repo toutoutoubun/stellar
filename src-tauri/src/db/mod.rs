@@ -28,7 +28,8 @@ pub fn get_pool(app: &AppHandle) -> Result<Arc<SqlitePool>, String> {
         Some(db) => Ok(db.0.clone()),
         None => Err(
             "データベースが初期化されていません。アプリを再起動してください。\
-             （AppDb が Managed State に登録されていません）".to_string()
+             （AppDb が Managed State に登録されていません）"
+                .to_string(),
         ),
     }
 }
@@ -85,7 +86,9 @@ pub async fn init_db(app: &AppHandle) -> SqlitePool {
 /// ファイルベース DB への接続を最大3回試行する
 /// 成功時は Ok(pool)、全リトライ失敗時は Err(エラー詳細文字列) を返す
 async fn try_file_db(app: &AppHandle) -> Result<SqlitePool, String> {
-    let app_path = app.path().app_config_dir()
+    let app_path = app
+        .path()
+        .app_config_dir()
         .map_err(|e| format!("アプリ設定ディレクトリの取得に失敗: {}", e))?;
 
     std::fs::create_dir_all(&app_path)
@@ -110,7 +113,12 @@ async fn try_file_db(app: &AppHandle) -> Result<SqlitePool, String> {
                     }
                     Err(e) => {
                         last_err = format!("接続後のヘルスチェック失敗: {}", e);
-                        log::error!("DB ヘルスチェック失敗 (試行 {}/{}): {}", attempt, max_attempts, e);
+                        log::error!(
+                            "DB ヘルスチェック失敗 (試行 {}/{}): {}",
+                            attempt,
+                            max_attempts,
+                            e
+                        );
                     }
                 }
             }
@@ -159,14 +167,32 @@ async fn run_migrations_safe(pool: &SqlitePool) {
 
     // ── V001〜V003, V006: 全て IF NOT EXISTS で安全 ──
     let safe_migrations: Vec<(i64, &str, &str)> = vec![
-        (1, "V001__initial", include_str!("migrations/V001__initial.sql")),
-        (2, "V002__qualitative", include_str!("migrations/V002__qualitative.sql")),
-        (3, "V003__quantitative", include_str!("migrations/V003__quantitative.sql")),
-        (6, "V006__export", include_str!("migrations/V006__export.sql")),
+        (
+            1,
+            "V001__initial",
+            include_str!("migrations/V001__initial.sql"),
+        ),
+        (
+            2,
+            "V002__qualitative",
+            include_str!("migrations/V002__qualitative.sql"),
+        ),
+        (
+            3,
+            "V003__quantitative",
+            include_str!("migrations/V003__quantitative.sql"),
+        ),
+        (
+            6,
+            "V006__export",
+            include_str!("migrations/V006__export.sql"),
+        ),
     ];
 
     for (version, name, sql) in &safe_migrations {
-        if migration_applied(pool, *version).await { continue; }
+        if migration_applied(pool, *version).await {
+            continue;
+        }
         run_sql_migration_safe(pool, *version, name, sql).await;
     }
 
@@ -192,17 +218,33 @@ async fn run_migrations_safe(pool: &SqlitePool) {
 /// V004: citation_network — 各ステートメントを個別に安全実行
 async fn run_v004_safe(pool: &SqlitePool) {
     // papers テーブルにカラムを安全に追加
-    safe_add_column(pool, "papers", "reading_status",
-        "TEXT NOT NULL DEFAULT 'unread'").await;
+    safe_add_column(
+        pool,
+        "papers",
+        "reading_status",
+        "TEXT NOT NULL DEFAULT 'unread'",
+    )
+    .await;
     safe_add_column(pool, "papers", "ss_paper_id", "TEXT").await;
-    safe_add_column(pool, "papers", "references_json",
-        "TEXT NOT NULL DEFAULT '[]'").await;
-    safe_add_column(pool, "papers", "cited_by_json",
-        "TEXT NOT NULL DEFAULT '[]'").await;
+    safe_add_column(
+        pool,
+        "papers",
+        "references_json",
+        "TEXT NOT NULL DEFAULT '[]'",
+    )
+    .await;
+    safe_add_column(
+        pool,
+        "papers",
+        "cited_by_json",
+        "TEXT NOT NULL DEFAULT '[]'",
+    )
+    .await;
     safe_add_column(pool, "papers", "references_fetched_at", "TEXT").await;
 
     // paper_recommendations テーブル
-    exec_ignore(pool, 
+    exec_ignore(
+        pool,
         "CREATE TABLE IF NOT EXISTS paper_recommendations (
             id TEXT PRIMARY KEY,
             paper_id TEXT NOT NULL REFERENCES papers(id) ON DELETE CASCADE,
@@ -217,29 +259,50 @@ async fn run_v004_safe(pool: &SqlitePool) {
             relevance_score REAL,
             is_imported INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
-        )").await;
+        )",
+    )
+    .await;
 
     // インデックス
-    safe_create_index(pool, "CREATE INDEX idx_papers_reading_status ON papers(reading_status)").await;
-    safe_create_index(pool, "CREATE INDEX idx_papers_ss_paper_id ON papers(ss_paper_id)").await;
-    safe_create_index(pool, "CREATE INDEX idx_recommendations_paper_id ON paper_recommendations(paper_id)").await;
-    safe_create_index(pool, "CREATE INDEX idx_recommendations_is_imported ON paper_recommendations(is_imported)").await;
+    safe_create_index(
+        pool,
+        "CREATE INDEX idx_papers_reading_status ON papers(reading_status)",
+    )
+    .await;
+    safe_create_index(
+        pool,
+        "CREATE INDEX idx_papers_ss_paper_id ON papers(ss_paper_id)",
+    )
+    .await;
+    safe_create_index(
+        pool,
+        "CREATE INDEX idx_recommendations_paper_id ON paper_recommendations(paper_id)",
+    )
+    .await;
+    safe_create_index(
+        pool,
+        "CREATE INDEX idx_recommendations_is_imported ON paper_recommendations(is_imported)",
+    )
+    .await;
 }
 
 /// V005: draft_mode — 各ステートメントを個別に安全実行
 async fn run_v005_safe(pool: &SqlitePool) {
     // notes テーブルにカラムを安全に追加
-    safe_add_column(pool, "notes", "is_draft",
-        "INTEGER NOT NULL DEFAULT 0").await;
-    safe_add_column(pool, "notes", "draft_meta",
-        "TEXT NOT NULL DEFAULT '{}'").await;
-    safe_add_column(pool, "notes", "word_count",
-        "INTEGER NOT NULL DEFAULT 0").await;
-    safe_add_column(pool, "notes", "reading_time_min",
-        "INTEGER NOT NULL DEFAULT 0").await;
+    safe_add_column(pool, "notes", "is_draft", "INTEGER NOT NULL DEFAULT 0").await;
+    safe_add_column(pool, "notes", "draft_meta", "TEXT NOT NULL DEFAULT '{}'").await;
+    safe_add_column(pool, "notes", "word_count", "INTEGER NOT NULL DEFAULT 0").await;
+    safe_add_column(
+        pool,
+        "notes",
+        "reading_time_min",
+        "INTEGER NOT NULL DEFAULT 0",
+    )
+    .await;
 
     // draft_citations テーブル
-    exec_ignore(pool,
+    exec_ignore(
+        pool,
         "CREATE TABLE IF NOT EXISTS draft_citations (
             id TEXT PRIMARY KEY,
             note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
@@ -251,10 +314,13 @@ async fn run_v005_safe(pool: &SqlitePool) {
             page_ref TEXT,
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             UNIQUE(note_id, paper_id, page_ref)
-        )").await;
+        )",
+    )
+    .await;
 
     // draft_chapters テーブル
-    exec_ignore(pool,
+    exec_ignore(
+        pool,
         "CREATE TABLE IF NOT EXISTS draft_chapters (
             id TEXT PRIMARY KEY,
             note_id TEXT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
@@ -263,13 +329,27 @@ async fn run_v005_safe(pool: &SqlitePool) {
             word_count INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-        )").await;
+        )",
+    )
+    .await;
 
     // インデックス
     safe_create_index(pool, "CREATE INDEX idx_notes_is_draft ON notes(is_draft)").await;
-    safe_create_index(pool, "CREATE INDEX idx_draft_citations_note_id ON draft_citations(note_id)").await;
-    safe_create_index(pool, "CREATE INDEX idx_draft_citations_paper_id ON draft_citations(paper_id)").await;
-    safe_create_index(pool, "CREATE INDEX idx_draft_chapters_note_id ON draft_chapters(note_id, order_index)").await;
+    safe_create_index(
+        pool,
+        "CREATE INDEX idx_draft_citations_note_id ON draft_citations(note_id)",
+    )
+    .await;
+    safe_create_index(
+        pool,
+        "CREATE INDEX idx_draft_citations_paper_id ON draft_citations(paper_id)",
+    )
+    .await;
+    safe_create_index(
+        pool,
+        "CREATE INDEX idx_draft_chapters_note_id ON draft_chapters(note_id, order_index)",
+    )
+    .await;
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -358,25 +438,44 @@ async fn run_sql_migration_safe(pool: &SqlitePool, version: i64, name: &str, sql
     let mut skipped = 0;
     for statement in split_sql_statements(sql) {
         let trimmed = statement.trim();
-        if trimmed.is_empty() { continue; }
+        if trimmed.is_empty() {
+            continue;
+        }
         match sqlx::query(trimmed).execute(pool).await {
-            Ok(_) => { success += 1; }
+            Ok(_) => {
+                success += 1;
+            }
             Err(e) => {
                 skipped += 1;
                 // FTS5/trigram 関連は INFO レベル（既知の環境依存問題）
                 let err_msg = format!("{}", e);
-                if err_msg.contains("fts5") || err_msg.contains("trigram")
+                if err_msg.contains("fts5")
+                    || err_msg.contains("trigram")
                     || err_msg.contains("no such module")
-                    || err_msg.contains("unknown tokenizer") {
-                    log::info!("マイグレーション {} — FTS5 ステートメントをスキップ（環境未対応）: {}", name, e);
+                    || err_msg.contains("unknown tokenizer")
+                {
+                    log::info!(
+                        "マイグレーション {} — FTS5 ステートメントをスキップ（環境未対応）: {}",
+                        name,
+                        e
+                    );
                 } else {
-                    log::warn!("マイグレーション {} — ステートメントをスキップ: {}", name, e);
+                    log::warn!(
+                        "マイグレーション {} — ステートメントをスキップ: {}",
+                        name,
+                        e
+                    );
                 }
             }
         }
     }
     mark_migration_applied(pool, version).await;
-    log::info!("マイグレーション {} 完了 (成功: {}, スキップ: {})", name, success, skipped);
+    log::info!(
+        "マイグレーション {} 完了 (成功: {}, スキップ: {})",
+        name,
+        success,
+        skipped
+    );
 }
 
 /// セミコロンで SQL 文を分割するヘルパー
