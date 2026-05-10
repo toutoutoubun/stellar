@@ -192,8 +192,14 @@ export const DatasetList: React.FC = () => {
         );
       }
       setModalOpen(false);
-    } catch {
-      // エラーはストアで処理済み
+    } catch (err) {
+      const message =
+        typeof err === "string"
+          ? err
+          : err instanceof Error
+          ? err.message
+          : "データセットの作成に失敗しました";
+      toast.error(message);
     }
   }, [
     createSource,

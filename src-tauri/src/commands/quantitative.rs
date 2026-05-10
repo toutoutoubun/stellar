@@ -7,7 +7,7 @@ use crate::db::get_pool;
 use crate::db::models::*;
 use crate::models::quantitative::*;
 use sqlx::Row;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use tauri::AppHandle;
 
 // ════════════════════════════════════════════════════════════════
@@ -174,6 +174,7 @@ pub async fn get_variables(app: AppHandle, dataset_id: String) -> Result<Vec<Var
 pub async fn update_variable(
     app: AppHandle,
     id: String,
+    name: Option<String>,
     label: Option<String>,
     var_type: String,
     unit: Option<String>,
@@ -182,8 +183,9 @@ pub async fn update_variable(
     let pool = get_pool(&app)?;
 
     sqlx::query(
-        "UPDATE variables SET label = ?, var_type = ?, unit = ?, likert_labels = ? WHERE id = ?",
+        "UPDATE variables SET name = COALESCE(?, name), label = ?, var_type = ?, unit = ?, likert_labels = ? WHERE id = ?",
     )
+    .bind(&name)
     .bind(&label)
     .bind(&var_type)
     .bind(&unit)
@@ -253,7 +255,6 @@ pub async fn auto_detect_variable_types(
         return Ok(variables);
     }
 
-    let total_rows = data_rows.len();
     let mut updated_variables = Vec::new();
 
     for var in &variables {
@@ -261,14 +262,18 @@ pub async fn auto_detect_variable_types(
         let mut values: Vec<String> = Vec::new();
         for dr in &data_rows {
             if let Ok(obj) = serde_json::from_str::<serde_json::Value>(&dr.values) {
-                if let Some(val) = obj.get(&var.id) {
+                let value = obj
+                    .get(&var.id)
+                    .or_else(|| obj.get(&var.name))
+                    .or_else(|| var.label.as_ref().and_then(|label| obj.get(label)));
+                if let Some(val) = value {
                     let v = match val {
                         serde_json::Value::String(s) => s.clone(),
                         serde_json::Value::Number(n) => n.to_string(),
                         serde_json::Value::Null => String::new(),
                         other => other.to_string(),
                     };
-                    if !v.is_empty() {
+                    if !v.trim().is_empty() {
                         values.push(v);
                     }
                 }
@@ -288,7 +293,7 @@ pub async fn auto_detect_variable_types(
             } else {
                 // 数値パース可能率を計算
                 let numeric_count = values.iter().filter(|v| v.parse::<f64>().is_ok()).count();
-                let numeric_ratio = numeric_count as f64 / total_rows as f64;
+                let numeric_ratio = numeric_count as f64 / values.len() as f64;
 
                 if numeric_ratio >= 0.8 {
                     "scale".to_string()
@@ -341,6 +346,20 @@ pub async fn insert_data_rows(
 ) -> Result<usize, String> {
     let pool = get_pool(&app)?;
 
+    let variables = sqlx::query_as::<_, Variable>(
+        "SELECT id, dataset_id, column_index, name, label, var_type, unit, likert_min, likert_max, likert_labels
+         FROM variables WHERE dataset_id = ? ORDER BY column_index ASC",
+    )
+    .bind(&dataset_id)
+    .fetch_all(pool.as_ref())
+    .await
+    .map_err(|e| format!("変数一覧の取得に失敗: {}", e))?;
+    let variable_ids: HashSet<String> = variables.iter().map(|v| v.id.clone()).collect();
+    let variable_id_by_name: HashMap<String, String> = variables
+        .iter()
+        .map(|v| (v.name.clone(), v.id.clone()))
+        .collect();
+
     // 現在の最大 row_index を取得
     let max_row: i64 = sqlx::query(
         "SELECT COALESCE(MAX(row_index), -1) as max_idx FROM data_rows WHERE dataset_id = ?",
@@ -356,7 +375,25 @@ pub async fn insert_data_rows(
     for (i, row_value) in rows.iter().enumerate() {
         let id = uuid::Uuid::new_v4().to_string();
         let row_index = max_row + 1 + i as i64;
-        let values_str = serde_json::to_string(row_value)
+        let normalized_row = match row_value {
+            serde_json::Value::Object(values) => {
+                let mut normalized = serde_json::Map::new();
+                for (key, value) in values {
+                    let storage_key = if variable_ids.contains(key) {
+                        key.clone()
+                    } else {
+                        variable_id_by_name
+                            .get(key)
+                            .cloned()
+                            .unwrap_or_else(|| key.clone())
+                    };
+                    normalized.insert(storage_key, value.clone());
+                }
+                serde_json::Value::Object(normalized)
+            }
+            other => other.clone(),
+        };
+        let values_str = serde_json::to_string(&normalized_row)
             .map_err(|e| format!("JSON シリアライズに失敗: {}", e))?;
 
         sqlx::query(
@@ -933,6 +970,29 @@ pub async fn create_dataset_from_highlights(
     };
     let source_ref = paper_id.clone();
 
+    // 先にハイライトを確認する。0件のときに空データセットを残すと、
+    // UI 側の再試行や一覧描画が壊れた状態を引きずってしまう。
+    let highlights = if let Some(ref pid) = paper_id {
+        sqlx::query(
+            "SELECT id, paper_id, text, comment, color, page FROM highlights WHERE paper_id = ? ORDER BY page ASC, id ASC",
+        )
+        .bind(pid)
+        .fetch_all(pool.as_ref())
+        .await
+        .map_err(|e| format!("ハイライト取得に失敗: {}", e))?
+    } else {
+        sqlx::query(
+            "SELECT id, paper_id, text, comment, color, page FROM highlights ORDER BY paper_id ASC, page ASC, id ASC",
+        )
+        .fetch_all(pool.as_ref())
+        .await
+        .map_err(|e| format!("ハイライト取得に失敗: {}", e))?
+    };
+
+    if highlights.is_empty() {
+        return Err("この論文にはデータセット化できるハイライトがありません".to_string());
+    }
+
     sqlx::query(
         "INSERT INTO datasets (id, name, description, source_type, source_ref, row_count, created_at, updated_at)
          VALUES (?, ?, 'ハイライトデータから自動生成', 'from_highlights', ?, 0, ?, ?)",
@@ -974,25 +1034,7 @@ pub async fn create_dataset_from_highlights(
         variable_ids.push(var_id);
     }
 
-    // 3. ハイライトを取得
-    let highlights = if let Some(ref pid) = paper_id {
-        sqlx::query(
-            "SELECT id, paper_id, text, comment, color, page FROM highlights WHERE paper_id = ? ORDER BY page ASC, id ASC",
-        )
-        .bind(pid)
-        .fetch_all(pool.as_ref())
-        .await
-        .map_err(|e| format!("ハイライト取得に失敗: {}", e))?
-    } else {
-        sqlx::query(
-            "SELECT id, paper_id, text, comment, color, page FROM highlights ORDER BY paper_id ASC, page ASC, id ASC",
-        )
-        .fetch_all(pool.as_ref())
-        .await
-        .map_err(|e| format!("ハイライト取得に失敗: {}", e))?
-    };
-
-    // 4. データ行を作成
+    // 3. データ行を作成
     for (row_idx, h) in highlights.iter().enumerate() {
         let h_paper_id = col_str(h, "paper_id");
         let text = col_str(h, "text");

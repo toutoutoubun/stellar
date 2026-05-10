@@ -169,7 +169,9 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
         setDownloadPdf(true); // PDF URL がある場合はデフォルトでチェックON
       }
       // pdf_url / pdfUrl はフォームには不要なので除去してから適用
-      const { pdf_url: _a, pdfUrl: _b, ...formData } = data;
+      const formData = { ...data };
+      delete formData.pdf_url;
+      delete formData.pdfUrl;
       applyMetadata({ ...formData, url: urlInput.trim() });
       toast.success(useI18nStore.getState().t.library.k_2uf93e);
     } catch (e) {
