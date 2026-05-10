@@ -5,6 +5,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import "./plugins/registerAnalysisAddons";
 
 // スタイル読み込み（テーマ → グローバルの順で読み込む）
 import "./styles/themes.css";
