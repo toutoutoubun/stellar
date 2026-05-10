@@ -1,5 +1,5 @@
 // src/components/qualitative/CodingMatrixView.tsx
-// コーディングマトリクス — コード×論文のクロス集計表
+// コーディングマトリクス — コード×分析ソースのクロス集計表
 // ミニマルUI / カスタムアイコン / ヘルプ付き
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -67,14 +67,14 @@ export const CodingMatrixView: React.FC<CodingMatrixViewProps> = ({
       >
         <IconMatrix size={28} />
         <span className="text-sm">
-          マトリクスデータなし。コードとハイライトを追加してください。
+          マトリクスデータなし。分析ソースにコードを追加してください。
         </span>
       </div>
     );
   }
 
-  const getCount = (codeId: string, paperId: string): number => {
-    const key = `${codeId}:${paperId}`;
+  const getCount = (codeId: string, sourceId: string): number => {
+    const key = `${codeId}:${sourceId}`;
     return matrix.cells[key] ?? 0;
   };
 

@@ -1,11 +1,15 @@
 // src/components/qualitative/SourceCritiqueForm.tsx
-// 史料批判シート — 論文単位の史料評価フォーム
+// 史料批判シート — 分析ソース単位の史料評価フォーム
 // 折りたたみパネル / ミニマルUI / カスタムアイコン / ヘルプ付き
 
 import React, { useState, useEffect, useCallback } from "react";
 import { invoke } from "../../lib/tauriShim";
 import { swalConfirm } from "../../lib/swal";
-import type { SourceCritique, SourceCritiqueInput, Paper } from "../../types";
+import type {
+  QualitativeSource,
+  QualSourceCritique,
+  QualSourceCritiqueInput,
+} from "../../types";
 import { HelpTooltip } from "./HelpTooltip";
 import { IconDelete, IconPanelLeft, IconScroll } from "./icons/QualIcons";
 import { useT } from "../../stores/useI18nStore";
@@ -18,16 +22,16 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
   projectId,
 }) => {
   const t = useT();
-  const [critiques, setCritiques] = useState<SourceCritique[]>([]);
-  const [papers, setPapers] = useState<Paper[]>([]);
-  const [selectedPaperId, setSelectedPaperId] = useState<string | null>(null);
+  const [critiques, setCritiques] = useState<QualSourceCritique[]>([]);
+  const [sources, setSources] = useState<QualitativeSource[]>([]);
+  const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [listCollapsed, setListCollapsed] = useState(false);
 
   // フォーム状態
-  const [form, setForm] = useState<SourceCritiqueInput>({
-    paperId: "",
+  const [form, setForm] = useState<QualSourceCritiqueInput>({
+    sourceId: "",
     authorInfo: "",
     creationDate: "",
     isDateEstimated: false,
@@ -48,14 +52,12 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
     const load = async () => {
       setLoading(true);
       try {
-        const [paperResult, critiqueList] = await Promise.all([
-          invoke<{ items: Paper[] } | Paper[]>("get_papers", { page: 1, perPage: 500, sortBy: "title", sortDir: "asc", search: "" }),
-          invoke<SourceCritique[]>("get_source_critiques_by_project", { projectId }),
+        const [sourceResult, critiqueList] = await Promise.all([
+          invoke<QualitativeSource[]>("get_qualitative_sources", { projectId }),
+          invoke<QualSourceCritique[]>("get_qual_source_critiques_by_project", { projectId }),
         ]);
-        // get_papers は { items: Paper[] } を返す場合と Paper[] を返す場合の両方に対応
-        const paperList = Array.isArray(paperResult) ? paperResult : (paperResult?.items ?? []);
-        setPapers(paperList);
-        setCritiques(critiqueList);
+        setSources(Array.isArray(sourceResult) ? sourceResult : []);
+        setCritiques(Array.isArray(critiqueList) ? critiqueList : []);
       } catch (err) {
         console.error(t.qualitative.k_ro7ypi, err);
       } finally {
@@ -65,14 +67,14 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
     void load();
   }, [projectId]);
 
-  const handleSelectPaper = useCallback(
-    async (paperId: string) => {
-      setSelectedPaperId(paperId);
+  const handleSelectSource = useCallback(
+    async (sourceId: string) => {
+      setSelectedSourceId(sourceId);
       try {
-        const existing = await invoke<SourceCritique | null>("get_source_critique", { paperId });
+        const existing = await invoke<QualSourceCritique | null>("get_qual_source_critique", { sourceId });
         if (existing) {
           setForm({
-            paperId,
+            sourceId,
             authorInfo: existing.authorInfo ?? "",
             creationDate: existing.creationDate ?? "",
             isDateEstimated: existing.isDateEstimated,
@@ -90,7 +92,7 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
           });
         } else {
           setForm({
-            paperId,
+            sourceId,
             authorInfo: "",
             creationDate: "",
             isDateEstimated: false,
@@ -115,14 +117,14 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
   );
 
   const handleSave = useCallback(async () => {
-    if (!selectedPaperId) return;
+    if (!selectedSourceId) return;
     setSaving(true);
     try {
-      await invoke("upsert_source_critique", {
-        dto: { ...form, paperId: selectedPaperId },
+      await invoke("upsert_qual_source_critique", {
+        dto: { ...form, sourceId: selectedSourceId },
       });
-      const updated = await invoke<SourceCritique[]>(
-        "get_source_critiques_by_project",
+      const updated = await invoke<QualSourceCritique[]>(
+        "get_qual_source_critiques_by_project",
         { projectId }
       );
       setCritiques(updated);
@@ -131,26 +133,26 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
     } finally {
       setSaving(false);
     }
-  }, [selectedPaperId, form, projectId]);
+  }, [selectedSourceId, form, projectId]);
 
   const handleDelete = useCallback(
     async (id: string) => {
       const ok = await swalConfirm(t.qualitative.k_t3c3je, t.qualitative.k_d2dlnr);
       if (!ok) return;
       try {
-        await invoke("delete_source_critique", { id });
+        await invoke("delete_qual_source_critique", { id });
         setCritiques((prev) => prev.filter((c) => c.id !== id));
-        if (critiques.find((c) => c.id === id)?.paperId === selectedPaperId) {
-          setSelectedPaperId(null);
+        if (critiques.find((c) => c.id === id)?.sourceId === selectedSourceId) {
+          setSelectedSourceId(null);
         }
       } catch (err) {
         console.error(t.qualitative.k_qrch2t, err);
       }
     },
-    [critiques, selectedPaperId]
+    [critiques, selectedSourceId]
   );
 
-  const updateField = (field: keyof SourceCritiqueInput, value: unknown) => {
+  const updateField = (field: keyof QualSourceCritiqueInput, value: unknown) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -164,7 +166,7 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
 
   return (
     <div className="flex h-full overflow-hidden">
-      {/* 左: 論文一覧 + 既存批判 */}
+      {/* 左: 分析ソース一覧 + 既存批判 */}
       <div
         className="flex flex-col shrink-0 h-full"
         style={{
@@ -183,7 +185,7 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
         >
           {!listCollapsed && (
             <span className="text-xs font-semibold" style={{ color: "var(--color-text-tertiary)" }}>
-              論文一覧
+              分析ソース一覧
             </span>
           )}
           <button
@@ -199,17 +201,17 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
         {!listCollapsed && (
           <>
             <div className="flex-1 overflow-y-auto p-2">
-              {papers.map((p) => {
-                const hasCritique = critiques.some((c) => c.paperId === p.id);
+              {sources.map((source) => {
+                const hasCritique = critiques.some((c) => c.sourceId === source.id);
                 return (
                   <div
-                    key={p.id}
-                    onClick={() => void handleSelectPaper(p.id)}
+                    key={source.id}
+                    onClick={() => void handleSelectSource(source.id)}
                     className="flex items-center gap-2 py-1.5 px-2 group"
                     style={{
                       borderRadius: "6px",
                       cursor: "pointer",
-                      backgroundColor: selectedPaperId === p.id ? "var(--color-bg-hover)" : "transparent",
+                      backgroundColor: selectedSourceId === source.id ? "var(--color-bg-hover)" : "transparent",
                     }}
                   >
                     <span
@@ -224,19 +226,19 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
                     <span
                       className="text-xs truncate flex-1"
                       style={{
-                        color: selectedPaperId === p.id
+                        color: selectedSourceId === source.id
                           ? "var(--color-accent-primary)"
                           : "var(--color-text-secondary)",
                       }}
                     >
-                      {p.title}
+                      {source.title}
                     </span>
                   </div>
                 );
               })}
-              {papers.length === 0 && (
+              {sources.length === 0 && (
                 <div className="text-center py-8 text-xs" style={{ color: "var(--color-text-tertiary)" }}>
-                  論文なし
+                  分析ソースなし
                 </div>
               )}
             </div>
@@ -257,7 +259,7 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
                     <span
                       className="truncate flex-1 cursor-pointer"
                       style={{ color: "var(--color-text-secondary)" }}
-                      onClick={() => void handleSelectPaper(c.paperId)}
+                      onClick={() => void handleSelectSource(c.sourceId)}
                     >
                       信頼度: {c.reliabilityScore}/5
                     </span>
@@ -294,7 +296,7 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
           ]}
         />
 
-        {selectedPaperId ? (
+        {selectedSourceId ? (
           <>
             <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--color-text-primary)" }}>
               史料批判シート
@@ -371,7 +373,7 @@ export const SourceCritiqueForm: React.FC<SourceCritiqueFormProps> = ({
         ) : (
           <div className="flex flex-col items-center justify-center h-full gap-3" style={{ color: "var(--color-text-tertiary)" }}>
             <IconScroll size={28} />
-            <span className="text-sm">{t.qualitative.k_xhv9sn}</span>
+            <span className="text-sm">分析ソースを選択してください</span>
           </div>
         )}
       </div>

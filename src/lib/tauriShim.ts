@@ -30,7 +30,7 @@ function hasTauriRuntime(): boolean {
 // ブラウザプレビューでも create / get / update / delete が動作するように
 // メモリ上にデータを保持する軽量ストア。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mockStore: { notes: any[]; projects: any[]; papers: any[]; datasets: any[]; variables: any[]; dataRows: any[]; analyses: any[]; codes: any[]; highlights: any[]; links: any[] } = {
+const mockStore: { notes: any[]; projects: any[]; papers: any[]; datasets: any[]; variables: any[]; dataRows: any[]; analyses: any[]; codes: any[]; highlights: any[]; links: any[]; qualitativeSources: any[]; sourceSegments: any[]; qualSourceCritiques: any[] } = {
   notes: [],
   projects: [],
   papers: [],
@@ -41,6 +41,9 @@ const mockStore: { notes: any[]; projects: any[]; papers: any[]; datasets: any[]
   codes: [],
   highlights: [],
   links: [],
+  qualitativeSources: [],
+  sourceSegments: [],
+  qualSourceCritiques: [],
 };
 let mockIdCounter = 1;
 function mockId(): string {
@@ -515,19 +518,21 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     const filtered = projectId
       ? mockStore.codes.filter((c) => c.projectId === projectId)
       : [...mockStore.codes];
-    return { handled: true, result: filtered };
+    return { handled: true, result: filtered.map((code) => ({ ...code, children: code.children ?? [], assignmentCount: code.assignmentCount ?? 0 })) };
   }
   if (cmd === "create_code") {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const a = (args ?? {}) as any;
+    const a = commandInput(args);
     const code = {
       id: mockId(),
-      projectId: a.projectId ?? "",
-      parentId: a.parentId ?? null,
-      label: a.label ?? useI18nStore.getState().t.utils.str_b194an,
-      color: a.color ?? "#6366f1",
-      description: a.description ?? null,
+      projectId: commandString(a.projectId),
+      parentId: commandNullableString(a.parentId),
+      name: commandString(a.name, commandString(a.label, useI18nStore.getState().t.utils.str_b194an)),
+      color: commandString(a.color, "#6366f1"),
+      codeType: commandString(a.codeType, "thematic"),
+      description: commandNullableString(a.description),
       sortOrder: mockStore.codes.length,
+      children: [],
+      assignmentCount: 0,
       createdAt: now(),
       updatedAt: now(),
     };
@@ -538,9 +543,10 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     const idx = mockStore.codes.findIndex((c) => c.id === args?.id);
     if (idx >= 0) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const a = (args ?? {}) as any;
+      const a = commandInput(args);
       const updated = { ...mockStore.codes[idx] };
-      if (a.label != null) updated.label = a.label;
+      if (a.name != null) updated.name = a.name;
+      if (a.label != null) updated.name = a.label;
       if (a.color != null) updated.color = a.color;
       if (a.description != null) updated.description = a.description;
       if (a.parentId !== undefined) updated.parentId = a.parentId || null;
@@ -552,6 +558,186 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
   }
   if (cmd === "delete_code") {
     mockStore.codes = mockStore.codes.filter((c) => c.id !== args?.id);
+    return { handled: true, result: undefined };
+  }
+
+  // ── Qualitative Sources ──
+  if (cmd === "get_qualitative_sources") {
+    const projectId = args?.projectId as string | undefined;
+    const filtered = projectId
+      ? mockStore.qualitativeSources.filter((source) => source.projectId === projectId)
+      : [...mockStore.qualitativeSources];
+    return { handled: true, result: filtered };
+  }
+  if (cmd === "get_qualitative_source") {
+    const source = mockStore.qualitativeSources.find((item) => item.id === args?.id) ?? null;
+    return { handled: true, result: source };
+  }
+  if (cmd === "import_qualitative_source") {
+    const input = commandInput(args);
+    const filePath = commandString(input.filePath);
+    const title = commandString(
+      input.title,
+      filePath.split(/[\\/]/).pop()?.replace(/\.(docx|pdf|md|markdown)$/i, "") ?? "分析ソース",
+    );
+    const fileType = filePath.split(".").pop()?.toLowerCase() ?? "md";
+    const content = filePath
+      ? `${title}\n\nブラウザプレビューでは本文抽出はTauri実行時に有効です。`
+      : "";
+    const source = {
+      id: mockId(),
+      projectId: commandString(input.projectId),
+      title,
+      sourceType: commandString(input.sourceType, "primary_source"),
+      fileType,
+      filePath: filePath || null,
+      content,
+      wordCount: content.split(/\s+/).filter(Boolean).length,
+      createdAt: now(),
+      updatedAt: now(),
+    };
+    mockStore.qualitativeSources.unshift(source);
+    return { handled: true, result: { ...source } };
+  }
+  if (cmd === "update_qualitative_source") {
+    const idx = mockStore.qualitativeSources.findIndex((source) => source.id === args?.id);
+    if (idx >= 0) {
+      const input = commandInput(args);
+      const updated = { ...mockStore.qualitativeSources[idx] };
+      if (input.title !== undefined) updated.title = commandString(input.title, updated.title);
+      if (input.sourceType !== undefined) updated.sourceType = commandString(input.sourceType, updated.sourceType);
+      if (input.content !== undefined) {
+        updated.content = commandString(input.content);
+        updated.wordCount = updated.content.split(/\s+/).filter(Boolean).length;
+      }
+      updated.updatedAt = now();
+      mockStore.qualitativeSources[idx] = updated;
+      return { handled: true, result: { ...updated } };
+    }
+    return { handled: true, result: null };
+  }
+  if (cmd === "delete_qualitative_source") {
+    const id = args?.id;
+    mockStore.qualitativeSources = mockStore.qualitativeSources.filter((source) => source.id !== id);
+    mockStore.sourceSegments = mockStore.sourceSegments.filter((segment) => segment.sourceId !== id);
+    mockStore.qualSourceCritiques = mockStore.qualSourceCritiques.filter((critique) => critique.sourceId !== id);
+    return { handled: true, result: undefined };
+  }
+  if (cmd === "assign_code_to_source_segment") {
+    const input = commandInput(args);
+    const sourceId = commandString(input.sourceId);
+    const source = mockStore.qualitativeSources.find((item) => item.id === sourceId);
+    const segment = {
+      id: mockId(),
+      sourceId,
+      sourceTitle: source?.title ?? "",
+      codeId: commandString(input.codeId),
+      segmentText: commandString(input.segmentText),
+      offsetStart: typeof input.offsetStart === "number" ? input.offsetStart : null,
+      offsetEnd: typeof input.offsetEnd === "number" ? input.offsetEnd : null,
+      memo: commandNullableString(input.memo),
+      assignedAt: now(),
+    };
+    mockStore.sourceSegments.push(segment);
+    const code = mockStore.codes.find((item) => item.id === segment.codeId);
+    if (code) code.assignmentCount = commandNumber(code.assignmentCount, 0) + 1;
+    return { handled: true, result: { ...segment } };
+  }
+  if (cmd === "get_source_segments") {
+    const sourceId = args?.sourceId as string | undefined;
+    return {
+      handled: true,
+      result: mockStore.sourceSegments.filter((segment) => segment.sourceId === sourceId),
+    };
+  }
+  if (cmd === "get_source_segments_by_code") {
+    const codeId = args?.codeId as string | undefined;
+    return {
+      handled: true,
+      result: mockStore.sourceSegments.filter((segment) => segment.codeId === codeId),
+    };
+  }
+  if (cmd === "delete_source_segment_code") {
+    mockStore.sourceSegments = mockStore.sourceSegments.filter((segment) => segment.id !== args?.id);
+    return { handled: true, result: undefined };
+  }
+  if (cmd === "get_coding_matrix") {
+    const projectId = args?.projectId as string | undefined;
+    const projectCodes = mockStore.codes.filter((code) => !projectId || code.projectId === projectId);
+    const projectSourceIds = new Set(
+      mockStore.qualitativeSources
+        .filter((source) => !projectId || source.projectId === projectId)
+        .map((source) => source.id),
+    );
+    const matrixSegments = mockStore.sourceSegments.filter((segment) => projectSourceIds.has(segment.sourceId));
+    const sourceIdsWithSegments = new Set(matrixSegments.map((segment) => segment.sourceId));
+    const cols = mockStore.qualitativeSources
+      .filter((source) => sourceIdsWithSegments.has(source.id))
+      .map((source) => ({ paperId: source.id, paperTitle: source.title }));
+    const rows = projectCodes.map((code) => ({
+      codeId: code.id,
+      codeName: code.name,
+      codeColor: code.color,
+    }));
+    const cells: Record<string, number> = {};
+    for (const segment of matrixSegments) {
+      const key = `${segment.codeId}:${segment.sourceId}`;
+      cells[key] = (cells[key] ?? 0) + 1;
+    }
+    return { handled: true, result: { rows, cols, cells } };
+  }
+
+  // ── Qualitative Source Critiques ──
+  if (cmd === "get_qual_source_critique") {
+    const sourceId = args?.sourceId as string | undefined;
+    const critique = mockStore.qualSourceCritiques.find((item) => item.sourceId === sourceId) ?? null;
+    return { handled: true, result: critique };
+  }
+  if (cmd === "get_qual_source_critiques_by_project") {
+    const projectId = args?.projectId as string | undefined;
+    const sourceIds = new Set(
+      mockStore.qualitativeSources
+        .filter((source) => !projectId || source.projectId === projectId)
+        .map((source) => source.id),
+    );
+    return {
+      handled: true,
+      result: mockStore.qualSourceCritiques.filter((critique) => sourceIds.has(critique.sourceId)),
+    };
+  }
+  if (cmd === "upsert_qual_source_critique") {
+    const input = isRecord(args?.dto) ? args.dto : commandInput(args);
+    const sourceId = commandString(input.sourceId);
+    const existing = mockStore.qualSourceCritiques.findIndex((critique) => critique.sourceId === sourceId);
+    const critique = {
+      id: existing >= 0 ? mockStore.qualSourceCritiques[existing].id : mockId(),
+      sourceId,
+      authorInfo: commandNullableString(input.authorInfo),
+      creationDate: commandNullableString(input.creationDate),
+      isDateEstimated: Boolean(input.isDateEstimated),
+      location: commandNullableString(input.location),
+      sourceType: commandNullableString(input.sourceType),
+      authenticity: commandNullableString(input.authenticity),
+      archiveInfo: commandNullableString(input.archiveInfo),
+      intent: commandNullableString(input.intent),
+      audience: commandNullableString(input.audience),
+      biasLevel: commandNullableString(input.biasLevel),
+      biasReason: commandNullableString(input.biasReason),
+      consistency: commandNullableString(input.consistency),
+      reliabilityScore: commandNumber(input.reliabilityScore, 3),
+      researcherNotes: commandNullableString(input.researcherNotes),
+      createdAt: existing >= 0 ? mockStore.qualSourceCritiques[existing].createdAt : now(),
+      updatedAt: now(),
+    };
+    if (existing >= 0) {
+      mockStore.qualSourceCritiques[existing] = critique;
+    } else {
+      mockStore.qualSourceCritiques.unshift(critique);
+    }
+    return { handled: true, result: { ...critique } };
+  }
+  if (cmd === "delete_qual_source_critique") {
+    mockStore.qualSourceCritiques = mockStore.qualSourceCritiques.filter((critique) => critique.id !== args?.id);
     return { handled: true, result: undefined };
   }
 
@@ -1262,6 +1448,17 @@ const MOCK_RESPONSES: Record<string, any> = {
   // Qualitative — Coding Matrix
   get_coding_matrix: { rows: [], cols: [], cells: {} },
 
+  // Qualitative — Sources
+  get_qualitative_sources: [],
+  get_qualitative_source: null,
+  import_qualitative_source: null,
+  update_qualitative_source: null,
+  delete_qualitative_source: undefined,
+  assign_code_to_source_segment: null,
+  get_source_segments: [],
+  get_source_segments_by_code: [],
+  delete_source_segment_code: undefined,
+
   // Qualitative — Source Critique
   get_source_critiques: [],
   get_source_critiques_by_project: [],
@@ -1270,6 +1467,10 @@ const MOCK_RESPONSES: Record<string, any> = {
   update_source_critique: null,
   upsert_source_critique: null,
   delete_source_critique: undefined,
+  get_qual_source_critique: null,
+  upsert_qual_source_critique: null,
+  get_qual_source_critiques_by_project: [],
+  delete_qual_source_critique: undefined,
 
   // Qualitative — Timeline
   get_timeline_events: [],

@@ -22,6 +22,17 @@ export const IconDashboard: React.FC<IconProps> = ({ size = defaults.size, color
   </svg>
 );
 
+/** 分析ソース */
+export const IconSources: React.FC<IconProps> = ({ size = defaults.size, color = defaults.color, className }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M7 3h7l5 5v13H7a2 2 0 01-2-2V5a2 2 0 012-2z" />
+    <polyline points="14 3 14 8 19 8" />
+    <path d="M9 13h6" />
+    <path d="M9 17h6" />
+    <path d="M3 7v12a4 4 0 004 4h10" />
+  </svg>
+);
+
 /** コードブック / タグ */
 export const IconCodebook: React.FC<IconProps> = ({ size = defaults.size, color = defaults.color, className }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>

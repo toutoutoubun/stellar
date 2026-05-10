@@ -96,6 +96,16 @@ pub fn run() {
             commands::qualitative::get_projects,
             commands::qualitative::update_project,
             commands::qualitative::delete_project,
+            // 質的分析コマンド — 分析ソース
+            commands::qualitative::get_qualitative_sources,
+            commands::qualitative::get_qualitative_source,
+            commands::qualitative::import_qualitative_source,
+            commands::qualitative::update_qualitative_source,
+            commands::qualitative::delete_qualitative_source,
+            commands::qualitative::assign_code_to_source_segment,
+            commands::qualitative::get_source_segments,
+            commands::qualitative::get_source_segments_by_code,
+            commands::qualitative::delete_source_segment_code,
             // 質的分析コマンド — コーディング
             commands::qualitative::get_code_tree,
             commands::qualitative::create_code,
@@ -110,6 +120,10 @@ pub fn run() {
             // 質的分析コマンド — 史料批判
             commands::qualitative::get_source_critique,
             commands::qualitative::upsert_source_critique,
+            commands::qualitative::get_qual_source_critique,
+            commands::qualitative::upsert_qual_source_critique,
+            commands::qualitative::get_qual_source_critiques_by_project,
+            commands::qualitative::delete_qual_source_critique,
             // 質的分析コマンド — タイムライン
             commands::qualitative::get_timeline_events,
             commands::qualitative::create_timeline_event,

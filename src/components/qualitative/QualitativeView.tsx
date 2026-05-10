@@ -17,6 +17,7 @@ import { getQualitativeAnalysisAddons } from "../../plugins/analysisAddons";
 // アイコン
 import {
   IconDashboard,
+  IconSources,
   IconCodebook,
   IconMatrix,
   IconIcr,
@@ -38,6 +39,7 @@ import {
 import { HelpTooltip } from "./HelpTooltip";
 
 // 子コンポーネント（Tauri WKWebView 安全策で静的 import）
+import { QualitativeSourcesView } from "./QualitativeSourcesView";
 import { CodebookView } from "./CodebookView";
 import { CodingMatrixView } from "./CodingMatrixView";
 import { IcrCalculator } from "./IcrCalculator";
@@ -53,6 +55,7 @@ import { useT, useI18nStore } from "../../stores/useI18nStore";
 /** タブ定義 — アイコンは React コンポーネント */
 const BUILT_IN_TABS: { key: BuiltInQualitativeTab; label: string; Icon: React.FC<{ size?: number; color?: string }> }[] = [
   { key: "dashboard", label: useI18nStore.getState().t.qualitative.k_ip8f, Icon: IconDashboard },
+  { key: "sources", label: "分析ソース", Icon: IconSources },
   { key: "codebook", label: useI18nStore.getState().t.qualitative.k_7z1tpa, Icon: IconCodebook },
   { key: "matrix", label: useI18nStore.getState().t.qualitative.k_fnxlsm, Icon: IconMatrix },
   { key: "icr", label: "ICR", Icon: IconIcr },
@@ -199,6 +202,8 @@ const QualitativeView: React.FC = () => {
     }
 
     switch (activeTab) {
+      case "sources":
+        return <QualitativeSourcesView projectId={selectedProjectId} />;
       case "codebook":
         return <CodebookView projectId={selectedProjectId} />;
       case "matrix":
