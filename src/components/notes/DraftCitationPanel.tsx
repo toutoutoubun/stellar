@@ -14,6 +14,37 @@ interface DraftCitationPanelProps {
   citationStyle: string;
 }
 
+async function copyTextToClipboard(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (err) {
+    console.warn("[DraftCitationPanel] Clipboard API copy failed:", err);
+  }
+
+  let textarea: HTMLTextAreaElement | null = null;
+  try {
+    textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    textarea.style.top = "0";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    const copied = document.execCommand("copy");
+    return copied;
+  } catch (err) {
+    console.warn("[DraftCitationPanel] Fallback copy failed:", err);
+    return false;
+  } finally {
+    textarea?.remove();
+  }
+}
+
 export const DraftCitationPanel: React.FC<DraftCitationPanelProps> = ({
   noteId,
   citationStyle,
@@ -25,6 +56,7 @@ export const DraftCitationPanel: React.FC<DraftCitationPanelProps> = ({
   const [loading, setLoading] = useState(true);
   const [pageRefOpen, setPageRefOpen] = useState<string | null>(null);
   const [pageRefValue, setPageRefValue] = useState("");
+  const [generatedBibliography, setGeneratedBibliography] = useState("");
 
   /** 引用一覧とペーパー一覧を取得 */
   useEffect(() => {
@@ -79,6 +111,7 @@ export const DraftCitationPanel: React.FC<DraftCitationPanelProps> = ({
             if (existingIndex === -1) return [...prev, result];
             return prev.map((c) => (c.id === result.id ? result : c));
           });
+          setGeneratedBibliography("");
           toast.success(t.draftMode.citationInserted);
         } else {
           // mock が null を返した場合（論文が見つからない等）
@@ -99,6 +132,7 @@ export const DraftCitationPanel: React.FC<DraftCitationPanelProps> = ({
       try {
         await invoke("delete_citation", { id: citationId });
         setCitations((prev) => prev.filter((c) => c.id !== citationId));
+        setGeneratedBibliography("");
         toast.success(t.draftMode.citationDeleted);
       } catch {
         toast.error(t.draftMode.citationDeleteFailed);
@@ -114,11 +148,13 @@ export const DraftCitationPanel: React.FC<DraftCitationPanelProps> = ({
         noteId,
         style: citationStyle,
       });
-      if (bib) {
-        await navigator.clipboard.writeText(bib);
+      if (bib.trim()) {
+        setGeneratedBibliography(bib);
+        void copyTextToClipboard(bib);
         toast.success(t.draftMode.bibliographyGenerated);
       }
-    } catch {
+    } catch (err) {
+      console.error("[DraftCitationPanel] Bibliography generation failed:", err);
       toast.error(t.draftMode.bibliographyFailed);
     }
   }, [noteId, citationStyle, t]);
@@ -487,6 +523,20 @@ export const DraftCitationPanel: React.FC<DraftCitationPanelProps> = ({
             </svg>
             {t.draftMode.generateBibliography}
           </button>
+          {generatedBibliography && (
+            <pre
+              className="mt-3 max-h-40 overflow-auto whitespace-pre-wrap break-words text-[11px] leading-relaxed"
+              style={{
+                backgroundColor: "var(--color-bg-tertiary)",
+                border: "1px solid var(--color-border-secondary)",
+                borderRadius: "8px",
+                color: "var(--color-text-secondary)",
+                padding: "10px",
+              }}
+            >
+              {generatedBibliography}
+            </pre>
+          )}
         </div>
       )}
     </div>

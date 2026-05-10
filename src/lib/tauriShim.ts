@@ -811,7 +811,16 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     const noteId = (args?.noteId ?? "") as string;
     const citations = ((mockStore as any).citations ?? []).filter((c: any) => c.noteId === noteId);
     if (citations.length === 0) return { handled: true, result: "" };
-    const bib = citations.map((c: any, i: number) => `[${i + 1}] ${c.bibliographyText}`).join("\n");
+    const seen = new Set<string>();
+    const entries = citations
+      .sort((a: any, b: any) => String(a.citationKey).localeCompare(String(b.citationKey)))
+      .filter((citation: any) => {
+        if (seen.has(citation.paperId)) return false;
+        seen.add(citation.paperId);
+        return true;
+      })
+      .map((citation: any) => `- ${citation.bibliographyText}`);
+    const bib = `## References\n\n${entries.join("\n")}`;
     return { handled: true, result: bib };
   }
 
