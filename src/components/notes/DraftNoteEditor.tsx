@@ -3,12 +3,12 @@
 // 中央: NoteEditor / 右: タブパネル (280px)
 
 import type React from "react";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { CitationStyle, NodeType } from "../../types";
 import { CITATION_STYLE_LABELS } from "../../types";
 import { useNoteStore } from "../../stores/useNoteStore";
 import { useUIStore } from "../../stores/useUIStore";
-import { NoteEditor } from "./NoteEditor";
+import { NoteEditor, type NoteEditorHandle } from "./NoteEditor";
 import { DraftCitationPanel } from "./DraftCitationPanel";
 import { NoteContextPanel } from "./NoteContextPanel";
 import { useT } from "../../stores/useI18nStore";
@@ -37,6 +37,7 @@ export const DraftNoteEditor: React.FC<DraftNoteEditorProps> = ({ noteId }) => {
   const [citationStyle, setCitationStyle] = useState<CitationStyle>("apa7");
   const [styleMenuOpen, setStyleMenuOpen] = useState(false);
   const [editorContent, setEditorContent] = useState("");
+  const noteEditorRef = useRef<NoteEditorHandle | null>(null);
 
   /** ノートデータの取得 */
   useEffect(() => {
@@ -90,9 +91,9 @@ export const DraftNoteEditor: React.FC<DraftNoteEditorProps> = ({ noteId }) => {
     [openNoteUI, openPaperUI],
   );
 
-  /** 見出しクリック（将来拡張） */
-  const handleHeadingClick = useCallback((_line: number) => { // eslint-disable-line @typescript-eslint/no-unused-vars
-    // 将来: StellarEditor ref で該当行へスクロール
+  /** 見出しクリック → エディタの該当行にスクロール */
+  const handleHeadingClick = useCallback((line: number) => {
+    noteEditorRef.current?.scrollToLine(line);
   }, []);
 
   return (
@@ -288,7 +289,11 @@ export const DraftNoteEditor: React.FC<DraftNoteEditorProps> = ({ noteId }) => {
       <div className="flex flex-1 overflow-hidden">
         {/* NoteEditor */}
         <div className="flex-1 overflow-hidden">
-          <NoteEditor noteId={noteId} />
+          <NoteEditor
+            ref={noteEditorRef}
+            noteId={noteId}
+            onContentChange={setEditorContent}
+          />
         </div>
 
         {/* 右: タブパネル */}

@@ -4,12 +4,19 @@
 // ツールバー: 戻るボタン、タイトル編集、検索、フォーカスモード切替、メニュー
 // 下部ステータスバー: 文字数 + 最終保存時刻
 
-import type React from "react";
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import {
+  forwardRef,
+  useState,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useMemo,
+} from "react";
 import type { NodeType } from "../../types";
 import { useNoteStore } from "../../stores/useNoteStore";
 import { useUIStore } from "../../stores/useUIStore";
-import { StellarEditor } from "./StellarEditor";
+import { StellarEditor, type StellarEditorHandle } from "./StellarEditor";
 import { NoteContextPanel } from "./NoteContextPanel";
 import { FocusMode } from "./FocusMode";
 import { toast } from "../ui/Toast";
@@ -22,9 +29,18 @@ import { StaticSiteExportModal } from "../export/StaticSiteExportModal";
 interface NoteEditorProps {
   /** 表示するノートのID */
   noteId: string;
+  /** 外側レイアウトに現在の本文を同期する */
+  onContentChange?: (content: string) => void;
 }
 
-export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
+export interface NoteEditorHandle {
+  scrollToLine: (line: number) => void;
+}
+
+export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(({
+  noteId,
+  onContentChange: onContentChangeExternal,
+}, ref) => {
   const t = useT();
   // ストア
   const activeNote = useNoteStore((s) => s.activeNote);
@@ -54,6 +70,17 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [staticSiteModalOpen, setStaticSiteModalOpen] = useState(false);
+  const stellarEditorRef = useRef<StellarEditorHandle | null>(null);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      scrollToLine: (line: number) => {
+        stellarEditorRef.current?.scrollToLine(line);
+      },
+    }),
+    [],
+  );
 
   /** ノートデータの取得 */
   useEffect(() => {
@@ -63,7 +90,6 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
   /** activeNote が読み込まれたらローカル状態を初期化 */
   useEffect(() => {
     if (activeNote) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
       setEditorContent(activeNote.content);
       setCharCount(activeNote.content.length);
       setTitleValue(activeNote.title);
@@ -79,7 +105,6 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
   useEffect(() => {
     if (autoSaveStatus === "saved") {
       const now = new Date();
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
       setLastSavedAt(
         `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
       );
@@ -104,8 +129,9 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
       setEditorContent(content);
       setCharCount(content.length);
       setIsModified(true);
+      onContentChangeExternal?.(content);
     },
-    [setIsModified],
+    [setIsModified, onContentChangeExternal],
   );
 
   /** WikiLink / バックリンク遷移 */
@@ -162,10 +188,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
   }, []);
 
   /** アウトライン見出しクリック → エディタの該当行にスクロール */
-  const handleHeadingClick = useCallback((_line: number) => { // eslint-disable-line @typescript-eslint/no-unused-vars
-    // CodeMirror の EditorView を直接参照する必要があるが、
-    // 現在のアーキテクチャでは StellarEditor 内部に閉じている。
-    // 将来的に ref でスクロール関数を公開する拡張が可能。
+  const handleHeadingClick = useCallback((line: number) => {
+    stellarEditorRef.current?.scrollToLine(line);
   }, []);
 
   /** 単語数・読了時間（メモ化） */
@@ -305,6 +329,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
   /** エディタ部分（フォーカスモード / 通常モード共通） */
   const editorElement = (
     <StellarEditor
+      ref={stellarEditorRef}
       noteId={activeNote.id}
       initialContent={activeNote.content}
       onSave={handleSave}
@@ -808,4 +833,4 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ noteId }) => {
       </div>
     </div>
   );
-};
+});
