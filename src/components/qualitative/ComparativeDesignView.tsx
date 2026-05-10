@@ -17,12 +17,20 @@ interface ComparativeDesignViewProps {
   projectId: string;
 }
 
+type ComparativeDesignCommandResult =
+  | ComparativeDesignFull
+  | ComparativeDesignFull[]
+  | null;
+
 const DESIGN_TYPES = [
   { value: "MSSD", label: useI18nStore.getState().t.qualitative.k_a347nj },
   { value: "MDSD", label: useI18nStore.getState().t.qualitative.k_jj3dfz },
   { value: "QCA", label: useI18nStore.getState().t.qualitative.k_55t8w3 },
   { value: "other", label: useI18nStore.getState().t.notes.k_7bosl },
 ];
+
+const getNextSortOrder = (items: { sortOrder: number }[]): number =>
+  items.reduce((max, item) => Math.max(max, item.sortOrder), -1) + 1;
 
 export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
   projectId,
@@ -41,11 +49,11 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
   const loadDesign = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await invoke<ComparativeDesignFull | null>(
+      const result = await invoke<ComparativeDesignCommandResult>(
         "get_comparative_design",
         { projectId }
       );
-      setDesign(result);
+      setDesign(Array.isArray(result) ? result[0] ?? null : result);
     } catch (err) {
       console.error(t.qualitative.k_tnbwfn, err);
     } finally {
@@ -81,6 +89,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
       await invoke("add_comparative_case", {
         designId: design.id,
         name: newCaseName.trim(),
+        sortOrder: getNextSortOrder(design.cases),
       });
       setNewCaseName("");
       void loadDesign();
@@ -96,6 +105,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
         designId: design.id,
         name: newVarName.trim(),
         varType: newVarType,
+        sortOrder: getNextSortOrder(design.variables),
       });
       setNewVarName("");
       void loadDesign();
@@ -138,7 +148,7 @@ export const ComparativeDesignView: React.FC<ComparativeDesignViewProps> = ({
         await invoke("upsert_comparative_cell", {
           caseId,
           variableId,
-          value: value || null,
+          value,
           paperId: null,
         });
         void loadDesign();
