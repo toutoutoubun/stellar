@@ -186,7 +186,10 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
 
       // 即時追加（Tip UI は表示せず直接ハイライト化）
       onAddHighlight(text, selectedColor, position.pageNumber, rect);
-      hideTipAndSelection();
+      queueMicrotask(() => {
+        hideTipAndSelection();
+        window.getSelection()?.removeAllRanges();
+      });
       return null;
     },
     [onAddHighlight, selectedColor],
@@ -209,7 +212,8 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
 
   return (
     <div
-      className="relative w-full h-full"
+      className="relative w-full h-full selectable stellar-pdf-viewer"
+      data-selectable="true"
       style={{ backgroundColor: "var(--color-bg-tertiary)" }}
     >
       <PdfLoader
@@ -368,6 +372,16 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
 
       {/* ハイライト色のカスタムスタイル注入 */}
       <style>{`
+        .stellar-pdf-viewer .textLayer,
+        .stellar-pdf-viewer .textLayer :is(span, br) {
+          -webkit-user-select: text;
+          user-select: text;
+        }
+        .stellar-pdf-viewer .pdfViewer.noUserSelect .textLayer,
+        .stellar-pdf-viewer .pdfViewer.noUserSelect .textLayer * {
+          -webkit-user-select: none;
+          user-select: none;
+        }
         .Highlight__part {
           background-color: ${HIGHLIGHT_COLORS[selectedColor].bg} !important;
         }
