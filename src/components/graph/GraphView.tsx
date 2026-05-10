@@ -143,7 +143,15 @@ export const GraphView: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    setPositionedNodes([]);
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setPositionedNodes([]);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [filteredNodes]);
 
   /** ミニマップからグラフ中心を移動 */
@@ -156,11 +164,9 @@ export const GraphView: React.FC = () => {
 
   const graphWidth =
     containerSize.width ||
-    containerRef.current?.clientWidth ||
     (typeof window !== "undefined" ? Math.max(320, window.innerWidth - 280) : 800);
   const graphHeight =
     containerSize.height ||
-    containerRef.current?.clientHeight ||
     (typeof window !== "undefined" ? Math.max(320, window.innerHeight - 40) : 600);
 
   /** キーボードショートカット */

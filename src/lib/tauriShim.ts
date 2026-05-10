@@ -6,7 +6,6 @@
 import { useI18nStore } from "../stores/useI18nStore";
 
 // ── Tauri 環境検出 ─────────────────────────────────
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function detectTauriRuntime(): boolean {
   if (typeof window === "undefined") return false;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -31,11 +30,13 @@ function hasTauriRuntime(): boolean {
 // ブラウザプレビューでも create / get / update / delete が動作するように
 // メモリ上にデータを保持する軽量ストア。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mockStore: { notes: any[]; projects: any[]; papers: any[]; datasets: any[]; analyses: any[]; codes: any[]; highlights: any[]; links: any[] } = {
+const mockStore: { notes: any[]; projects: any[]; papers: any[]; datasets: any[]; variables: any[]; dataRows: any[]; analyses: any[]; codes: any[]; highlights: any[]; links: any[] } = {
   notes: [],
   projects: [],
   papers: [],
   datasets: [],
+  variables: [],
+  dataRows: [],
   analyses: [],
   codes: [],
   highlights: [],
@@ -47,6 +48,70 @@ function mockId(): string {
 }
 function now(): string {
   return new Date().toISOString();
+}
+
+type UnknownRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function commandInput(args?: Record<string, unknown>): UnknownRecord {
+  return isRecord(args?.input) ? args.input : (args ?? {});
+}
+
+function commandString(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+function commandNullableString(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function commandNumber(value: unknown, fallback = 0): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function normalizeMockDataValues(
+  values: UnknownRecord,
+  variables: UnknownRecord[],
+): UnknownRecord {
+  const variableIds = new Set(variables.map((v) => commandString(v.id)));
+  const variableIdByName = new Map(
+    variables.map((v) => [commandString(v.name), commandString(v.id)]),
+  );
+  const normalized: UnknownRecord = {};
+  for (const [key, value] of Object.entries(values)) {
+    const storageKey = variableIds.has(key) ? key : (variableIdByName.get(key) ?? key);
+    normalized[storageKey] = value;
+  }
+  return normalized;
+}
+
+function detectMockVariableType(variable: UnknownRecord, rows: UnknownRecord[]): string {
+  const variableId = commandString(variable.id);
+  const variableName = commandString(variable.name);
+  const variableLabel = commandNullableString(variable.label);
+  const values = rows
+    .map((row) => {
+      const rowValues = isRecord(row.values) ? row.values : {};
+      const value =
+        rowValues[variableId] ??
+        rowValues[variableName] ??
+        (variableLabel ? rowValues[variableLabel] : undefined);
+      return value == null ? "" : String(value).trim();
+    })
+    .filter(Boolean);
+
+  if (values.length === 0) return "text";
+  const nameLower = variableName.toLowerCase();
+  if (nameLower.includes("日付") || nameLower.includes("年") || nameLower.includes("date")) {
+    return "date";
+  }
+
+  const numericCount = values.filter((value) => Number.isFinite(Number(value))).length;
+  if (numericCount / values.length >= 0.8) return "scale";
+  return new Set(values).size <= 10 ? "nominal" : "text";
 }
 
 /**
@@ -203,13 +268,13 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     return { handled: true, result: [...mockStore.datasets] };
   }
   if (cmd === "create_dataset") {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const a = (args ?? {}) as any;
+    const a = commandInput(args);
     const ds = {
       id: mockId(),
-      name: a.name ?? useI18nStore.getState().t.quantitative.k_2jvud1,
-      description: a.description ?? null,
-      sourceType: a.sourceType ?? "manual",
+      name: commandString(a.name, useI18nStore.getState().t.quantitative.k_2jvud1),
+      description: commandNullableString(a.description),
+      sourceType: commandString(a.sourceType, "manual"),
+      sourceRef: commandNullableString(a.sourceRef),
       rowCount: 0,
       createdAt: now(),
       updatedAt: now(),
@@ -218,11 +283,13 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     return { handled: true, result: { ...ds } };
   }
   if (cmd === "create_dataset_from_codes") {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const a = (args ?? {}) as any;
+    const a = commandInput(args);
     const ds = {
       id: mockId(),
-      name: a.name ?? useI18nStore.getState().t.utils.str_7nzz94,
+      name: commandString(
+        a.datasetName ?? a.name,
+        useI18nStore.getState().t.utils.str_7nzz94,
+      ),
       description: null,
       sourceType: "codes" as const,
       rowCount: 0,
@@ -233,6 +300,13 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     return { handled: true, result: { ...ds } };
   }
   if (cmd === "create_dataset_from_highlights") {
+    const paperId = typeof args?.paperId === "string" ? args.paperId : null;
+    const highlights = paperId
+      ? mockStore.highlights.filter((h) => h.paperId === paperId)
+      : mockStore.highlights;
+    if (highlights.length === 0) {
+      throw new Error("この論文にはデータセット化できるハイライトがありません");
+    }
     const ds = {
       id: mockId(),
       name: useI18nStore.getState().t.utils.str_gs5oob,
@@ -254,16 +328,156 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
 
   // ── Variables & Data Rows (Quantitative) ──
   if (cmd === "get_variables") {
-    return { handled: true, result: [] };
+    const datasetId = args?.datasetId as string | undefined;
+    const variables = datasetId
+      ? mockStore.variables.filter((v) => v.datasetId === datasetId)
+      : [...mockStore.variables];
+    return { handled: true, result: variables };
   }
   if (cmd === "get_data_rows") {
-    return { handled: true, result: [] };
+    const datasetId = args?.datasetId as string | undefined;
+    const offset = commandNumber(args?.offset, 0);
+    const limit = commandNumber(args?.limit, 50);
+    const rows = mockStore.dataRows
+      .filter((row) => !datasetId || row.datasetId === datasetId)
+      .sort((a, b) => commandNumber(a.rowIndex) - commandNumber(b.rowIndex))
+      .slice(offset, offset + limit);
+    return { handled: true, result: rows };
   }
   if (cmd === "import_csv") {
-    return { handled: true, result: undefined };
+    const input = commandInput(args);
+    const datasetId = commandString(input.datasetId);
+    const csvText = commandString(input.csvText);
+    const delimiter = commandString(input.delimiter, ",");
+    const hasHeader = input.hasHeader !== false;
+    const lines = csvText.split(/\r?\n/).filter((line) => line.trim().length > 0);
+    if (!datasetId || lines.length === 0) {
+      return { handled: true, result: { datasetId, rowCount: 0, variableCount: 0, warnings: [] } };
+    }
+
+    const cells = lines.map((line) => line.split(delimiter));
+    const headers = hasHeader
+      ? (cells.shift() ?? []).map((header, index) => header.trim() || `column_${index + 1}`)
+      : (cells[0] ?? []).map((_, index) => `column_${index + 1}`);
+    mockStore.variables = mockStore.variables.filter((v) => v.datasetId !== datasetId);
+    mockStore.dataRows = mockStore.dataRows.filter((row) => row.datasetId !== datasetId);
+    const variables = headers.map((name, index) => ({
+      id: mockId(),
+      datasetId,
+      columnIndex: index,
+      name,
+      label: null,
+      varType: "text",
+      unit: null,
+      likertMin: null,
+      likertMax: null,
+      likertLabels: null,
+    }));
+    mockStore.variables.push(...variables);
+    const rows = cells.map((row, rowIndex) => {
+      const values: UnknownRecord = {};
+      variables.forEach((variable, columnIndex) => {
+        values[variable.id] = row[columnIndex] ?? "";
+      });
+      return { id: mockId(), datasetId, rowIndex, values, createdAt: now() };
+    });
+    mockStore.dataRows.push(...rows);
+    const dataset = mockStore.datasets.find((d) => d.id === datasetId);
+    if (dataset) {
+      dataset.sourceType = "csv";
+      dataset.rowCount = rows.length;
+      dataset.updatedAt = now();
+    }
+    return {
+      handled: true,
+      result: { datasetId, rowCount: rows.length, variableCount: variables.length, warnings: [] },
+    };
+  }
+  if (cmd === "create_variable") {
+    const input = commandInput(args);
+    const datasetId = commandString(input.datasetId);
+    const variable = {
+      id: mockId(),
+      datasetId,
+      columnIndex: commandNumber(input.columnIndex, mockStore.variables.length),
+      name: commandString(input.name, `variable_${mockStore.variables.length + 1}`),
+      label: commandNullableString(input.label),
+      varType: commandString(input.varType, "text"),
+      unit: commandNullableString(input.unit),
+      likertMin: input.likertMin ?? null,
+      likertMax: input.likertMax ?? null,
+      likertLabels: input.likertLabels ?? null,
+    };
+    mockStore.variables.push(variable);
+    return { handled: true, result: { ...variable } };
   }
   if (cmd === "update_variable") {
+    const idx = mockStore.variables.findIndex((v) => v.id === args?.id);
+    if (idx >= 0) {
+      const current = mockStore.variables[idx];
+      const updated = {
+        ...current,
+        name: commandString(args?.name, current.name),
+        label: args?.label === undefined ? current.label : commandNullableString(args.label),
+        varType: commandString(args?.varType, current.varType),
+        unit: args?.unit === undefined ? current.unit : commandNullableString(args.unit),
+        likertLabels: args?.likertLabels === undefined ? current.likertLabels : args.likertLabels,
+      };
+      mockStore.variables[idx] = updated;
+      return { handled: true, result: { ...updated } };
+    }
+    return { handled: true, result: null };
+  }
+  if (cmd === "delete_variable") {
+    mockStore.variables = mockStore.variables.filter((v) => v.id !== args?.id);
     return { handled: true, result: undefined };
+  }
+  if (cmd === "insert_data_rows") {
+    const datasetId = commandString(args?.datasetId);
+    const rows = Array.isArray(args?.rows) ? args.rows : [];
+    const variables = mockStore.variables.filter((v) => v.datasetId === datasetId);
+    const maxRowIndex = mockStore.dataRows
+      .filter((row) => row.datasetId === datasetId)
+      .reduce((max, row) => Math.max(max, commandNumber(row.rowIndex, -1)), -1);
+    const createdRows = rows.map((row, index) => ({
+      id: mockId(),
+      datasetId,
+      rowIndex: maxRowIndex + 1 + index,
+      values: normalizeMockDataValues(isRecord(row) ? row : {}, variables),
+      createdAt: now(),
+    }));
+    mockStore.dataRows.push(...createdRows);
+    const dataset = mockStore.datasets.find((d) => d.id === datasetId);
+    if (dataset) {
+      dataset.rowCount = mockStore.dataRows.filter((row) => row.datasetId === datasetId).length;
+      dataset.updatedAt = now();
+    }
+    return { handled: true, result: createdRows.length };
+  }
+  if (cmd === "delete_data_rows") {
+    const datasetId = commandString(args?.datasetId);
+    mockStore.dataRows = mockStore.dataRows.filter((row) => row.datasetId !== datasetId);
+    const dataset = mockStore.datasets.find((d) => d.id === datasetId);
+    if (dataset) {
+      dataset.rowCount = 0;
+      dataset.updatedAt = now();
+    }
+    return { handled: true, result: true };
+  }
+  if (cmd === "auto_detect_variable_types") {
+    const datasetId = commandString(args?.datasetId);
+    const rows = mockStore.dataRows.filter((row) => row.datasetId === datasetId);
+    const variables = mockStore.variables
+      .filter((variable) => variable.datasetId === datasetId)
+      .map((variable) => {
+        const updated = { ...variable, varType: detectMockVariableType(variable, rows) };
+        const idx = mockStore.variables.findIndex((item) => item.id === variable.id);
+        if (idx >= 0) {
+          mockStore.variables[idx] = updated;
+        }
+        return updated;
+      });
+    return { handled: true, result: variables };
   }
 
   // ── Analyses (Quantitative) ──
@@ -397,6 +611,7 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
   }
 
   // ── Graph Data（動的生成）──
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   if (cmd === "get_graph_data") {
     // mockStore のノートと論文からグラフデータを動的に生成
     const normalizeTitle = (title: string) => title.trim().toLowerCase();
@@ -542,21 +757,28 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     const authorLast = (paper.authors?.[0] ?? "Unknown").split(" ").pop() ?? "Unknown";
     const yearStr = paper.year ? String(paper.year) : "n.d.";
     const citationKey = `${authorLast}${yearStr}`;
-    let inlineText = "";
-    let bibliographyText = "";
     const authorsStr = paper.authors?.join(", ") ?? "Unknown";
+    let citationText: { inlineText: string; bibliographyText: string };
     if (style === "apa7") {
-      inlineText = pageRef ? `(${authorLast}, ${yearStr}, ${pageRef})` : `(${authorLast}, ${yearStr})`;
-      bibliographyText = `${authorsStr} (${yearStr}). ${paper.title}.${paper.journal ? " " + paper.journal + "." : ""}`;
+      citationText = {
+        inlineText: pageRef ? `(${authorLast}, ${yearStr}, ${pageRef})` : `(${authorLast}, ${yearStr})`,
+        bibliographyText: `${authorsStr} (${yearStr}). ${paper.title}.${paper.journal ? " " + paper.journal + "." : ""}`,
+      };
     } else if (style === "mla9") {
-      inlineText = pageRef ? `(${authorLast} ${pageRef})` : `(${authorLast})`;
-      bibliographyText = `${authorsStr}. "${paper.title}."${paper.journal ? " " + paper.journal + "," : ""} ${yearStr}.`;
+      citationText = {
+        inlineText: pageRef ? `(${authorLast} ${pageRef})` : `(${authorLast})`,
+        bibliographyText: `${authorsStr}. "${paper.title}."${paper.journal ? " " + paper.journal + "," : ""} ${yearStr}.`,
+      };
     } else if (style === "chicago17") {
-      inlineText = pageRef ? `(${authorLast} ${yearStr}, ${pageRef})` : `(${authorLast} ${yearStr})`;
-      bibliographyText = `${authorsStr}. ${paper.title}.${paper.journal ? " " + paper.journal : ""}, ${yearStr}.`;
+      citationText = {
+        inlineText: pageRef ? `(${authorLast} ${yearStr}, ${pageRef})` : `(${authorLast} ${yearStr})`,
+        bibliographyText: `${authorsStr}. ${paper.title}.${paper.journal ? " " + paper.journal : ""}, ${yearStr}.`,
+      };
     } else {
-      inlineText = pageRef ? `(${authorLast} ${yearStr}: ${pageRef})` : `(${authorLast} ${yearStr})`;
-      bibliographyText = `${authorsStr}『${paper.title}』${paper.journal ? paper.journal + "、" : ""}${yearStr}年。`;
+      citationText = {
+        inlineText: pageRef ? `(${authorLast} ${yearStr}: ${pageRef})` : `(${authorLast} ${yearStr})`,
+        bibliographyText: `${authorsStr}『${paper.title}』${paper.journal ? paper.journal + "、" : ""}${yearStr}年。`,
+      };
     }
     const citation = {
       id: mockId(),
@@ -564,8 +786,8 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
       paperId,
       citationKey,
       citationStyle: style,
-      inlineText,
-      bibliographyText,
+      inlineText: citationText.inlineText,
+      bibliographyText: citationText.bibliographyText,
       pageRef,
       createdAt: now(),
     };
@@ -821,6 +1043,7 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     if (paper) return { handled: true, result: { id: paper.id, itemType: "paper" } };
     return { handled: true, result: null };
   }
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 
   // ── メタデータ取得（ブラウザ開発用モック）──
   // 実環境では Rust 側の CrossRef API / HTML スクレイピングが動くが、

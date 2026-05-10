@@ -104,8 +104,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
   /** PDF Blob URL の生成 */
   useEffect(() => {
     if (!paper?.pdfPath) {
-      setPdfBlobUrl(null);
-      setPdfLoadError(null);
+      queueMicrotask(() => {
+        setPdfBlobUrl(null);
+        setPdfLoadError(null);
+      });
       return;
     }
 
@@ -160,11 +162,15 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
             try {
               blob = await readViaFsPlugin(paper.pdfPath!);
               if (blob.size === 0) {
-                throw new Error("PDF file is empty (0 bytes) via fs plugin");
+                throw new Error("PDF file is empty (0 bytes) via fs plugin", {
+                  cause: assetErr,
+                });
               }
               const header = await blob.slice(0, 5).text();
               if (header !== "%PDF-") {
-                throw new Error(`Invalid PDF header via fs plugin: ${JSON.stringify(header)}`);
+                throw new Error(`Invalid PDF header via fs plugin: ${JSON.stringify(header)}`, {
+                  cause: assetErr,
+                });
               }
               console.info("[ReaderView] PDF loaded successfully via fs plugin fallback");
             } catch (fsErr) {
@@ -173,6 +179,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
               const fsMsg = fsErr instanceof Error ? fsErr.message : String(fsErr);
               throw new Error(
                 `Asset protocol: ${assetMsg} | FS plugin: ${fsMsg}`,
+                { cause: fsErr },
               );
             }
           }
