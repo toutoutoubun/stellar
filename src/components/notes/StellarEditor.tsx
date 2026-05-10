@@ -1,11 +1,18 @@
-/* eslint-disable react-hooks/static-components -- CodeMirror toolbar components are intentionally created within the editor component */
 // src/components/notes/StellarEditor.tsx
 // Stellar — CodeMirror 6 カスタムエディタ
 // Markdown 編集 + WikiLink構文ハイライト + ==ハイライト== + @cite{} + 自動保存
 // テーマは CSS 変数と連動
 
 import type React from "react";
-import { useCallback, useEffect, useRef, useMemo, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useMemo,
+  useState,
+} from "react";
 import { EditorView, keymap, ViewUpdate } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
@@ -299,17 +306,21 @@ interface StellarEditorProps {
   onContentChange?: (content: string) => void;
 }
 
+export interface StellarEditorHandle {
+  scrollToLine: (line: number) => void;
+}
+
 // ============================================================
 // メインコンポーネント
 // ============================================================
 
-export const StellarEditor: React.FC<StellarEditorProps> = ({
+export const StellarEditor = forwardRef<StellarEditorHandle, StellarEditorProps>(({
   noteId,
   initialContent,
   onSave,
   onLinkClick,
   onContentChange,
-}) => {
+}, ref) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -320,6 +331,27 @@ export const StellarEditor: React.FC<StellarEditorProps> = ({
     onSaveRef.current = onSave;
     onContentChangeRef.current = onContentChange;
   });
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      scrollToLine: (line: number) => {
+        const view = viewRef.current;
+        if (!view) return;
+        const lineNumber = Math.min(
+          Math.max(1, Math.trunc(line)),
+          view.state.doc.lines,
+        );
+        const targetLine = view.state.doc.line(lineNumber);
+        view.dispatch({
+          selection: { anchor: targetLine.from },
+          effects: EditorView.scrollIntoView(targetLine.from, { y: "center" }),
+        });
+        view.focus();
+      },
+    }),
+    [],
+  );
 
   /** WikiLink オートコンプリート候補取得 */
   const getSuggestions = useCallback(
@@ -367,7 +399,6 @@ export const StellarEditor: React.FC<StellarEditorProps> = ({
   );
 
   /** autoSave Extension — キー入力から1秒後に自動保存 */
-  /* eslint-disable react-hooks/refs, react-hooks/preserve-manual-memoization -- refs are only read inside event handlers, not during render */
   const autoSaveExtension = useMemo(
     () =>
       EditorView.updateListener.of((update: ViewUpdate) => {
@@ -386,7 +417,6 @@ export const StellarEditor: React.FC<StellarEditorProps> = ({
       }),
     [],
   );
-  /* eslint-enable react-hooks/refs, react-hooks/preserve-manual-memoization */
 
   /** WikiLink クリックハンドラ Extension */
   const clickHandlerExtension = useMemo(
@@ -824,4 +854,4 @@ export const StellarEditor: React.FC<StellarEditorProps> = ({
     </div>
     </>
   );
-};
+});

@@ -1,20 +1,17 @@
 // src/components/notes/DraftNoteEditor.tsx
-// Stellar — 草稿エディタ（3カラムレイアウト）
-// 左: DraftOutlinePanel (220px) / 中央: NoteEditor / 右: タブパネル (280px)
+// Stellar — 草稿エディタ（2カラムレイアウト）
+// 中央: NoteEditor / 右: タブパネル (280px)
 
 import type React from "react";
-import { useState, useCallback, useEffect } from "react";
-import { invoke } from "../../lib/tauriShim";
-import type { DraftChapter, CitationStyle } from "../../types";
+import { useState, useCallback, useEffect, useRef } from "react";
+import type { CitationStyle, NodeType } from "../../types";
 import { CITATION_STYLE_LABELS } from "../../types";
 import { useNoteStore } from "../../stores/useNoteStore";
 import { useUIStore } from "../../stores/useUIStore";
-import { NoteEditor } from "./NoteEditor";
-import { DraftOutlinePanel } from "./DraftOutlinePanel";
+import { NoteEditor, type NoteEditorHandle } from "./NoteEditor";
 import { DraftCitationPanel } from "./DraftCitationPanel";
 import { NoteContextPanel } from "./NoteContextPanel";
 import { useT } from "../../stores/useI18nStore";
-import type { NodeType } from "../../types";
 
 interface DraftNoteEditorProps {
   noteId: string;
@@ -35,34 +32,17 @@ export const DraftNoteEditor: React.FC<DraftNoteEditorProps> = ({ noteId }) => {
   const setMainPaneContent = useUIStore((s) => s.setMainPaneContent);
 
   // ローカル状態
-  const [chapters, setChapters] = useState<DraftChapter[]>([]);
   const [rightTab, setRightTab] = useState<RightTab>("citations");
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [citationStyle, setCitationStyle] = useState<CitationStyle>("apa7");
   const [styleMenuOpen, setStyleMenuOpen] = useState(false);
   const [editorContent, setEditorContent] = useState("");
+  const noteEditorRef = useRef<NoteEditorHandle | null>(null);
 
   /** ノートデータの取得 */
   useEffect(() => {
     void openNoteAction(noteId);
   }, [noteId, openNoteAction]);
-
-  /** 章リストを取得 */
-  const fetchChapters = useCallback(async () => {
-    try {
-      const result = await invoke<DraftChapter[]>("get_draft_chapters", {
-        noteId,
-      });
-      setChapters(result);
-    } catch {
-      // 静かに処理
-    }
-  }, [noteId]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
-    void fetchChapters();
-  }, [fetchChapters]);
 
   /** activeNote が読み込まれたらコンテンツを同期 */
   useEffect(() => {
@@ -71,11 +51,6 @@ export const DraftNoteEditor: React.FC<DraftNoteEditorProps> = ({ noteId }) => {
       setEditorContent(activeNote.content);
     }
   }, [activeNote]);
-
-  /** 章クリック — 該当位置へスクロール（将来拡張） */
-  const handleChapterClick = useCallback((_chapterId: string) => { // eslint-disable-line @typescript-eslint/no-unused-vars
-    // 将来: StellarEditor ref で該当見出しまでスクロール
-  }, []);
 
   /** 引用スタイル変更 */
   const handleStyleChange = useCallback(
@@ -116,9 +91,9 @@ export const DraftNoteEditor: React.FC<DraftNoteEditorProps> = ({ noteId }) => {
     [openNoteUI, openPaperUI],
   );
 
-  /** 見出しクリック（将来拡張） */
-  const handleHeadingClick = useCallback((_line: number) => { // eslint-disable-line @typescript-eslint/no-unused-vars
-    // 将来: StellarEditor ref で該当行へスクロール
+  /** 見出しクリック → エディタの該当行にスクロール */
+  const handleHeadingClick = useCallback((line: number) => {
+    noteEditorRef.current?.scrollToLine(line);
   }, []);
 
   return (
@@ -310,19 +285,15 @@ export const DraftNoteEditor: React.FC<DraftNoteEditorProps> = ({ noteId }) => {
         </button>
       </header>
 
-      {/* 3カラムレイアウト */}
+      {/* エディタ + 右パネル */}
       <div className="flex flex-1 overflow-hidden">
-        {/* 左: DraftOutlinePanel */}
-        <DraftOutlinePanel
-          noteId={noteId}
-          chapters={chapters}
-          onChapterClick={handleChapterClick}
-          onReorder={() => void fetchChapters()}
-        />
-
-        {/* 中央: NoteEditor */}
+        {/* NoteEditor */}
         <div className="flex-1 overflow-hidden">
-          <NoteEditor noteId={noteId} />
+          <NoteEditor
+            ref={noteEditorRef}
+            noteId={noteId}
+            onContentChange={setEditorContent}
+          />
         </div>
 
         {/* 右: タブパネル */}
