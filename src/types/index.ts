@@ -936,7 +936,7 @@ export interface FramingMatrix {
 }
 
 /** 質的分析ビューのタブ */
-export type QualitativeTab =
+export type BuiltInQualitativeTab =
   | 'dashboard'
   | 'codebook'
   | 'matrix'
@@ -948,6 +948,8 @@ export type QualitativeTab =
   | 'comparative'
   | 'framing'
   | 'report';
+
+export type QualitativeTab = BuiltInQualitativeTab | (string & {});
 
 // ============================================================
 // 量的分析（Quantitative Analysis）— Data Studio

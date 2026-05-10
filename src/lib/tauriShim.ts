@@ -1565,6 +1565,93 @@ export async function openFileDialog(
   });
 }
 
+export interface TextFileSelection {
+  name: string;
+  path: string | null;
+  content: string;
+}
+
+/**
+ * テキストファイルを選択して本文まで読み込む。
+ * Tauri 環境ではファイルパス、ブラウザプレビューでは File オブジェクトから読む。
+ */
+export async function openTextFileDialog(
+  options?: OpenFileDialogOptions,
+): Promise<TextFileSelection[]> {
+  if (hasTauriRuntime()) {
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const { readTextFile } = await import("@tauri-apps/plugin-fs");
+      const result = await open({
+        multiple: options?.multiple ?? false,
+        filters: options?.filters,
+        title: options?.title,
+      });
+      const paths = Array.isArray(result) ? result : result ? [result] : [];
+      const selections: TextFileSelection[] = [];
+      for (const path of paths) {
+        const content = await readTextFile(path);
+        const name = String(path).split(/[\\/]/).pop() ?? String(path);
+        selections.push({ name, path: String(path), content });
+      }
+      return selections;
+    } catch (err) {
+      console.error("[tauriShim] Tauri text file open failed:", err);
+      return [];
+    }
+  }
+
+  return new Promise<TextFileSelection[]>((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.style.display = "none";
+
+    if (options?.filters?.length) {
+      input.accept = options.filters
+        .flatMap((f) => f.extensions)
+        .map((ext) => `.${ext}`)
+        .join(",");
+    }
+    if (options?.multiple) {
+      input.multiple = true;
+    }
+
+    input.addEventListener("change", () => {
+      const files = Array.from(input.files ?? []);
+      Promise.all(
+        files.map(
+          (file) =>
+            new Promise<TextFileSelection>((fileResolve, fileReject) => {
+              const reader = new FileReader();
+              reader.onload = () =>
+                fileResolve({
+                  name: file.name,
+                  path: null,
+                  content: String(reader.result ?? ""),
+                });
+              reader.onerror = () => fileReject(reader.error);
+              reader.readAsText(file);
+            }),
+        ),
+      )
+        .then(resolve)
+        .catch((err) => {
+          console.error("[tauriShim] Browser text file open failed:", err);
+          resolve([]);
+        })
+        .finally(() => input.remove());
+    });
+
+    input.addEventListener("cancel", () => {
+      resolve([]);
+      input.remove();
+    });
+
+    document.body.appendChild(input);
+    input.click();
+  });
+}
+
 // ── 安全な openDirectoryDialog ────────────────────────────
 
 /** ディレクトリ選択ダイアログのオプション */

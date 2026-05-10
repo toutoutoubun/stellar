@@ -38,6 +38,13 @@ function formatRelativeDate(
   return `${String(y)}/${String(date.getMonth() + 1)}/${String(date.getDate())}`;
 }
 
+function titleFromMarkdownFilename(name: string): string {
+  return name
+    .replace(/\.(md|markdown)$/i, "")
+    .replace(/[_-]+/g, " ")
+    .trim() || "Imported Markdown";
+}
+
 export const NoteList: React.FC = () => {
   const t = useT();
 
@@ -138,6 +145,37 @@ export const NoteList: React.FC = () => {
     }
   }, [createNote, openNote]);
 
+  /** Markdown ファイルをノートとしてインポート */
+  const handleImportMarkdown = useCallback(async () => {
+    try {
+      const { openTextFileDialog } = await import("../../lib/tauriShim");
+      const files = await openTextFileDialog({
+        multiple: true,
+        title: "Markdown ファイルをインポート",
+        filters: [{ name: "Markdown", extensions: ["md", "markdown"] }],
+      });
+      if (files.length === 0) return;
+
+      const imported: Note[] = [];
+      for (const file of files) {
+        const note = await createNote({
+          title: titleFromMarkdownFilename(file.name),
+          content: file.content,
+          tags: ["markdown"],
+        });
+        imported.push(note);
+      }
+
+      if (imported[0]) {
+        openNote(imported[0].id);
+      }
+      toast.success(`${imported.length} 件のMarkdownノートをインポートしました`);
+    } catch (err) {
+      console.error("[importMarkdown] failed:", err);
+      toast.error("Markdownのインポートに失敗しました");
+    }
+  }, [createNote, openNote]);
+
   /** 新規草稿を作成 */
   const handleCreateDraft = useCallback(async () => {
     try {
@@ -203,6 +241,43 @@ export const NoteList: React.FC = () => {
           </span>
         </div>
         <div className="flex items-center gap-1">
+          {/* Markdown インポートボタン */}
+          <button
+            type="button"
+            onClick={() => void handleImportMarkdown()}
+            className="flex items-center justify-center"
+            style={{
+              color: "var(--color-accent-primary)",
+              width: "28px",
+              height: "28px",
+              borderRadius: "8px",
+              backgroundColor: "transparent",
+              transition: "background-color 150ms ease-out",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "var(--color-bg-hover)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
+            title="Markdown (.md) をインポート"
+            aria-label="Markdown (.md) をインポート"
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+          </button>
           {/* 新規草稿ボタン */}
           <button
             type="button"

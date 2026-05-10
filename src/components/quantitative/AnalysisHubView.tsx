@@ -16,6 +16,7 @@ import { NetworkAnalysisView } from "./results/NetworkAnalysisView";
 import { ReportBuilder } from "./ReportBuilder";
 import type { Analysis } from "../../types";
 import { useI18nStore } from "../../stores/useI18nStore";
+import { getQuantitativeAnalysisAddons } from "../../plugins/analysisAddons";
 
 // ── 分析カテゴリ定義 ──
 const ANALYSIS_GROUPS: {
@@ -223,21 +224,54 @@ export const AnalysisHubView: React.FC = () => {
   const [reportOpen, setReportOpen] = useState(false);
   const [exportingNote, setExportingNote] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const quantitativeAddons = useMemo(() => getQuantitativeAnalysisAddons(), []);
+
+  const analysisGroups = useMemo(() => {
+    const groups = ANALYSIS_GROUPS.map((group) => ({ ...group, types: [...group.types] }));
+    for (const addon of quantitativeAddons) {
+      const groupKey = addon.groupKey ?? "addons";
+      let group = groups.find((item) => item.key === groupKey);
+      if (!group) {
+        group = {
+          key: groupKey,
+          label: addon.groupLabel ?? "アドオン",
+          icon: addon.icon ?? (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 3v18" />
+              <path d="M3 12h18" />
+              <circle cx="12" cy="12" r="8" />
+            </svg>
+          ),
+          types: [],
+        };
+        groups.push(group);
+      }
+      if (!group.types.includes(addon.id)) {
+        group.types.push(addon.id);
+      }
+    }
+    return groups;
+  }, [quantitativeAddons]);
+
+  const getAnalysisTypeLabel = useCallback(
+    (type: string) => quantitativeAddons.find((addon) => addon.id === type)?.label ?? analysisTypeLabel(type),
+    [quantitativeAddons],
+  );
 
   // グループ化された分析一覧
   const groupedAnalyses = useMemo(() => {
     const map = new Map<string, Analysis[]>();
-    for (const g of ANALYSIS_GROUPS) {
+    for (const g of analysisGroups) {
       map.set(g.key, []);
     }
     for (const a of analyses) {
-      const gk = getGroupKey(a.analysisType);
+      const gk = analysisGroups.find((g) => g.types.includes(a.analysisType))?.key ?? getGroupKey(a.analysisType);
       const arr = map.get(gk);
       if (arr) arr.push(a);
       else map.set(gk, [a]);
     }
     return map;
-  }, [analyses]);
+  }, [analyses, analysisGroups]);
 
   const selectedAnalysis = useMemo(
     () => analyses.find((a) => a.id === selectedAnalysisId) ?? null,
@@ -313,7 +347,7 @@ export const AnalysisHubView: React.FC = () => {
       const md = mdParts.join("\n");
       const tags = [useI18nStore.getState().t.quantitative.k_jf913u, useI18nStore.getState().t.qualitative.k_pbsye];
       const usedTypes = new Set(analyses.map((a) => a.analysisType));
-      for (const tp of usedTypes) tags.push(`#${analysisTypeLabel(tp)}`);
+      for (const tp of usedTypes) tags.push(`#${getAnalysisTypeLabel(tp)}`);
 
       await createNote({
         title: useI18nStore.getState().t.quantitative.k_t8dwwa,
@@ -327,7 +361,7 @@ export const AnalysisHubView: React.FC = () => {
     } finally {
       setExportingNote(false);
     }
-  }, [selectedDataset, analyses, createNote]);
+  }, [selectedDataset, analyses, createNote, getAnalysisTypeLabel]);
 
   // ── 分析結果レンダリング ──
   const renderResult = () => {
@@ -367,6 +401,11 @@ export const AnalysisHubView: React.FC = () => {
 
     const result = selectedAnalysis.result;
     const type = selectedAnalysis.analysisType;
+    const addon = quantitativeAddons.find((item) => item.id === type);
+
+    if (addon?.renderResult) {
+      return addon.renderResult({ analysis: selectedAnalysis, variables, dataRows });
+    }
 
     if (type === "descriptive" || type === "correlation") {
       return <DescriptiveResult analysis={selectedAnalysis} variables={variables} dataRows={dataRows} />;
@@ -552,7 +591,7 @@ export const AnalysisHubView: React.FC = () => {
 
         {/* 分析グループ一覧 */}
         <div className="flex-1 overflow-y-auto px-2 pb-4 scrollable-area">
-          {ANALYSIS_GROUPS.map((group) => {
+          {analysisGroups.map((group) => {
             const items = groupedAnalyses.get(group.key) ?? [];
             const collapsed = collapsedGroups.has(group.key);
             const color = GROUP_COLORS[group.key] ?? "var(--color-text-secondary)";
@@ -664,7 +703,7 @@ export const AnalysisHubView: React.FC = () => {
                               fontSize: "9px",
                             }}
                           >
-                            {analysisTypeLabel(item.analysisType)}
+                            {getAnalysisTypeLabel(item.analysisType)}
                           </span>
 
                           {/* 削除ボタン */}

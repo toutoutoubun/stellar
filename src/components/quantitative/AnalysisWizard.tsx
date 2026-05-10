@@ -9,6 +9,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useQuantitativeStore } from "../../stores/useQuantitativeStore";
 import { toast } from "../ui/Toast";
 import type { Variable, SaveAnalysisInput } from "../../types";
+import { getQuantitativeAnalysisAddons } from "../../plugins/analysisAddons";
 import {
   computeDescriptive,
   computeFrequencyTable,
@@ -21,7 +22,7 @@ import {
 import { useT, useI18nStore } from "../../stores/useI18nStore";
 
 // ── 分析手法定義 ──
-type MethodKey =
+type BuiltInMethodKey =
   | "descriptive"
   | "t-test"
   | "correlation"
@@ -29,6 +30,8 @@ type MethodKey =
   | "network"
   | "text"
   | "survey";
+
+type MethodKey = BuiltInMethodKey | (string & {});
 
 interface MethodDef {
   key: MethodKey;
@@ -38,7 +41,7 @@ interface MethodDef {
   color: string;
 }
 
-const METHODS: MethodDef[] = [
+const BUILT_IN_METHODS: MethodDef[] = [
   {
     key: "descriptive",
     label: useI18nStore.getState().t.quantitative.k_i0q6xb,
@@ -168,6 +171,32 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
   const [useNonParametric, setUseNonParametric] = useState(false);
   const [includeIntercept, setIncludeIntercept] = useState(true);
 
+  const quantitativeAddons = useMemo(() => getQuantitativeAnalysisAddons(), []);
+  const methods = useMemo<MethodDef[]>(
+    () => [
+      ...BUILT_IN_METHODS,
+      ...quantitativeAddons.map((addon) => ({
+        key: addon.id,
+        label: addon.label,
+        description: addon.description,
+        icon: addon.icon ?? (
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 3v18" />
+            <path d="M3 12h18" />
+            <circle cx="12" cy="12" r="8" />
+          </svg>
+        ),
+        color: addon.color ?? "var(--color-accent-info)",
+      })),
+    ],
+    [quantitativeAddons],
+  );
+
+  const selectedAddon = useMemo(
+    () => (method ? quantitativeAddons.find((addon) => addon.id === method) ?? null : null),
+    [method, quantitativeAddons],
+  );
+
   // ── 変数フィルタ ──
   const scaleVars = useMemo(
     () => variables.filter((v) => v.variableType === "scale"),
@@ -184,6 +213,12 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
   const ordinalVars = useMemo(
     () => variables.filter((v) => v.variableType === "ordinal"),
     [variables],
+  );
+  const selectedVariables = useMemo(
+    () => selectedVarIds
+      .map((id) => variables.find((v) => v.id === id))
+      .filter((v): v is Variable => v != null),
+    [selectedVarIds, variables],
   );
 
   // ── バリデーション警告 ──
@@ -236,24 +271,59 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
       w.push(t.quantitative.k_s19ryv);
     }
 
+    if (selectedAddon) {
+      const minVariables = selectedAddon.minVariables ?? 1;
+      if (selectedVarIds.length < minVariables) {
+        w.push(`少なくとも ${minVariables} 個の変数を選択してください。`);
+      }
+      if (selectedAddon.maxVariables != null && selectedVarIds.length > selectedAddon.maxVariables) {
+        w.push(`${selectedAddon.maxVariables} 個以下の変数を選択してください。`);
+      }
+      const addonWarnings = selectedAddon.validate?.({
+        datasetId: selectedDataset?.id ?? "",
+        variables,
+        dataRows,
+        selectedVariables,
+        selectedVarIds,
+        alpha,
+        config: { method, corrMethod, useNonParametric, includeIntercept },
+      }) ?? [];
+      w.push(...addonWarnings);
+    }
+
     return w;
-  }, [method, selectedVarIds, groupVarId, dependentVarId, variables, dataRows]);
+  }, [
+    method,
+    selectedVarIds,
+    groupVarId,
+    dependentVarId,
+    variables,
+    dataRows,
+    selectedVariables,
+    selectedAddon,
+    selectedDataset,
+    alpha,
+    corrMethod,
+    useNonParametric,
+    includeIntercept,
+  ]);
 
   const canProceedStep2 = method !== null;
-  const canProceedStep3 = warnings.length === 0 && selectedVarIds.length > 0;
+  const canProceedStep3 =
+    warnings.length === 0 && selectedVarIds.length >= (selectedAddon?.minVariables ?? 1);
   const canExecute = canProceedStep3 && analysisName.trim().length > 0;
 
   // ── 自動名前提案 ──
   const suggestedName = useMemo(() => {
     if (!method) return "";
-    const methodLabel = METHODS.find((m) => m.key === method)?.label ?? "";
+    const methodLabel = methods.find((m) => m.key === method)?.label ?? "";
     const varNames = selectedVarIds
       .map((id) => variables.find((v) => v.id === id)?.name ?? "")
       .filter(Boolean)
       .slice(0, 3);
     const suffix = varNames.length > 0 ? ` (${varNames.join(", ")})` : "";
     return `${methodLabel}${suffix}`;
-  }, [method, selectedVarIds, variables]);
+  }, [method, selectedVarIds, variables, methods]);
 
   // ── 変数チェックボックス切り替え ──
   const toggleVar = useCallback((id: string) => {
@@ -295,10 +365,6 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let result: any = null;
       let analysisType = method as string;
-
-      const selectedVariables = selectedVarIds
-        .map((id) => variables.find((v) => v.id === id))
-        .filter((v): v is Variable => v != null);
 
       // ─── 記述統計 ───
       if (method === "descriptive") {
@@ -519,6 +585,22 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
         analysisType = "survey";
       }
 
+      if (!result) {
+        const addon = quantitativeAddons.find((item) => item.id === method);
+        if (addon) {
+          result = await addon.run({
+            datasetId: selectedDataset.id,
+            variables,
+            dataRows,
+            selectedVariables,
+            selectedVarIds,
+            alpha,
+            config: { method, corrMethod, useNonParametric, includeIntercept },
+          });
+          analysisType = addon.id;
+        }
+      }
+
       if (!result) throw new Error(t.quantitative.k_tnsgkq);
 
       // ─── 結果保存 ───
@@ -553,7 +635,7 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
     method, selectedDataset, canExecute, selectedVarIds, variables, dataRows,
     groupVarId, dependentVarId, analysisName, alpha, corrMethod,
     useNonParametric, includeIntercept, getNumericValues, getStringValues,
-    saveAnalysis, onComplete,
+    selectedVariables, quantitativeAddons, saveAnalysis, onComplete,
   ]);
 
   // ── 変数タイプバッジ ──
@@ -645,7 +727,7 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
       </p>
 
       <div className="grid grid-cols-2 gap-3">
-        {METHODS.map((m) => {
+        {methods.map((m) => {
           const isSelected = method === m.key;
           return (
             <button
@@ -946,6 +1028,39 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
         );
       }
 
+      if (selectedAddon) {
+        const addonVariables = variables.filter((v) =>
+          selectedAddon.supportsVariable ? selectedAddon.supportsVariable(v) : true,
+        );
+        return (
+          <div>
+            <p className="text-xs mb-3" style={{ color: "var(--color-text-secondary)" }}>
+              {selectedAddon.description}
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {addonVariables.map((v) => (
+                <VarCheckbox
+                  key={v.id}
+                  v={v}
+                  checked={selectedVarIds.includes(v.id)}
+                  onChange={() => toggleVar(v.id)}
+                  disabled={
+                    !selectedVarIds.includes(v.id) &&
+                    selectedAddon.maxVariables != null &&
+                    selectedVarIds.length >= selectedAddon.maxVariables
+                  }
+                />
+              ))}
+              {addonVariables.length === 0 && (
+                <p className="text-xs py-2 px-3" style={{ color: "var(--color-accent-warning)" }}>
+                  このアドオンで使用できる変数がありません。
+                </p>
+              )}
+            </div>
+          </div>
+        );
+      }
+
       return null;
     };
 
@@ -958,7 +1073,7 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
           変数を選択
         </h3>
         <p className="text-xs mb-4" style={{ color: "var(--color-text-tertiary)" }}>
-          {METHODS.find((m) => m.key === method)?.label} に使用する変数を選択してください
+          {methods.find((m) => m.key === method)?.label} に使用する変数を選択してください
         </p>
 
         {renderVarSelector()}
@@ -1156,7 +1271,7 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
             分析サマリー
           </p>
           <div className="flex flex-col gap-1 text-xs" style={{ color: "var(--color-text-secondary)" }}>
-            <span>{t.quantitative.k_method_label} {METHODS.find((m) => m.key === method)?.label}</span>
+            <span>{t.quantitative.k_method_label} {methods.find((m) => m.key === method)?.label}</span>
             <span>{t.quantitative.k_vars_label} {selectedVarIds.length}</span>
             <span>{t.quantitative.k_data_rows_label} {dataRows.length} {t.common.items}</span>
             <span>{t.quantitative.k_sig_level} {alpha}</span>

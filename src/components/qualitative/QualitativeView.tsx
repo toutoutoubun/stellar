@@ -2,15 +2,17 @@
 // 質的分析メインビュー — プロジェクトナビゲーション + タブ切り替え
 // サイドバー・タブバー折りたたみ対応 / ミニマルUI / カスタムSVGアイコン
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { invoke } from "../../lib/tauriShim";
 import { swalConfirm } from "../../lib/swal";
 import type {
+  BuiltInQualitativeTab,
   QualProject,
   CreateQualProjectInput,
   UpdateQualProjectInput,
   QualitativeTab,
 } from "../../types";
+import { getQualitativeAnalysisAddons } from "../../plugins/analysisAddons";
 
 // アイコン
 import {
@@ -49,7 +51,7 @@ import { AnalysisReport } from "./AnalysisReport";
 import { useT, useI18nStore } from "../../stores/useI18nStore";
 
 /** タブ定義 — アイコンは React コンポーネント */
-const TABS: { key: QualitativeTab; label: string; Icon: React.FC<{ size?: number; color?: string }> }[] = [
+const BUILT_IN_TABS: { key: BuiltInQualitativeTab; label: string; Icon: React.FC<{ size?: number; color?: string }> }[] = [
   { key: "dashboard", label: useI18nStore.getState().t.qualitative.k_ip8f, Icon: IconDashboard },
   { key: "codebook", label: useI18nStore.getState().t.qualitative.k_7z1tpa, Icon: IconCodebook },
   { key: "matrix", label: useI18nStore.getState().t.qualitative.k_fnxlsm, Icon: IconMatrix },
@@ -81,6 +83,19 @@ const QualitativeView: React.FC = () => {
   // 折りたたみ状態
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [tabBarCollapsed, setTabBarCollapsed] = useState(false);
+
+  const qualitativeAddons = useMemo(() => getQualitativeAnalysisAddons(), []);
+  const tabs = useMemo(
+    () => [
+      ...BUILT_IN_TABS,
+      ...qualitativeAddons.map((addon) => ({
+        key: addon.id,
+        label: addon.label,
+        Icon: addon.icon ?? IconBook,
+      })),
+    ],
+    [qualitativeAddons],
+  );
 
   const loadProjects = useCallback(async () => {
     try {
@@ -178,6 +193,11 @@ const QualitativeView: React.FC = () => {
       );
     }
 
+    const addon = qualitativeAddons.find((item) => item.id === activeTab);
+    if (addon) {
+      return addon.render({ projectId: selectedProjectId, project: selectedProject });
+    }
+
     switch (activeTab) {
       case "codebook":
         return <CodebookView projectId={selectedProjectId} />;
@@ -241,11 +261,11 @@ const QualitativeView: React.FC = () => {
           {t.qualitative.k_quick_actions}
         </h3>
         <div className="flex flex-wrap gap-2">
-          {TABS.filter((t) => t.key !== "dashboard").map((t) => (
+          {tabs.filter((t) => t.key !== "dashboard").map((t) => (
             <button
               key={t.key}
               type="button"
-              onClick={() => setActiveTab(t.key)}
+              onClick={() => setActiveTab(t.key as QualitativeTab)}
               className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5"
               style={{
                 backgroundColor: "var(--color-bg-secondary)",
@@ -473,13 +493,13 @@ const QualitativeView: React.FC = () => {
             transition: "height 150ms ease-out",
           }}
         >
-          {TABS.map((t) => {
+          {tabs.map((t) => {
             const isActive = activeTab === t.key;
             return (
               <button
                 key={t.key}
                 type="button"
-                onClick={() => setActiveTab(t.key)}
+                onClick={() => setActiveTab(t.key as QualitativeTab)}
                 className="inline-flex items-center gap-1.5 text-sm px-3 h-full whitespace-nowrap"
                 style={{
                   color: isActive ? "var(--color-accent-primary)" : "var(--color-text-tertiary)",
@@ -530,7 +550,7 @@ const QualitativeView: React.FC = () => {
               style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-tertiary)" }}
             >
               <IconChevronRight size={12} />
-              {TABS.find((t) => t.key === activeTab)?.label ?? t.qualitative.k_8k53}
+              {tabs.find((t) => t.key === activeTab)?.label ?? t.qualitative.k_8k53}
             </button>
           </div>
         )}
