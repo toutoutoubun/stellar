@@ -1,5 +1,7 @@
 # Stellar — README
 
+**Download / ダウンロード:** [GitHub Releases](https://github.com/toutoutoubun/stellar/releases)
+
 | 言語 / Language | Link |
 |----------------|------|
 | 🇯🇵 日本語 | [JA.md](README/JA.md) |
