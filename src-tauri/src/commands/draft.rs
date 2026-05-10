@@ -811,23 +811,6 @@ pub async fn delete_citation(app: AppHandle, id: String) -> Result<(), String> {
 pub async fn generate_bibliography(app: AppHandle, note_id: String) -> Result<String, String> {
     let pool = get_pool(&app)?;
 
-    // ノートの引用スタイルを draft_meta から取得（デフォルト: apa7）
-    let note_row = sqlx::query("SELECT draft_meta FROM notes WHERE id = ?")
-        .bind(&note_id)
-        .fetch_optional(pool.as_ref())
-        .await
-        .map_err(|e| format!("ノートの取得に失敗: {}", e))?;
-
-    let _citation_style = note_row
-        .and_then(|r| {
-            let meta_str: String = r.try_get("draft_meta").unwrap_or_default();
-            let meta: serde_json::Value = serde_json::from_str(&meta_str).unwrap_or_default();
-            meta.get("citationStyle")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string())
-        })
-        .unwrap_or_else(|| "apa7".to_string());
-
     // 引用一覧を取得（citation_key でソート）
     let rows =
         sqlx::query("SELECT * FROM draft_citations WHERE note_id = ? ORDER BY citation_key ASC")
