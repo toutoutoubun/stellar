@@ -187,6 +187,11 @@ async fn run_migrations_safe(pool: &SqlitePool) {
             "V006__export",
             include_str!("migrations/V006__export.sql"),
         ),
+        (
+            7,
+            "V007__qualitative_sources",
+            include_str!("migrations/V007__qualitative_sources.sql"),
+        ),
     ];
 
     for (version, name, sql) in &safe_migrations {
