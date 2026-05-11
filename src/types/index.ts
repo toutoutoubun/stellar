@@ -434,7 +434,7 @@ export interface GraphNodeExtended extends GraphNode {
 // ============================================================
 
 /** 設定タブ種別 */
-export type SettingsTab = 'appearance' | 'data' | 'shortcuts' | 'citation' | 'language';
+export type SettingsTab = 'appearance' | 'data' | 'addons' | 'shortcuts' | 'citation' | 'language';
 
 /** 対応ロケール */
 export type Locale = 'ja' | 'en' | 'fr' | 'af';
@@ -622,6 +622,55 @@ export interface UpdateQualCodeInput {
   sortOrder?: number;
 }
 
+/** 分析ソース（質的分析専用） */
+export interface QualitativeSource {
+  id: string;
+  projectId: string;
+  title: string;
+  sourceType: string;
+  fileType: string;
+  filePath: string | null;
+  content: string;
+  wordCount: number;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+export interface ImportQualitativeSourceInput {
+  projectId: string;
+  filePath: string;
+  title?: string | null;
+  sourceType?: string | null;
+}
+
+export interface UpdateQualitativeSourceInput {
+  title?: string;
+  sourceType?: string;
+  content?: string;
+}
+
+/** 分析ソーステキストへのコード付与 */
+export interface SourceSegmentCode {
+  id: string;
+  sourceId: string;
+  sourceTitle: string;
+  codeId: string;
+  segmentText: string;
+  offsetStart: number | null;
+  offsetEnd: number | null;
+  memo: string | null;
+  assignedAt: string;
+}
+
+export interface CreateSourceSegmentCodeInput {
+  sourceId: string;
+  codeId: string;
+  segmentText: string;
+  offsetStart?: number | null;
+  offsetEnd?: number | null;
+  memo?: string | null;
+}
+
 /** ハイライト + コンテキスト（コード別取得用） */
 export interface HighlightWithContext {
   id: string;
@@ -642,14 +691,16 @@ export interface CodingMatrixRow {
 }
 
 export interface CodingMatrixCol {
+  /** 互換性のため paperId 名を維持。質的分析では分析ソースIDを入れる。 */
   paperId: string;
+  /** 互換性のため paperTitle 名を維持。質的分析では分析ソースタイトルを入れる。 */
   paperTitle: string;
 }
 
 export interface CodingMatrix {
   rows: CodingMatrixRow[];
   cols: CodingMatrixCol[];
-  /** キー: "codeId:paperId" → 割り当て数 */
+  /** キー: "codeId:sourceId" → 割り当て数 */
   cells: Record<string, number>;
 }
 
@@ -699,6 +750,46 @@ export interface SourceCritique {
 
 export interface SourceCritiqueInput {
   paperId: string;
+  authorInfo?: string | null;
+  creationDate?: string | null;
+  isDateEstimated?: boolean;
+  location?: string | null;
+  sourceType?: string | null;
+  authenticity?: string | null;
+  archiveInfo?: string | null;
+  intent?: string | null;
+  audience?: string | null;
+  biasLevel?: string | null;
+  biasReason?: string | null;
+  consistency?: string | null;
+  reliabilityScore?: number;
+  researcherNotes?: string | null;
+}
+
+/** 分析ソース批判シート */
+export interface QualSourceCritique {
+  id: string;
+  sourceId: string;
+  authorInfo: string | null;
+  creationDate: string | null;
+  isDateEstimated: boolean;
+  location: string | null;
+  sourceType: string | null;
+  authenticity: string | null;
+  archiveInfo: string | null;
+  intent: string | null;
+  audience: string | null;
+  biasLevel: string | null;
+  biasReason: string | null;
+  consistency: string | null;
+  reliabilityScore: number;
+  researcherNotes: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+export interface QualSourceCritiqueInput {
+  sourceId: string;
   authorInfo?: string | null;
   creationDate?: string | null;
   isDateEstimated?: boolean;
@@ -938,6 +1029,7 @@ export interface FramingMatrix {
 /** 質的分析ビューのタブ */
 export type BuiltInQualitativeTab =
   | 'dashboard'
+  | 'sources'
   | 'codebook'
   | 'matrix'
   | 'icr'

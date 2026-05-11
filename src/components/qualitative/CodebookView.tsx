@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { invoke } from "../../lib/tauriShim";
 import { swalConfirm } from "../../lib/swal";
-import type { CodeNode, HighlightWithContext } from "../../types";
+import type { CodeNode, HighlightWithContext, SourceSegmentCode } from "../../types";
 import { CodeTreeNode } from "./CodeTreeNode";
 import { HelpTooltip } from "./HelpTooltip";
 import { IconPlus, IconComment, IconPanelLeft } from "./icons/QualIcons";
@@ -20,6 +20,7 @@ export const CodebookView: React.FC<CodebookViewProps> = ({ projectId }) => {
   const [codeTree, setCodeTree] = useState<CodeNode[]>([]);
   const [selectedCodeId, setSelectedCodeId] = useState<string | null>(null);
   const [highlights, setHighlights] = useState<HighlightWithContext[]>([]);
+  const [sourceSegments, setSourceSegments] = useState<SourceSegmentCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [newCodeName, setNewCodeName] = useState("");
   const [newCodeColor, setNewCodeColor] = useState("#6366F1");
@@ -41,8 +42,12 @@ export const CodebookView: React.FC<CodebookViewProps> = ({ projectId }) => {
 
   const loadHighlights = useCallback(async (codeId: string) => {
     try {
-      const result = await invoke<HighlightWithContext[]>("get_highlights_by_code", { codeId });
-      setHighlights(result);
+      const [result, segmentResult] = await Promise.all([
+        invoke<HighlightWithContext[]>("get_highlights_by_code", { codeId }),
+        invoke<SourceSegmentCode[]>("get_source_segments_by_code", { codeId }),
+      ]);
+      setHighlights(Array.isArray(result) ? result : []);
+      setSourceSegments(Array.isArray(segmentResult) ? segmentResult : []);
     } catch (err) {
       console.error(t.qualitative.k_cjt8o, err);
     }
@@ -50,7 +55,7 @@ export const CodebookView: React.FC<CodebookViewProps> = ({ projectId }) => {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- legitimate data sync/fetch pattern
-    if (selectedCodeId) { void loadHighlights(selectedCodeId); } else { setHighlights([]); }
+    if (selectedCodeId) { void loadHighlights(selectedCodeId); } else { setHighlights([]); setSourceSegments([]); }
   }, [selectedCodeId, loadHighlights]);
 
   const handleCreateCode = useCallback(async () => {
@@ -145,12 +150,23 @@ export const CodebookView: React.FC<CodebookViewProps> = ({ projectId }) => {
         {selectedCodeId ? (
           <>
             <h3 className="text-sm font-semibold mb-3" style={{ color: "var(--color-text-primary)" }}>
-              割り当て済みハイライト ({highlights.length})
+              割り当て済みコード ({highlights.length + sourceSegments.length})
             </h3>
-            {highlights.length === 0 ? (
-              <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>このコードにはまだハイライトが割り当てられていません。</p>
+            {highlights.length === 0 && sourceSegments.length === 0 ? (
+              <p className="text-xs" style={{ color: "var(--color-text-tertiary)" }}>このコードにはまだテキストが割り当てられていません。</p>
             ) : (
               <div className="flex flex-col gap-2">
+                {sourceSegments.map((segment) => (
+                  <div key={segment.id} className="p-3" style={{ backgroundColor: "var(--color-bg-secondary)", borderRadius: "8px", border: "1px solid var(--color-border-primary)", borderLeft: "3px solid var(--color-accent-primary)" }}>
+                    <div className="text-xs mb-1" style={{ color: "var(--color-text-tertiary)" }}>{segment.sourceTitle} · 分析ソース</div>
+                    <p className="text-sm" style={{ color: "var(--color-text-primary)", lineHeight: "1.5" }}>{segment.segmentText}</p>
+                    {segment.memo && (
+                      <p className="text-xs mt-1 inline-flex items-center gap-1" style={{ color: "var(--color-text-secondary)" }}>
+                        <IconComment size={11} /> {segment.memo}
+                      </p>
+                    )}
+                  </div>
+                ))}
                 {highlights.map((h) => (
                   <div key={h.id} className="p-3" style={{ backgroundColor: "var(--color-bg-secondary)", borderRadius: "8px", border: "1px solid var(--color-border-primary)", borderLeft: `3px solid ${h.color}` }}>
                     <div className="text-xs mb-1" style={{ color: "var(--color-text-tertiary)" }}>{h.paperTitle} - p.{h.page}</div>

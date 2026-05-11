@@ -6,7 +6,7 @@
 
 use crate::db::{get_pool, models::*};
 use sqlx::Row;
-use std::collections::HashMap;
+use std::{collections::HashMap, fs::File, io::Read, path::Path};
 use tauri::AppHandle;
 
 // ════════════════════════════════════════════════════════════════
@@ -109,6 +109,245 @@ pub async fn delete_project(app: AppHandle, id: String) -> Result<(), String> {
 }
 
 // ════════════════════════════════════════════════════════════════
+// 分析ソース（質的分析専用）
+// ════════════════════════════════════════════════════════════════
+
+#[tauri::command]
+pub async fn get_qualitative_sources(
+    app: AppHandle,
+    project_id: String,
+) -> Result<Vec<QualitativeSourceResponse>, String> {
+    let pool = get_pool(&app)?;
+    let rows = sqlx::query(
+        "SELECT * FROM qualitative_sources WHERE project_id = ? ORDER BY updated_at DESC, title ASC",
+    )
+    .bind(&project_id)
+    .fetch_all(pool.as_ref())
+    .await
+    .map_err(|e| format!("分析ソース一覧の取得に失敗: {}", e))?;
+
+    rows.iter().map(parse_qualitative_source).collect()
+}
+
+#[tauri::command]
+pub async fn get_qualitative_source(
+    app: AppHandle,
+    id: String,
+) -> Result<QualitativeSourceResponse, String> {
+    let pool = get_pool(&app)?;
+    let row = sqlx::query("SELECT * FROM qualitative_sources WHERE id = ?")
+        .bind(&id)
+        .fetch_optional(pool.as_ref())
+        .await
+        .map_err(|e| format!("分析ソース取得に失敗: {}", e))?
+        .ok_or_else(|| format!("分析ソースが見つかりません: {}", id))?;
+
+    parse_qualitative_source(&row)
+}
+
+#[tauri::command]
+pub async fn import_qualitative_source(
+    app: AppHandle,
+    input: ImportQualitativeSourceDto,
+) -> Result<QualitativeSourceResponse, String> {
+    let pool = get_pool(&app)?;
+    let path = Path::new(&input.file_path);
+    let file_type = path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+
+    let content = extract_source_text(&input.file_path, &file_type)?;
+    let title = input.title.unwrap_or_else(|| {
+        path.file_stem()
+            .and_then(|name| name.to_str())
+            .unwrap_or("Untitled source")
+            .replace('_', " ")
+            .replace('-', " ")
+    });
+    let source_type = input
+        .source_type
+        .unwrap_or_else(|| "primary_source".to_string());
+    let word_count = count_words(&content);
+    let id = uuid::Uuid::new_v4().to_string();
+    let now = chrono::Utc::now().to_rfc3339();
+
+    sqlx::query(
+        "INSERT INTO qualitative_sources (id, project_id, title, source_type, file_type, file_path, content, word_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+    .bind(&id)
+    .bind(&input.project_id)
+    .bind(&title)
+    .bind(&source_type)
+    .bind(&file_type)
+    .bind(&input.file_path)
+    .bind(&content)
+    .bind(word_count)
+    .bind(&now)
+    .bind(&now)
+    .execute(pool.as_ref())
+    .await
+    .map_err(|e| format!("分析ソースの取り込みに失敗: {}", e))?;
+
+    Ok(QualitativeSourceResponse {
+        id,
+        project_id: input.project_id,
+        title,
+        source_type,
+        file_type,
+        file_path: Some(input.file_path),
+        content,
+        word_count,
+        created_at: now.clone(),
+        updated_at: Some(now),
+    })
+}
+
+#[tauri::command]
+pub async fn update_qualitative_source(
+    app: AppHandle,
+    id: String,
+    input: UpdateQualitativeSourceDto,
+) -> Result<QualitativeSourceResponse, String> {
+    let pool = get_pool(&app)?;
+    let row = sqlx::query("SELECT * FROM qualitative_sources WHERE id = ?")
+        .bind(&id)
+        .fetch_optional(pool.as_ref())
+        .await
+        .map_err(|e| format!("分析ソース取得に失敗: {}", e))?
+        .ok_or_else(|| format!("分析ソースが見つかりません: {}", id))?;
+
+    let current = parse_qualitative_source(&row)?;
+    let title = input.title.unwrap_or(current.title);
+    let source_type = input.source_type.unwrap_or(current.source_type);
+    let content = input.content.unwrap_or(current.content);
+    let word_count = count_words(&content);
+    let now = chrono::Utc::now().to_rfc3339();
+
+    sqlx::query(
+        "UPDATE qualitative_sources SET title = ?, source_type = ?, content = ?, word_count = ?, updated_at = ? WHERE id = ?",
+    )
+    .bind(&title)
+    .bind(&source_type)
+    .bind(&content)
+    .bind(word_count)
+    .bind(&now)
+    .bind(&id)
+    .execute(pool.as_ref())
+    .await
+    .map_err(|e| format!("分析ソース更新に失敗: {}", e))?;
+
+    get_qualitative_source(app, id).await
+}
+
+#[tauri::command]
+pub async fn delete_qualitative_source(app: AppHandle, id: String) -> Result<(), String> {
+    let pool = get_pool(&app)?;
+    sqlx::query("DELETE FROM qualitative_sources WHERE id = ?")
+        .bind(&id)
+        .execute(pool.as_ref())
+        .await
+        .map_err(|e| format!("分析ソース削除に失敗: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn assign_code_to_source_segment(
+    app: AppHandle,
+    input: CreateSourceSegmentCodeDto,
+) -> Result<SourceSegmentCodeResponse, String> {
+    if input.segment_text.trim().is_empty() {
+        return Err("コード化するテキストを選択してください".to_string());
+    }
+
+    let pool = get_pool(&app)?;
+    let id = uuid::Uuid::new_v4().to_string();
+    let now = chrono::Utc::now().to_rfc3339();
+
+    sqlx::query(
+        "INSERT INTO source_segment_codes (id, source_id, code_id, segment_text, offset_start, offset_end, memo, assigned_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+    .bind(&id)
+    .bind(&input.source_id)
+    .bind(&input.code_id)
+    .bind(input.segment_text.trim())
+    .bind(input.offset_start)
+    .bind(input.offset_end)
+    .bind(&input.memo)
+    .bind(&now)
+    .execute(pool.as_ref())
+    .await
+    .map_err(|e| format!("分析ソースセグメントへのコード付与に失敗: {}", e))?;
+
+    let row = sqlx::query(
+        "SELECT ssc.*, qs.title as source_title
+         FROM source_segment_codes ssc
+         JOIN qualitative_sources qs ON qs.id = ssc.source_id
+         WHERE ssc.id = ?",
+    )
+    .bind(&id)
+    .fetch_one(pool.as_ref())
+    .await
+    .map_err(|e| format!("コード化セグメント取得に失敗: {}", e))?;
+
+    parse_source_segment_code(&row)
+}
+
+#[tauri::command]
+pub async fn get_source_segments(
+    app: AppHandle,
+    source_id: String,
+) -> Result<Vec<SourceSegmentCodeResponse>, String> {
+    let pool = get_pool(&app)?;
+    let rows = sqlx::query(
+        "SELECT ssc.*, qs.title as source_title
+         FROM source_segment_codes ssc
+         JOIN qualitative_sources qs ON qs.id = ssc.source_id
+         WHERE ssc.source_id = ?
+         ORDER BY COALESCE(ssc.offset_start, 2147483647) ASC, ssc.assigned_at ASC",
+    )
+    .bind(&source_id)
+    .fetch_all(pool.as_ref())
+    .await
+    .map_err(|e| format!("コード化セグメント一覧の取得に失敗: {}", e))?;
+
+    rows.iter().map(parse_source_segment_code).collect()
+}
+
+#[tauri::command]
+pub async fn get_source_segments_by_code(
+    app: AppHandle,
+    code_id: String,
+) -> Result<Vec<SourceSegmentCodeResponse>, String> {
+    let pool = get_pool(&app)?;
+    let rows = sqlx::query(
+        "SELECT ssc.*, qs.title as source_title
+         FROM source_segment_codes ssc
+         JOIN qualitative_sources qs ON qs.id = ssc.source_id
+         WHERE ssc.code_id = ?
+         ORDER BY qs.title ASC, COALESCE(ssc.offset_start, 2147483647) ASC, ssc.assigned_at ASC",
+    )
+    .bind(&code_id)
+    .fetch_all(pool.as_ref())
+    .await
+    .map_err(|e| format!("コード別分析ソースセグメント取得に失敗: {}", e))?;
+
+    rows.iter().map(parse_source_segment_code).collect()
+}
+
+#[tauri::command]
+pub async fn delete_source_segment_code(app: AppHandle, id: String) -> Result<(), String> {
+    let pool = get_pool(&app)?;
+    sqlx::query("DELETE FROM source_segment_codes WHERE id = ?")
+        .bind(&id)
+        .execute(pool.as_ref())
+        .await
+        .map_err(|e| format!("分析ソースセグメントのコード解除に失敗: {}", e))?;
+    Ok(())
+}
+
+// ════════════════════════════════════════════════════════════════
 // コーディング
 // ════════════════════════════════════════════════════════════════
 
@@ -122,6 +361,8 @@ pub async fn get_code_tree(app: AppHandle, project_id: String) -> Result<Vec<Cod
             SELECT COUNT(*) FROM highlight_codes hc WHERE hc.code_id = c.id
         ) + (
             SELECT COUNT(*) FROM note_segment_codes nsc WHERE nsc.code_id = c.id
+        ) + (
+            SELECT COUNT(*) FROM source_segment_codes ssc WHERE ssc.code_id = c.id
         ) as assignment_count
         FROM codes c WHERE c.project_id = ? ORDER BY c.sort_order ASC, c.name ASC",
     )
@@ -360,20 +601,21 @@ pub async fn get_coding_matrix(app: AppHandle, project_id: String) -> Result<Cod
         })
         .collect();
 
-    // 論文一覧（列）— コードが割り当てられているハイライトを持つ論文のみ
-    let paper_rows = sqlx::query(
-        "SELECT DISTINCT p.id, p.title FROM papers p
-         JOIN highlights h ON h.paper_id = p.id
-         JOIN highlight_codes hc ON hc.highlight_id = h.id
-         JOIN codes c ON c.id = hc.code_id AND c.project_id = ?
-         ORDER BY p.title ASC",
+    // 分析ソース一覧（列）— コードが割り当てられている分析ソースのみ
+    let source_rows = sqlx::query(
+        "SELECT DISTINCT qs.id, qs.title FROM qualitative_sources qs
+         JOIN source_segment_codes ssc ON ssc.source_id = qs.id
+         JOIN codes c ON c.id = ssc.code_id AND c.project_id = ?
+         WHERE qs.project_id = ?
+         ORDER BY qs.title ASC",
     )
+    .bind(&project_id)
     .bind(&project_id)
     .fetch_all(pool.as_ref())
     .await
-    .map_err(|e| format!("論文取得に失敗: {}", e))?;
+    .map_err(|e| format!("分析ソース取得に失敗: {}", e))?;
 
-    let cols: Vec<CodingMatrixCol> = paper_rows
+    let cols: Vec<CodingMatrixCol> = source_rows
         .iter()
         .map(|r| CodingMatrixCol {
             paper_id: col_str(r, "id"),
@@ -381,14 +623,16 @@ pub async fn get_coding_matrix(app: AppHandle, project_id: String) -> Result<Cod
         })
         .collect();
 
-    // セル（code_id:paper_id → count）
+    // セル（code_id:source_id → count）
     let cell_rows = sqlx::query(
-        "SELECT hc.code_id, h.paper_id, COUNT(*) as cnt
-         FROM highlight_codes hc
-         JOIN highlights h ON h.id = hc.highlight_id
-         JOIN codes c ON c.id = hc.code_id AND c.project_id = ?
-         GROUP BY hc.code_id, h.paper_id",
+        "SELECT ssc.code_id, ssc.source_id, COUNT(*) as cnt
+         FROM source_segment_codes ssc
+         JOIN qualitative_sources qs ON qs.id = ssc.source_id
+         JOIN codes c ON c.id = ssc.code_id AND c.project_id = ?
+         WHERE qs.project_id = ?
+         GROUP BY ssc.code_id, ssc.source_id",
     )
+    .bind(&project_id)
     .bind(&project_id)
     .fetch_all(pool.as_ref())
     .await
@@ -396,7 +640,7 @@ pub async fn get_coding_matrix(app: AppHandle, project_id: String) -> Result<Cod
 
     let mut cells: HashMap<String, u32> = HashMap::new();
     for row in &cell_rows {
-        let key = format!("{}:{}", col_str(row, "code_id"), col_str(row, "paper_id"));
+        let key = format!("{}:{}", col_str(row, "code_id"), col_str(row, "source_id"));
         let cnt: i64 = row.try_get("cnt").unwrap_or(0);
         cells.insert(key, cnt as u32);
     }
@@ -687,6 +931,146 @@ pub async fn upsert_source_critique(
         created_at: now.clone(),
         updated_at: Some(now),
     })
+}
+
+#[tauri::command]
+pub async fn get_qual_source_critique(
+    app: AppHandle,
+    source_id: String,
+) -> Result<Option<QualSourceCritiqueResponse>, String> {
+    let pool = get_pool(&app)?;
+
+    let row = sqlx::query("SELECT * FROM qual_source_critiques WHERE source_id = ?")
+        .bind(&source_id)
+        .fetch_optional(pool.as_ref())
+        .await
+        .map_err(|e| format!("分析ソース批判取得に失敗: {}", e))?;
+
+    match row {
+        Some(r) => Ok(Some(parse_qual_source_critique(&r)?)),
+        None => Ok(None),
+    }
+}
+
+#[tauri::command]
+pub async fn upsert_qual_source_critique(
+    app: AppHandle,
+    dto: QualSourceCritiqueDto,
+) -> Result<QualSourceCritiqueResponse, String> {
+    let pool = get_pool(&app)?;
+    let now = chrono::Utc::now().to_rfc3339();
+
+    let existing = sqlx::query("SELECT id FROM qual_source_critiques WHERE source_id = ?")
+        .bind(&dto.source_id)
+        .fetch_optional(pool.as_ref())
+        .await
+        .map_err(|e| format!("分析ソース批判確認に失敗: {}", e))?;
+
+    let id = if let Some(row) = existing {
+        let existing_id = col_str(&row, "id");
+        sqlx::query(
+            "UPDATE qual_source_critiques SET author_info = ?, creation_date = ?, is_date_estimated = ?, location = ?, source_type = ?, authenticity = ?, archive_info = ?, intent = ?, audience = ?, bias_level = ?, bias_reason = ?, consistency = ?, reliability_score = ?, researcher_notes = ?, updated_at = ? WHERE id = ?",
+        )
+        .bind(&dto.author_info)
+        .bind(&dto.creation_date)
+        .bind(dto.is_date_estimated as i32)
+        .bind(&dto.location)
+        .bind(&dto.source_type)
+        .bind(&dto.authenticity)
+        .bind(&dto.archive_info)
+        .bind(&dto.intent)
+        .bind(&dto.audience)
+        .bind(&dto.bias_level)
+        .bind(&dto.bias_reason)
+        .bind(&dto.consistency)
+        .bind(dto.reliability_score)
+        .bind(&dto.researcher_notes)
+        .bind(&now)
+        .bind(&existing_id)
+        .execute(pool.as_ref())
+        .await
+        .map_err(|e| format!("分析ソース批判更新に失敗: {}", e))?;
+        existing_id
+    } else {
+        let new_id = uuid::Uuid::new_v4().to_string();
+        sqlx::query(
+            "INSERT INTO qual_source_critiques (id, source_id, author_info, creation_date, is_date_estimated, location, source_type, authenticity, archive_info, intent, audience, bias_level, bias_reason, consistency, reliability_score, researcher_notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(&new_id)
+        .bind(&dto.source_id)
+        .bind(&dto.author_info)
+        .bind(&dto.creation_date)
+        .bind(dto.is_date_estimated as i32)
+        .bind(&dto.location)
+        .bind(&dto.source_type)
+        .bind(&dto.authenticity)
+        .bind(&dto.archive_info)
+        .bind(&dto.intent)
+        .bind(&dto.audience)
+        .bind(&dto.bias_level)
+        .bind(&dto.bias_reason)
+        .bind(&dto.consistency)
+        .bind(dto.reliability_score)
+        .bind(&dto.researcher_notes)
+        .bind(&now)
+        .bind(&now)
+        .execute(pool.as_ref())
+        .await
+        .map_err(|e| format!("分析ソース批判作成に失敗: {}", e))?;
+        new_id
+    };
+
+    Ok(QualSourceCritiqueResponse {
+        id,
+        source_id: dto.source_id,
+        author_info: dto.author_info,
+        creation_date: dto.creation_date,
+        is_date_estimated: dto.is_date_estimated,
+        location: dto.location,
+        source_type: dto.source_type,
+        authenticity: dto.authenticity,
+        archive_info: dto.archive_info,
+        intent: dto.intent,
+        audience: dto.audience,
+        bias_level: dto.bias_level,
+        bias_reason: dto.bias_reason,
+        consistency: dto.consistency,
+        reliability_score: dto.reliability_score,
+        researcher_notes: dto.researcher_notes,
+        created_at: now.clone(),
+        updated_at: Some(now),
+    })
+}
+
+#[tauri::command]
+pub async fn get_qual_source_critiques_by_project(
+    app: AppHandle,
+    project_id: String,
+) -> Result<Vec<QualSourceCritiqueResponse>, String> {
+    let pool = get_pool(&app)?;
+    let rows = sqlx::query(
+        "SELECT qsc.* FROM qual_source_critiques qsc
+         JOIN qualitative_sources qs ON qs.id = qsc.source_id
+         WHERE qs.project_id = ?
+         ORDER BY qsc.updated_at DESC",
+    )
+    .bind(&project_id)
+    .fetch_all(pool.as_ref())
+    .await
+    .map_err(|e| format!("分析ソース批判一覧取得に失敗: {}", e))?;
+
+    rows.iter().map(parse_qual_source_critique).collect()
+}
+
+#[tauri::command]
+pub async fn delete_qual_source_critique(app: AppHandle, id: String) -> Result<(), String> {
+    let pool = get_pool(&app)?;
+    sqlx::query("DELETE FROM qual_source_critiques WHERE id = ?")
+        .bind(&id)
+        .execute(pool.as_ref())
+        .await
+        .map_err(|e| format!("分析ソース批判削除に失敗: {}", e))?;
+    Ok(())
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -1847,7 +2231,13 @@ pub async fn generate_analysis_report(
             "codebook" => {
                 report.push_str("## コードブック\n\n");
                 let code_rows = sqlx::query(
-                    "SELECT c.*, (SELECT COUNT(*) FROM highlight_codes hc WHERE hc.code_id = c.id) as count FROM codes c WHERE c.project_id = ? ORDER BY c.sort_order ASC",
+                    "SELECT c.*, (
+                        SELECT COUNT(*) FROM highlight_codes hc WHERE hc.code_id = c.id
+                    ) + (
+                        SELECT COUNT(*) FROM note_segment_codes nsc WHERE nsc.code_id = c.id
+                    ) + (
+                        SELECT COUNT(*) FROM source_segment_codes ssc WHERE ssc.code_id = c.id
+                    ) as count FROM codes c WHERE c.project_id = ? ORDER BY c.sort_order ASC",
                 )
                 .bind(&project_id)
                 .fetch_all(pool.as_ref())
@@ -2069,6 +2459,107 @@ pub async fn generate_analysis_report(
     }
 
     Ok(report)
+}
+
+fn extract_source_text(path: &str, file_type: &str) -> Result<String, String> {
+    match file_type {
+        "md" | "markdown" | "txt" => std::fs::read_to_string(path)
+            .map(|text| normalize_extracted_text(&text))
+            .map_err(|e| format!("テキストファイルの読み込みに失敗: {}", e)),
+        "docx" => extract_docx_text(path).map(|text| normalize_extracted_text(&text)),
+        "pdf" => extract_pdf_text(path).map(|text| normalize_extracted_text(&text)),
+        other => Err(format!(
+            "未対応のファイル形式です: {}。docx / pdf / md を選択してください",
+            if other.is_empty() { "(拡張子なし)" } else { other }
+        )),
+    }
+}
+
+fn extract_docx_text(path: &str) -> Result<String, String> {
+    let file = File::open(path).map_err(|e| format!("DOCXを開けません: {}", e))?;
+    let mut archive =
+        zip::ZipArchive::new(file).map_err(|e| format!("DOCXの展開に失敗: {}", e))?;
+    let mut document = archive
+        .by_name("word/document.xml")
+        .map_err(|e| format!("DOCX本文が見つかりません: {}", e))?;
+
+    let mut xml = String::new();
+    document
+        .read_to_string(&mut xml)
+        .map_err(|e| format!("DOCX本文の読み込みに失敗: {}", e))?;
+
+    Ok(strip_docx_xml(&xml))
+}
+
+fn extract_pdf_text(path: &str) -> Result<String, String> {
+    let document = lopdf::Document::load(path).map_err(|e| format!("PDFを開けません: {}", e))?;
+    let pages: Vec<u32> = document.get_pages().keys().copied().collect();
+    if pages.is_empty() {
+        return Ok(String::new());
+    }
+    document
+        .extract_text(&pages)
+        .map_err(|e| format!("PDF本文の抽出に失敗: {}", e))
+}
+
+fn strip_docx_xml(xml: &str) -> String {
+    let with_breaks = xml
+        .replace("</w:p>", "\n")
+        .replace("<w:tab/>", "\t")
+        .replace("<w:tab />", "\t")
+        .replace("<w:br/>", "\n")
+        .replace("<w:br />", "\n")
+        .replace("<w:cr/>", "\n")
+        .replace("<w:cr />", "\n");
+
+    let mut text = String::new();
+    let mut in_tag = false;
+    for ch in with_breaks.chars() {
+        match ch {
+            '<' => in_tag = true,
+            '>' => in_tag = false,
+            _ if !in_tag => text.push(ch),
+            _ => {}
+        }
+    }
+
+    decode_xml_entities(&text)
+}
+
+fn decode_xml_entities(text: &str) -> String {
+    text.replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&amp;", "&")
+        .replace("&quot;", "\"")
+        .replace("&apos;", "'")
+}
+
+fn normalize_extracted_text(text: &str) -> String {
+    let mut lines = Vec::new();
+    let mut previous_blank = false;
+
+    for raw_line in text.lines() {
+        let line = raw_line.trim();
+        if line.is_empty() {
+            if !previous_blank && !lines.is_empty() {
+                lines.push(String::new());
+            }
+            previous_blank = true;
+        } else {
+            lines.push(line.to_string());
+            previous_blank = false;
+        }
+    }
+
+    while lines.last().is_some_and(|line| line.is_empty()) {
+        lines.pop();
+    }
+
+    lines.join("\n")
+}
+
+fn count_words(text: &str) -> i32 {
+    text.split_whitespace().count() as i32
 }
 
 // ════════════════════════════════════════════════════════════════

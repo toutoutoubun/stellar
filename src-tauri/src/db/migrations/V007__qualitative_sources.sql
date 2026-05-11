@@ -1,5 +1,5 @@
 -- V007__qualitative_sources.sql
--- 質的分析用の一次資料を、文献ライブラリ(papers)から分離して管理する。
+-- 質的分析用の分析ソースを、文献ライブラリ(papers)から分離して管理する。
 
 CREATE TABLE IF NOT EXISTS qualitative_sources (
     id TEXT PRIMARY KEY NOT NULL,

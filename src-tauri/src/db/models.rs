@@ -698,6 +698,98 @@ pub fn parse_code(row: &sqlx::sqlite::SqliteRow) -> Result<CodeResponse, String>
     })
 }
 
+// --- 分析ソース（質的分析専用） ---
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QualitativeSourceResponse {
+    pub id: String,
+    pub project_id: String,
+    pub title: String,
+    pub source_type: String,
+    pub file_type: String,
+    pub file_path: Option<String>,
+    pub content: String,
+    pub word_count: i32,
+    pub created_at: String,
+    pub updated_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportQualitativeSourceDto {
+    pub project_id: String,
+    pub file_path: String,
+    pub title: Option<String>,
+    pub source_type: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateQualitativeSourceDto {
+    pub title: Option<String>,
+    pub source_type: Option<String>,
+    pub content: Option<String>,
+}
+
+pub fn parse_qualitative_source(
+    row: &sqlx::sqlite::SqliteRow,
+) -> Result<QualitativeSourceResponse, String> {
+    Ok(QualitativeSourceResponse {
+        id: col_str(row, "id"),
+        project_id: col_str(row, "project_id"),
+        title: col_str(row, "title"),
+        source_type: col_str(row, "source_type"),
+        file_type: col_str(row, "file_type"),
+        file_path: col_opt_str(row, "file_path"),
+        content: col_str(row, "content"),
+        word_count: col_i32(row, "word_count"),
+        created_at: col_str(row, "created_at"),
+        updated_at: col_opt_str(row, "updated_at"),
+    })
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SourceSegmentCodeResponse {
+    pub id: String,
+    pub source_id: String,
+    pub source_title: String,
+    pub code_id: String,
+    pub segment_text: String,
+    pub offset_start: Option<i32>,
+    pub offset_end: Option<i32>,
+    pub memo: Option<String>,
+    pub assigned_at: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateSourceSegmentCodeDto {
+    pub source_id: String,
+    pub code_id: String,
+    pub segment_text: String,
+    pub offset_start: Option<i32>,
+    pub offset_end: Option<i32>,
+    pub memo: Option<String>,
+}
+
+pub fn parse_source_segment_code(
+    row: &sqlx::sqlite::SqliteRow,
+) -> Result<SourceSegmentCodeResponse, String> {
+    Ok(SourceSegmentCodeResponse {
+        id: col_str(row, "id"),
+        source_id: col_str(row, "source_id"),
+        source_title: col_str(row, "source_title"),
+        code_id: col_str(row, "code_id"),
+        segment_text: col_str(row, "segment_text"),
+        offset_start: col_opt_i32(row, "offset_start"),
+        offset_end: col_opt_i32(row, "offset_end"),
+        memo: col_opt_str(row, "memo"),
+        assigned_at: col_str(row, "assigned_at"),
+    })
+}
+
 // --- ハイライト×コード ---
 
 #[derive(Debug, Clone, Serialize)]
@@ -822,6 +914,78 @@ pub fn parse_source_critique(
     Ok(SourceCritiqueResponse {
         id: col_str(row, "id"),
         paper_id: col_str(row, "paper_id"),
+        author_info: col_opt_str(row, "author_info"),
+        creation_date: col_opt_str(row, "creation_date"),
+        is_date_estimated: col_i32(row, "is_date_estimated") != 0,
+        location: col_opt_str(row, "location"),
+        source_type: col_opt_str(row, "source_type"),
+        authenticity: col_opt_str(row, "authenticity"),
+        archive_info: col_opt_str(row, "archive_info"),
+        intent: col_opt_str(row, "intent"),
+        audience: col_opt_str(row, "audience"),
+        bias_level: col_opt_str(row, "bias_level"),
+        bias_reason: col_opt_str(row, "bias_reason"),
+        consistency: col_opt_str(row, "consistency"),
+        reliability_score: col_i32(row, "reliability_score"),
+        researcher_notes: col_opt_str(row, "researcher_notes"),
+        created_at: col_str(row, "created_at"),
+        updated_at: col_opt_str(row, "updated_at"),
+    })
+}
+
+// --- 分析ソース批判（qualitative_sources 専用） ---
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QualSourceCritiqueResponse {
+    pub id: String,
+    pub source_id: String,
+    pub author_info: Option<String>,
+    pub creation_date: Option<String>,
+    pub is_date_estimated: bool,
+    pub location: Option<String>,
+    pub source_type: Option<String>,
+    pub authenticity: Option<String>,
+    pub archive_info: Option<String>,
+    pub intent: Option<String>,
+    pub audience: Option<String>,
+    pub bias_level: Option<String>,
+    pub bias_reason: Option<String>,
+    pub consistency: Option<String>,
+    pub reliability_score: i32,
+    pub researcher_notes: Option<String>,
+    pub created_at: String,
+    pub updated_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QualSourceCritiqueDto {
+    pub source_id: String,
+    pub author_info: Option<String>,
+    pub creation_date: Option<String>,
+    #[serde(default)]
+    pub is_date_estimated: bool,
+    pub location: Option<String>,
+    pub source_type: Option<String>,
+    pub authenticity: Option<String>,
+    pub archive_info: Option<String>,
+    pub intent: Option<String>,
+    pub audience: Option<String>,
+    pub bias_level: Option<String>,
+    pub bias_reason: Option<String>,
+    pub consistency: Option<String>,
+    #[serde(default = "default_reliability_score")]
+    pub reliability_score: i32,
+    pub researcher_notes: Option<String>,
+}
+
+pub fn parse_qual_source_critique(
+    row: &sqlx::sqlite::SqliteRow,
+) -> Result<QualSourceCritiqueResponse, String> {
+    Ok(QualSourceCritiqueResponse {
+        id: col_str(row, "id"),
+        source_id: col_str(row, "source_id"),
         author_info: col_opt_str(row, "author_info"),
         creation_date: col_opt_str(row, "creation_date"),
         is_date_estimated: col_i32(row, "is_date_estimated") != 0,
