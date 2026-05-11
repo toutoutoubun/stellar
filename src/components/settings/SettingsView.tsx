@@ -9,9 +9,14 @@ import { useI18nStore, useT } from "../../stores/useI18nStore";
 import { SUPPORTED_LOCALES, LOCALE_NATIVE_NAMES } from "../../i18n";
 import { ThemePreviewCard } from "./ThemePreviewCard";
 import { StellarPackageModal } from "../export/StellarPackageModal";
-import { invoke } from "../../lib/tauriShim";
+import { invoke, openDirectoryDialog, openFileDialog, relaunch, shellOpen } from "../../lib/tauriShim";
 import { dataApi, cloudBackupApi } from "../../utils/ipc";
 import { toast } from "../ui/Toast";
+import {
+  listInstalledUserPlugins,
+  loadInstalledUserPlugin,
+  type InstalledUserPlugin,
+} from "../../plugins/userPluginLoader";
 import type { Paper } from "../../types";
 import type {
   Theme,
@@ -25,6 +30,22 @@ import type {
   CloudBackupStatus,
   BackupEntry,
 } from "../../types";
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function formatPluginSize(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 KB";
+  const units = ["B", "KB", "MB", "GB"];
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  return `${value.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+}
 import {
   DEFAULT_APPEARANCE_SETTINGS,
   EDITOR_FONTS,
@@ -73,6 +94,12 @@ export const SettingsView: React.FC = () => {
   const [recentImports, setRecentImports] = useState<{ title: string; importedAt: string }[]>([]);
   const [installGuideOpen, setInstallGuideOpen] = useState(false);
   const installGuideRef = useRef<HTMLDivElement>(null);
+
+  // アドオン / プラグイン
+  const [plugins, setPlugins] = useState<InstalledUserPlugin[]>([]);
+  const [isLoadingPlugins, setIsLoadingPlugins] = useState(false);
+  const [isInstallingPlugin, setIsInstallingPlugin] = useState(false);
+  const [updatingPluginId, setUpdatingPluginId] = useState<string | null>(null);
 
   // 引用スタイル設定
   const [citationStyle, setCitationStyle] = useState<CitationStyle>("apa7");
@@ -129,6 +156,20 @@ export const SettingsView: React.FC = () => {
       ),
     },
     {
+      id: "addons",
+      label: t.settings.tabs.addons,
+      icon: (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2v5" />
+          <path d="M9 7h6" />
+          <path d="M6 10h12" />
+          <path d="M8 10v10a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V10" />
+          <path d="M5 14h3" />
+          <path d="M16 14h3" />
+        </svg>
+      ),
+    },
+    {
       id: "shortcuts",
       label: t.settings.tabs.shortcuts,
       icon: (
@@ -162,6 +203,18 @@ export const SettingsView: React.FC = () => {
       ),
     },
   ];
+
+  const refreshPlugins = useCallback(async () => {
+    setIsLoadingPlugins(true);
+    try {
+      const installed = await listInstalledUserPlugins();
+      setPlugins(installed);
+    } catch (error) {
+      toast.error(`${t.settings.addons.loadFailed}: ${errorMessage(error)}`);
+    } finally {
+      setIsLoadingPlugins(false);
+    }
+  }, [t]);
 
   // データサマリーの読み込み（実データ取得）
   useEffect(() => {
@@ -232,6 +285,14 @@ export const SettingsView: React.FC = () => {
 
     return () => { clearTimeout(timer); controller.abort(); };
   }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== "addons") return;
+    const timer = window.setTimeout(() => {
+      void refreshPlugins();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [activeTab, refreshPlugins]);
 
   // テーマ切替ハンドラ
   const handleThemeChange = useCallback(
@@ -380,6 +441,105 @@ export const SettingsView: React.FC = () => {
       });
     }
   }, [cloudStatus]);
+
+  const upsertPlugin = useCallback((plugin: InstalledUserPlugin) => {
+    setPlugins((prev) => {
+      const existing = prev.findIndex((item) => item.id === plugin.id);
+      if (existing < 0) {
+        return [...prev, plugin].sort((a, b) => a.name.localeCompare(b.name));
+      }
+      const next = [...prev];
+      next[existing] = plugin;
+      return next.sort((a, b) => a.name.localeCompare(b.name));
+    });
+  }, []);
+
+  const handleInstallPluginPath = useCallback(
+    async (sourcePath: string) => {
+      setIsInstallingPlugin(true);
+      try {
+        const installed = await invoke<InstalledUserPlugin | null>("install_plugin_package", { sourcePath });
+        if (!installed) {
+          toast.error(t.settings.addons.installFailed);
+          return;
+        }
+        upsertPlugin(installed);
+        const loadResult = await loadInstalledUserPlugin(installed);
+        if (loadResult.ok) {
+          toast.success(t.settings.addons.installSuccess.replace("${name}", installed.name));
+        } else {
+          toast.error(`${t.settings.addons.loadFailed}: ${loadResult.error ?? installed.name}`);
+        }
+      } catch (error) {
+        toast.error(`${t.settings.addons.installFailed}: ${errorMessage(error)}`);
+      } finally {
+        setIsInstallingPlugin(false);
+      }
+    },
+    [t, upsertPlugin],
+  );
+
+  const handleInstallPluginFromFile = useCallback(async () => {
+    const selected = await openFileDialog({
+      title: t.settings.addons.addFromFile,
+      filters: [
+        { name: "Stellar Plugin", extensions: ["zip", "stellar-plugin"] },
+      ],
+    });
+    if (!selected || Array.isArray(selected)) return;
+    await handleInstallPluginPath(selected);
+  }, [handleInstallPluginPath, t]);
+
+  const handleInstallPluginFromFolder = useCallback(async () => {
+    const selected = await openDirectoryDialog({ title: t.settings.addons.addFromFolder });
+    if (!selected) return;
+    await handleInstallPluginPath(selected);
+  }, [handleInstallPluginPath, t]);
+
+  const handleTogglePlugin = useCallback(
+    async (plugin: InstalledUserPlugin, enabled: boolean) => {
+      setUpdatingPluginId(plugin.id);
+      try {
+        const updated = await invoke<InstalledUserPlugin>("set_installed_plugin_enabled", {
+          pluginId: plugin.id,
+          enabled,
+        });
+        upsertPlugin(updated);
+        if (enabled) {
+          const loadResult = await loadInstalledUserPlugin(updated);
+          if (loadResult.ok) {
+            toast.success(t.settings.addons.enableSuccess.replace("${name}", updated.name));
+          } else {
+            toast.error(`${t.settings.addons.loadFailed}: ${loadResult.error ?? updated.name}`);
+          }
+        } else {
+          toast.success(t.settings.addons.disableSuccess.replace("${name}", updated.name));
+        }
+      } catch (error) {
+        toast.error(errorMessage(error));
+      } finally {
+        setUpdatingPluginId(null);
+      }
+    },
+    [t, upsertPlugin],
+  );
+
+  const handleRemovePlugin = useCallback(
+    async (plugin: InstalledUserPlugin) => {
+      if (!window.confirm(t.settings.addons.removeConfirm.replace("${name}", plugin.name))) return;
+      setUpdatingPluginId(plugin.id);
+      try {
+        await invoke<void>("remove_installed_plugin", { pluginId: plugin.id });
+        setPlugins((prev) => prev.filter((item) => item.id !== plugin.id));
+        toast.success(t.settings.addons.removeSuccess.replace("${name}", plugin.name));
+      } catch (error) {
+        toast.error(errorMessage(error));
+      } finally {
+        setUpdatingPluginId(null);
+      }
+    },
+    [t],
+  );
 
   // ============================================================
   // 外観タブ
@@ -1072,6 +1232,305 @@ export const SettingsView: React.FC = () => {
   );
 
   // ============================================================
+  // アドオン / プラグインタブ
+  // ============================================================
+  const renderAddonsTab = () => (
+    <div className="flex flex-col gap-8">
+      <section>
+        <h3 className="text-base font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
+          {t.settings.addons.title}
+        </h3>
+        <p className="text-sm mb-4" style={{ color: "var(--color-text-tertiary)" }}>
+          {t.settings.addons.desc}
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={handleInstallPluginFromFile}
+            disabled={isInstallingPlugin}
+            className="flex items-center gap-2 px-4 py-2 text-xs font-medium"
+            style={{
+              backgroundColor: "var(--color-accent-primary)",
+              color: "var(--color-text-inverse)",
+              borderRadius: "var(--radius-button)",
+              opacity: isInstallingPlugin ? 0.6 : 1,
+              cursor: isInstallingPlugin ? "not-allowed" : "pointer",
+              transition: "all var(--transition-fast)",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            {isInstallingPlugin ? t.settings.addons.installing : t.settings.addons.addFromFile}
+          </button>
+          <button
+            type="button"
+            onClick={handleInstallPluginFromFolder}
+            disabled={isInstallingPlugin}
+            className="flex items-center gap-2 px-4 py-2 text-xs font-medium"
+            style={{
+              backgroundColor: "var(--color-bg-hover)",
+              color: "var(--color-text-primary)",
+              borderRadius: "var(--radius-button)",
+              border: "1px solid var(--color-border-primary)",
+              opacity: isInstallingPlugin ? 0.6 : 1,
+              cursor: isInstallingPlugin ? "not-allowed" : "pointer",
+              transition: "all var(--transition-fast)",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <path d="M12 11v6" />
+              <path d="M9 14h6" />
+            </svg>
+            {t.settings.addons.addFromFolder}
+          </button>
+        </div>
+        <p className="text-xs mt-3" style={{ color: "var(--color-text-tertiary)" }}>
+          {t.settings.addons.packageHint}
+        </p>
+      </section>
+
+      <section>
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div>
+            <h3 className="text-base font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
+              {t.settings.addons.installed}
+            </h3>
+            <p className="text-sm" style={{ color: "var(--color-text-tertiary)" }}>
+              {t.settings.addons.installedDesc}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void refreshPlugins()}
+            disabled={isLoadingPlugins}
+            className="shrink-0 flex items-center gap-2 px-3 py-2 text-xs font-medium"
+            style={{
+              backgroundColor: "var(--color-bg-hover)",
+              color: "var(--color-text-primary)",
+              borderRadius: "var(--radius-button)",
+              border: "1px solid var(--color-border-primary)",
+              opacity: isLoadingPlugins ? 0.6 : 1,
+              cursor: isLoadingPlugins ? "not-allowed" : "pointer",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+              <path d="M21 3v6h-6" />
+            </svg>
+            {t.settings.addons.reloadList}
+          </button>
+        </div>
+
+        {isLoadingPlugins ? (
+          <div className="flex items-center gap-2 text-sm" style={{ color: "var(--color-text-tertiary)" }}>
+            <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" opacity="0.3" />
+              <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            {t.settings.addons.loading}
+          </div>
+        ) : plugins.length === 0 ? (
+          <div
+            className="px-4 py-5 text-sm"
+            style={{
+              backgroundColor: "var(--color-bg-secondary)",
+              border: "1px solid var(--color-border-secondary)",
+              borderRadius: "var(--radius-input)",
+              color: "var(--color-text-tertiary)",
+            }}
+          >
+            {t.settings.addons.empty}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {plugins.map((plugin) => {
+              const isBusy = updatingPluginId === plugin.id;
+              return (
+                <div
+                  key={plugin.id}
+                  className="p-4"
+                  style={{
+                    backgroundColor: "var(--color-bg-card)",
+                    border: "1px solid var(--color-border-secondary)",
+                    borderRadius: "var(--radius-input)",
+                  }}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className="shrink-0 flex items-center justify-center"
+                      style={{
+                        width: "34px",
+                        height: "34px",
+                        borderRadius: "var(--radius-input)",
+                        backgroundColor: plugin.enabled ? "rgba(59, 130, 246, 0.1)" : "var(--color-bg-tertiary)",
+                        color: plugin.enabled ? "var(--color-accent-primary)" : "var(--color-text-tertiary)",
+                      }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2v5" />
+                        <path d="M9 7h6" />
+                        <path d="M6 10h12" />
+                        <path d="M8 10v10a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V10" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-sm font-semibold truncate" style={{ color: "var(--color-text-primary)" }}>
+                          {plugin.name}
+                        </h4>
+                        <span
+                          className="px-2 py-0.5 text-[11px] font-medium"
+                          style={{
+                            borderRadius: "var(--radius-tag)",
+                            backgroundColor: plugin.enabled ? "rgba(34, 197, 94, 0.12)" : "var(--color-bg-tertiary)",
+                            color: plugin.enabled ? "rgb(34, 197, 94)" : "var(--color-text-tertiary)",
+                          }}
+                        >
+                          {plugin.enabled ? t.settings.addons.enabled : t.settings.addons.disabled}
+                        </span>
+                      </div>
+                      <p className="text-xs mt-1" style={{ color: "var(--color-text-tertiary)" }}>
+                        {plugin.description || t.settings.addons.noDescription}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 mt-4 text-xs" style={{ color: "var(--color-text-secondary)" }}>
+                    <div>
+                      <span style={{ color: "var(--color-text-tertiary)" }}>{t.settings.addons.version}: </span>
+                      {plugin.version || t.settings.addons.unknownVersion}
+                    </div>
+                    <div>
+                      <span style={{ color: "var(--color-text-tertiary)" }}>{t.settings.addons.author}: </span>
+                      {plugin.author || "—"}
+                    </div>
+                    <div>
+                      <span style={{ color: "var(--color-text-tertiary)" }}>{t.settings.addons.size}: </span>
+                      {formatPluginSize(plugin.packageSizeBytes)}
+                    </div>
+                    <div className="truncate">
+                      <span style={{ color: "var(--color-text-tertiary)" }}>{t.settings.addons.entry}: </span>
+                      {plugin.entry}
+                    </div>
+                  </div>
+
+                  {plugin.capabilities.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {plugin.capabilities.map((capability) => (
+                        <span
+                          key={capability}
+                          className="px-2 py-0.5 text-[11px]"
+                          style={{
+                            backgroundColor: "var(--color-bg-secondary)",
+                            color: "var(--color-text-secondary)",
+                            borderRadius: "var(--radius-tag)",
+                            border: "1px solid var(--color-border-secondary)",
+                          }}
+                        >
+                          {capability}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-2 mt-4">
+                    <label
+                      className="flex items-center gap-2 px-3 py-2 text-xs font-medium"
+                      style={{
+                        backgroundColor: "var(--color-bg-secondary)",
+                        color: "var(--color-text-primary)",
+                        border: "1px solid var(--color-border-secondary)",
+                        borderRadius: "var(--radius-button)",
+                        opacity: isBusy ? 0.6 : 1,
+                        cursor: isBusy ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={plugin.enabled}
+                        disabled={isBusy}
+                        onChange={(event) => void handleTogglePlugin(plugin, event.currentTarget.checked)}
+                        style={{ accentColor: "var(--color-accent-primary)" }}
+                      />
+                      {plugin.enabled ? t.settings.addons.enabled : t.settings.addons.disabled}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => void shellOpen(plugin.path)}
+                      className="px-3 py-2 text-xs font-medium"
+                      style={{
+                        backgroundColor: "var(--color-bg-hover)",
+                        color: "var(--color-text-primary)",
+                        border: "1px solid var(--color-border-primary)",
+                        borderRadius: "var(--radius-button)",
+                      }}
+                    >
+                      {t.settings.addons.openFolder}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleRemovePlugin(plugin)}
+                      disabled={isBusy}
+                      className="px-3 py-2 text-xs font-medium"
+                      style={{
+                        backgroundColor: "transparent",
+                        color: "var(--color-accent-danger)",
+                        border: "1px solid var(--color-border-primary)",
+                        borderRadius: "var(--radius-button)",
+                        opacity: isBusy ? 0.6 : 1,
+                        cursor: isBusy ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      {t.settings.addons.remove}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <section
+        className="p-4"
+        style={{
+          backgroundColor: "rgba(59, 130, 246, 0.06)",
+          border: "1px solid rgba(59, 130, 246, 0.15)",
+          borderRadius: "var(--radius-input)",
+        }}
+      >
+        <h3 className="text-sm font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
+          {t.settings.addons.restartTitle}
+        </h3>
+        <p className="text-xs mb-3" style={{ color: "var(--color-text-tertiary)" }}>
+          {t.settings.addons.restartNote}
+        </p>
+        <button
+          type="button"
+          onClick={() => void relaunch()}
+          className="flex items-center gap-2 px-3 py-2 text-xs font-medium"
+          style={{
+            backgroundColor: "var(--color-bg-hover)",
+            color: "var(--color-text-primary)",
+            border: "1px solid var(--color-border-primary)",
+            borderRadius: "var(--radius-button)",
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+            <path d="M21 3v6h-6" />
+          </svg>
+          {t.settings.addons.restartApp}
+        </button>
+      </section>
+    </div>
+  );
+
+  // ============================================================
   // ショートカットタブ
   // ============================================================
   const renderShortcutsTab = () => {
@@ -1292,6 +1751,7 @@ export const SettingsView: React.FC = () => {
       <div className="flex-1 overflow-y-auto p-8" style={{ maxWidth: "720px" }}>
         {activeTab === "appearance" && renderAppearanceTab()}
         {activeTab === "data" && renderDataTab()}
+        {activeTab === "addons" && renderAddonsTab()}
         {activeTab === "shortcuts" && renderShortcutsTab()}
         {activeTab === "citation" && renderCitationTab()}
         {activeTab === "language" && renderLanguageTab()}

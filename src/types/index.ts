@@ -434,7 +434,7 @@ export interface GraphNodeExtended extends GraphNode {
 // ============================================================
 
 /** 設定タブ種別 */
-export type SettingsTab = 'appearance' | 'data' | 'shortcuts' | 'citation' | 'language';
+export type SettingsTab = 'appearance' | 'data' | 'addons' | 'shortcuts' | 'citation' | 'language';
 
 /** 対応ロケール */
 export type Locale = 'ja' | 'en' | 'fr' | 'af';

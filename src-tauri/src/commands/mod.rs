@@ -12,6 +12,7 @@ pub mod links;
 pub mod metadata;
 pub mod notes;
 pub mod papers;
+pub mod plugins;
 pub mod qualitative;
 pub mod quantitative;
 pub mod search;

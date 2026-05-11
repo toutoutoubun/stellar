@@ -6,6 +6,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./plugins/registerAnalysisAddons";
+import { loadEnabledUserPlugins } from "./plugins/userPluginLoader";
 
 // スタイル読み込み（テーマ → グローバルの順で読み込む）
 import "./styles/themes.css";
@@ -18,9 +19,16 @@ const rootEl = document.getElementById("root");
 if (!rootEl) {
   throw new Error("Root element not found: #root");
 }
+const root = rootEl;
 
-ReactDOM.createRoot(rootEl).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+async function bootstrap(): Promise<void> {
+  await loadEnabledUserPlugins();
+
+  ReactDOM.createRoot(root).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+}
+
+void bootstrap();
