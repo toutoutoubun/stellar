@@ -30,7 +30,7 @@ function hasTauriRuntime(): boolean {
 // ブラウザプレビューでも create / get / update / delete が動作するように
 // メモリ上にデータを保持する軽量ストア。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mockStore: { notes: any[]; projects: any[]; papers: any[]; datasets: any[]; variables: any[]; dataRows: any[]; analyses: any[]; codes: any[]; highlights: any[]; links: any[]; qualitativeSources: any[]; sourceSegments: any[]; qualSourceCritiques: any[] } = {
+const mockStore: { notes: any[]; projects: any[]; papers: any[]; datasets: any[]; variables: any[]; dataRows: any[]; analyses: any[]; codes: any[]; highlights: any[]; links: any[]; qualitativeSources: any[]; sourceSegments: any[]; qualSourceCritiques: any[]; comparativeDesigns: any[]; comparativeCases: any[]; comparativeVariables: any[]; comparativeCells: any[] } = {
   notes: [],
   projects: [],
   papers: [],
@@ -44,6 +44,10 @@ const mockStore: { notes: any[]; projects: any[]; papers: any[]; datasets: any[]
   qualitativeSources: [],
   sourceSegments: [],
   qualSourceCritiques: [],
+  comparativeDesigns: [],
+  comparativeCases: [],
+  comparativeVariables: [],
+  comparativeCells: [],
 };
 let mockIdCounter = 1;
 function mockId(): string {
@@ -115,6 +119,58 @@ function detectMockVariableType(variable: UnknownRecord, rows: UnknownRecord[]):
   const numericCount = values.filter((value) => Number.isFinite(Number(value))).length;
   if (numericCount / values.length >= 0.8) return "scale";
   return new Set(values).size <= 10 ? "nominal" : "text";
+}
+
+function compareSortOrder(a: UnknownRecord, b: UnknownRecord): number {
+  return commandNumber(a.sortOrder) - commandNumber(b.sortOrder);
+}
+
+function buildMockComparativeDesignFull(design: UnknownRecord): UnknownRecord {
+  const designId = commandString(design.id);
+  const cases = mockStore.comparativeCases
+    .filter((item) => item.designId === designId)
+    .sort(compareSortOrder)
+    .map((item) => ({ ...item }));
+  const variables = mockStore.comparativeVariables
+    .filter((item) => item.designId === designId)
+    .sort(compareSortOrder)
+    .map((item) => ({ ...item }));
+  const caseIds = new Set(cases.map((item) => commandString(item.id)));
+  const variableIds = new Set(variables.map((item) => commandString(item.id)));
+  const cells = mockStore.comparativeCells
+    .filter((item) => caseIds.has(commandString(item.caseId)) && variableIds.has(commandString(item.variableId)))
+    .map((item) => ({ ...item }));
+  return { ...design, cases, variables, cells };
+}
+
+function csvCell(value: unknown): string {
+  const text = value == null ? "" : String(value);
+  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function buildMockQcaCsv(designId: string): string {
+  const cases = mockStore.comparativeCases
+    .filter((item) => item.designId === designId)
+    .sort(compareSortOrder);
+  const variables = mockStore.comparativeVariables
+    .filter((item) => item.designId === designId)
+    .sort(compareSortOrder);
+  const cellMap = new Map<string, string>();
+  for (const cell of mockStore.comparativeCells) {
+    cellMap.set(`${cell.caseId}:${cell.variableId}`, commandString(cell.value));
+  }
+
+  const lines = [
+    ["case", ...variables.map((item) => commandString(item.name))].map(csvCell).join(","),
+  ];
+  for (const itemCase of cases) {
+    const caseId = commandString(itemCase.id);
+    const values = variables.map((variable) =>
+      cellMap.get(`${caseId}:${commandString(variable.id)}`) ?? "",
+    );
+    lines.push([commandString(itemCase.name), ...values].map(csvCell).join(","));
+  }
+  return `${lines.join("\n")}\n`;
 }
 
 /**
@@ -542,7 +598,6 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
   if (cmd === "update_code") {
     const idx = mockStore.codes.findIndex((c) => c.id === args?.id);
     if (idx >= 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const a = commandInput(args);
       const updated = { ...mockStore.codes[idx] };
       if (a.name != null) updated.name = a.name;
@@ -559,6 +614,145 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
   if (cmd === "delete_code") {
     mockStore.codes = mockStore.codes.filter((c) => c.id !== args?.id);
     return { handled: true, result: undefined };
+  }
+
+  // ── Qualitative Comparative Design ──
+  if (cmd === "get_comparative_design") {
+    const projectId = commandString(args?.projectId ?? args?.project_id);
+    const designs = mockStore.comparativeDesigns
+      .filter((item) => !projectId || item.projectId === projectId)
+      .sort((a, b) => commandString(a.createdAt).localeCompare(commandString(b.createdAt)))
+      .map(buildMockComparativeDesignFull);
+    return { handled: true, result: designs };
+  }
+  if (cmd === "create_comparative_design") {
+    const input = commandInput(args);
+    const design = {
+      id: mockId(),
+      projectId: commandString(input.projectId),
+      designType: commandString(input.designType, "MSSD"),
+      title: commandString(input.title, useI18nStore.getState().t.qualitative.k_x6q83e),
+      createdAt: now(),
+    };
+    mockStore.comparativeDesigns.push(design);
+    return { handled: true, result: { ...design } };
+  }
+  if (cmd === "update_comparative_design") {
+    const id = commandString(args?.id);
+    const input = commandInput(args);
+    const idx = mockStore.comparativeDesigns.findIndex((item) => item.id === id);
+    if (idx >= 0) {
+      const updated = { ...mockStore.comparativeDesigns[idx] };
+      if (input.title !== undefined) updated.title = commandString(input.title, updated.title);
+      if (input.designType !== undefined) updated.designType = commandString(input.designType, updated.designType);
+      mockStore.comparativeDesigns[idx] = updated;
+      return { handled: true, result: { ...updated } };
+    }
+    return { handled: true, result: null };
+  }
+  if (cmd === "get_comparative_cases") {
+    const designId = commandString(args?.designId ?? args?.design_id);
+    return {
+      handled: true,
+      result: mockStore.comparativeCases
+        .filter((item) => !designId || item.designId === designId)
+        .sort(compareSortOrder)
+        .map((item) => ({ ...item })),
+    };
+  }
+  if (cmd === "add_comparative_case" || cmd === "create_comparative_case") {
+    const input = commandInput(args);
+    const designId = commandString(input.designId);
+    const sortOrder = commandNumber(
+      input.sortOrder,
+      mockStore.comparativeCases.filter((item) => item.designId === designId).length,
+    );
+    const itemCase = {
+      id: mockId(),
+      designId,
+      name: commandString(input.name, "Case"),
+      sortOrder,
+    };
+    mockStore.comparativeCases.push(itemCase);
+    return { handled: true, result: { ...itemCase } };
+  }
+  if (cmd === "delete_comparative_case") {
+    const id = commandString(args?.id);
+    mockStore.comparativeCases = mockStore.comparativeCases.filter((item) => item.id !== id);
+    mockStore.comparativeCells = mockStore.comparativeCells.filter((item) => item.caseId !== id);
+    return { handled: true, result: undefined };
+  }
+  if (cmd === "get_comparative_variables") {
+    const designId = commandString(args?.designId ?? args?.design_id);
+    return {
+      handled: true,
+      result: mockStore.comparativeVariables
+        .filter((item) => !designId || item.designId === designId)
+        .sort(compareSortOrder)
+        .map((item) => ({ ...item })),
+    };
+  }
+  if (cmd === "add_comparative_variable" || cmd === "create_comparative_variable") {
+    const input = commandInput(args);
+    const designId = commandString(input.designId);
+    const sortOrder = commandNumber(
+      input.sortOrder,
+      mockStore.comparativeVariables.filter((item) => item.designId === designId).length,
+    );
+    const variable = {
+      id: mockId(),
+      designId,
+      name: commandString(input.name, "Variable"),
+      varType: commandString(input.varType, "independent"),
+      sortOrder,
+    };
+    mockStore.comparativeVariables.push(variable);
+    return { handled: true, result: { ...variable } };
+  }
+  if (cmd === "delete_comparative_variable") {
+    const id = commandString(args?.id);
+    mockStore.comparativeVariables = mockStore.comparativeVariables.filter((item) => item.id !== id);
+    mockStore.comparativeCells = mockStore.comparativeCells.filter((item) => item.variableId !== id);
+    return { handled: true, result: undefined };
+  }
+  if (cmd === "get_comparative_cells") {
+    const designId = commandString(args?.designId ?? args?.design_id);
+    const caseIds = new Set(
+      mockStore.comparativeCases
+        .filter((item) => !designId || item.designId === designId)
+        .map((item) => item.id),
+    );
+    return {
+      handled: true,
+      result: mockStore.comparativeCells
+        .filter((item) => caseIds.has(item.caseId))
+        .map((item) => ({ ...item })),
+    };
+  }
+  if (cmd === "upsert_comparative_cell" || cmd === "update_comparative_cell") {
+    const input = commandInput(args);
+    const caseId = commandString(input.caseId);
+    const variableId = commandString(input.variableId);
+    const existing = mockStore.comparativeCells.findIndex(
+      (item) => item.caseId === caseId && item.variableId === variableId,
+    );
+    const cell = {
+      id: existing >= 0 ? mockStore.comparativeCells[existing].id : mockId(),
+      caseId,
+      variableId,
+      value: commandString(input.value),
+      paperId: commandNullableString(input.paperId),
+    };
+    if (existing >= 0) {
+      mockStore.comparativeCells[existing] = cell;
+    } else {
+      mockStore.comparativeCells.push(cell);
+    }
+    return { handled: true, result: undefined };
+  }
+  if (cmd === "export_qca_csv") {
+    const designId = commandString(args?.designId ?? args?.design_id);
+    return { handled: true, result: buildMockQcaCsv(designId) };
   }
 
   // ── Qualitative Sources ──

@@ -271,12 +271,13 @@ export function exportHtmlBlob(content: string, title: string): Blob {
 /**
  * PDF エクスポート — ブラウザの印刷ダイアログ経由。
  * 新しいウィンドウに学術スタイルの HTML を表示して window.print() を呼ぶ。
+ * 呼び出し側でクリック直後に開いたウィンドウを渡すと、ポップアップブロックを避けられる。
  */
-export function exportPdf(content: string, title: string): void {
+export function exportPdf(content: string, title: string, targetWindow?: Window | null): void {
   const bodyHtml = markdownToHtml(content);
   const fullHtml = buildAcademicHtml(bodyHtml, title);
 
-  const printWindow = window.open("", "_blank");
+  const printWindow = targetWindow ?? window.open("", "_blank");
   if (!printWindow) {
     throw new Error(useI18nStore.getState().t.utils.str_oxfjvb);
   }
