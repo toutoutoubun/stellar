@@ -261,11 +261,12 @@ export interface RecentItem {
 // テーマ（Theme）
 // ============================================================
 
-/** アプリテーマ */
-export type Theme = 'white' | 'ivory' | 'dark-blue' | 'black';
+/** アプリテーマ（ビルトイン + プラグイン拡張） */
+export type BuiltInTheme = 'white' | 'ivory' | 'dark-blue' | 'black';
+export type Theme = BuiltInTheme | (string & {});
 
-/** テーマ表示名（日本語） */
-export const THEME_LABELS: Record<Theme, string> = {
+/** ビルトインテーマの表示名 */
+export const THEME_LABELS: Record<BuiltInTheme, string> = {
   'white': 'White',
   'ivory': 'Ivory',
   'dark-blue': 'Dark Blue',
@@ -276,10 +277,11 @@ export const THEME_LABELS: Record<Theme, string> = {
 // UI 状態
 // ============================================================
 
-/** サイドバーのナビゲーションビュー */
-export type SidebarView = 'library' | 'notes' | 'graph' | 'qualitative' | 'quantitative' | 'search' | 'settings';
+/** サイドバーのナビゲーションビュー（ビルトイン + プラグイン拡張） */
+export type BuiltInSidebarView = 'library' | 'notes' | 'graph' | 'qualitative' | 'quantitative' | 'search' | 'settings';
+export type SidebarView = BuiltInSidebarView | `plugin:${string}`;
 
-/** メインペインに表示するコンテンツ種別 */
+/** メインペインに表示するコンテンツ種別（プラグインビュー対応） */
 export type MainPaneContent =
   | { type: 'empty' }
   | { type: 'paper'; paperId: string }
@@ -290,7 +292,8 @@ export type MainPaneContent =
   | { type: 'search' }
   | { type: 'settings' }
   | { type: 'split-view'; paperId: string; noteId: string }
-  | { type: 'draft'; noteId: string };
+  | { type: 'draft'; noteId: string }
+  | { type: 'plugin-view'; pluginId: string };
 
 /** ソート方向 */
 export type SortDirection = 'asc' | 'desc';
@@ -333,11 +336,12 @@ export interface GraphData {
 // 引用スタイル（Citation）
 // ============================================================
 
-/** 対応する引用フォーマット */
-export type CitationStyle = 'apa7' | 'mla9' | 'chicago17' | 'hitotsubashi';
+/** 対応する引用フォーマット（ビルトイン + プラグイン拡張） */
+export type BuiltInCitationStyle = 'apa7' | 'mla9' | 'chicago17' | 'hitotsubashi';
+export type CitationStyle = BuiltInCitationStyle | (string & {});
 
-/** 引用スタイルの表示名（日本語） */
-export const CITATION_STYLE_LABELS: Record<CitationStyle, string> = {
+/** ビルトイン引用スタイルの表示名 */
+export const CITATION_STYLE_LABELS: Record<BuiltInCitationStyle, string> = {
   'apa7': 'APA 7th',
   'mla9': 'MLA 9th',
   'chicago17': 'Chicago 17th',
