@@ -4,7 +4,7 @@
 
 import type React from "react";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useThemeStore, THEMES, getAllThemes } from "../../stores/useThemeStore";
+import { useThemeStore, getAllThemes } from "../../stores/useThemeStore";
 import { useI18nStore, useT } from "../../stores/useI18nStore";
 import { SUPPORTED_LOCALES, LOCALE_NATIVE_NAMES } from "../../i18n";
 import { ThemePreviewCard } from "./ThemePreviewCard";
@@ -52,7 +52,7 @@ import {
   EDITOR_FONTS,
   CITATION_STYLE_LABELS,
 } from "../../types";
-import { useAddonRegistry, getCitationStyleAddons } from "../../plugins/addonRegistry";
+import { getCitationStyleAddons } from "../../plugins/addonRegistry";
 
 // ============================================================
 // SettingsView コンポーネント

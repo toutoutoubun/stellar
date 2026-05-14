@@ -16,7 +16,7 @@ import { SplitView } from "./SplitView";
 import { GraphView } from "../graph/GraphView";
 import { useI18nStore } from "../../stores/useI18nStore";
 import { SearchResultsView } from "../search/SearchResultsView";
-import { useAddonRegistry, getWorkspaceViewAddon } from "../../plugins/addonRegistry";
+import { getWorkspaceViewAddon } from "../../plugins/addonRegistry";
 
 // ── ビュー単位の ErrorBoundary ──────────────────────────
 // 質的/量的分析ビュー等のクラッシュがライブラリ・ノートに波及しないようにする

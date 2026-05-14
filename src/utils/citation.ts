@@ -5,6 +5,7 @@
 
 import type { Paper, CitationStyle } from "../types";
 import { useI18nStore } from "../stores/useI18nStore";
+import { getCitationStyleAddon } from "../plugins/addonRegistry";
 
 // ============================================================
 // 著者名フォーマット補助関数
@@ -300,6 +301,24 @@ export const formatCitation = (
       return formatChicago17(paper);
     case "hitotsubashi":
       return formatHitotsubashi(paper);
+    default: {
+      // プラグイン引用スタイル: addonRegistry からフォーマッタを取得
+      const addon = getCitationStyleAddon(style);
+      if (addon) {
+        return addon.formatBibliography({
+          title: paper.title,
+          authors: paper.authors,
+          year: paper.year,
+          journal: paper.journal,
+          volume: paper.volume,
+          issue: paper.issue,
+          pages: paper.pages,
+          doi: paper.doi,
+          url: paper.url,
+        });
+      }
+      return formatAPA7(paper);
+    }
   }
 };
 
