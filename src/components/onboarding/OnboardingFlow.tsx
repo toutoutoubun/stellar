@@ -7,7 +7,7 @@
 
 import type React from "react";
 import { useState, useCallback, useEffect } from "react";
-import { useThemeStore, THEMES, getAllThemes } from "../../stores/useThemeStore";
+import { useThemeStore, getAllThemes } from "../../stores/useThemeStore";
 import { useI18nStore, useT } from "../../stores/useI18nStore";
 import { SUPPORTED_LOCALES, LOCALE_NATIVE_NAMES } from "../../i18n";
 import { ThemePreviewCard } from "../settings/ThemePreviewCard";

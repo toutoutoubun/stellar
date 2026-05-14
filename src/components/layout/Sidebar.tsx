@@ -18,7 +18,7 @@ interface NavItem {
   labelKey: string;
   icon: React.ReactNode;
   /** セクション区分 */
-  section: "main" | "analysis" | "system";
+  section: "main" | "analysis" | "addons" | "system";
   /** キーボードショートカットヒント */
   shortcut?: string;
 }
@@ -326,7 +326,7 @@ export const Sidebar: React.FC = () => {
               item={item}
               isActive={sidebarView === item.view}
               isCollapsed={sidebarCollapsed}
-              label={labelMap[item.view]}
+              label={labelMap[item.view] ?? item.labelKey}
               onClick={() => handleNavClick(item.view)}
             />
           ))}
@@ -388,7 +388,7 @@ export const Sidebar: React.FC = () => {
               item={item}
               isActive={sidebarView === item.view}
               isCollapsed={sidebarCollapsed}
-              label={labelMap[item.view]}
+              label={labelMap[item.view] ?? item.labelKey}
               onClick={() => handleNavClick(item.view)}
             />
           ))}

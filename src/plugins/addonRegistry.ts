@@ -4,7 +4,6 @@
 // 既存の analysisAddons.tsx の upsertById パターンを踏襲。
 
 import type React from "react";
-import type { Paper } from "../types";
 
 // ============================================================
 // 共通ユーティリティ
@@ -344,8 +343,6 @@ function _getSnapshot(): AddonSnapshot {
   return _snapshotCache;
 }
 
-// _notifySubscribers のオリジナルをラップしてキャッシュクリア
-const _originalNotify = _notifySubscribers;
 // 注: キャッシュクリアは subscribe のコールバックで行う
 
 function _subscribe(onStoreChange: () => void): () => void {
