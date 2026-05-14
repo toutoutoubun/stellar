@@ -4,7 +4,7 @@
 
 import type React from "react";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useThemeStore, THEMES } from "../../stores/useThemeStore";
+import { useThemeStore, THEMES, getAllThemes } from "../../stores/useThemeStore";
 import { useI18nStore, useT } from "../../stores/useI18nStore";
 import { SUPPORTED_LOCALES, LOCALE_NATIVE_NAMES } from "../../i18n";
 import { ThemePreviewCard } from "./ThemePreviewCard";
@@ -52,6 +52,7 @@ import {
   EDITOR_FONTS,
   CITATION_STYLE_LABELS,
 } from "../../types";
+import { useAddonRegistry, getCitationStyleAddons } from "../../plugins/addonRegistry";
 
 // ============================================================
 // SettingsView コンポーネント
@@ -556,7 +557,7 @@ export const SettingsView: React.FC = () => {
           {t.settings.appearance.themeDesc}
         </p>
         <div className="flex flex-wrap gap-3">
-          {THEMES.map((meta) => (
+          {getAllThemes().map((meta) => (
             <ThemePreviewCard key={meta.id} meta={meta} isSelected={theme === meta.id} onSelect={handleThemeChange} />
           ))}
         </div>
@@ -1621,12 +1622,15 @@ export const SettingsView: React.FC = () => {
   // 引用スタイルタブ
   // ============================================================
   const renderCitationTab = () => {
-    const citationHints: Record<CitationStyle, string> = {
+    const citationHints: Record<string, string> = {
       apa7: t.settings.citation.apa7Hint,
       mla9: t.settings.citation.mla9Hint,
       chicago17: t.settings.citation.chicago17Hint,
       hitotsubashi: t.settings.citation.hitotsubashiHint,
     };
+
+    // プラグイン引用スタイルを取得
+    const pluginCitationStyles = getCitationStyleAddons();
 
     return (
       <div className="flex flex-col gap-8">
@@ -1638,6 +1642,7 @@ export const SettingsView: React.FC = () => {
             {t.settings.citation.defaultStyleDesc}
           </p>
           <div className="flex flex-col gap-2" style={{ maxWidth: "400px" }}>
+            {/* ビルトイン引用スタイル */}
             {(Object.entries(CITATION_STYLE_LABELS) as [CitationStyle, string][]).map(([style, label]) => (
               <label key={style} className="flex items-center gap-3 px-4 py-3 cursor-pointer" style={{
                 backgroundColor: citationStyle === style ? "var(--color-bg-hover)" : "var(--color-bg-card)",
@@ -1650,8 +1655,36 @@ export const SettingsView: React.FC = () => {
                 <div>
                   <div className="text-sm font-medium" style={{ color: "var(--color-text-primary)" }}>{label}</div>
                   <div className="text-xs mt-0.5" style={{ color: "var(--color-text-tertiary)" }}>
-                    {citationHints[style]}
+                    {citationHints[style] ?? ""}
                   </div>
+                </div>
+              </label>
+            ))}
+            {/* プラグイン引用スタイル */}
+            {pluginCitationStyles.map((addon) => (
+              <label key={addon.id} className="flex items-center gap-3 px-4 py-3 cursor-pointer" style={{
+                backgroundColor: citationStyle === addon.id ? "var(--color-bg-hover)" : "var(--color-bg-card)",
+                borderRadius: "var(--radius-input)",
+                border: citationStyle === addon.id ? "2px solid var(--color-accent-primary)" : "2px solid var(--color-border-secondary)",
+                transition: "all var(--transition-fast)",
+              }}>
+                <input type="radio" name="citation-style" value={addon.id} checked={citationStyle === addon.id}
+                  onChange={() => setCitationStyle(addon.id as CitationStyle)} style={{ accentColor: "var(--color-accent-primary)" }} />
+                <div>
+                  <div className="text-sm font-medium" style={{ color: "var(--color-text-primary)" }}>
+                    {addon.label}
+                    <span className="ml-2 text-xs px-1.5 py-0.5" style={{
+                      backgroundColor: "var(--color-accent-primary)",
+                      color: "#fff",
+                      borderRadius: "var(--radius-badge)",
+                      opacity: 0.8,
+                    }}>Add-on</span>
+                  </div>
+                  {addon.description && (
+                    <div className="text-xs mt-0.5" style={{ color: "var(--color-text-tertiary)" }}>
+                      {addon.description}
+                    </div>
+                  )}
                 </div>
               </label>
             ))}

@@ -4,8 +4,9 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Theme } from "../types";
+import type { Theme, BuiltInTheme } from "../types";
 import { useI18nStore } from "./useI18nStore";
+import { getThemeAddons } from "../plugins/addonRegistry";
 
 // ============================================================
 // テーマメタデータ定数
@@ -75,8 +76,29 @@ export const THEMES: ThemeMeta[] = [
   },
 ];
 
-/** テーマの順序（ローテーション用） */
-const THEME_ORDER: Theme[] = ["white", "ivory", "dark-blue", "black"];
+/** ビルトインテーマの順序（ローテーション用） */
+const BUILT_IN_THEME_ORDER: BuiltInTheme[] = ["white", "ivory", "dark-blue", "black"];
+
+/** テーマの全順序（ビルトイン + プラグインテーマ）を動的に取得 */
+function getThemeOrder(): Theme[] {
+  const pluginThemeIds = getThemeAddons().map((a) => a.id);
+  return [...BUILT_IN_THEME_ORDER, ...pluginThemeIds];
+}
+
+/** ビルトイン + プラグインテーマの全メタデータを取得 */
+export function getAllThemes(): ThemeMeta[] {
+  const pluginMetas: ThemeMeta[] = getThemeAddons().map((addon) => ({
+    id: addon.id,
+    label: addon.label,
+    description: addon.description ?? "",
+    icon: "circle" as const,
+    previewBg: addon.preview?.bg ?? "#888888",
+    previewText: addon.preview?.text ?? "#ffffff",
+    previewAccent: addon.preview?.accent ?? "#4285f4",
+    previewSidebar: addon.preview?.sidebar ?? "#666666",
+  }));
+  return [...THEMES, ...pluginMetas];
+}
 
 // ============================================================
 // OS プリファレンス検出
@@ -122,9 +144,10 @@ export const useThemeStore = create<ThemeStore>()(
       },
 
       cycleTheme: () => {
-        const currentIndex = THEME_ORDER.indexOf(get().theme);
-        const nextIndex = (currentIndex + 1) % THEME_ORDER.length;
-        const nextTheme = THEME_ORDER[nextIndex];
+        const order = getThemeOrder();
+        const currentIndex = order.indexOf(get().theme);
+        const nextIndex = (currentIndex + 1) % order.length;
+        const nextTheme = order[nextIndex];
         if (nextTheme) {
           get().setTheme(nextTheme);
         }
@@ -151,11 +174,12 @@ export const useThemeStore = create<ThemeStore>()(
 
 /** 指定テーマの次のテーマを取得する */
 export const getNextTheme = (current: Theme): Theme => {
-  const idx = THEME_ORDER.indexOf(current);
-  return THEME_ORDER[(idx + 1) % THEME_ORDER.length] ?? "white";
+  const order = getThemeOrder();
+  const idx = order.indexOf(current);
+  return order[(idx + 1) % order.length] ?? "white";
 };
 
-/** テーマIDからメタデータを取得する */
+/** テーマIDからメタデータを取得する（プラグインテーマ含む） */
 export const getThemeMeta = (theme: Theme): ThemeMeta => {
-  return THEMES.find((t) => t.id === theme) ?? THEMES[0]!;
+  return getAllThemes().find((t) => t.id === theme) ?? THEMES[0]!;
 };

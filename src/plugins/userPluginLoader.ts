@@ -7,6 +7,18 @@ import {
   registerQualitativeAnalysisAddon,
   registerQuantitativeAnalysisAddon,
 } from "./analysisAddons";
+import {
+  registerWorkspaceView,
+  registerPanel,
+  registerTheme,
+  registerCitationStyle,
+} from "./addonRegistry";
+import type {
+  WorkspaceViewAddon,
+  PanelAddon,
+  ThemeAddon,
+  CitationStyleAddon,
+} from "./addonRegistry";
 
 export interface InstalledUserPlugin {
   id: string;
@@ -26,10 +38,16 @@ export interface InstalledUserPlugin {
 }
 
 export interface StellarPluginApi {
-  version: "0.1";
+  version: "0.2";
   React: typeof React;
+  // ── 分析アドオン（v0.1 互換） ──
   registerQualitativeAnalysisAddon: typeof registerQualitativeAnalysisAddon;
   registerQuantitativeAnalysisAddon: typeof registerQuantitativeAnalysisAddon;
+  // ── v0.2: ワークスペース・パネル・テーマ・引用スタイル ──
+  registerWorkspaceView: (addon: WorkspaceViewAddon) => void;
+  registerPanel: (addon: PanelAddon) => void;
+  registerTheme: (addon: ThemeAddon) => void;
+  registerCitationStyle: (addon: CitationStyleAddon) => void;
 }
 
 export interface UserPluginLoadResult {
@@ -53,10 +71,16 @@ declare global {
 
 export function getStellarPluginApi(): StellarPluginApi {
   const api: StellarPluginApi = {
-    version: "0.1",
+    version: "0.2",
     React,
+    // ── 分析アドオン（v0.1 互換） ──
     registerQualitativeAnalysisAddon,
     registerQuantitativeAnalysisAddon,
+    // ── v0.2: ワークスペース・パネル・テーマ・引用スタイル ──
+    registerWorkspaceView,
+    registerPanel,
+    registerTheme,
+    registerCitationStyle,
   };
   window.StellarPluginApi = api;
   return api;

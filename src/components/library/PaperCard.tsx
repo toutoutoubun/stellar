@@ -7,6 +7,7 @@ import type React from "react";
 import { useState, useCallback, useRef, useEffect, memo } from "react";
 import type { Paper, CitationStyle } from "../../types";
 import { CITATION_STYLE_LABELS } from "../../types";
+import { getCitationStyleAddons } from "../../plugins/addonRegistry";
 import { Badge } from "../ui/Badge";
 import { copyCitationToClipboard } from "../../utils/citation";
 import { toast } from "../ui/Toast";
@@ -251,14 +252,22 @@ const PaperCardInner: React.FC<PaperCardProps> = ({
       action: () => {
         setShowCitationSub(true);
       },
-      submenu: (
-        Object.entries(CITATION_STYLE_LABELS) as [CitationStyle, string][]
-      ).map(([style, label]) => ({
-        label,
-        action: () => {
-          void handleCopyCitation(style);
-        },
-      })),
+      submenu: [
+        ...(
+          Object.entries(CITATION_STYLE_LABELS) as [CitationStyle, string][]
+        ).map(([style, label]) => ({
+          label,
+          action: () => {
+            void handleCopyCitation(style);
+          },
+        })),
+        ...getCitationStyleAddons().map((addon) => ({
+          label: addon.label,
+          action: () => {
+            void handleCopyCitation(addon.id as CitationStyle);
+          },
+        })),
+      ],
     },
     {
       label: useI18nStore.getState().t.common.delete,

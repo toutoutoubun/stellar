@@ -8,6 +8,7 @@ import type React from "react";
 import { useState, useCallback, useEffect } from "react";
 import type { Paper, Note, Highlight, BacklinkItem, CitationStyle, NodeType } from "../../types";
 import { CITATION_STYLE_LABELS } from "../../types";
+import { getCitationStyleAddons } from "../../plugins/addonRegistry";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { copyCitationToClipboard } from "../../utils/citation";
@@ -680,6 +681,26 @@ export const PaperDetailPanel: React.FC<PaperDetailPanelProps> = ({
                     }}
                   >
                     {label}
+                  </button>
+                ))}
+                {getCitationStyleAddons().map((addon) => (
+                  <button
+                    key={addon.id}
+                    className="flex items-center w-full px-3 py-2 text-xs text-left"
+                    style={{
+                      color: "var(--color-text-primary)",
+                      transition: "background-color var(--transition-fast)",
+                    }}
+                    onClick={() => void handleCopyCitation(addon.id as CitationStyle)}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor =
+                        "var(--color-bg-hover)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
+                  >
+                    {addon.label}
                   </button>
                 ))}
               </div>

@@ -16,6 +16,7 @@ import { SplitView } from "./SplitView";
 import { GraphView } from "../graph/GraphView";
 import { useI18nStore } from "../../stores/useI18nStore";
 import { SearchResultsView } from "../search/SearchResultsView";
+import { useAddonRegistry, getWorkspaceViewAddon } from "../../plugins/addonRegistry";
 
 // ── ビュー単位の ErrorBoundary ──────────────────────────
 // 質的/量的分析ビュー等のクラッシュがライブラリ・ノートに波及しないようにする
@@ -358,6 +359,22 @@ export const MainPane: React.FC = () => {
       return <NotesView mainPaneContent={mainPaneContent} />;
     }
 
+    // サイドバーがプラグインビューの場合
+    if (typeof sidebarView === "string" && sidebarView.startsWith("plugin:")) {
+      const pluginId = sidebarView.slice("plugin:".length);
+      const addon = getWorkspaceViewAddon(pluginId);
+      if (addon) {
+        return (
+          <ViewErrorBoundary label={addon.label}>
+            <Suspense fallback={<LazyFallback />}>
+              {addon.render()}
+            </Suspense>
+          </ViewErrorBoundary>
+        );
+      }
+      return <EmptyState />;
+    }
+
     switch (mainPaneContent.type) {
       case "paper":
         return (
@@ -402,6 +419,19 @@ export const MainPane: React.FC = () => {
         return <SearchResultsView />;
       case "settings":
         return <SettingsView />;
+      case "plugin-view": {
+        const addon = getWorkspaceViewAddon(mainPaneContent.pluginId);
+        if (addon) {
+          return (
+            <ViewErrorBoundary label={addon.label}>
+              <Suspense fallback={<LazyFallback />}>
+                {addon.render()}
+              </Suspense>
+            </ViewErrorBoundary>
+          );
+        }
+        return <EmptyState />;
+      }
       case "empty":
       default:
         return <EmptyState />;

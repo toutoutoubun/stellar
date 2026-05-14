@@ -6,6 +6,7 @@ import type React from "react";
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { CitationStyle, NodeType } from "../../types";
 import { CITATION_STYLE_LABELS } from "../../types";
+import { getCitationStyleAddons } from "../../plugins/addonRegistry";
 import { useNoteStore } from "../../stores/useNoteStore";
 import { useUIStore } from "../../stores/useUIStore";
 import { NoteEditor, type NoteEditorHandle } from "./NoteEditor";
@@ -158,7 +159,7 @@ export const DraftNoteEditor: React.FC<DraftNoteEditorProps> = ({ noteId }) => {
               e.currentTarget.style.borderColor = "var(--color-border-secondary)";
             }}
           >
-            {CITATION_STYLE_LABELS[citationStyle]}
+            {CITATION_STYLE_LABELS[citationStyle as keyof typeof CITATION_STYLE_LABELS] ?? getCitationStyleAddons().find((a) => a.id === citationStyle)?.label ?? citationStyle}
             <svg
               width="10"
               height="10"
@@ -208,10 +209,35 @@ export const DraftNoteEditor: React.FC<DraftNoteEditorProps> = ({ noteId }) => {
                       e.currentTarget.style.backgroundColor = "transparent";
                     }}
                   >
-                    {CITATION_STYLE_LABELS[style]}
+                    {CITATION_STYLE_LABELS[style as keyof typeof CITATION_STYLE_LABELS]}
                   </button>
                 ),
               )}
+              {getCitationStyleAddons().map((addon) => (
+                <button
+                  key={addon.id}
+                  type="button"
+                  onClick={() => void handleStyleChange(addon.id as CitationStyle)}
+                  className="flex items-center gap-2 w-full text-left text-xs px-3 py-1.5"
+                  style={{
+                    color:
+                      citationStyle === addon.id
+                        ? "var(--color-accent-primary)"
+                        : "var(--color-text-secondary)",
+                    fontWeight: citationStyle === addon.id ? 600 : 400,
+                    borderRadius: "6px",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      "var(--color-bg-hover)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
+                >
+                  {addon.label}
+                </button>
+              ))}
             </div>
           )}
         </div>
