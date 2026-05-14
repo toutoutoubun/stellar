@@ -117,6 +117,7 @@ export const SettingsView: React.FC = () => {
     { keys: "Ctrl+1", description: t.settings.shortcuts.items.switchLibrary, category: t.settings.shortcuts.categories.navigation },
     { keys: "Ctrl+2", description: t.settings.shortcuts.items.switchNotes, category: t.settings.shortcuts.categories.navigation },
     { keys: "Ctrl+3", description: t.settings.shortcuts.items.switchGraph, category: t.settings.shortcuts.categories.navigation },
+    { keys: "Ctrl+\\", description: t.settings.shortcuts.items.toggleSidebar ?? "Toggle sidebar", category: t.settings.shortcuts.categories.navigation },
     { keys: "Ctrl+S", description: t.settings.shortcuts.items.save, category: t.settings.shortcuts.categories.editor },
     { keys: "Ctrl+B", description: t.settings.shortcuts.items.bold, category: t.settings.shortcuts.categories.editor },
     { keys: "Ctrl+I", description: t.settings.shortcuts.items.italic, category: t.settings.shortcuts.categories.editor },

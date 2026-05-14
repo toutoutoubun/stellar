@@ -175,6 +175,7 @@ const fr: TranslationKeys = {
         switchLibrary: "Basculer vers la bibliothèque",
         switchNotes: "Basculer vers les notes",
         switchGraph: "Basculer vers le graphe",
+        toggleSidebar: "Afficher/masquer la barre latérale",
         save: "Enregistrer",
         bold: "Gras",
         italic: "Italique",

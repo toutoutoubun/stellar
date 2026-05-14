@@ -176,6 +176,7 @@ const en: TranslationKeys = {
         switchLibrary: "Switch to Library",
         switchNotes: "Switch to Notes",
         switchGraph: "Switch to Graph",
+        toggleSidebar: "Toggle sidebar",
         save: "Save",
         bold: "Bold",
         italic: "Italic",

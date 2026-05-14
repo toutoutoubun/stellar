@@ -174,6 +174,7 @@ const ja = {
         switchLibrary: "文献ライブラリに切替",
         switchNotes: "ノートビューに切替",
         switchGraph: "グラフビューに切替",
+        toggleSidebar: "サイドバーの折りたたみ切替",
         save: "保存",
         bold: "太字",
         italic: "斜体",

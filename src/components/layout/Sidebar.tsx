@@ -419,8 +419,8 @@ export const Sidebar: React.FC = () => {
             e.currentTarget.style.backgroundColor = "transparent";
             e.currentTarget.style.color = "var(--color-text-tertiary)";
           }}
-          title={sidebarCollapsed ? t.sidebar.expandSidebar : t.sidebar.collapseSidebar}
-          {...(sidebarCollapsed ? { "data-tooltip": t.sidebar.expandSidebar } : {})}
+          title={sidebarCollapsed ? `${t.sidebar.expandSidebar}  (Ctrl+\\)` : `${t.sidebar.collapseSidebar}  (Ctrl+\\)`}
+          {...(sidebarCollapsed ? { "data-tooltip": `${t.sidebar.expandSidebar}  (Ctrl+\\)` } : {})}
         >
           <svg
             width="16"
