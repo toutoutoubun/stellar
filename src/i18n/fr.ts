@@ -1812,6 +1812,47 @@ const fr: TranslationKeys = {
   },
 
   // ============================================================
+  // Migration — Migration de données (Zotero / Obsidian / BibTeX / RIS)
+  // ============================================================
+  migration: {
+    title: "Migration de données",
+    menuLabel: "Importer depuis Zotero / Obsidian...",
+    settingsDesc: "Importez des données depuis Zotero, BibTeX, RIS ou Obsidian.",
+    tabReferences: "Zotero / BibTeX / RIS",
+    tabObsidian: "Obsidian Vault",
+    refDesc: "Importez des articles depuis des fichiers BibTeX (.bib), RIS (.ris) ou Zotero CSV (.csv). Les articles seront ajoutés à votre bibliothèque.",
+    obsidianDesc: "Importez des notes depuis un dossier Obsidian vault. Les fichiers Markdown avec YAML frontmatter et [[WikiLinks]] sont pris en charge.",
+    selectRefFile: "Sélectionner un fichier de références",
+    selectVault: "Sélectionner le dossier Obsidian vault",
+    noFileSelected: "Aucun fichier sélectionné",
+    noFolderSelected: "Aucun dossier sélectionné",
+    browse: "Parcourir...",
+    previewTitle: "Contenu du fichier",
+    format: "Format",
+    totalEntries: "Nombre d'entrées",
+    markdownFiles: "Fichiers Markdown",
+    skipDuplicates: "Ignorer les articles en double",
+    skipDuplicatesDesc: "Les articles avec un DOI ou un titre correspondant seront ignorés",
+    skipDuplicateNotes: "Ignorer les notes en double",
+    skipDuplicateNotesDesc: "Les notes avec un titre correspondant seront ignorées",
+    tagPrefix: "Ajouter un tag aux éléments importés (optionnel)",
+    tagPlaceholder: "ex: import-zotero",
+    startImport: "Importer",
+    importing: "Importation en cours...",
+    importComplete: "Importation terminée",
+    importFailed: "Échec de l'importation",
+    previewFailed: "Échec de l'aperçu",
+    papersImported: "Articles importés",
+    papersSkipped: "Articles ignorés",
+    notesImported: "Notes importées",
+    notesSkipped: "Notes ignorées",
+    errors: "Erreurs",
+    andMore: "et",
+    moreEntries: "entrées supplémentaires",
+    moreNotes: "notes supplémentaires",
+  },
+
+  // ============================================================
   // Hooks
   // ============================================================
   hooks: {

@@ -233,6 +233,11 @@ pub fn run() {
             commands::export::export_stellar_package,
             commands::export::inspect_stellar_package,
             commands::export::import_stellar_package,
+            // データ移行コマンド（Zotero / Obsidian / BibTeX / RIS）
+            commands::migration::preview_import_file,
+            commands::migration::preview_obsidian_vault,
+            commands::migration::import_references_file,
+            commands::migration::import_obsidian_vault,
             // データ管理コマンド
             commands::data::get_data_summary,
             commands::data::get_highlight_count,

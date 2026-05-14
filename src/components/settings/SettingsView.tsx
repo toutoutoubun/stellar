@@ -9,6 +9,7 @@ import { useI18nStore, useT } from "../../stores/useI18nStore";
 import { SUPPORTED_LOCALES, LOCALE_NATIVE_NAMES } from "../../i18n";
 import { ThemePreviewCard } from "./ThemePreviewCard";
 import { StellarPackageModal } from "../export/StellarPackageModal";
+import { DataMigrationModal } from "../export/DataMigrationModal";
 import { invoke, openDirectoryDialog, openFileDialog, relaunch, shellOpen } from "../../lib/tauriShim";
 import { dataApi, cloudBackupApi } from "../../utils/ipc";
 import { toast } from "../ui/Toast";
@@ -76,6 +77,7 @@ export const SettingsView: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [stellarPackageModalOpen, setStellarPackageModalOpen] = useState(false);
+  const [dataMigrationModalOpen, setDataMigrationModalOpen] = useState(false);
 
   // クラウドバックアップ
   const [cloudStatus, setCloudStatus] = useState<CloudBackupStatus | null>(null);
@@ -774,6 +776,36 @@ export const SettingsView: React.FC = () => {
             <line x1="12" y1="22.08" x2="12" y2="12" />
           </svg>
           {t.exportImport.k_stellarPackage}
+        </button>
+      </section>
+
+      {/* データ移行 (Zotero / Obsidian) */}
+      <section>
+        <h3 className="text-base font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
+          {((t as Record<string, Record<string, unknown>>).migration as Record<string, string> | undefined)?.title ?? "Data Migration"}
+        </h3>
+        <p className="text-sm mb-4" style={{ color: "var(--color-text-tertiary)" }}>
+          {((t as Record<string, Record<string, unknown>>).migration as Record<string, string> | undefined)?.settingsDesc ?? "Import papers and notes from Zotero, BibTeX, RIS, or Obsidian."}
+        </p>
+        <button
+          onClick={() => setDataMigrationModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 text-xs font-medium"
+          style={{
+            backgroundColor: "var(--color-bg-hover)",
+            color: "var(--color-text-primary)",
+            borderRadius: "var(--radius-button)",
+            border: "1px solid var(--color-border-primary)",
+            transition: "all var(--transition-fast)",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg-active)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg-hover)"; }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 3v12" />
+            <path d="m8 11 4 4 4-4" />
+            <path d="M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4" />
+          </svg>
+          {((t as Record<string, Record<string, unknown>>).migration as Record<string, string> | undefined)?.menuLabel ?? "Import from Zotero / Obsidian..."}
         </button>
       </section>
 
@@ -1761,6 +1793,12 @@ export const SettingsView: React.FC = () => {
       <StellarPackageModal
         open={stellarPackageModalOpen}
         onClose={() => setStellarPackageModalOpen(false)}
+      />
+
+      {/* データ移行モーダル (Zotero / Obsidian) */}
+      <DataMigrationModal
+        open={dataMigrationModalOpen}
+        onClose={() => setDataMigrationModalOpen(false)}
       />
     </div>
   );

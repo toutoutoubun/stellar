@@ -21,6 +21,7 @@ import { useT } from "../../stores/useI18nStore";
 import { invoke } from "../../lib/tauriShim";
 import { StaticSiteExportModal } from "../export/StaticSiteExportModal";
 import { StellarPackageModal } from "../export/StellarPackageModal";
+import { DataMigrationModal } from "../export/DataMigrationModal";
 import { EditPaperModal } from "./EditPaperModal";
 import type { UpdatePaperInput } from "../../types";
 
@@ -94,6 +95,7 @@ export const LibraryView: React.FC = () => {
   const [showShareDropdown, setShowShareDropdown] = useState(false);
   const [staticSiteModalOpen, setStaticSiteModalOpen] = useState(false);
   const [stellarPackageModalOpen, setStellarPackageModalOpen] = useState(false);
+  const [dataMigrationModalOpen, setDataMigrationModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingPaper, setEditingPaper] = useState<import("../../types").Paper | null>(null);
 
@@ -674,6 +676,26 @@ export const LibraryView: React.FC = () => {
                     </svg>
                     {t.exportImport.k_generateStaticSite}
                   </button>
+                  {/* Separator */}
+                  <div style={{ height: "1px", backgroundColor: "var(--color-border-secondary)", margin: "4px 0" }} />
+                  {/* Data Migration (Zotero/Obsidian) */}
+                  <button
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs text-left"
+                    style={dropdownItemBase}
+                    onClick={() => {
+                      setShowShareDropdown(false);
+                      setDataMigrationModalOpen(true);
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg-hover)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 3v12" />
+                      <path d="m8 11 4 4 4-4" />
+                      <path d="M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4" />
+                    </svg>
+                    {((t as Record<string, Record<string, unknown>>).migration as Record<string, string> | undefined)?.menuLabel ?? "Import from Zotero / Obsidian..."}
+                  </button>
                 </div>
               )}
             </div>
@@ -1055,6 +1077,12 @@ export const LibraryView: React.FC = () => {
       <StellarPackageModal
         open={stellarPackageModalOpen}
         onClose={() => setStellarPackageModalOpen(false)}
+      />
+
+      {/* データ移行モーダル (Zotero / Obsidian) */}
+      <DataMigrationModal
+        open={dataMigrationModalOpen}
+        onClose={() => setDataMigrationModalOpen(false)}
       />
 
       {/* 論文編集モーダル */}
