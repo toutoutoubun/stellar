@@ -1812,6 +1812,47 @@ const af: TranslationKeys = {
   },
 
   // ============================================================
+  // Migration — Data Migration (Zotero / Obsidian / BibTeX / RIS)
+  // ============================================================
+  migration: {
+    title: "Data-migrasie",
+    menuLabel: "Invoer vanaf Zotero / Obsidian...",
+    settingsDesc: "Voer data in vanaf Zotero, BibTeX, RIS of Obsidian.",
+    tabReferences: "Zotero / BibTeX / RIS",
+    tabObsidian: "Obsidian Vault",
+    refDesc: "Voer artikels in vanaf BibTeX (.bib), RIS (.ris) of Zotero CSV (.csv) lêers. Artikels sal by jou biblioteek gevoeg word.",
+    obsidianDesc: "Voer notas in vanaf 'n Obsidian vault-vouer. Markdown-lêers met YAML frontmatter en [[WikiLinks]] word ondersteun.",
+    selectRefFile: "Kies verwysings-lêer",
+    selectVault: "Kies Obsidian vault-vouer",
+    noFileSelected: "Geen lêer gekies nie",
+    noFolderSelected: "Geen vouer gekies nie",
+    browse: "Blaai...",
+    previewTitle: "Lêerinhoud",
+    format: "Formaat",
+    totalEntries: "Totale inskrywings",
+    markdownFiles: "Markdown-lêers",
+    skipDuplicates: "Slaan duplikaat artikels oor",
+    skipDuplicatesDesc: "Artikels met ooreenstemmende DOI of titel sal oorgeslaan word",
+    skipDuplicateNotes: "Slaan duplikaat notas oor",
+    skipDuplicateNotesDesc: "Notas met ooreenstemmende titel sal oorgeslaan word",
+    tagPrefix: "Voeg etiket by ingevoerde items (opsioneel)",
+    tagPlaceholder: "bv. zotero-invoer",
+    startImport: "Invoer",
+    importing: "Besig om in te voer...",
+    importComplete: "Invoer voltooi",
+    importFailed: "Invoer het misluk",
+    previewFailed: "Voorskou het misluk",
+    papersImported: "Artikels ingevoer",
+    papersSkipped: "Artikels oorgeslaan",
+    notesImported: "Notas ingevoer",
+    notesSkipped: "Notas oorgeslaan",
+    errors: "Foute",
+    andMore: "en",
+    moreEntries: "meer inskrywings",
+    moreNotes: "meer notas",
+  },
+
+  // ============================================================
   // Hooks
   // ============================================================
   hooks: {

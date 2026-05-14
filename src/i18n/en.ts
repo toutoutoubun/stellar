@@ -1820,6 +1820,47 @@ const en: TranslationKeys = {
   },
 
   // ============================================================
+  // Migration — Data Migration (Zotero / Obsidian / BibTeX / RIS)
+  // ============================================================
+  migration: {
+    title: "Data Migration",
+    menuLabel: "Import from Zotero / Obsidian...",
+    settingsDesc: "Import data from Zotero, BibTeX, RIS, or Obsidian.",
+    tabReferences: "Zotero / BibTeX / RIS",
+    tabObsidian: "Obsidian Vault",
+    refDesc: "Import papers from BibTeX (.bib), RIS (.ris), or Zotero CSV (.csv) files. Papers will be added to your library.",
+    obsidianDesc: "Import notes from an Obsidian vault folder. Markdown files with YAML frontmatter and [[WikiLinks]] are supported.",
+    selectRefFile: "Select reference file",
+    selectVault: "Select Obsidian vault folder",
+    noFileSelected: "No file selected",
+    noFolderSelected: "No folder selected",
+    browse: "Browse...",
+    previewTitle: "File Contents",
+    format: "Format",
+    totalEntries: "Total entries",
+    markdownFiles: "Markdown files",
+    skipDuplicates: "Skip duplicate papers",
+    skipDuplicatesDesc: "Papers with matching DOI or title will be skipped",
+    skipDuplicateNotes: "Skip duplicate notes",
+    skipDuplicateNotesDesc: "Notes with matching title will be skipped",
+    tagPrefix: "Add tag to imported items (optional)",
+    tagPlaceholder: "e.g. zotero-import",
+    startImport: "Import",
+    importing: "Importing...",
+    importComplete: "Import completed",
+    importFailed: "Import failed",
+    previewFailed: "Preview failed",
+    papersImported: "Papers imported",
+    papersSkipped: "Papers skipped",
+    notesImported: "Notes imported",
+    notesSkipped: "Notes skipped",
+    errors: "Errors",
+    andMore: "and",
+    moreEntries: "more entries",
+    moreNotes: "more notes",
+  },
+
+  // ============================================================
   // Hooks
   // ============================================================
   hooks: {
