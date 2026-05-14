@@ -175,6 +175,7 @@ const af: TranslationKeys = {
         switchLibrary: "Skakel na Biblioteek",
         switchNotes: "Skakel na Notas",
         switchGraph: "Skakel na Grafiek",
+        toggleSidebar: "Wissel sybalk",
         save: "Stoor",
         bold: "Vetdruk",
         italic: "Kursief",
