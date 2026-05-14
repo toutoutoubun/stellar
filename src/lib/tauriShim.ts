@@ -1865,6 +1865,9 @@ export async function invoke<T>(
   const COMMAND_TIMEOUTS: Record<string, number> = {
     fetch_citation_network: 45000,
     fetch_recommendations: 45000,
+    fetch_metadata_by_doi: 45000,
+    fetch_metadata_from_url: 45000,
+    download_pdf_from_url: 120000,
   };
   const TIMEOUT_MS = COMMAND_TIMEOUTS[cmd] ?? 15000;
   const result = await Promise.race([

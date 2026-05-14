@@ -164,6 +164,7 @@ async fn resolve_irdb_redirect(url: &str) -> Result<String, MetadataError> {
     let client = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::limited(10))
         .timeout(std::time::Duration::from_secs(15))
+        .use_rustls_tls()
         .build()
         .map_err(|e| MetadataError::NetworkError(format!("HTTP クライアント構築失敗: {}", e)))?;
 
@@ -1619,6 +1620,7 @@ pub async fn download_pdf_from_url(url: &str, save_path: &str) -> Result<String,
     let client = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::limited(10))
         .timeout(std::time::Duration::from_secs(120))
+        .use_rustls_tls()
         .build()
         .map_err(|e| MetadataError::NetworkError(format!("HTTP クライアント構築失敗: {}", e)))?;
 
