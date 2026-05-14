@@ -191,12 +191,24 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
     }
     setFetching(true);
     setFetched(false);
+    setPdfDownloadUrl(null);
     try {
-      const data = await invoke<Partial<CreatePaperInput>>(
+      // バックエンドは PaperMetadata を返す（pdfUrl フィールド含む）
+      const data = await invoke<Partial<CreatePaperInput> & { pdf_url?: string; pdfUrl?: string }>(
         "fetch_metadata_by_doi",
         { doi: doiInput.trim() }
       );
-      applyMetadata({ ...data, doi: doiInput.trim() });
+      // pdfUrl を保持（camelCase / snake_case 両対応）
+      const fetchedPdfUrl = data.pdfUrl ?? data.pdf_url ?? null;
+      if (fetchedPdfUrl) {
+        setPdfDownloadUrl(fetchedPdfUrl);
+        setDownloadPdf(true);
+      }
+      // pdf_url / pdfUrl はフォームには不要なので除去してから適用
+      const formData = { ...data };
+      delete formData.pdf_url;
+      delete formData.pdfUrl;
+      applyMetadata({ ...formData, doi: doiInput.trim() });
       toast.success(useI18nStore.getState().t.library.k_2uf93e);
     } catch (e) {
       const errMsg = String(e).replace(/^Error:\s*/i, "");
@@ -297,9 +309,9 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
       // まず論文を保存
       await onSave(finalForm);
 
-      // URLタブで「PDFも一緒に保存する」がON かつ PDF URL がある場合、
+      // URL/DOIタブで「PDFも一緒に保存する」がON かつ PDF URL がある場合、
       // バックエンドの download_pdf_from_url を呼んで PDF をダウンロード
-      if (activeTab === "url" && downloadPdf && pdfDownloadUrl) {
+      if ((activeTab === "url" || activeTab === "doi") && downloadPdf && pdfDownloadUrl) {
         try {
           // 保存直後の最新 paper を取得して ID を得る
           const { useLibraryStore } = await import("../../stores/useLibraryStore");
@@ -793,6 +805,46 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
               {useI18nStore.getState().t.library.k_fetch_btn}
             </Button>
           </div>
+
+          {/* PDFダウンロードオプション */}
+          <label className="flex items-center gap-2 text-xs cursor-pointer">
+            <div
+              className="flex items-center justify-center"
+              style={{
+                width: "16px",
+                height: "16px",
+                borderRadius: "4px",
+                border: downloadPdf
+                  ? "none"
+                  : "1.5px solid var(--color-border-primary)",
+                backgroundColor: downloadPdf
+                  ? "var(--color-accent-primary)"
+                  : "transparent",
+                transition: "all var(--transition-fast)",
+              }}
+              onClick={() => setDownloadPdf((v) => !v)}
+            >
+              {downloadPdf && (
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+            </div>
+            <span style={{ color: "var(--color-text-secondary)" }}>
+              {useI18nStore.getState().t.library.k_save_pdf_together}
+              {pdfDownloadUrl && (
+                <span
+                  style={{
+                    color: "var(--color-accent-primary)",
+                    marginLeft: "4px",
+                    fontSize: "10px",
+                  }}
+                >
+                  {useI18nStore.getState().t.library.k_pdf_url_detected}
+                </span>
+              )}
+            </span>
+          </label>
 
           {/* メタデータプレビュー / スケルトン / フォーム */}
           {fetching ? (
