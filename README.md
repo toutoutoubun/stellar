@@ -11,4 +11,5 @@
 
 **South African languages in progress:** isiZulu · isiXhosa · Sepedi · Setswana · Sesotho
 Stellar is actively seeking terminology reviewers and locale maintainers from South African academic communities.
+
 If you work with South African languages and want to contribute, please reach out: [shiosaisazanami@gmail.com](mailto:shiosaisazanami@gmail.com)
