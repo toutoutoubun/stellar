@@ -1,0 +1,10 @@
+{
+  "id": "jp-text-mining",
+  "name": "日本語テキストマイニング",
+  "version": "1.0.0",
+  "description": "日本語テキスト変数の頻出語、文字種、N-gram、KWICを集計する量的分析アドオンです。",
+  "author": "Stellar Contributors",
+  "entry": "index.js",
+  "capabilities": ["quantitative"],
+  "minStellarVersion": "0.4.0"
+}
