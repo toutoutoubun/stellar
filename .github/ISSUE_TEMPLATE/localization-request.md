@@ -2,7 +2,7 @@
 name: Localization Request
 about: Request support for a new language or offer to help with localization
 title: Localization Request
-labels: ''
+labels: localization
 assignees: ''
 
 ---
