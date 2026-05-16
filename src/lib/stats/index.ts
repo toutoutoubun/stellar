@@ -37,6 +37,7 @@ export {
 // ── Text analysis ───────────────────────────────────────────────────────────
 export {
   analyzeTextVariable,
+  analyzeTextCooccurrenceNetwork,
   buildCooccurrenceNetwork,
 } from "./textAnalysis";
 
