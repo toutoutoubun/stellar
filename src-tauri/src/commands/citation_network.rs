@@ -211,28 +211,82 @@ async fn semantic_scholar_get_json(
     url: &str,
     query: &[(&str, &str)],
 ) -> Result<serde_json::Value, String> {
-    let response = client
-        .get(url)
-        .query(query)
-        .header("User-Agent", SS_USER_AGENT)
-        .send()
-        .await
-        .map_err(|e| format!("Semantic Scholar API への接続に失敗: {}", e))?;
+    // リトライ付き: 429 (Too Many Requests) の場合は指数バックオフで最大3回再試行
+    let max_retries = 3u32;
+    let mut last_err = String::new();
 
-    let status = response.status();
-    if !status.is_success() {
-        let body = response.text().await.unwrap_or_default();
-        let excerpt: String = body.chars().take(240).collect();
-        return Err(format!(
-            "Semantic Scholar API エラー: {} {}",
-            status, excerpt
-        ));
+    for attempt in 0..=max_retries {
+        if attempt > 0 {
+            // 指数バックオフ: 1s, 2s, 4s
+            let delay_ms = 1000u64 * (1u64 << (attempt - 1));
+            log::info!(
+                "[citation_network] Semantic Scholar API リトライ {}/{} — {}ms 待機 (URL: {})",
+                attempt,
+                max_retries,
+                delay_ms,
+                url,
+            );
+            tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
+        }
+
+        let response = match client
+            .get(url)
+            .query(query)
+            .header("User-Agent", SS_USER_AGENT)
+            .send()
+            .await
+        {
+            Ok(r) => r,
+            Err(e) => {
+                last_err = format!("Semantic Scholar API への接続に失敗: {}", e);
+                if attempt < max_retries {
+                    log::warn!("[citation_network] 接続エラー (attempt {}): {}", attempt, e);
+                    continue;
+                }
+                return Err(last_err);
+            }
+        };
+
+        let status = response.status();
+
+        // 429 Too Many Requests — リトライ
+        if status.as_u16() == 429 {
+            let body = response.text().await.unwrap_or_default();
+            last_err = format!("Semantic Scholar API レート制限 (429): {}", body.chars().take(120).collect::<String>());
+            if attempt < max_retries {
+                log::warn!("[citation_network] レート制限 (attempt {}): {}", attempt, last_err);
+                continue;
+            }
+            return Err(last_err);
+        }
+
+        // 5xx サーバーエラー — リトライ
+        if status.is_server_error() {
+            let body = response.text().await.unwrap_or_default();
+            last_err = format!("Semantic Scholar API サーバーエラー ({}): {}", status, body.chars().take(120).collect::<String>());
+            if attempt < max_retries {
+                log::warn!("[citation_network] サーバーエラー (attempt {}): {}", attempt, last_err);
+                continue;
+            }
+            return Err(last_err);
+        }
+
+        if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
+            let excerpt: String = body.chars().take(240).collect();
+            return Err(format!(
+                "Semantic Scholar API エラー: {} {}",
+                status, excerpt
+            ));
+        }
+
+        return response
+            .json()
+            .await
+            .map_err(|e| format!("Semantic Scholar レスポンスの解析に失敗: {}", e));
     }
 
-    response
-        .json()
-        .await
-        .map_err(|e| format!("Semantic Scholar レスポンスの解析に失敗: {}", e))
+    Err(last_err)
 }
 
 async fn semantic_scholar_json(
@@ -399,6 +453,8 @@ pub async fn fetch_citation_network(
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(30))
+        .connect_timeout(std::time::Duration::from_secs(15))
+        .use_rustls_tls()
         .build()
         .map_err(|e| format!("HTTP クライアントの初期化に失敗: {}", e))?;
 
@@ -497,6 +553,8 @@ pub async fn fetch_recommendations(
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(30))
+        .connect_timeout(std::time::Duration::from_secs(15))
+        .use_rustls_tls()
         .build()
         .map_err(|e| format!("HTTP クライアントの初期化に失敗: {}", e))?;
 

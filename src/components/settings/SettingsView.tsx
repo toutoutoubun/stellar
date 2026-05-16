@@ -4,11 +4,12 @@
 
 import type React from "react";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useThemeStore, THEMES } from "../../stores/useThemeStore";
+import { useThemeStore, getAllThemes } from "../../stores/useThemeStore";
 import { useI18nStore, useT } from "../../stores/useI18nStore";
 import { SUPPORTED_LOCALES, LOCALE_NATIVE_NAMES } from "../../i18n";
 import { ThemePreviewCard } from "./ThemePreviewCard";
 import { StellarPackageModal } from "../export/StellarPackageModal";
+import { DataMigrationModal } from "../export/DataMigrationModal";
 import { invoke, openDirectoryDialog, openFileDialog, relaunch, shellOpen } from "../../lib/tauriShim";
 import { dataApi, cloudBackupApi } from "../../utils/ipc";
 import { toast } from "../ui/Toast";
@@ -51,6 +52,7 @@ import {
   EDITOR_FONTS,
   CITATION_STYLE_LABELS,
 } from "../../types";
+import { getCitationStyleAddons } from "../../plugins/addonRegistry";
 
 // ============================================================
 // SettingsView コンポーネント
@@ -76,6 +78,7 @@ export const SettingsView: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [stellarPackageModalOpen, setStellarPackageModalOpen] = useState(false);
+  const [dataMigrationModalOpen, setDataMigrationModalOpen] = useState(false);
 
   // クラウドバックアップ
   const [cloudStatus, setCloudStatus] = useState<CloudBackupStatus | null>(null);
@@ -114,6 +117,7 @@ export const SettingsView: React.FC = () => {
     { keys: "Ctrl+1", description: t.settings.shortcuts.items.switchLibrary, category: t.settings.shortcuts.categories.navigation },
     { keys: "Ctrl+2", description: t.settings.shortcuts.items.switchNotes, category: t.settings.shortcuts.categories.navigation },
     { keys: "Ctrl+3", description: t.settings.shortcuts.items.switchGraph, category: t.settings.shortcuts.categories.navigation },
+    { keys: "Ctrl+\\", description: t.settings.shortcuts.items.toggleSidebar ?? "Toggle sidebar", category: t.settings.shortcuts.categories.navigation },
     { keys: "Ctrl+S", description: t.settings.shortcuts.items.save, category: t.settings.shortcuts.categories.editor },
     { keys: "Ctrl+B", description: t.settings.shortcuts.items.bold, category: t.settings.shortcuts.categories.editor },
     { keys: "Ctrl+I", description: t.settings.shortcuts.items.italic, category: t.settings.shortcuts.categories.editor },
@@ -554,7 +558,7 @@ export const SettingsView: React.FC = () => {
           {t.settings.appearance.themeDesc}
         </p>
         <div className="flex flex-wrap gap-3">
-          {THEMES.map((meta) => (
+          {getAllThemes().map((meta) => (
             <ThemePreviewCard key={meta.id} meta={meta} isSelected={theme === meta.id} onSelect={handleThemeChange} />
           ))}
         </div>
@@ -774,6 +778,36 @@ export const SettingsView: React.FC = () => {
             <line x1="12" y1="22.08" x2="12" y2="12" />
           </svg>
           {t.exportImport.k_stellarPackage}
+        </button>
+      </section>
+
+      {/* データ移行 (Zotero / Obsidian) */}
+      <section>
+        <h3 className="text-base font-semibold mb-1" style={{ color: "var(--color-text-primary)" }}>
+          {((t as Record<string, Record<string, unknown>>).migration as Record<string, string> | undefined)?.title ?? "Data Migration"}
+        </h3>
+        <p className="text-sm mb-4" style={{ color: "var(--color-text-tertiary)" }}>
+          {((t as Record<string, Record<string, unknown>>).migration as Record<string, string> | undefined)?.settingsDesc ?? "Import papers and notes from Zotero, BibTeX, RIS, or Obsidian."}
+        </p>
+        <button
+          onClick={() => setDataMigrationModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 text-xs font-medium"
+          style={{
+            backgroundColor: "var(--color-bg-hover)",
+            color: "var(--color-text-primary)",
+            borderRadius: "var(--radius-button)",
+            border: "1px solid var(--color-border-primary)",
+            transition: "all var(--transition-fast)",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg-active)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "var(--color-bg-hover)"; }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 3v12" />
+            <path d="m8 11 4 4 4-4" />
+            <path d="M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4" />
+          </svg>
+          {((t as Record<string, Record<string, unknown>>).migration as Record<string, string> | undefined)?.menuLabel ?? "Import from Zotero / Obsidian..."}
         </button>
       </section>
 
@@ -1589,12 +1623,15 @@ export const SettingsView: React.FC = () => {
   // 引用スタイルタブ
   // ============================================================
   const renderCitationTab = () => {
-    const citationHints: Record<CitationStyle, string> = {
+    const citationHints: Record<string, string> = {
       apa7: t.settings.citation.apa7Hint,
       mla9: t.settings.citation.mla9Hint,
       chicago17: t.settings.citation.chicago17Hint,
       hitotsubashi: t.settings.citation.hitotsubashiHint,
     };
+
+    // プラグイン引用スタイルを取得
+    const pluginCitationStyles = getCitationStyleAddons();
 
     return (
       <div className="flex flex-col gap-8">
@@ -1606,6 +1643,7 @@ export const SettingsView: React.FC = () => {
             {t.settings.citation.defaultStyleDesc}
           </p>
           <div className="flex flex-col gap-2" style={{ maxWidth: "400px" }}>
+            {/* ビルトイン引用スタイル */}
             {(Object.entries(CITATION_STYLE_LABELS) as [CitationStyle, string][]).map(([style, label]) => (
               <label key={style} className="flex items-center gap-3 px-4 py-3 cursor-pointer" style={{
                 backgroundColor: citationStyle === style ? "var(--color-bg-hover)" : "var(--color-bg-card)",
@@ -1618,8 +1656,36 @@ export const SettingsView: React.FC = () => {
                 <div>
                   <div className="text-sm font-medium" style={{ color: "var(--color-text-primary)" }}>{label}</div>
                   <div className="text-xs mt-0.5" style={{ color: "var(--color-text-tertiary)" }}>
-                    {citationHints[style]}
+                    {citationHints[style] ?? ""}
                   </div>
+                </div>
+              </label>
+            ))}
+            {/* プラグイン引用スタイル */}
+            {pluginCitationStyles.map((addon) => (
+              <label key={addon.id} className="flex items-center gap-3 px-4 py-3 cursor-pointer" style={{
+                backgroundColor: citationStyle === addon.id ? "var(--color-bg-hover)" : "var(--color-bg-card)",
+                borderRadius: "var(--radius-input)",
+                border: citationStyle === addon.id ? "2px solid var(--color-accent-primary)" : "2px solid var(--color-border-secondary)",
+                transition: "all var(--transition-fast)",
+              }}>
+                <input type="radio" name="citation-style" value={addon.id} checked={citationStyle === addon.id}
+                  onChange={() => setCitationStyle(addon.id as CitationStyle)} style={{ accentColor: "var(--color-accent-primary)" }} />
+                <div>
+                  <div className="text-sm font-medium" style={{ color: "var(--color-text-primary)" }}>
+                    {addon.label}
+                    <span className="ml-2 text-xs px-1.5 py-0.5" style={{
+                      backgroundColor: "var(--color-accent-primary)",
+                      color: "#fff",
+                      borderRadius: "var(--radius-badge)",
+                      opacity: 0.8,
+                    }}>Add-on</span>
+                  </div>
+                  {addon.description && (
+                    <div className="text-xs mt-0.5" style={{ color: "var(--color-text-tertiary)" }}>
+                      {addon.description}
+                    </div>
+                  )}
                 </div>
               </label>
             ))}
@@ -1761,6 +1827,12 @@ export const SettingsView: React.FC = () => {
       <StellarPackageModal
         open={stellarPackageModalOpen}
         onClose={() => setStellarPackageModalOpen(false)}
+      />
+
+      {/* データ移行モーダル (Zotero / Obsidian) */}
+      <DataMigrationModal
+        open={dataMigrationModalOpen}
+        onClose={() => setDataMigrationModalOpen(false)}
       />
     </div>
   );

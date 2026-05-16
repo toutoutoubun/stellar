@@ -11,6 +11,7 @@ pub mod export;
 pub mod highlights;
 pub mod links;
 pub mod metadata;
+pub mod migration;
 pub mod notes;
 pub mod papers;
 pub mod plugins;

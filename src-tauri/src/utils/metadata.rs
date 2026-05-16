@@ -164,6 +164,7 @@ async fn resolve_irdb_redirect(url: &str) -> Result<String, MetadataError> {
     let client = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::limited(10))
         .timeout(std::time::Duration::from_secs(15))
+        .use_rustls_tls()
         .build()
         .map_err(|e| MetadataError::NetworkError(format!("HTTP クライアント構築失敗: {}", e)))?;
 
@@ -1116,10 +1117,24 @@ async fn scrape_html_metadata_once(
         return Err(MetadataError::ApiError(msg));
     }
 
-    let html_text = response
-        .text()
+    // J-Stage 等の日本語サイトは Shift_JIS / EUC-JP で返すことがある。
+    // reqwest::Response::text() は Content-Type charset を参照するが、
+    // charset が指定されていない場合 UTF-8 と仮定して壊れることがある。
+    // bytes() で取得し、encoding_rs で明示的にデコードすることで
+    // プラットフォームによらず正しく処理できるようにする。
+    let content_type = response
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .to_string();
+
+    let raw_bytes = response
+        .bytes()
         .await
         .map_err(|e| MetadataError::ParseError(format!("HTML の取得に失敗: {}", e)))?;
+
+    let html_text = decode_html_bytes(&raw_bytes, &content_type);
 
     parse_html_metadata(&html_text, url, site)
 }
@@ -1605,6 +1620,7 @@ pub async fn download_pdf_from_url(url: &str, save_path: &str) -> Result<String,
     let client = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::limited(10))
         .timeout(std::time::Duration::from_secs(120))
+        .use_rustls_tls()
         .build()
         .map_err(|e| MetadataError::NetworkError(format!("HTTP クライアント構築失敗: {}", e)))?;
 
@@ -1675,14 +1691,77 @@ pub async fn download_pdf_from_url(url: &str, save_path: &str) -> Result<String,
 // ════════════════════════════════════════════════════════════
 
 /// 共通 HTTP クライアントを構築する
+/// rustls-tls バックエンドを使用するため、macOS / Windows / Linux で
+/// 同一の TLS 実装が使用され、プラットフォーム固有の OpenSSL/SChannel
+/// リンク問題を回避できる。
 fn build_http_client() -> Result<reqwest::Client, MetadataError> {
     reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::limited(10))
         .timeout(std::time::Duration::from_secs(30))
+        .connect_timeout(std::time::Duration::from_secs(15))
         .danger_accept_invalid_certs(false)
         .cookie_store(true) // クッキーストアを有効化（セッション維持用）
+        .user_agent("Stellar/0.1.0 (academic research tool; mailto:contact@stellar.app)")
+        .use_rustls_tls()
         .build()
         .map_err(|e| MetadataError::NetworkError(format!("HTTP クライアントの構築に失敗: {}", e)))
+}
+
+/// HTML バイト列をテキストにデコードする。
+/// Content-Type ヘッダーの charset、HTML 内の meta charset、BOM を参照して
+/// 正しいエンコーディングを判定する。J-Stage 等の日本語サイトが Shift_JIS /
+/// EUC-JP で返すケースに対応。
+fn decode_html_bytes(bytes: &[u8], content_type: &str) -> String {
+    // 1. Content-Type ヘッダーから charset を抽出
+    let charset_from_header = content_type
+        .split(';')
+        .find_map(|part| {
+            let part = part.trim().to_lowercase();
+            if part.starts_with("charset=") {
+                Some(part["charset=".len()..].trim_matches('"').trim().to_string())
+            } else {
+                None
+            }
+        });
+
+    // 2. HTML 内の <meta charset="..."> または <meta http-equiv="Content-Type" content="...;charset=...">
+    let charset_from_html = if charset_from_header.is_none() {
+        // ASCII 範囲で先頭 2048 バイトを検索（エンコーディング未確定のため安全に）
+        let preview: String = bytes.iter().take(2048).map(|&b| b as char).collect();
+        let preview_lower = preview.to_lowercase();
+
+        // <meta charset="xxx">
+        preview_lower
+            .find("charset=")
+            .and_then(|pos| {
+                let after = &preview_lower[pos + 8..];
+                let after = after.trim_start_matches(['\"', '\'', ' ']);
+                let end = after.find(|c: char| c == '"' || c == '\'' || c == ';' || c == '>' || c == ' ')
+                    .unwrap_or(after.len());
+                let cs = after[..end].trim().to_string();
+                if cs.is_empty() { None } else { Some(cs) }
+            })
+    } else {
+        None
+    };
+
+    let charset = charset_from_header
+        .or(charset_from_html)
+        .unwrap_or_else(|| "utf-8".to_string());
+
+    // 3. encoding_rs でデコード
+    let encoding = encoding_rs::Encoding::for_label(charset.as_bytes())
+        .unwrap_or(encoding_rs::UTF_8);
+
+    let (text, _, had_errors) = encoding.decode(bytes);
+    if had_errors {
+        log::warn!(
+            "[metadata] HTML デコードで一部文字化けが発生 (charset: {})",
+            charset
+        );
+    }
+
+    text.into_owned()
 }
 
 /// 2つのメタデータをマージする（primary が優先、空フィールドを secondary で補完）

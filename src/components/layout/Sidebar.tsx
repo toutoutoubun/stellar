@@ -5,11 +5,12 @@
 // 折りたたみ対応: collapsed 状態ではアイコン + ツールチップ表示
 
 import type React from "react";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { clsx } from "clsx";
 import { useUIStore } from "../../stores/useUIStore";
 import { useT } from "../../stores/useI18nStore";
 import type { SidebarView } from "../../types";
+import { useAddonRegistry } from "../../plugins/addonRegistry";
 
 /** サイドバーのナビゲーションアイテム定義 */
 interface NavItem {
@@ -17,7 +18,7 @@ interface NavItem {
   labelKey: string;
   icon: React.ReactNode;
   /** セクション区分 */
-  section: "main" | "analysis" | "system";
+  section: "main" | "analysis" | "addons" | "system";
   /** キーボードショートカットヒント */
   shortcut?: string;
 }
@@ -108,6 +109,7 @@ const NAV_ITEMS: NavItem[] = [
 const SECTION_LABELS: Record<string, string> = {
   main: "WORKSPACE",
   analysis: "ANALYSIS",
+  addons: "ADD-ONS",
 };
 
 /** ナビゲーションボタン */
@@ -216,17 +218,35 @@ const NavButton: React.FC<{
 
 export const Sidebar: React.FC = () => {
   const t = useT();
+  const { workspaceViews } = useAddonRegistry();
 
-  /** ビュー → 翻訳済みラベルのマッピング */
-  const labelMap: Record<SidebarView, string> = {
-    library: t.sidebar.library,
-    notes: t.sidebar.notes,
-    graph: t.sidebar.graph,
-    qualitative: t.sidebar.qualitative,
-    quantitative: t.sidebar.quantitative,
-    settings: t.sidebar.settings,
-    search: t.common.search,
-  };
+  /** ビュー → 翻訳済みラベルのマッピング（プラグインビューも含む） */
+  const labelMap: Record<string, string> = useMemo(() => {
+    const base: Record<string, string> = {
+      library: t.sidebar.library,
+      notes: t.sidebar.notes,
+      graph: t.sidebar.graph,
+      qualitative: t.sidebar.qualitative,
+      quantitative: t.sidebar.quantitative,
+      settings: t.sidebar.settings,
+      search: t.common.search,
+    };
+    // プラグインワークスペースビューのラベルを追加
+    for (const addon of workspaceViews) {
+      base[`plugin:${addon.id}`] = addon.label;
+    }
+    return base;
+  }, [t, workspaceViews]);
+
+  /** プラグインから登録されたナビアイテム */
+  const pluginNavItems: NavItem[] = useMemo(() => {
+    return workspaceViews.map((addon) => ({
+      view: `plugin:${addon.id}` as SidebarView,
+      labelKey: addon.id,
+      icon: addon.icon,
+      section: addon.section ?? "addons",
+    }));
+  }, [workspaceViews]);
 
   const sidebarView = useUIStore((s) => s.sidebarView);
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
@@ -240,6 +260,14 @@ export const Sidebar: React.FC = () => {
 
   const handleNavClick = useCallback(
     (view: SidebarView) => {
+      // プラグインビューの処理
+      if (typeof view === "string" && view.startsWith("plugin:")) {
+        const pluginId = view.slice("plugin:".length);
+        setSidebarView(view);
+        setMainPaneContent({ type: "plugin-view", pluginId });
+        return;
+      }
+
       if (view === "graph") { openGraph(); return; }
       if (view === "settings") { openSettings(); return; }
       if (view === "qualitative") { openQualitative(); return; }
@@ -261,10 +289,12 @@ export const Sidebar: React.FC = () => {
     [setSidebarView, openGraph, openSettings, openQualitative, openQuantitative, setMainPaneContent]
   );
 
-  /** セクション別にアイテムをグループ化 */
-  const mainItems = NAV_ITEMS.filter((i) => i.section === "main");
-  const analysisItems = NAV_ITEMS.filter((i) => i.section === "analysis");
-  const systemItems = NAV_ITEMS.filter((i) => i.section === "system");
+  /** セクション別にアイテムをグループ化（ビルトイン + プラグイン） */
+  const allNavItems = useMemo(() => [...NAV_ITEMS, ...pluginNavItems], [pluginNavItems]);
+  const mainItems = allNavItems.filter((i) => i.section === "main");
+  const analysisItems = allNavItems.filter((i) => i.section === "analysis");
+  const addonItems = allNavItems.filter((i) => i.section === "addons");
+  const systemItems = allNavItems.filter((i) => i.section === "system");
 
   return (
     <aside
@@ -296,7 +326,7 @@ export const Sidebar: React.FC = () => {
               item={item}
               isActive={sidebarView === item.view}
               isCollapsed={sidebarCollapsed}
-              label={labelMap[item.view]}
+              label={labelMap[item.view] ?? item.labelKey}
               onClick={() => handleNavClick(item.view)}
             />
           ))}
@@ -316,11 +346,33 @@ export const Sidebar: React.FC = () => {
               item={item}
               isActive={sidebarView === item.view}
               isCollapsed={sidebarCollapsed}
-              label={labelMap[item.view]}
+              label={labelMap[item.view] ?? item.labelKey}
               onClick={() => handleNavClick(item.view)}
             />
           ))}
         </div>
+
+        {/* ── アドオンセクション（プラグインが登録されている場合のみ表示） ── */}
+        {addonItems.length > 0 && (
+          <>
+            <div className="section-divider" />
+            {!sidebarCollapsed && (
+              <div className="section-label">{SECTION_LABELS.addons}</div>
+            )}
+            <div className="flex flex-col gap-0.5">
+              {addonItems.map((item) => (
+                <NavButton
+                  key={item.view}
+                  item={item}
+                  isActive={sidebarView === item.view}
+                  isCollapsed={sidebarCollapsed}
+                  label={labelMap[item.view] ?? item.labelKey}
+                  onClick={() => handleNavClick(item.view)}
+                />
+              ))}
+            </div>
+          </>
+        )}
 
         {/* ── スペーサー ── */}
         <div className="flex-1" />
@@ -336,7 +388,7 @@ export const Sidebar: React.FC = () => {
               item={item}
               isActive={sidebarView === item.view}
               isCollapsed={sidebarCollapsed}
-              label={labelMap[item.view]}
+              label={labelMap[item.view] ?? item.labelKey}
               onClick={() => handleNavClick(item.view)}
             />
           ))}
@@ -367,8 +419,8 @@ export const Sidebar: React.FC = () => {
             e.currentTarget.style.backgroundColor = "transparent";
             e.currentTarget.style.color = "var(--color-text-tertiary)";
           }}
-          title={sidebarCollapsed ? t.sidebar.expandSidebar : t.sidebar.collapseSidebar}
-          {...(sidebarCollapsed ? { "data-tooltip": t.sidebar.expandSidebar } : {})}
+          title={sidebarCollapsed ? `${t.sidebar.expandSidebar}  (Ctrl+\\)` : `${t.sidebar.collapseSidebar}  (Ctrl+\\)`}
+          {...(sidebarCollapsed ? { "data-tooltip": `${t.sidebar.expandSidebar}  (Ctrl+\\)` } : {})}
         >
           <svg
             width="16"

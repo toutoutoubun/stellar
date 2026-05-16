@@ -1555,6 +1555,63 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     };
   }
 
+  // ── データ移行コマンド（Zotero / Obsidian / BibTeX / RIS）──
+  if (cmd === "preview_import_file") {
+    return {
+      handled: true,
+      result: {
+        entries: [
+          { title: "[Preview] Sample BibTeX Article", authors: ["Author A", "Author B"], year: 2023, journal: "Journal of Examples", volume: "1", issue: "2", pages: "10-20", doi: "10.1234/example", url: null, abstract: "This is a sample abstract.", tags: ["sample", "preview"], entryType: "article" },
+          { title: "[Preview] Another Reference", authors: ["Author C"], year: 2022, journal: "Sample Journal", volume: null, issue: null, pages: null, doi: null, url: "https://example.com", abstract: null, tags: [], entryType: "inproceedings" },
+        ],
+        notes: [],
+        formatDetected: "bibtex",
+        totalCount: 2,
+      },
+    };
+  }
+
+  if (cmd === "preview_obsidian_vault") {
+    return {
+      handled: true,
+      result: {
+        entries: [],
+        notes: [
+          { title: "[Preview] Research Notes", content: "# Research Notes\n\nSample content with [[WikiLink]].", tags: ["research", "preview"], sourcePath: "Research Notes.md" },
+          { title: "[Preview] Meeting Minutes", content: "# Meeting\n\nDiscussion about methodology.", tags: ["meeting"], sourcePath: "meetings/Meeting Minutes.md" },
+        ],
+        formatDetected: "obsidian",
+        totalCount: 2,
+      },
+    };
+  }
+
+  if (cmd === "import_references_file") {
+    return {
+      handled: true,
+      result: {
+        papersImported: 2,
+        notesImported: 0,
+        papersSkipped: 0,
+        notesSkipped: 0,
+        errors: [],
+      },
+    };
+  }
+
+  if (cmd === "import_obsidian_vault") {
+    return {
+      handled: true,
+      result: {
+        papersImported: 0,
+        notesImported: 2,
+        papersSkipped: 0,
+        notesSkipped: 0,
+        errors: [],
+      },
+    };
+  }
+
   // ── Citation Network（動的生成）──
   if (cmd === "fetch_citation_network") {
     const paperId = (args?.paperId ?? "") as string;
@@ -2042,6 +2099,12 @@ const MOCK_RESPONSES: Record<string, any> = {
   inspect_stellar_package: { version: "1.0.0", createdAt: new Date().toISOString(), paperCount: 0, noteCount: 0, highlightCount: 0, linkCount: 0, hasPdfs: false, fileSizeBytes: 0 },
   import_stellar_package: { papersImported: 0, notesImported: 0, highlightsImported: 0, linksImported: 0, pdfsExtracted: 0, conflicts: [] },
 
+  // Data Migration (Zotero / Obsidian / BibTeX / RIS)
+  // preview_import_file → 動的ハンドラで処理
+  // preview_obsidian_vault → 動的ハンドラで処理
+  // import_references_file → 動的ハンドラで処理
+  // import_obsidian_vault → 動的ハンドラで処理
+
   // Citation Network
   // fetch_citation_network → 動的ハンドラで処理
   // fetch_recommendations → 動的ハンドラで処理
@@ -2092,6 +2155,9 @@ export async function invoke<T>(
   const COMMAND_TIMEOUTS: Record<string, number> = {
     fetch_citation_network: 45000,
     fetch_recommendations: 45000,
+    fetch_metadata_by_doi: 45000,
+    fetch_metadata_from_url: 45000,
+    download_pdf_from_url: 120000,
   };
   const TIMEOUT_MS = COMMAND_TIMEOUTS[cmd] ?? 15000;
   const result = await Promise.race([

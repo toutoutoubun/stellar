@@ -13,6 +13,12 @@ on:
     tags:
       - 'v*'
 
+# ── 共通: タグ名を1箇所で解決する ──
+# push (tag) → github.ref_name  例: v0.3.2
+# workflow_dispatch → inputs.tag_name  例: v0.3.2 (空なら release しない)
+env:
+  RELEASE_TAG: ${{ github.event.inputs.tag_name || github.ref_name }}
+
 jobs:
   # ============================================================
   # macOS — Universal (arm64 + x64) DMG
@@ -207,25 +213,60 @@ jobs:
   # GitHub Release — collect all artifacts & publish
   # ============================================================
   publish-release:
-    if: startsWith(github.ref, 'refs/tags/')
+    # tag push → RELEASE_TAG = "v0.3.2" (startsWith true)
+    # workflow_dispatch + tag_name 入力あり → RELEASE_TAG = "v0.3.2" (startsWith true)
+    # workflow_dispatch + tag_name 空 → RELEASE_TAG = "main" (startsWith false → skip)
+    if: startsWith(needs.build-macos.result, 'success') && startsWith(needs.build-windows.result, 'success') && startsWith(needs.build-linux.result, 'success')
     needs: [build-macos, build-windows, build-linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve release tag
+        id: resolve_tag
+        run: |
+          TAG="${{ github.event.inputs.tag_name || github.ref_name }}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if [[ "$TAG" == v* ]]; then
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # workflow_dispatch で tag_name を指定した場合、そのタグが
+      # まだ存在しなければ HEAD に作成する
+      - name: Create tag if needed
+        if: steps.resolve_tag.outputs.should_release == 'true'
+        run: |
+          TAG="${{ steps.resolve_tag.outputs.tag }}"
+          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+            git tag "$TAG"
+            git push origin "$TAG"
+            echo "Created and pushed tag $TAG"
+          else
+            echo "Tag $TAG already exists"
+          fi
+
       - name: Download all artifacts
+        if: steps.resolve_tag.outputs.should_release == 'true'
         uses: actions/download-artifact@v4
         with:
           path: release-artifacts
 
       - name: List downloaded artifacts
+        if: steps.resolve_tag.outputs.should_release == 'true'
         run: find release-artifacts -type f | sort
 
       - name: Create GitHub Release
+        if: steps.resolve_tag.outputs.should_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.resolve_tag.outputs.tag }}
           files: release-artifacts/**/*
           draft: false
           prerelease: false
           generate_release_notes: true
+

@@ -93,6 +93,7 @@ const ScreenTransition: React.FC<ScreenTransitionProps> = ({
 const AppContent: React.FC = () => {
   const theme = useThemeStore((s) => s.theme);
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
+  const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const toggleSearchModal = useUIStore((s) => s.toggleSearchModal);
   const openSettings = useUIStore((s) => s.openSettings);
   const goBack = useUIStore((s) => s.goBack);
@@ -144,10 +145,15 @@ const AppContent: React.FC = () => {
         e.preventDefault();
         goForward();
       }
+      // Cmd+\ / Ctrl+\ → サイドバーの待たみトグル
+      if ((e.metaKey || e.ctrlKey) && e.key === "\\") {
+        e.preventDefault();
+        toggleSidebar();
+      }
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [toggleSearchModal, openSettings, goBack, goForward]);
+  }, [toggleSearchModal, openSettings, goBack, goForward, toggleSidebar]);
 
   // 遷移完了コールバック
   const handleTransitionEnd = useCallback(() => {

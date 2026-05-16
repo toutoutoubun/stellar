@@ -93,9 +93,18 @@ const makeEntry = (state: {
   sidebarView: state.sidebarView,
 });
 
+/** localStorage からサイドバー折りたたみ状態を復元 */
+const loadSidebarCollapsed = (): boolean => {
+  try {
+    return localStorage.getItem("stellar-sidebar-collapsed") === "true";
+  } catch {
+    return false;
+  }
+};
+
 export const useUIStore = create<UIState>((set, get) => ({
   sidebarView: "library",
-  sidebarCollapsed: false,
+  sidebarCollapsed: loadSidebarCollapsed(),
   mainPaneContent: { type: "empty" },
   contextPanelOpen: false,
   searchModalOpen: false,
@@ -105,10 +114,16 @@ export const useUIStore = create<UIState>((set, get) => ({
 
   setSidebarView: (view) => set({ sidebarView: view }),
 
-  toggleSidebar: () =>
-    set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+  toggleSidebar: () => {
+    const next = !get().sidebarCollapsed;
+    try { localStorage.setItem("stellar-sidebar-collapsed", String(next)); } catch { /* ignore */ }
+    set({ sidebarCollapsed: next });
+  },
 
-  setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+  setSidebarCollapsed: (collapsed) => {
+    try { localStorage.setItem("stellar-sidebar-collapsed", String(collapsed)); } catch { /* ignore */ }
+    set({ sidebarCollapsed: collapsed });
+  },
 
   setMainPaneContent: (content) => {
     const state = get();
