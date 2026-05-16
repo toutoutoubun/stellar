@@ -15,6 +15,12 @@ import { useI18nStore } from "../../stores/useI18nStore";
 
  
 type KuromojiTokenizer = { tokenize: (text: string) => KuromojiToken[] };
+type KuromojiFactory = {
+  builder: (config: { dicPath: string }) => {
+    build: (callback: (err: Error | null, tokenizer: KuromojiTokenizer) => void) => void;
+  };
+};
+type KuromojiImport = KuromojiFactory | { default: KuromojiFactory };
 
 interface KuromojiToken {
   surface_form: string;
@@ -25,6 +31,7 @@ interface KuromojiToken {
 }
 
 let _tokenizer: KuromojiTokenizer | null = null;
+let _tokenizerPromise: Promise<KuromojiTokenizer> | null = null;
 
 interface TokenizedTexts {
   docTokens: string[][];
@@ -43,6 +50,7 @@ interface CooccurrenceNetworkOptions {
 const DEFAULT_COOCCURRENCE_WINDOW = 5;
 const DEFAULT_COOCCURRENCE_MAX_NODES = 100;
 const DEFAULT_COOCCURRENCE_MAX_EDGES = 600;
+const KUROMOJI_LOAD_TIMEOUT_MS = 4_000;
 
 /**
  * Lazily initialise the kuromoji tokeniser.  Dictionary path is resolved
@@ -50,29 +58,123 @@ const DEFAULT_COOCCURRENCE_MAX_EDGES = 600;
  */
 async function getTokenizer(): Promise<KuromojiTokenizer> {
   if (_tokenizer) return _tokenizer;
+  if (_tokenizerPromise) return _tokenizerPromise;
 
+  _tokenizerPromise = loadKuromojiTokenizer()
+    .then((tokenizer) => {
+      _tokenizer = tokenizer;
+      return tokenizer;
+    })
+    .catch((error) => {
+      console.warn("[TextAnalysis] kuromoji unavailable; using fallback tokenizer:", error);
+      const tokenizer = createFallbackTokenizer();
+      _tokenizer = tokenizer;
+      return tokenizer;
+    });
+
+  return _tokenizerPromise;
+}
+
+async function loadKuromojiTokenizer(): Promise<KuromojiTokenizer> {
   // kuromoji is CJS — use variable to prevent Vite static analysis from
   // detecting and pre-bundling the 18 MB dictionary module.
    
   const modName = "kuromoji";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- kuromoji has no type declarations
-  const kuromoji = (await import(/* @vite-ignore */ modName)) as any;
-  const kuromojiMod = kuromoji.default ?? kuromoji;
+  const kuromoji = (await withTimeout(
+    import(/* @vite-ignore */ modName),
+    KUROMOJI_LOAD_TIMEOUT_MS,
+    "kuromoji import timed out",
+  )) as KuromojiImport;
+  const kuromojiMod = "default" in kuromoji ? kuromoji.default : kuromoji;
 
-  return new Promise<KuromojiTokenizer>((resolve, reject) => {
-    kuromojiMod
-      .builder({ dicPath: "node_modules/kuromoji/dict/" })
-      .build(
-        (
-          err: Error | null,
-          tokenizer: KuromojiTokenizer,
-        ) => {
-          if (err) return reject(err);
-          _tokenizer = tokenizer;
-          resolve(tokenizer);
-        },
-      );
+  return withTimeout(
+    new Promise<KuromojiTokenizer>((resolve, reject) => {
+      kuromojiMod
+        .builder({ dicPath: "node_modules/kuromoji/dict/" })
+        .build(
+          (
+            err: Error | null,
+            tokenizer: KuromojiTokenizer,
+          ) => {
+            if (err) return reject(err);
+            resolve(tokenizer);
+          },
+        );
+    }),
+    KUROMOJI_LOAD_TIMEOUT_MS,
+    "kuromoji dictionary load timed out",
+  );
+}
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
   });
+}
+
+function createFallbackTokenizer(): KuromojiTokenizer {
+  return {
+    tokenize(text: string): KuromojiToken[] {
+      const normalized = String(text ?? "").normalize("NFKC");
+      const tokens = normalized.match(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}ー]+|[A-Za-z0-9][A-Za-z0-9._-]*/gu) ?? [];
+      return tokens
+        .flatMap(splitFallbackJapaneseToken)
+        .filter((token) => token.length >= 2)
+        .map((token) => ({
+          surface_form: token,
+          pos: useI18nStore.getState().t.quantResults.str_f20h,
+          pos_detail_1: "",
+          basic_form: token,
+        }));
+    },
+  };
+}
+
+function splitFallbackJapaneseToken(token: string): string[] {
+  const segments: string[] = [];
+  let current = "";
+  let previousType = "";
+
+  for (const char of token) {
+    const type = fallbackCharType(char);
+    const compatible =
+      previousType === type ||
+      (previousType === "kanji" && type === "hiragana") ||
+      (previousType === "hiragana" && type === "kanji");
+
+    if (current && !compatible) {
+      segments.push(current);
+      current = char;
+    } else {
+      current += char;
+    }
+    previousType = type;
+  }
+
+  if (current) segments.push(current);
+  return segments.length <= 1 ? [token] : segments;
+}
+
+function fallbackCharType(char: string): string {
+  if (/\p{Script=Han}/u.test(char)) return "kanji";
+  if (/\p{Script=Hiragana}/u.test(char)) return "hiragana";
+  if (/\p{Script=Katakana}/u.test(char)) return "katakana";
+  if (/[A-Za-z0-9]/.test(char)) return "latin";
+  return "other";
 }
 
 // ---------------------------------------------------------------------------
