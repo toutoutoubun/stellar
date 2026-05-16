@@ -222,6 +222,8 @@ async fn run_migrations_safe(pool: &SqlitePool) {
         log::info!("V005__draft_mode 完了");
     }
 
+    repair_quantitative_schema(pool).await;
+
     log::info!("全マイグレーション処理完了");
 }
 
@@ -358,6 +360,180 @@ async fn run_v005_safe(pool: &SqlitePool) {
     safe_create_index(
         pool,
         "CREATE INDEX idx_draft_chapters_note_id ON draft_chapters(note_id, order_index)",
+    )
+    .await;
+}
+
+/// 量的分析スキーマの自己修復。
+/// 過去の V003 で data_rows."values" が未クォートだったため、
+/// datasets などは作成済みでも data_rows だけ欠ける DB を起動時に修復する。
+async fn repair_quantitative_schema(pool: &SqlitePool) {
+    exec_ignore(
+        pool,
+        "CREATE TABLE IF NOT EXISTS datasets (
+            id          TEXT PRIMARY KEY NOT NULL,
+            name        TEXT NOT NULL,
+            description TEXT,
+            source_type TEXT NOT NULL CHECK(source_type IN ('csv','manual','from_codes','from_highlights','from_timeline')),
+            source_ref  TEXT,
+            row_count   INTEGER NOT NULL DEFAULT 0,
+            created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+        )",
+    )
+    .await;
+
+    exec_ignore(
+        pool,
+        "CREATE TABLE IF NOT EXISTS variables (
+            id            TEXT PRIMARY KEY NOT NULL,
+            dataset_id    TEXT NOT NULL,
+            column_index  INTEGER NOT NULL,
+            name          TEXT NOT NULL,
+            label         TEXT,
+            var_type      TEXT NOT NULL CHECK(var_type IN ('nominal','ordinal','scale','text','date')),
+            unit          TEXT,
+            likert_min    INTEGER,
+            likert_max    INTEGER,
+            likert_labels TEXT,
+            FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON DELETE CASCADE
+        )",
+    )
+    .await;
+
+    exec_ignore(
+        pool,
+        "CREATE TABLE IF NOT EXISTS data_rows (
+            id          TEXT PRIMARY KEY NOT NULL,
+            dataset_id  TEXT NOT NULL,
+            row_index   INTEGER NOT NULL,
+            \"values\"    TEXT NOT NULL,
+            created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON DELETE CASCADE
+        )",
+    )
+    .await;
+
+    exec_ignore(
+        pool,
+        "CREATE TABLE IF NOT EXISTS analyses (
+            id              TEXT PRIMARY KEY NOT NULL,
+            dataset_id      TEXT NOT NULL,
+            analysis_type   TEXT NOT NULL,
+            name            TEXT NOT NULL,
+            parameters      TEXT NOT NULL,
+            result          TEXT NOT NULL,
+            interpretation  TEXT,
+            created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON DELETE CASCADE
+        )",
+    )
+    .await;
+
+    exec_ignore(
+        pool,
+        "CREATE TABLE IF NOT EXISTS token_frequencies (
+            id              TEXT PRIMARY KEY NOT NULL,
+            dataset_id      TEXT NOT NULL,
+            variable_id     TEXT NOT NULL,
+            token           TEXT NOT NULL,
+            frequency       INTEGER NOT NULL DEFAULT 1,
+            tf_idf          REAL,
+            pos             TEXT,
+            document_count  INTEGER NOT NULL DEFAULT 1,
+            FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON DELETE CASCADE,
+            FOREIGN KEY (variable_id) REFERENCES variables(id) ON DELETE CASCADE
+        )",
+    )
+    .await;
+
+    exec_ignore(
+        pool,
+        "CREATE TRIGGER IF NOT EXISTS trg_data_rows_insert_count
+        AFTER INSERT ON data_rows
+        BEGIN
+            UPDATE datasets SET row_count = (
+                SELECT COUNT(*) FROM data_rows WHERE dataset_id = NEW.dataset_id
+            ) WHERE id = NEW.dataset_id;
+        END",
+    )
+    .await;
+
+    exec_ignore(
+        pool,
+        "CREATE TRIGGER IF NOT EXISTS trg_data_rows_delete_count
+        AFTER DELETE ON data_rows
+        BEGIN
+            UPDATE datasets SET row_count = (
+                SELECT COUNT(*) FROM data_rows WHERE dataset_id = OLD.dataset_id
+            ) WHERE id = OLD.dataset_id;
+        END",
+    )
+    .await;
+
+    exec_ignore(
+        pool,
+        "CREATE TRIGGER IF NOT EXISTS trg_datasets_updated_at
+        AFTER UPDATE ON datasets
+        FOR EACH ROW
+        WHEN NEW.updated_at = OLD.updated_at
+        BEGIN
+            UPDATE datasets SET updated_at = datetime('now')
+            WHERE id = NEW.id;
+        END",
+    )
+    .await;
+
+    exec_ignore(
+        pool,
+        "CREATE TRIGGER IF NOT EXISTS trg_variables_update_dataset
+        AFTER UPDATE ON variables
+        BEGIN
+            UPDATE datasets SET updated_at = datetime('now')
+            WHERE id = NEW.dataset_id;
+        END",
+    )
+    .await;
+
+    exec_ignore(
+        pool,
+        "CREATE TRIGGER IF NOT EXISTS trg_analyses_update_dataset
+        AFTER UPDATE ON analyses
+        BEGIN
+            UPDATE datasets SET updated_at = datetime('now')
+            WHERE id = NEW.dataset_id;
+        END",
+    )
+    .await;
+
+    safe_create_index(
+        pool,
+        "CREATE INDEX idx_data_rows_dataset_row ON data_rows(dataset_id, row_index)",
+    )
+    .await;
+    safe_create_index(
+        pool,
+        "CREATE INDEX idx_variables_dataset_col ON variables(dataset_id, column_index)",
+    )
+    .await;
+    safe_create_index(
+        pool,
+        "CREATE INDEX idx_token_frequencies_dataset_token ON token_frequencies(dataset_id, token, frequency DESC)",
+    )
+    .await;
+    safe_create_index(
+        pool,
+        "CREATE INDEX idx_analyses_dataset_type ON analyses(dataset_id, analysis_type)",
+    )
+    .await;
+    safe_create_index(
+        pool,
+        "CREATE INDEX idx_datasets_updated_at ON datasets(updated_at)",
+    )
+    .await;
+    safe_create_index(
+        pool,
+        "CREATE INDEX idx_token_frequencies_variable ON token_frequencies(variable_id)",
     )
     .await;
 }

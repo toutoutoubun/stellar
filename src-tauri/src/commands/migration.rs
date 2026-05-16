@@ -4,7 +4,6 @@
 
 use crate::db::get_pool;
 use serde::{Deserialize, Serialize};
-use sqlx::Row;
 use std::collections::HashMap;
 use tauri::AppHandle;
 

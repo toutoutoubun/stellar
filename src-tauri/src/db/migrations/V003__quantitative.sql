@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS data_rows (
     id          TEXT PRIMARY KEY NOT NULL,
     dataset_id  TEXT NOT NULL,
     row_index   INTEGER NOT NULL,
-    values      TEXT NOT NULL,
+    "values"    TEXT NOT NULL,
     created_at  TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON DELETE CASCADE
 );

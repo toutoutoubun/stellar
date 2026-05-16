@@ -135,17 +135,21 @@ export const DatasetList: React.FC = () => {
 
   // ── 自動名前サジェスト ──
   const getAutoName = useCallback((source: CreateSource): string => {
+    const dateStr = new Date().toLocaleDateString();
+    const withDate = (template: string) =>
+      template.replace(/\$\{dateStr\}/g, dateStr);
+
     switch (source) {
       case "csv":
-        return t.quantitative.k_ewifof;
+        return withDate(t.quantitative.k_ewifof);
       case "manual":
-        return t.quantitative.k_n15ubc;
+        return withDate(t.quantitative.k_n15ubc);
       case "codes":
-        return t.quantitative.k_wq3gz3;
+        return withDate(t.quantitative.k_wq3gz3);
       case "highlights":
-        return t.quantitative.k_d7dk5g;
+        return withDate(t.quantitative.k_d7dk5g);
     }
-  }, []);
+  }, [t]);
 
   // ソース変更時に自動名前設定
   const handleSourceChange = useCallback(
