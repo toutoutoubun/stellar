@@ -218,14 +218,14 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       try {
         if (isTauri) {
           let blob: Blob | null = null;
-          const rawPath = paper.pdfPath!;
+          const rawPath = pdfPath;
           const normalizedPath = normalizePath(rawPath);
 
-          // 方法1: Tauri fs プラグインで直接読み取り（最も信頼性が高い）
+          // 方法1: convertFileSrc で asset URL を取得し、fetch → Blob URL
           // Windows (WebView2) / Linux (webkit2gtk) では asset protocol の
-          // 互換性に問題があるため、fs plugin を優先する。
+          // 互換性に問題があるため、失敗時は fs plugin にフォールバックする。
           try {
-            const assetUrl = convertFileSrc(pdfPath);
+            const assetUrl = convertFileSrc(normalizedPath);
             console.info("[ReaderView] PDF asset URL:", assetUrl);
 
             const response = await fetch(assetUrl);
@@ -235,39 +235,39 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
 
             blob = await response.blob();
             if (blob.size === 0) {
-              throw new Error("PDF file is empty (0 bytes) via fs plugin");
+              throw new Error("PDF file is empty (0 bytes) via asset protocol");
             }
             if (!(await validatePdfHeader(blob))) {
               const header = await blob.slice(0, 5).text();
-              throw new Error(`Invalid PDF header via fs plugin: ${JSON.stringify(header)}`);
+              throw new Error(`Invalid PDF header via asset protocol: ${JSON.stringify(header)}`);
             }
-            console.info("[ReaderView] PDF loaded successfully via fs plugin (primary)");
-          } catch (fsErr) {
+            console.info("[ReaderView] PDF loaded successfully via asset protocol");
+          } catch (assetErr) {
             console.warn(
-              "[ReaderView] FS plugin failed, falling back to asset protocol:",
-              fsErr instanceof Error ? fsErr.message : String(fsErr),
+              "[ReaderView] Asset protocol failed, falling back to fs plugin:",
+              assetErr instanceof Error ? assetErr.message : String(assetErr),
             );
             blob = null;
 
-            // 方法2: convertFileSrc で asset URL を取得し、fetch → Blob URL
+            // 方法2: Tauri fs プラグインで直接読み取り
             try {
-              blob = await readViaFsPlugin(pdfPath);
+              blob = await readViaFsPlugin(rawPath);
               if (blob.size === 0) {
-                throw new Error("PDF file is empty (0 bytes) via asset protocol");
+                throw new Error("PDF file is empty (0 bytes) via fs plugin");
               }
 
               if (!(await validatePdfHeader(blob))) {
                 const header = await blob.slice(0, 5).text();
-                throw new Error(`Invalid PDF header via asset protocol: ${JSON.stringify(header)}`);
+                throw new Error(`Invalid PDF header via fs plugin: ${JSON.stringify(header)}`);
               }
-              console.info("[ReaderView] PDF loaded successfully via asset protocol (fallback)");
-            } catch (assetErr) {
-              // 両方失敗 — 元の fs plugin エラーと合わせて報告
-              const fsMsg = fsErr instanceof Error ? fsErr.message : String(fsErr);
+              console.info("[ReaderView] PDF loaded successfully via fs plugin fallback");
+            } catch (fsErr) {
+              // 両方失敗 — 元の asset protocol エラーと合わせて報告
               const assetMsg = assetErr instanceof Error ? assetErr.message : String(assetErr);
+              const fsMsg = fsErr instanceof Error ? fsErr.message : String(fsErr);
               throw new Error(
-                `FS plugin: ${fsMsg} | Asset protocol: ${assetMsg}`,
-                { cause: assetErr },
+                `Asset protocol: ${assetMsg} | FS plugin: ${fsMsg}`,
+                { cause: fsErr },
               );
             }
           }
