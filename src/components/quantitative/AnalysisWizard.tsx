@@ -306,6 +306,7 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
     corrMethod,
     useNonParametric,
     includeIntercept,
+    t,
   ]);
 
   const canProceedStep2 = method !== null;
@@ -561,13 +562,12 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
 
       // ─── ネットワーク分析 ───
       if (method === "network") {
-        const { analyzeTextVariable, buildCooccurrenceNetwork } = await import("../../lib/stats/textAnalysis");
+        const { analyzeTextCooccurrenceNetwork, buildCooccurrenceNetwork } = await import("../../lib/stats/textAnalysis");
         const networkResults: unknown[] = [];
         for (const v of selectedVariables) {
           if (v.variableType === "text") {
             const vals = getStringValues(v.name);
-            const textResult = await analyzeTextVariable(vals, v.id);
-            networkResults.push(textResult.cooccurrenceNetwork);
+            networkResults.push(await analyzeTextCooccurrenceNetwork(vals));
           } else {
             const vals = getStringValues(v.name);
             networkResults.push(buildCooccurrenceNetwork(vals.map(s => s.split(/\s+/)), 2));
@@ -636,6 +636,7 @@ export const AnalysisWizard: React.FC<AnalysisWizardProps> = ({
     groupVarId, dependentVarId, analysisName, alpha, corrMethod,
     useNonParametric, includeIntercept, getNumericValues, getStringValues,
     selectedVariables, quantitativeAddons, saveAnalysis, onComplete,
+    t,
   ]);
 
   // ── 変数タイプバッジ ──

@@ -5,6 +5,7 @@ use lindera_tokenizer::tokenizer::{Tokenizer, TokenizerConfig};
 use serde::Serialize;
 use sqlx::Row;
 use std::collections::{HashMap, HashSet};
+use std::sync::{Mutex, OnceLock};
 use tauri::AppHandle;
 
 #[derive(Debug, Clone, Serialize)]
@@ -67,17 +68,10 @@ fn detect_language(text: &str) -> DetectedLanguage {
 }
 
 fn tokenize_japanese(text: &str) -> Result<Vec<String>, String> {
-    let dictionary = DictionaryConfig {
-        kind: Some(DictionaryKind::IPADIC),
-        path: None,
-    };
-    let config = TokenizerConfig {
-        dictionary,
-        user_dictionary: None,
-        mode: Mode::Normal,
-    };
-    let tokenizer =
-        Tokenizer::from_config(config).map_err(|e| format!("lindera初期化に失敗: {}", e))?;
+    let tokenizer = japanese_tokenizer()?;
+    let tokenizer = tokenizer
+        .lock()
+        .map_err(|_| "linderaトークナイザのロックに失敗".to_string())?;
     let stopwords = japanese_stopwords();
 
     tokenizer
@@ -90,6 +84,34 @@ fn tokenize_japanese(text: &str) -> Result<Vec<String>, String> {
                 .filter(|token| !stopwords.contains(token.as_str()))
                 .collect()
         })
+}
+
+fn japanese_tokenizer() -> Result<&'static Mutex<Tokenizer>, String> {
+    static TOKENIZER: OnceLock<Result<Mutex<Tokenizer>, String>> = OnceLock::new();
+
+    let result = TOKENIZER.get_or_init(|| {
+        create_japanese_tokenizer()
+            .map(Mutex::new)
+            .map_err(|e| format!("lindera初期化に失敗: {}", e))
+    });
+
+    match result {
+        Ok(tokenizer) => Ok(tokenizer),
+        Err(message) => Err(message.clone()),
+    }
+}
+
+fn create_japanese_tokenizer() -> Result<Tokenizer, String> {
+    let dictionary = DictionaryConfig {
+        kind: Some(DictionaryKind::IPADIC),
+        path: None,
+    };
+    let config = TokenizerConfig {
+        dictionary,
+        user_dictionary: None,
+        mode: Mode::Normal,
+    };
+    Tokenizer::from_config(config).map_err(|e| e.to_string())
 }
 
 fn tokenize_ascii_words(text: &str, stopwords: &HashSet<&'static str>) -> Vec<String> {

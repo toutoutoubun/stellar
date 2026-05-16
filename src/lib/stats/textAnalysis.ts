@@ -26,6 +26,24 @@ interface KuromojiToken {
 
 let _tokenizer: KuromojiTokenizer | null = null;
 
+interface TokenizedTexts {
+  docTokens: string[][];
+  sentenceTokens: string[][];
+  docTokenMaps: Map<string, number>[];
+  posMap: Map<string, string>;
+  totalTokenCount: number;
+}
+
+interface CooccurrenceNetworkOptions {
+  windowSize?: number;
+  maxNodes?: number;
+  maxEdges?: number;
+}
+
+const DEFAULT_COOCCURRENCE_WINDOW = 5;
+const DEFAULT_COOCCURRENCE_MAX_NODES = 100;
+const DEFAULT_COOCCURRENCE_MAX_EDGES = 600;
+
 /**
  * Lazily initialise the kuromoji tokeniser.  Dictionary path is resolved
  * relative to the node_modules location bundled by Vite / Tauri.
@@ -85,6 +103,73 @@ const EXCLUDED_NOUN_DETAILS = new Set([
   useI18nStore.getState().t.stats.str_msxdr, useI18nStore.getState().t.stats.str_bz0us, useI18nStore.getState().t.stats.k_k1c, useI18nStore.getState().t.stats.str_hge1, useI18nStore.getState().t.stats.str_k27l,
 ]);
 
+async function tokenizeTexts(
+  texts: string[],
+  stopWords?: string[],
+): Promise<TokenizedTexts> {
+  const tokenizer = await getTokenizer();
+  const customStops = new Set([...DEFAULT_STOPWORDS, ...(stopWords ?? [])]);
+
+  const docTokens: string[][] = [];
+  const sentenceTokens: string[][] = [];
+  const docTokenMaps: Map<string, number>[] = [];
+  const posMap = new Map<string, string>();
+  let totalTokenCount = 0;
+
+  for (const text of texts) {
+    const tokens = tokenizer.tokenize(text);
+    const docMap = new Map<string, number>();
+    const docList: string[] = [];
+    let sentBuf: string[] = [];
+
+    for (const tok of tokens) {
+      if (!ALLOWED_POS.has(tok.pos)) {
+        if (tok.surface_form === useI18nStore.getState().t.stats.k_9he && sentBuf.length > 0) {
+          sentenceTokens.push([...sentBuf]);
+          sentBuf = [];
+        }
+        continue;
+      }
+
+      if (tok.pos === useI18nStore.getState().t.quantResults.str_f20h && EXCLUDED_NOUN_DETAILS.has(tok.pos_detail_1)) {
+        continue;
+      }
+
+      const form =
+        tok.basic_form && tok.basic_form !== "*"
+          ? tok.basic_form
+          : tok.surface_form;
+
+      if (form.length < 2 && tok.pos !== useI18nStore.getState().t.quantResults.str_f20h) continue;
+      if (customStops.has(form)) continue;
+
+      docList.push(form);
+      docMap.set(form, (docMap.get(form) ?? 0) + 1);
+      sentBuf.push(form);
+      totalTokenCount++;
+
+      if (!posMap.has(form)) {
+        posMap.set(form, tok.pos);
+      }
+    }
+
+    if (sentBuf.length > 0) {
+      sentenceTokens.push(sentBuf);
+    }
+
+    docTokens.push(docList);
+    docTokenMaps.push(docMap);
+  }
+
+  return {
+    docTokens,
+    sentenceTokens,
+    docTokenMaps,
+    posMap,
+    totalTokenCount,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -102,71 +187,13 @@ export async function analyzeTextVariable(
   variableId: string,
   stopWords?: string[],
 ): Promise<TextAnalysisResult> {
-  const tokenizer = await getTokenizer();
-  const customStops = new Set([...DEFAULT_STOPWORDS, ...(stopWords ?? [])]);
-
-  // ── Step 1: Tokenise each document ────────────────────────────────────
-  /** Per-document token lists (surface forms, filtered). */
-  const docTokens: string[][] = [];
-  /** Per-sentence token lists (for co-occurrence). */
-  const sentenceTokens: string[][] = [];
-  /** Per-document token → count. */
-  const docTokenMaps: Map<string, number>[] = [];
-  /** POS map: token → original POS tag. */
-  const posMap = new Map<string, string>();
-
-  let totalTokenCount = 0;
-
-  for (const text of texts) {
-    const tokens = tokenizer.tokenize(text);
-    const docMap = new Map<string, number>();
-    const docList: string[] = [];
-
-    // Split into sentences on 。 and process each
-    let sentBuf: string[] = [];
-
-    for (const tok of tokens) {
-      if (!ALLOWED_POS.has(tok.pos)) {
-        // Sentence boundary on 。
-        if (tok.surface_form === useI18nStore.getState().t.stats.k_9he && sentBuf.length > 0) {
-          sentenceTokens.push([...sentBuf]);
-          sentBuf = [];
-        }
-        continue;
-      }
-
-      // Exclude certain noun subcategories
-      if (tok.pos === useI18nStore.getState().t.quantResults.str_f20h && EXCLUDED_NOUN_DETAILS.has(tok.pos_detail_1)) {
-        continue;
-      }
-
-      // Use basic_form if available (lemmatisation), else surface
-      const form =
-        tok.basic_form && tok.basic_form !== "*"
-          ? tok.basic_form
-          : tok.surface_form;
-
-      if (form.length < 2 && tok.pos !== useI18nStore.getState().t.quantResults.str_f20h) continue; // skip single-char verbs/adj
-      if (customStops.has(form)) continue;
-
-      docList.push(form);
-      docMap.set(form, (docMap.get(form) ?? 0) + 1);
-      sentBuf.push(form);
-      totalTokenCount++;
-
-      if (!posMap.has(form)) {
-        posMap.set(form, tok.pos);
-      }
-    }
-
-    // Flush remaining sentence buffer
-    if (sentBuf.length > 0) {
-      sentenceTokens.push(sentBuf);
-    }
-
-    docTokens.push(docList);
-    docTokenMaps.push(docMap);
-  }
+  const {
+    docTokens,
+    sentenceTokens,
+    docTokenMaps,
+    posMap,
+    totalTokenCount,
+  } = await tokenizeTexts(texts, stopWords);
 
   // ── Step 2: Global frequency ──────────────────────────────────────────
   const globalFreq = new Map<string, number>();
@@ -242,6 +269,14 @@ export async function analyzeTextVariable(
   };
 }
 
+export async function analyzeTextCooccurrenceNetwork(
+  texts: string[],
+  stopWords?: string[],
+): Promise<NetworkAnalysisResult> {
+  const { sentenceTokens } = await tokenizeTexts(texts, stopWords);
+  return buildCooccurrenceNetwork(sentenceTokens, 2);
+}
+
 // ---------------------------------------------------------------------------
 // Co-occurrence network builder
 // ---------------------------------------------------------------------------
@@ -256,7 +291,21 @@ export async function analyzeTextVariable(
 export function buildCooccurrenceNetwork(
   sentences: string[][],
   minCooccurrence: number,
+  options: CooccurrenceNetworkOptions = {},
 ): NetworkAnalysisResult {
+  const windowSize = Math.max(
+    2,
+    Math.floor(options.windowSize ?? DEFAULT_COOCCURRENCE_WINDOW),
+  );
+  const maxNodes = Math.max(
+    1,
+    Math.floor(options.maxNodes ?? DEFAULT_COOCCURRENCE_MAX_NODES),
+  );
+  const maxEdges = Math.max(
+    1,
+    Math.floor(options.maxEdges ?? DEFAULT_COOCCURRENCE_MAX_EDGES),
+  );
+
   // Count co-occurrences
   const coocMap = new Map<string, number>();
   const nodeFreq = new Map<string, number>();
@@ -266,9 +315,16 @@ export function buildCooccurrenceNetwork(
     for (const t of unique) {
       nodeFreq.set(t, (nodeFreq.get(t) ?? 0) + 1);
     }
-    for (let i = 0; i < unique.length; i++) {
-      for (let j = i + 1; j < unique.length; j++) {
-        const key = [unique[i]!, unique[j]!].sort().join("\0");
+
+    for (let i = 0; i < tokens.length; i++) {
+      const source = tokens[i]!;
+      const end = Math.min(tokens.length, i + windowSize);
+      for (let j = i + 1; j < end; j++) {
+        const target = tokens[j]!;
+        if (source === target) continue;
+        const key = source < target
+          ? `${source}\0${target}`
+          : `${target}\0${source}`;
         coocMap.set(key, (coocMap.get(key) ?? 0) + 1);
       }
     }
@@ -276,26 +332,40 @@ export function buildCooccurrenceNetwork(
 
   // Filter edges by minimum co-occurrence
   const filteredEdges: Array<{ source: string; target: string; weight: number }> = [];
-  const activeNodes = new Set<string>();
 
   for (const [key, weight] of coocMap) {
     if (weight < minCooccurrence) continue;
     const [source, target] = key.split("\0") as [string, string];
     filteredEdges.push({ source, target, weight });
-    activeNodes.add(source);
-    activeNodes.add(target);
   }
 
-  // Keep only top 100 nodes by frequency among active nodes
+  const candidateEdges = filteredEdges
+    .sort(
+      (a, b) =>
+        b.weight - a.weight ||
+        ((nodeFreq.get(b.source) ?? 0) + (nodeFreq.get(b.target) ?? 0)) -
+          ((nodeFreq.get(a.source) ?? 0) + (nodeFreq.get(a.target) ?? 0)) ||
+        a.source.localeCompare(b.source, "ja") ||
+        a.target.localeCompare(b.target, "ja"),
+    )
+    .slice(0, maxEdges);
+
+  const activeNodes = new Set<string>();
+  for (const edge of candidateEdges) {
+    activeNodes.add(edge.source);
+    activeNodes.add(edge.target);
+  }
+
+  // Keep only top nodes by frequency among active nodes
   const sortedActive = [...activeNodes]
     .map((id) => ({ id, freq: nodeFreq.get(id) ?? 0 }))
     .sort((a, b) => b.freq - a.freq)
-    .slice(0, 100);
+    .slice(0, maxNodes);
 
   const topNodeSet = new Set(sortedActive.map((n) => n.id));
 
   const nodes = sortedActive.map((n) => ({ id: n.id, label: n.id }));
-  const edges = filteredEdges.filter(
+  const edges = candidateEdges.filter(
     (e) => topNodeSet.has(e.source) && topNodeSet.has(e.target),
   );
 
