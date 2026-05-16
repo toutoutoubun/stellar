@@ -11,6 +11,7 @@ import {
   registerWorkspaceView,
   registerPanel,
   registerTheme,
+  unregisterTheme,
   registerCitationStyle,
 } from "./addonRegistry";
 import type {
@@ -63,13 +64,15 @@ interface UserPluginModule {
   default?: PluginRegister | { register?: PluginRegister };
 }
 
+const pluginThemeIds = new Map<string, Set<string>>();
+
 declare global {
   interface Window {
     StellarPluginApi?: StellarPluginApi;
   }
 }
 
-export function getStellarPluginApi(): StellarPluginApi {
+export function getStellarPluginApi(pluginId?: string): StellarPluginApi {
   const api: StellarPluginApi = {
     version: "0.2",
     React,
@@ -79,11 +82,27 @@ export function getStellarPluginApi(): StellarPluginApi {
     // ── v0.2: ワークスペース・パネル・テーマ・引用スタイル ──
     registerWorkspaceView,
     registerPanel,
-    registerTheme,
+    registerTheme: (addon) => {
+      registerTheme(addon);
+      if (pluginId) {
+        const ids = pluginThemeIds.get(pluginId) ?? new Set<string>();
+        ids.add(addon.id);
+        pluginThemeIds.set(pluginId, ids);
+      }
+    },
     registerCitationStyle,
   };
   window.StellarPluginApi = api;
   return api;
+}
+
+export function unloadInstalledUserPluginThemes(pluginId: string): void {
+  const ids = pluginThemeIds.get(pluginId);
+  if (!ids) return;
+  for (const themeId of ids) {
+    unregisterTheme(themeId);
+  }
+  pluginThemeIds.delete(pluginId);
 }
 
 export async function listInstalledUserPlugins(): Promise<InstalledUserPlugin[]> {
@@ -98,6 +117,7 @@ export async function loadInstalledUserPlugin(
   }
 
   try {
+    unloadInstalledUserPluginThemes(plugin.id);
     const moduleUrl = `${convertFileSrc(plugin.entryPath)}?stellarPlugin=${encodeURIComponent(
       `${plugin.id}-${plugin.installedAt}`,
     )}`;
@@ -118,7 +138,7 @@ export async function loadInstalledUserPlugin(
       throw new Error("Plugin module must export register(api) or default register(api).");
     }
 
-    await register(getStellarPluginApi());
+    await register(getStellarPluginApi(plugin.id));
     return { plugin, ok: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

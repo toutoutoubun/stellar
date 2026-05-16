@@ -16,6 +16,7 @@ import { toast } from "../ui/Toast";
 import {
   listInstalledUserPlugins,
   loadInstalledUserPlugin,
+  unloadInstalledUserPluginThemes,
   type InstalledUserPlugin,
 } from "../../plugins/userPluginLoader";
 import type { Paper } from "../../types";
@@ -52,7 +53,7 @@ import {
   EDITOR_FONTS,
   CITATION_STYLE_LABELS,
 } from "../../types";
-import { getCitationStyleAddons } from "../../plugins/addonRegistry";
+import { getCitationStyleAddons, useAddonRegistry } from "../../plugins/addonRegistry";
 
 // ============================================================
 // SettingsView コンポーネント
@@ -68,6 +69,8 @@ export const SettingsView: React.FC = () => {
   // 外観設定
   const theme = useThemeStore((s) => s.theme);
   const setTheme = useThemeStore((s) => s.setTheme);
+  useAddonRegistry();
+  const allThemes = getAllThemes();
   const [appearance, setAppearance] = useState<AppearanceSettings>(
     DEFAULT_APPEARANCE_SETTINGS
   );
@@ -298,6 +301,11 @@ export const SettingsView: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [activeTab, refreshPlugins]);
 
+  useEffect(() => {
+    if (allThemes.some((item) => item.id === theme)) return;
+    setTheme("white");
+  }, [allThemes, setTheme, theme]);
+
   // テーマ切替ハンドラ
   const handleThemeChange = useCallback(
     (newTheme: Theme) => {
@@ -517,6 +525,7 @@ export const SettingsView: React.FC = () => {
             toast.error(`${t.settings.addons.loadFailed}: ${loadResult.error ?? updated.name}`);
           }
         } else {
+          unloadInstalledUserPluginThemes(plugin.id);
           toast.success(t.settings.addons.disableSuccess.replace("${name}", updated.name));
         }
       } catch (error) {
@@ -534,6 +543,7 @@ export const SettingsView: React.FC = () => {
       setUpdatingPluginId(plugin.id);
       try {
         await invoke<void>("remove_installed_plugin", { pluginId: plugin.id });
+        unloadInstalledUserPluginThemes(plugin.id);
         setPlugins((prev) => prev.filter((item) => item.id !== plugin.id));
         toast.success(t.settings.addons.removeSuccess.replace("${name}", plugin.name));
       } catch (error) {
@@ -558,7 +568,7 @@ export const SettingsView: React.FC = () => {
           {t.settings.appearance.themeDesc}
         </p>
         <div className="flex flex-wrap gap-3">
-          {getAllThemes().map((meta) => (
+          {allThemes.map((meta) => (
             <ThemePreviewCard key={meta.id} meta={meta} isSelected={theme === meta.id} onSelect={handleThemeChange} />
           ))}
         </div>

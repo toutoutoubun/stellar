@@ -79,6 +79,60 @@ registerQuantitativeAnalysisAddon({
 import "./missingnessAddon";
 ```
 
+## カスタムテーマアドオン
+
+プラグインから `registerTheme` を呼ぶと、設定 > 外観 のテーマ一覧にカスタムテーマを追加できます。テーマは CSS 変数として注入され、選択状態は通常のテーマと同じく保存されます。
+
+`stellar-plugin.json` の `capabilities` には `"theme"` を含めてください。
+
+```json
+{
+  "id": "my-theme-pack",
+  "name": "My Theme Pack",
+  "version": "1.0.0",
+  "entry": "index.js",
+  "capabilities": ["theme"]
+}
+```
+
+`index.js` の例:
+
+```js
+export function register({ registerTheme }) {
+  registerTheme({
+    id: "my-theme-pack.paper",
+    label: "Paper",
+    description: "落ち着いた紙面風の研究テーマ",
+    preview: {
+      bg: "#fbf7ef",
+      text: "#2d2720",
+      accent: "#7c5c2f",
+      sidebar: "#efe5d4",
+    },
+    cssVariables: {
+      "--color-bg-primary": "#fbf7ef",
+      "--color-bg-secondary": "#f4ecde",
+      "--color-bg-tertiary": "#eadfce",
+      "--color-bg-sidebar": "#efe5d4",
+      "--color-bg-card": "#fffaf2",
+      "--color-bg-hover": "rgba(124, 92, 47, 0.1)",
+      "--color-text-primary": "#2d2720",
+      "--color-text-secondary": "#5f5348",
+      "--color-text-tertiary": "#8a7a68",
+      "--color-text-inverse": "#ffffff",
+      "--color-accent-primary": "#7c5c2f",
+      "--color-accent-secondary": "#3f7f6f",
+      "--color-accent-warning": "#b7791f",
+      "--color-accent-danger": "#b91c1c",
+      "--color-border-primary": "#d8c9b5",
+      "--color-border-secondary": "#e7dccc",
+    },
+  });
+}
+```
+
+テーマプラグインを有効化すると、その場でテーマ一覧に追加されます。無効化または削除すると、そのプラグインが登録したテーマ CSS は現在のセッションから外されます。
+
 ## 推奨構成
 
 ```text
