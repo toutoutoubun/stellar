@@ -163,10 +163,10 @@ Stellar speaks four languages:
 
 | Language | Status |
 |----------|--------|
-| 🇯🇵 日本語 | ✅ Full |
-| 🇬🇧 English | ✅ Full |
-| 🇫🇷 Français | ✅ Full |
-| 🇿🇦 Afrikaans | ✅ Full |
+| 日本語 | ✅ Full |
+| English | ✅ Full |
+| Français | ✅ Full |
+| Afrikaans | ✅ Full |
 
 Want to add a language? See [CONTRIBUTING.md](CONTRIBUTING.md).
 
