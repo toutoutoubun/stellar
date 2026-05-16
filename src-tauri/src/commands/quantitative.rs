@@ -783,25 +783,7 @@ pub async fn create_dataset_from_codes(
 ) -> Result<Dataset, String> {
     let pool = get_pool(&app)?;
 
-    // 1. データセットを作成
-    let ds_id = uuid::Uuid::new_v4().to_string();
-    let now = chrono::Utc::now().to_rfc3339();
-
-    sqlx::query(
-        "INSERT INTO datasets (id, name, description, source_type, source_ref, row_count, created_at, updated_at)
-         VALUES (?, ?, ?, 'from_codes', ?, 0, ?, ?)",
-    )
-    .bind(&ds_id)
-    .bind(&dataset_name)
-    .bind(format!("QDA プロジェクト {} からコーディングデータを変換", &project_id).as_str())
-    .bind(&project_id)
-    .bind(&now)
-    .bind(&now)
-    .execute(pool.as_ref())
-    .await
-    .map_err(|e| format!("データセット作成に失敗: {}", e))?;
-
-    // 2. プロジェクトに属するコード一覧を取得
+    // 1. プロジェクトに属するコード一覧を取得
     let code_rows =
         sqlx::query("SELECT id, name FROM codes WHERE project_id = ? ORDER BY sort_order ASC")
             .bind(&project_id)
@@ -815,6 +797,29 @@ pub async fn create_dataset_from_codes(
 
     let code_ids: Vec<String> = code_rows.iter().map(|r| col_str(r, "id")).collect();
     let code_names: Vec<String> = code_rows.iter().map(|r| col_str(r, "name")).collect();
+
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| format!("トランザクション開始に失敗: {}", e))?;
+
+    // 2. データセットを作成
+    let ds_id = uuid::Uuid::new_v4().to_string();
+    let now = chrono::Utc::now().to_rfc3339();
+
+    sqlx::query(
+        "INSERT INTO datasets (id, name, description, source_type, source_ref, row_count, created_at, updated_at)
+         VALUES (?, ?, ?, 'from_codes', ?, 0, ?, ?)",
+    )
+    .bind(&ds_id)
+    .bind(&dataset_name)
+    .bind(format!("QDA プロジェクト {} からコーディングデータを変換", &project_id).as_str())
+    .bind(&project_id)
+    .bind(&now)
+    .bind(&now)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| format!("データセット作成に失敗: {}", e))?;
 
     // 3. 変数を作成: document_id, text_length, segment_length + 各コード（0/1）
     let mut variable_ids: Vec<String> = Vec::new();
@@ -836,7 +841,7 @@ pub async fn create_dataset_from_codes(
         .bind(name)
         .bind(label)
         .bind(var_type)
-        .execute(pool.as_ref())
+        .execute(&mut *tx)
         .await
         .map_err(|e| format!("メタ変数 '{}' の作成に失敗: {}", name, e))?;
         variable_ids.push(var_id);
@@ -856,7 +861,7 @@ pub async fn create_dataset_from_codes(
         .bind(col_idx as i64)
         .bind(code_name)
         .bind(format!("コード: {}", code_name).as_str())
-        .execute(pool.as_ref())
+        .execute(&mut *tx)
         .await
         .map_err(|e| format!("コード変数 '{}' の作成に失敗: {}", code_name, e))?;
         code_var_ids.push(var_id);
@@ -871,7 +876,7 @@ pub async fn create_dataset_from_codes(
          ORDER BY h.paper_id, h.page, h.id",
     )
     .bind(&project_id)
-    .fetch_all(pool.as_ref())
+    .fetch_all(&mut *tx)
     .await
     .map_err(|e| format!("ハイライト取得に失敗: {}", e))?;
 
@@ -885,7 +890,7 @@ pub async fn create_dataset_from_codes(
         let assigned_rows =
             sqlx::query("SELECT code_id FROM highlight_codes WHERE highlight_id = ?")
                 .bind(&h_id)
-                .fetch_all(pool.as_ref())
+                .fetch_all(&mut *tx)
                 .await
                 .map_err(|e| format!("コード割り当て取得に失敗: {}", e))?;
 
@@ -932,20 +937,26 @@ pub async fn create_dataset_from_codes(
         .bind(&ds_id)
         .bind(row_idx as i64)
         .bind(&values_json)
-        .execute(pool.as_ref())
+        .execute(&mut *tx)
         .await
         .map_err(|e| format!("データ行挿入に失敗: {}", e))?;
     }
 
     // 結果を返す
-    sqlx::query_as::<_, Dataset>(
+    let dataset = sqlx::query_as::<_, Dataset>(
         "SELECT id, name, description, source_type, source_ref, row_count, created_at, updated_at
          FROM datasets WHERE id = ?",
     )
     .bind(&ds_id)
-    .fetch_one(pool.as_ref())
+    .fetch_one(&mut *tx)
     .await
-    .map_err(|e| format!("データセット取得に失敗: {}", e))
+    .map_err(|e| format!("データセット取得に失敗: {}", e))?;
+
+    tx.commit()
+        .await
+        .map_err(|e| format!("トランザクション確定に失敗: {}", e))?;
+
+    Ok(dataset)
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -993,6 +1004,11 @@ pub async fn create_dataset_from_highlights(
         return Err("この論文にはデータセット化できるハイライトがありません".to_string());
     }
 
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|e| format!("トランザクション開始に失敗: {}", e))?;
+
     sqlx::query(
         "INSERT INTO datasets (id, name, description, source_type, source_ref, row_count, created_at, updated_at)
          VALUES (?, ?, 'ハイライトデータから自動生成', 'from_highlights', ?, 0, ?, ?)",
@@ -1002,7 +1018,7 @@ pub async fn create_dataset_from_highlights(
     .bind(&source_ref)
     .bind(&now)
     .bind(&now)
-    .execute(pool.as_ref())
+    .execute(&mut *tx)
     .await
     .map_err(|e| format!("データセット作成に失敗: {}", e))?;
 
@@ -1028,7 +1044,7 @@ pub async fn create_dataset_from_highlights(
         .bind(name)
         .bind(label)
         .bind(var_type)
-        .execute(pool.as_ref())
+        .execute(&mut *tx)
         .await
         .map_err(|e| format!("変数 '{}' の作成に失敗: {}", name, e))?;
         variable_ids.push(var_id);
@@ -1072,18 +1088,24 @@ pub async fn create_dataset_from_highlights(
         .bind(&ds_id)
         .bind(row_idx as i64)
         .bind(&values_json)
-        .execute(pool.as_ref())
+        .execute(&mut *tx)
         .await
         .map_err(|e| format!("データ行挿入に失敗: {}", e))?;
     }
 
     // 結果を返す
-    sqlx::query_as::<_, Dataset>(
+    let dataset = sqlx::query_as::<_, Dataset>(
         "SELECT id, name, description, source_type, source_ref, row_count, created_at, updated_at
          FROM datasets WHERE id = ?",
     )
     .bind(&ds_id)
-    .fetch_one(pool.as_ref())
+    .fetch_one(&mut *tx)
     .await
-    .map_err(|e| format!("データセット取得に失敗: {}", e))
+    .map_err(|e| format!("データセット取得に失敗: {}", e))?;
+
+    tx.commit()
+        .await
+        .map_err(|e| format!("トランザクション確定に失敗: {}", e))?;
+
+    Ok(dataset)
 }
