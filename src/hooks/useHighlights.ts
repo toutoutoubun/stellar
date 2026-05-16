@@ -50,11 +50,16 @@ export interface UseHighlightsReturn {
   reload: () => Promise<void>;
 }
 
+export type HighlightTargetKind = "paper" | "qualitativeSource";
+
 /**
  * ハイライト管理カスタムフック
- * @param paperId 対象論文のID
+ * @param targetId 対象論文または質的分析ソースのID
  */
-export function useHighlights(paperId: string): UseHighlightsReturn {
+export function useHighlights(
+  targetId: string,
+  targetKind: HighlightTargetKind = "paper",
+): UseHighlightsReturn {
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedHighlightIds, setSelectedHighlightIds] = useState<Set<string>>(
@@ -72,9 +77,14 @@ export function useHighlights(paperId: string): UseHighlightsReturn {
   const fetchHighlights = useCallback(async () => {
     setIsLoading(true);
     try {
-      const result = await invoke<Highlight[]>("get_highlights", {
-        paperId,
-      });
+      const result =
+        targetKind === "qualitativeSource"
+          ? await invoke<Highlight[]>("get_qualitative_source_highlights", {
+              sourceId: targetId,
+            })
+          : await invoke<Highlight[]>("get_highlights", {
+              paperId: targetId,
+            });
       // createdAt 昇順でソート
       const sorted = [...result].sort(
         (a, b) =>
@@ -87,7 +97,7 @@ export function useHighlights(paperId: string): UseHighlightsReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [paperId]);
+  }, [targetId, targetKind]);
 
   // 初回読み込み
   useEffect(() => {
@@ -115,7 +125,9 @@ export function useHighlights(paperId: string): UseHighlightsReturn {
       rect: HighlightRect,
     ): Promise<Highlight | null> => {
       const input: CreateHighlightInput = {
-        paperId,
+        ...(targetKind === "qualitativeSource"
+          ? { sourceId: targetId }
+          : { paperId: targetId }),
         text,
         color,
         page,
@@ -126,7 +138,8 @@ export function useHighlights(paperId: string): UseHighlightsReturn {
       const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const optimisticHighlight: Highlight = {
         id: tempId,
-        paperId,
+        paperId: targetId,
+        sourceId: targetKind === "qualitativeSource" ? targetId : null,
         text,
         comment: null,
         color,
@@ -139,7 +152,10 @@ export function useHighlights(paperId: string): UseHighlightsReturn {
       setHighlights((prev) => [...prev, optimisticHighlight]);
 
       try {
-        const created = await invoke<Highlight>("create_highlight", { input });
+        const created =
+          targetKind === "qualitativeSource"
+            ? await invoke<Highlight>("create_qualitative_source_highlight", { input })
+            : await invoke<Highlight>("create_highlight", { input });
         // 仮IDを実際のIDに置換
         setHighlights((prev) =>
           prev.map((h) => (h.id === tempId ? created : h)),
@@ -154,7 +170,7 @@ export function useHighlights(paperId: string): UseHighlightsReturn {
         return null;
       }
     },
-    [paperId],
+    [targetId, targetKind],
   );
 
   /** コメント更新（500ms debounce） */
@@ -180,10 +196,15 @@ export function useHighlights(paperId: string): UseHighlightsReturn {
       // 500ms 後にバックエンドへ保存
       const timer = setTimeout(async () => {
         try {
-          await invoke("update_highlight_comment", {
-            id: highlightId,
-            comment: comment || "",
-          });
+          await invoke(
+            targetKind === "qualitativeSource"
+              ? "update_qualitative_source_highlight_comment"
+              : "update_highlight_comment",
+            {
+              id: highlightId,
+              comment: comment || "",
+            },
+          );
         } catch (err) {
           const message =
             typeof err === "string" ? err : useI18nStore.getState().t.hooks.k_jkw2ka;
@@ -198,7 +219,7 @@ export function useHighlights(paperId: string): UseHighlightsReturn {
 
       debounceTimers.current.set(highlightId, timer);
     },
-    [],
+    [targetKind],
   );
 
   /** ハイライト削除（即時） */
@@ -212,7 +233,12 @@ export function useHighlights(paperId: string): UseHighlightsReturn {
     });
 
     try {
-      await invoke("delete_highlight", { id: highlightId });
+      await invoke(
+        targetKind === "qualitativeSource"
+          ? "delete_qualitative_source_highlight"
+          : "delete_highlight",
+        { id: highlightId },
+      );
       toast.success(useI18nStore.getState().t.hooks.k_fr4nj7);
     } catch (err) {
       // 削除失敗時は再読み込みで整合性を回復
@@ -221,7 +247,7 @@ export function useHighlights(paperId: string): UseHighlightsReturn {
       toast.error(message);
       void fetchHighlights();
     }
-  }, [fetchHighlights]);
+  }, [fetchHighlights, targetKind]);
 
   /** 選択トグル */
   const toggleSelect = useCallback((highlightId: string) => {
@@ -252,10 +278,16 @@ export function useHighlights(paperId: string): UseHighlightsReturn {
     }
 
     try {
-      const noteId = await invoke<string>("create_note_from_highlights", {
-        highlightIds: ids,
-        paperId,
-      });
+      const noteId =
+        targetKind === "qualitativeSource"
+          ? await invoke<string>("create_note_from_source_highlights", {
+              highlightIds: ids,
+              sourceId: targetId,
+            })
+          : await invoke<string>("create_note_from_highlights", {
+              highlightIds: ids,
+              paperId: targetId,
+            });
       toast.success(useI18nStore.getState().t.hooks.k_hup4rp);
       setSelectedHighlightIds(new Set());
       return noteId;
@@ -265,7 +297,7 @@ export function useHighlights(paperId: string): UseHighlightsReturn {
       toast.error(message);
       return null;
     }
-  }, [selectedHighlightIds, paperId]);
+  }, [selectedHighlightIds, targetId, targetKind]);
 
   return {
     highlights,

@@ -1,7 +1,7 @@
 // src/components/qualitative/QualitativeSourcesView.tsx
 // 質的分析専用の分析ソース管理と、資料本文へのコード付与
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { invoke, openFileDialog } from "../../lib/tauriShim";
 import { swalConfirm } from "../../lib/swal";
 import { toast } from "../ui/Toast";
@@ -11,6 +11,7 @@ import type {
   SourceSegmentCode,
 } from "../../types";
 import {
+  IconActorMap,
   IconAssignCode,
   IconDelete,
   IconPanelLeft,
@@ -18,10 +19,15 @@ import {
   IconSources,
 } from "./icons/QualIcons";
 import { useT } from "../../stores/useI18nStore";
+import { CooccurrencePanel } from "./CooccurrencePanel";
 
 interface QualitativeSourcesViewProps {
   projectId: string;
 }
+
+const ReaderView = lazy(() =>
+  import("../reader/ReaderView").then((m) => ({ default: m.ReaderView })),
+);
 
 interface FlatCode {
   id: string;
@@ -46,8 +52,11 @@ export const QualitativeSourcesView: React.FC<QualitativeSourcesViewProps> = ({
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [listCollapsed, setListCollapsed] = useState(false);
+  const [cooccurrenceSegmentId, setCooccurrenceSegmentId] = useState<string | null>(null);
 
   const selectedSource = sources.find((source) => source.id === selectedSourceId) ?? null;
+  const selectedSourceIsPdf =
+    selectedSource?.fileType.toLowerCase() === "pdf" && Boolean(selectedSource.filePath);
   const flatCodes = useMemo(() => flattenCodeTree(codeTree), [codeTree]);
   const codeById = useMemo(
     () => new Map(flatCodes.map((code) => [code.id, code])),
@@ -93,18 +102,42 @@ export const QualitativeSourcesView: React.FC<QualitativeSourcesViewProps> = ({
   }, [loadSources, loadCodes]);
 
   useEffect(() => {
-    if (!selectedSourceId) {
-      setSegments([]);
-      return;
+    let cancelled = false;
+    if (!selectedSourceId || selectedSourceIsPdf) {
+      queueMicrotask(() => {
+        if (!cancelled) setSegments([]);
+      });
+      return () => {
+        cancelled = true;
+      };
     }
-    void loadSegments(selectedSourceId);
-  }, [selectedSourceId, loadSegments]);
+    const loadSelectedSegments = async () => {
+      const result = await invoke<SourceSegmentCode[]>("get_source_segments", {
+        sourceId: selectedSourceId,
+      });
+      if (!cancelled) {
+        setSegments(Array.isArray(result) ? result : []);
+      }
+    };
+    void loadSelectedSegments();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedSourceId, selectedSourceIsPdf]);
 
   useEffect(() => {
-    if (!selectedCodeId && flatCodes[0]) {
-      setSelectedCodeId(flatCodes[0].id);
-    }
+    if (selectedCodeId || !flatCodes[0]) return;
+    const nextCodeId = flatCodes[0].id;
+    queueMicrotask(() => {
+      setSelectedCodeId((current) => current || nextCodeId);
+    });
   }, [flatCodes, selectedCodeId]);
+
+  useEffect(() => {
+    if (!cooccurrenceSegmentId) return;
+    if (segments.some((segment) => segment.id === cooccurrenceSegmentId)) return;
+    setCooccurrenceSegmentId(null);
+  }, [cooccurrenceSegmentId, segments]);
 
   const handleImport = useCallback(async () => {
     setImporting(true);
@@ -214,6 +247,7 @@ export const QualitativeSourcesView: React.FC<QualitativeSourcesViewProps> = ({
       try {
         await invoke("delete_source_segment_code", { id: segmentId });
         setSegments((prev) => prev.filter((segment) => segment.id !== segmentId));
+        setCooccurrenceSegmentId((current) => (current === segmentId ? null : current));
         await loadCodes();
       } catch (err) {
         console.error("Failed to delete source segment code:", err);
@@ -339,6 +373,26 @@ export const QualitativeSourcesView: React.FC<QualitativeSourcesViewProps> = ({
 
       <main className="flex-1 flex overflow-hidden">
         {selectedSource ? (
+          selectedSourceIsPdf ? (
+            <section className="flex-1 min-w-0 h-full">
+              <Suspense
+                fallback={
+                  <div
+                    className="flex items-center justify-center h-full"
+                    style={{ color: "var(--color-text-tertiary)" }}
+                  >
+                    <span className="text-sm">{t.common.loading}</span>
+                  </div>
+                }
+              >
+                <ReaderView
+                  sourceId={selectedSource.id}
+                  sourceProjectId={projectId}
+                  initialPanelTab="coding"
+                />
+              </Suspense>
+            </section>
+          ) : (
           <>
             <section className="flex-1 flex flex-col min-w-0">
               <header
@@ -439,7 +493,7 @@ export const QualitativeSourcesView: React.FC<QualitativeSourcesViewProps> = ({
             </section>
 
             <aside
-              className="shrink-0 h-full overflow-y-auto"
+              className="shrink-0 h-full flex flex-col"
               style={{ width: "300px", borderLeft: "1px solid var(--color-border-primary)" }}
             >
               <header className="px-3 py-2" style={{ borderBottom: "1px solid var(--color-border-primary)" }}>
@@ -447,7 +501,12 @@ export const QualitativeSourcesView: React.FC<QualitativeSourcesViewProps> = ({
                   コード化済み ({segments.length})
                 </h4>
               </header>
-              <div className="p-3 flex flex-col gap-2">
+              <CooccurrencePanel
+                segmentId={cooccurrenceSegmentId ?? ""}
+                isOpen={Boolean(cooccurrenceSegmentId)}
+                onClose={() => setCooccurrenceSegmentId(null)}
+              />
+              <div className="p-3 flex-1 overflow-y-auto flex flex-col gap-2">
                 {segments.length === 0 ? (
                   <div className="text-xs text-center py-8" style={{ color: "var(--color-text-tertiary)" }}>
                     セグメントなし
@@ -459,26 +518,45 @@ export const QualitativeSourcesView: React.FC<QualitativeSourcesViewProps> = ({
                       <div
                         key={segment.id}
                         className="group p-3"
+                        onClick={() => setCooccurrenceSegmentId(segment.id)}
                         style={{
                           border: "1px solid var(--color-border-primary)",
                           borderLeft: `3px solid ${code?.color ?? "var(--color-accent-primary)"}`,
                           borderRadius: "6px",
                           backgroundColor: "var(--color-bg-secondary)",
+                          cursor: "pointer",
                         }}
                       >
                         <div className="flex items-start justify-between gap-2 mb-1">
                           <span className="text-xs font-semibold" style={{ color: "var(--color-text-primary)" }}>
                             {code?.name ?? "コード"}
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => void handleDeleteSegment(segment.id)}
-                            className="opacity-0 group-hover:opacity-100"
-                            title={t.common.delete}
-                            style={{ background: "none", border: "none", color: "var(--color-text-tertiary)", cursor: "pointer", padding: "0", display: "flex" }}
-                          >
-                            <IconDelete size={12} />
-                          </button>
+                          <div className="inline-flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setCooccurrenceSegmentId(segment.id);
+                              }}
+                              className="opacity-0 group-hover:opacity-100"
+                              title="共起語を分析"
+                              style={{ background: "none", border: "none", color: "var(--color-text-tertiary)", cursor: "pointer", padding: "0", display: "flex" }}
+                            >
+                              <IconActorMap size={12} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void handleDeleteSegment(segment.id);
+                              }}
+                              className="opacity-0 group-hover:opacity-100"
+                              title={t.common.delete}
+                              style={{ background: "none", border: "none", color: "var(--color-text-tertiary)", cursor: "pointer", padding: "0", display: "flex" }}
+                            >
+                              <IconDelete size={12} />
+                            </button>
+                          </div>
                         </div>
                         <p className="text-xs" style={{ color: "var(--color-text-secondary)", lineHeight: 1.55 }}>
                           {segment.segmentText}
@@ -490,6 +568,7 @@ export const QualitativeSourcesView: React.FC<QualitativeSourcesViewProps> = ({
               </div>
             </aside>
           </>
+          )
         ) : (
           <div className="flex flex-col items-center justify-center h-full w-full gap-3" style={{ color: "var(--color-text-tertiary)" }}>
             <IconSources size={30} />

@@ -382,6 +382,101 @@ pub async fn create_note_from_highlights(
     })
 }
 
+/// 質的分析ソースPDFのハイライトから独立ノートを作成する。
+#[tauri::command]
+pub async fn create_note_from_source_highlights(
+    app: AppHandle,
+    source_id: String,
+    highlight_ids: Vec<String>,
+) -> Result<NoteResponse, String> {
+    let pool = get_pool(&app)?;
+
+    if highlight_ids.is_empty() {
+        return Err("ハイライトが指定されていません".to_string());
+    }
+
+    let source_row = sqlx::query("SELECT title FROM qualitative_sources WHERE id = ?")
+        .bind(&source_id)
+        .fetch_optional(pool.as_ref())
+        .await
+        .map_err(|e| format!("分析ソースの取得に失敗: {}", e))?
+        .ok_or_else(|| format!("分析ソースが見つかりません: {}", source_id))?;
+
+    let source_title: String = source_row
+        .try_get("title")
+        .map_err(|e| format!("分析ソースタイトルの取得に失敗: {}", e))?;
+
+    let placeholders: Vec<String> = highlight_ids.iter().map(|_| "?".to_string()).collect();
+    let in_clause = placeholders.join(", ");
+    let sql = format!(
+        "SELECT * FROM qualitative_source_highlights WHERE id IN ({}) AND source_id = ? ORDER BY page ASC, created_at ASC",
+        in_clause
+    );
+
+    let mut query = sqlx::query(&sql);
+    for hid in &highlight_ids {
+        query = query.bind(hid);
+    }
+    query = query.bind(&source_id);
+
+    let highlight_rows = query
+        .fetch_all(pool.as_ref())
+        .await
+        .map_err(|e| format!("分析ソースハイライトの取得に失敗: {}", e))?;
+
+    if highlight_rows.is_empty() {
+        return Err("指定されたハイライトが見つかりません".to_string());
+    }
+
+    let mut markdown = format!("## ハイライト from {}\n\n", source_title);
+
+    for row in &highlight_rows {
+        let text: String = row.try_get("text").unwrap_or_default();
+        let page: i32 = row.try_get("page").unwrap_or(0);
+        let comment: Option<String> = row.try_get("comment").unwrap_or(None);
+
+        markdown.push_str(&format!("> {} (p.{})\n\n", text, page));
+
+        if let Some(ref c) = comment {
+            if !c.is_empty() {
+                markdown.push_str(&format!("{}\n\n", c));
+            }
+        }
+    }
+
+    let note_id = uuid::Uuid::new_v4().to_string();
+    let now = chrono::Utc::now().to_rfc3339();
+    let title = format!("ハイライト: {}", source_title);
+    let tags_json = serde_json::to_string(&vec!["qualitative-source"]).unwrap_or("[]".to_string());
+
+    sqlx::query(
+        "INSERT INTO notes (id, title, content, paper_id, tags, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, ?, ?)",
+    )
+    .bind(&note_id)
+    .bind(&title)
+    .bind(&markdown)
+    .bind(&tags_json)
+    .bind(&now)
+    .bind(&now)
+    .execute(pool.as_ref())
+    .await
+    .map_err(|e| format!("ノート作成に失敗: {}", e))?;
+
+    Ok(NoteResponse {
+        id: note_id,
+        title,
+        content: markdown,
+        paper_id: None,
+        tags: vec!["qualitative-source".to_string()],
+        created_at: now.clone(),
+        updated_at: now,
+        is_draft: None,
+        draft_meta: None,
+        word_count: None,
+        reading_time_min: None,
+    })
+}
+
 // ────────────────────────────────────────────────────────────
 // テスト
 // ────────────────────────────────────────────────────────────
