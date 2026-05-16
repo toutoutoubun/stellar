@@ -9,6 +9,8 @@
 | Français | [FR.md](README/FR.md) |
 | Afrikaans | [AF.md](README/AF.md) |
 
+[Wiki](https://stellar-portal.shiosaisazanami.workers.dev/en)
+
 **🇿🇦South African languages in progress🇿🇦** 
 
 Stellar is actively seeking terminology reviewers and locale maintainers from South African academic communities.
