@@ -13,6 +13,7 @@ interface CodePanelProps {
   highlights: Highlight[];
   selectedHighlightIds: Set<string>;
   paperId?: string;
+  targetKind?: "paper" | "qualitativeSource";
   currentProjectId?: string;
 }
 
@@ -31,6 +32,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
   highlights,
   selectedHighlightIds,
   paperId: _paperId, // eslint-disable-line @typescript-eslint/no-unused-vars
+  targetKind = "paper",
   currentProjectId,
 }) => {
   const t = useT();
@@ -45,6 +47,13 @@ const CodePanel: React.FC<CodePanelProps> = ({
   const [highlightCodeMap, setHighlightCodeMap] = useState<
     Record<string, Set<string>>
   >({});
+
+  useEffect(() => {
+    if (!currentProjectId) return;
+    queueMicrotask(() => {
+      setProjectId((current) => (current === currentProjectId ? current : currentProjectId));
+    });
+  }, [currentProjectId]);
 
   // プロジェクト一覧取得
   useEffect(() => {
@@ -128,7 +137,12 @@ const CodePanel: React.FC<CodePanelProps> = ({
   const handleAssignCode = useCallback(
     async (highlightId: string, codeId: string) => {
       try {
-        await invoke("assign_code_to_highlight", { highlightId, codeId });
+        await invoke(
+          targetKind === "qualitativeSource"
+            ? "assign_code_to_source_highlight"
+            : "assign_code_to_highlight",
+          { highlightId, codeId },
+        );
         setHighlightCodeMap((prev) => {
           const next = { ...prev };
           if (!next[highlightId]) next[highlightId] = new Set();
@@ -140,13 +154,18 @@ const CodePanel: React.FC<CodePanelProps> = ({
         console.error(t.qualitative.k_2ph86u, err);
       }
     },
-    []
+    [targetKind]
   );
 
   const handleRemoveCode = useCallback(
     async (highlightId: string, codeId: string) => {
       try {
-        await invoke("remove_code_from_highlight", { highlightId, codeId });
+        await invoke(
+          targetKind === "qualitativeSource"
+            ? "remove_code_from_source_highlight"
+            : "remove_code_from_highlight",
+          { highlightId, codeId },
+        );
         setHighlightCodeMap((prev) => {
           const next = { ...prev };
           if (next[highlightId]) {
@@ -159,7 +178,7 @@ const CodePanel: React.FC<CodePanelProps> = ({
         console.error(t.qualitative.k_fmx0x7, err);
       }
     },
-    []
+    [targetKind]
   );
 
   const handleUpdateCode = useCallback(

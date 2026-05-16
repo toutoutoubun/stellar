@@ -47,3 +47,6 @@ rand = "0.8"
 base64 = "0.22"
 sha2 = "0.10"
 hmac = "0.12"
+lindera-core = "0.28"
+lindera-tokenizer = { version = "0.28", features = ["ipadic"] }
+lindera-dictionary = "0.28"

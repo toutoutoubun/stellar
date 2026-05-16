@@ -84,6 +84,19 @@ pub struct CreateHighlightDto {
     pub rect: HighlightRect,
 }
 
+/// 質的分析ソースPDFハイライト作成 DTO
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateQualitativeSourceHighlightDto {
+    pub source_id: String,
+    pub text: String,
+    pub comment: Option<String>,
+    #[serde(default = "default_highlight_color")]
+    pub color: String,
+    pub page: i32,
+    pub rect: HighlightRect,
+}
+
 fn default_highlight_color() -> String {
     "yellow".to_string()
 }
@@ -504,6 +517,31 @@ pub fn parse_highlight_sqlx(row: &sqlx::sqlite::SqliteRow) -> Result<HighlightRe
     Ok(HighlightResponse {
         id: col_str(row, "id"),
         paper_id: col_str(row, "paper_id"),
+        text: col_str(row, "text"),
+        comment: col_opt_str(row, "comment"),
+        color: col_str(row, "color"),
+        page: col_i32(row, "page"),
+        rect,
+        created_at: col_str(row, "created_at"),
+    })
+}
+
+/// sqlx::SqliteRow → HighlightResponse
+/// 質的分析ソースPDFのハイライトは、互換性のため paper_id に source_id を入れて返す。
+pub fn parse_qualitative_source_highlight_sqlx(
+    row: &sqlx::sqlite::SqliteRow,
+) -> Result<HighlightResponse, String> {
+    let rect: HighlightRect =
+        serde_json::from_str(&col_str(row, "rect")).unwrap_or(HighlightRect {
+            x1: 0.0,
+            y1: 0.0,
+            x2: 0.0,
+            y2: 0.0,
+        });
+
+    Ok(HighlightResponse {
+        id: col_str(row, "id"),
+        paper_id: col_str(row, "source_id"),
         text: col_str(row, "text"),
         comment: col_opt_str(row, "comment"),
         color: col_str(row, "color"),

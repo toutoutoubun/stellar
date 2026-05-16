@@ -158,7 +158,17 @@ pub async fn import_qualitative_source(
         .unwrap_or("")
         .to_ascii_lowercase();
 
-    let content = extract_source_text(&input.file_path, &file_type)?;
+    let content = match extract_source_text(&input.file_path, &file_type) {
+        Ok(text) => text,
+        Err(err) if file_type == "pdf" => {
+            eprintln!(
+                "[qualitative] PDF text extraction failed for {}: {}",
+                input.file_path, err
+            );
+            String::new()
+        }
+        Err(err) => return Err(err),
+    };
     let title = input.title.unwrap_or_else(|| {
         path.file_stem()
             .and_then(|name| name.to_str())
@@ -363,6 +373,8 @@ pub async fn get_code_tree(app: AppHandle, project_id: String) -> Result<Vec<Cod
             SELECT COUNT(*) FROM note_segment_codes nsc WHERE nsc.code_id = c.id
         ) + (
             SELECT COUNT(*) FROM source_segment_codes ssc WHERE ssc.code_id = c.id
+        ) + (
+            SELECT COUNT(*) FROM source_highlight_codes shc WHERE shc.code_id = c.id
         ) as assignment_count
         FROM codes c WHERE c.project_id = ? ORDER BY c.sort_order ASC, c.name ASC",
     )
@@ -559,7 +571,8 @@ pub async fn get_highlights_by_code(
     .await
     .map_err(|e| format!("コード別ハイライト取得に失敗: {}", e))?;
 
-    rows.iter()
+    let mut result: Vec<HighlightWithContext> = rows
+        .iter()
         .map(|row| {
             Ok(HighlightWithContext {
                 id: col_str(row, "id"),
@@ -572,7 +585,36 @@ pub async fn get_highlights_by_code(
                 created_at: col_str(row, "created_at"),
             })
         })
-        .collect()
+        .collect::<Result<Vec<_>, String>>()?;
+
+    let source_rows = sqlx::query(
+        "SELECT h.id, h.source_id, h.text, h.comment, h.color, h.page, h.created_at, qs.title as source_title
+         FROM source_highlight_codes shc
+         JOIN qualitative_source_highlights h ON h.id = shc.source_highlight_id
+         JOIN qualitative_sources qs ON qs.id = h.source_id
+         JOIN codes c ON c.id = shc.code_id
+         WHERE shc.code_id = ?
+         ORDER BY qs.title ASC, h.page ASC",
+    )
+    .bind(&code_id)
+    .fetch_all(pool.as_ref())
+    .await
+    .map_err(|e| format!("コード別分析ソースハイライト取得に失敗: {}", e))?;
+
+    for row in &source_rows {
+        result.push(HighlightWithContext {
+            id: col_str(row, "id"),
+            paper_id: col_str(row, "source_id"),
+            text: col_str(row, "text"),
+            comment: col_opt_str(row, "comment"),
+            color: col_str(row, "color"),
+            page: col_i32(row, "page"),
+            paper_title: format!("{} · 分析ソース", col_str(row, "source_title")),
+            created_at: col_str(row, "created_at"),
+        });
+    }
+
+    Ok(result)
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -604,11 +646,23 @@ pub async fn get_coding_matrix(app: AppHandle, project_id: String) -> Result<Cod
     // 分析ソース一覧（列）— コードが割り当てられている分析ソースのみ
     let source_rows = sqlx::query(
         "SELECT DISTINCT qs.id, qs.title FROM qualitative_sources qs
-         JOIN source_segment_codes ssc ON ssc.source_id = qs.id
-         JOIN codes c ON c.id = ssc.code_id AND c.project_id = ?
          WHERE qs.project_id = ?
+           AND (
+             EXISTS (
+               SELECT 1 FROM source_segment_codes ssc
+               JOIN codes c ON c.id = ssc.code_id AND c.project_id = ?
+               WHERE ssc.source_id = qs.id
+             )
+             OR EXISTS (
+               SELECT 1 FROM qualitative_source_highlights qsh
+               JOIN source_highlight_codes shc ON shc.source_highlight_id = qsh.id
+               JOIN codes c ON c.id = shc.code_id AND c.project_id = ?
+               WHERE qsh.source_id = qs.id
+             )
+           )
          ORDER BY qs.title ASC",
     )
+    .bind(&project_id)
     .bind(&project_id)
     .bind(&project_id)
     .fetch_all(pool.as_ref())
@@ -643,6 +697,30 @@ pub async fn get_coding_matrix(app: AppHandle, project_id: String) -> Result<Cod
         let key = format!("{}:{}", col_str(row, "code_id"), col_str(row, "source_id"));
         let cnt: i64 = row.try_get("cnt").unwrap_or(0);
         cells.insert(key, cnt as u32);
+    }
+
+    let source_highlight_cell_rows = sqlx::query(
+        "SELECT shc.code_id, qsh.source_id, COUNT(*) as cnt
+         FROM source_highlight_codes shc
+         JOIN qualitative_source_highlights qsh ON qsh.id = shc.source_highlight_id
+         JOIN qualitative_sources qs ON qs.id = qsh.source_id
+         JOIN codes c ON c.id = shc.code_id AND c.project_id = ?
+         WHERE qs.project_id = ?
+         GROUP BY shc.code_id, qsh.source_id",
+    )
+    .bind(&project_id)
+    .bind(&project_id)
+    .fetch_all(pool.as_ref())
+    .await
+    .map_err(|e| format!("PDFハイライト由来マトリクスセル取得に失敗: {}", e))?;
+
+    for row in &source_highlight_cell_rows {
+        let key = format!("{}:{}", col_str(row, "code_id"), col_str(row, "source_id"));
+        let cnt: i64 = row.try_get("cnt").unwrap_or(0);
+        cells
+            .entry(key)
+            .and_modify(|value| *value += cnt as u32)
+            .or_insert(cnt as u32);
     }
 
     Ok(CodingMatrix { rows, cols, cells })
@@ -2470,15 +2548,18 @@ fn extract_source_text(path: &str, file_type: &str) -> Result<String, String> {
         "pdf" => extract_pdf_text(path).map(|text| normalize_extracted_text(&text)),
         other => Err(format!(
             "未対応のファイル形式です: {}。docx / pdf / md を選択してください",
-            if other.is_empty() { "(拡張子なし)" } else { other }
+            if other.is_empty() {
+                "(拡張子なし)"
+            } else {
+                other
+            }
         )),
     }
 }
 
 fn extract_docx_text(path: &str) -> Result<String, String> {
     let file = File::open(path).map_err(|e| format!("DOCXを開けません: {}", e))?;
-    let mut archive =
-        zip::ZipArchive::new(file).map_err(|e| format!("DOCXの展開に失敗: {}", e))?;
+    let mut archive = zip::ZipArchive::new(file).map_err(|e| format!("DOCXの展開に失敗: {}", e))?;
     let mut document = archive
         .by_name("word/document.xml")
         .map_err(|e| format!("DOCX本文が見つかりません: {}", e))?;

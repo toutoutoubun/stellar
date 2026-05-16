@@ -39,6 +39,12 @@ interface HighlightPanelProps {
   onCreateNoteFromSelected: () => Promise<string | null>;
   /** 現在表示中の論文ID（コーディングパネル用） */
   paperId?: string;
+  /** ハイライト対象 */
+  targetKind?: "paper" | "qualitativeSource";
+  /** 質的分析ソースの所属プロジェクトID */
+  currentProjectId?: string;
+  /** 初期表示タブ */
+  defaultTab?: PanelTab;
 }
 
 export const HighlightPanel: React.FC<HighlightPanelProps> = ({
@@ -54,8 +60,11 @@ export const HighlightPanel: React.FC<HighlightPanelProps> = ({
   onClearSelection,
   onCreateNoteFromSelected,
   paperId,
+  targetKind = "paper",
+  currentProjectId,
+  defaultTab = "highlights",
 }) => {
-  const [activeTab, setActiveTab] = useState<PanelTab>("highlights");
+  const [activeTab, setActiveTab] = useState<PanelTab>(defaultTab);
 
   /** ノート変換ハンドラ */
   const handleCreateNote = useCallback(async () => {
@@ -323,6 +332,8 @@ export const HighlightPanel: React.FC<HighlightPanelProps> = ({
               highlights={highlights}
               selectedHighlightIds={selectedHighlightIds}
               paperId={paperId}
+              targetKind={targetKind}
+              currentProjectId={currentProjectId}
             />
           </Suspense>
         </div>

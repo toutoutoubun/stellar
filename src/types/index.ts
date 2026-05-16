@@ -152,6 +152,7 @@ export type HighlightColor = 'yellow' | 'blue' | 'green' | 'pink';
 export interface Highlight {
   id: string;
   paperId: string;
+  sourceId?: string | null;
   text: string;
   comment: string | null;
   color: HighlightColor;
@@ -162,7 +163,8 @@ export interface Highlight {
 
 /** ハイライト作成時の入力型 */
 export interface CreateHighlightInput {
-  paperId: string;
+  paperId?: string;
+  sourceId?: string;
   text: string;
   comment?: string | null;
   color: HighlightColor;
@@ -669,6 +671,12 @@ export interface CreateSourceSegmentCodeInput {
   offsetStart?: number | null;
   offsetEnd?: number | null;
   memo?: string | null;
+}
+
+export interface CooccurrencePair {
+  wordA: string;
+  wordB: string;
+  count: number;
 }
 
 /** ハイライト + コンテキスト（コード別取得用） */

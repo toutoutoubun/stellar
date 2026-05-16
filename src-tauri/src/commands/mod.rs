@@ -4,6 +4,7 @@
 
 pub mod citation_network;
 pub mod cloud_backup;
+pub mod cooccurrence;
 pub mod data;
 pub mod draft;
 pub mod export;

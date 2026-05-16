@@ -30,7 +30,7 @@ function hasTauriRuntime(): boolean {
 // ブラウザプレビューでも create / get / update / delete が動作するように
 // メモリ上にデータを保持する軽量ストア。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mockStore: { notes: any[]; projects: any[]; papers: any[]; datasets: any[]; variables: any[]; dataRows: any[]; analyses: any[]; codes: any[]; highlights: any[]; links: any[]; qualitativeSources: any[]; sourceSegments: any[]; qualSourceCritiques: any[]; comparativeDesigns: any[]; comparativeCases: any[]; comparativeVariables: any[]; comparativeCells: any[] } = {
+const mockStore: { notes: any[]; projects: any[]; papers: any[]; datasets: any[]; variables: any[]; dataRows: any[]; analyses: any[]; codes: any[]; highlights: any[]; links: any[]; qualitativeSources: any[]; sourceSegments: any[]; qualitativeSourceHighlights: any[]; sourceHighlightCodes: any[]; qualSourceCritiques: any[]; comparativeDesigns: any[]; comparativeCases: any[]; comparativeVariables: any[]; comparativeCells: any[] } = {
   notes: [],
   projects: [],
   papers: [],
@@ -43,6 +43,8 @@ const mockStore: { notes: any[]; projects: any[]; papers: any[]; datasets: any[]
   links: [],
   qualitativeSources: [],
   sourceSegments: [],
+  qualitativeSourceHighlights: [],
+  sourceHighlightCodes: [],
   qualSourceCritiques: [],
   comparativeDesigns: [],
   comparativeCases: [],
@@ -171,6 +173,81 @@ function buildMockQcaCsv(designId: string): string {
     lines.push([commandString(itemCase.name), ...values].map(csvCell).join(","));
   }
   return `${lines.join("\n")}\n`;
+}
+
+function mockCodeAssignmentCount(codeId: string): number {
+  const paperHighlightCount = mockStore.highlights.filter((highlight) =>
+    Array.isArray(highlight.codeIds) && highlight.codeIds.includes(codeId),
+  ).length;
+  const sourceSegmentCount = mockStore.sourceSegments.filter(
+    (segment) => segment.codeId === codeId,
+  ).length;
+  const sourceHighlightCount = mockStore.sourceHighlightCodes.filter(
+    (assignment) => assignment.codeId === codeId,
+  ).length;
+  return paperHighlightCount + sourceSegmentCount + sourceHighlightCount;
+}
+
+const MOCK_JA_STOPWORDS = new Set([
+  "は", "が", "を", "に", "の", "で", "と", "も", "から", "まで", "より", "など",
+  "こと", "ため", "よる", "おける", "れる", "られる", "する", "した", "して",
+  "これ", "その", "この", "あの", "そのような",
+]);
+
+const MOCK_EN_STOPWORDS = new Set([
+  "the", "a", "an", "is", "are", "was", "were", "of", "in", "to", "and", "or",
+  "but", "for", "with", "by", "on", "at",
+]);
+
+function normalizeMockToken(token: string): string | null {
+  const normalized = token
+    .replace(/^[\s'.,!?;:()\[\]{}"“”‘’]+|[\s'.,!?;:()\[\]{}"“”‘’]+$/g, "")
+    .toLowerCase();
+  if ([...normalized].length < 2) return null;
+  if (/^\d+$/.test(normalized)) return null;
+  return normalized;
+}
+
+function tokenizeMockCooccurrenceText(text: string): string[] {
+  const hasJapanese = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/.test(text);
+  const stopwords = hasJapanese ? MOCK_JA_STOPWORDS : MOCK_EN_STOPWORDS;
+  const matches = text.match(/[A-Za-z0-9']+|[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaffー]+/g) ?? [];
+  return matches
+    .map(normalizeMockToken)
+    .filter((token): token is string => Boolean(token && !stopwords.has(token)));
+}
+
+function buildMockCooccurrencePairs(
+  text: string,
+  windowSize = 5,
+  topN = 10,
+): Array<{ wordA: string; wordB: string; count: number }> {
+  const tokens = tokenizeMockCooccurrenceText(text);
+  const window = Math.min(Math.max(Math.trunc(windowSize), 2), 50);
+  const limit = Math.min(Math.max(Math.trunc(topN), 1), 100);
+  const counts = new Map<string, number>();
+
+  for (let start = 0; start < tokens.length; start++) {
+    const end = Math.min(start + window, tokens.length);
+    for (let i = start; i < end; i++) {
+      for (let j = i + 1; j < end; j++) {
+        const left = tokens[i]!;
+        const right = tokens[j]!;
+        if (left === right) continue;
+        const [wordA, wordB] = [left, right].sort() as [string, string];
+        const key = `${wordA}\0${wordB}`;
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+      }
+    }
+  }
+
+  return [...counts.entries()]
+    .map(([key, count]) => {
+      const [wordA, wordB] = key.split("\0") as [string, string];
+      return { wordA, wordB, count };
+    })
+    .sort((a, b) => b.count - a.count || a.wordA.localeCompare(b.wordA) || a.wordB.localeCompare(b.wordB))
+    .slice(0, limit);
 }
 
 /**
@@ -574,7 +651,14 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     const filtered = projectId
       ? mockStore.codes.filter((c) => c.projectId === projectId)
       : [...mockStore.codes];
-    return { handled: true, result: filtered.map((code) => ({ ...code, children: code.children ?? [], assignmentCount: code.assignmentCount ?? 0 })) };
+    return {
+      handled: true,
+      result: filtered.map((code) => ({
+        ...code,
+        children: code.children ?? [],
+        assignmentCount: mockCodeAssignmentCount(commandString(code.id)),
+      })),
+    };
   }
   if (cmd === "create_code") {
     const a = commandInput(args);
@@ -612,7 +696,15 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     return { handled: true, result: undefined };
   }
   if (cmd === "delete_code") {
-    mockStore.codes = mockStore.codes.filter((c) => c.id !== args?.id);
+    const codeId = commandString(args?.id);
+    mockStore.codes = mockStore.codes.filter((c) => c.id !== codeId);
+    mockStore.sourceSegments = mockStore.sourceSegments.filter((segment) => segment.codeId !== codeId);
+    mockStore.sourceHighlightCodes = mockStore.sourceHighlightCodes.filter((assignment) => assignment.codeId !== codeId);
+    for (const highlight of mockStore.highlights) {
+      if (Array.isArray(highlight.codeIds)) {
+        highlight.codeIds = highlight.codeIds.filter((id: string) => id !== codeId);
+      }
+    }
     return { handled: true, result: undefined };
   }
 
@@ -812,8 +904,17 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
   }
   if (cmd === "delete_qualitative_source") {
     const id = args?.id;
+    const deletedHighlightIds = new Set(
+      mockStore.qualitativeSourceHighlights
+        .filter((highlight) => highlight.sourceId === id)
+        .map((highlight) => highlight.id),
+    );
     mockStore.qualitativeSources = mockStore.qualitativeSources.filter((source) => source.id !== id);
     mockStore.sourceSegments = mockStore.sourceSegments.filter((segment) => segment.sourceId !== id);
+    mockStore.qualitativeSourceHighlights = mockStore.qualitativeSourceHighlights.filter((highlight) => highlight.sourceId !== id);
+    mockStore.sourceHighlightCodes = mockStore.sourceHighlightCodes.filter(
+      (assignment) => !deletedHighlightIds.has(assignment.sourceHighlightId),
+    );
     mockStore.qualSourceCritiques = mockStore.qualSourceCritiques.filter((critique) => critique.sourceId !== id);
     return { handled: true, result: undefined };
   }
@@ -851,6 +952,18 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
       result: mockStore.sourceSegments.filter((segment) => segment.codeId === codeId),
     };
   }
+  if (cmd === "analyze_cooccurrence") {
+    const segmentId = args?.segmentId as string | undefined;
+    const segment = mockStore.sourceSegments.find((item) => item.id === segmentId);
+    return {
+      handled: true,
+      result: buildMockCooccurrencePairs(
+        commandString(segment?.segmentText),
+        commandNumber(args?.windowSize, 5),
+        commandNumber(args?.topN, 10),
+      ),
+    };
+  }
   if (cmd === "delete_source_segment_code") {
     mockStore.sourceSegments = mockStore.sourceSegments.filter((segment) => segment.id !== args?.id);
     return { handled: true, result: undefined };
@@ -858,13 +971,28 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
   if (cmd === "get_coding_matrix") {
     const projectId = args?.projectId as string | undefined;
     const projectCodes = mockStore.codes.filter((code) => !projectId || code.projectId === projectId);
+    const projectCodeIds = new Set(projectCodes.map((code) => commandString(code.id)));
     const projectSourceIds = new Set(
       mockStore.qualitativeSources
         .filter((source) => !projectId || source.projectId === projectId)
         .map((source) => source.id),
     );
     const matrixSegments = mockStore.sourceSegments.filter((segment) => projectSourceIds.has(segment.sourceId));
+    const highlightById = new Map(
+      mockStore.qualitativeSourceHighlights
+        .filter((highlight) => projectSourceIds.has(highlight.sourceId))
+        .map((highlight) => [highlight.id, highlight]),
+    );
+    const matrixHighlightAssignments = mockStore.sourceHighlightCodes.filter(
+      (assignment) =>
+        projectCodeIds.has(assignment.codeId) &&
+        highlightById.has(assignment.sourceHighlightId),
+    );
     const sourceIdsWithSegments = new Set(matrixSegments.map((segment) => segment.sourceId));
+    for (const assignment of matrixHighlightAssignments) {
+      const highlight = highlightById.get(assignment.sourceHighlightId);
+      if (highlight) sourceIdsWithSegments.add(highlight.sourceId);
+    }
     const cols = mockStore.qualitativeSources
       .filter((source) => sourceIdsWithSegments.has(source.id))
       .map((source) => ({ paperId: source.id, paperTitle: source.title }));
@@ -876,6 +1004,12 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     const cells: Record<string, number> = {};
     for (const segment of matrixSegments) {
       const key = `${segment.codeId}:${segment.sourceId}`;
+      cells[key] = (cells[key] ?? 0) + 1;
+    }
+    for (const assignment of matrixHighlightAssignments) {
+      const highlight = highlightById.get(assignment.sourceHighlightId);
+      if (!highlight) continue;
+      const key = `${assignment.codeId}:${highlight.sourceId}`;
       cells[key] = (cells[key] ?? 0) + 1;
     }
     return { handled: true, result: { rows, cols, cells } };
@@ -962,32 +1096,187 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
 
   // ── Highlights ──
   if (cmd === "get_highlights") {
-    return { handled: true, result: [...mockStore.highlights] };
+    const paperId = commandString(args?.paperId ?? args?.paper_id);
+    const result = paperId
+      ? mockStore.highlights.filter((highlight) => highlight.paperId === paperId)
+      : [...mockStore.highlights];
+    return { handled: true, result };
   }
   if (cmd === "get_highlights_by_code") {
     const codeId = args?.codeId as string | undefined;
-    const filtered = codeId
-      ? mockStore.highlights.filter((h: Record<string, unknown>) => (h.codeIds as string[] | undefined)?.includes(codeId))
+    const paperHighlights = codeId
+      ? mockStore.highlights
+          .filter((h: Record<string, unknown>) => (h.codeIds as string[] | undefined)?.includes(codeId))
+          .map((highlight) => {
+            const paper = mockStore.papers.find((item) => item.id === highlight.paperId);
+            return { ...highlight, paperTitle: paper?.title ?? "" };
+          })
       : [];
-    return { handled: true, result: filtered };
+    const sourceHighlights = codeId
+      ? mockStore.sourceHighlightCodes
+          .filter((assignment) => assignment.codeId === codeId)
+          .map((assignment) => {
+            const highlight = mockStore.qualitativeSourceHighlights.find(
+              (item) => item.id === assignment.sourceHighlightId,
+            );
+            if (!highlight) return null;
+            const source = mockStore.qualitativeSources.find((item) => item.id === highlight.sourceId);
+            return {
+              ...highlight,
+              paperTitle: source ? `${source.title} · 分析ソース` : "分析ソース",
+            };
+          })
+          .filter(Boolean)
+      : [];
+    return { handled: true, result: [...paperHighlights, ...sourceHighlights] };
   }
   if (cmd === "create_highlight") {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const a = (args ?? {}) as any;
+    const a = commandInput(args);
     const hl = {
       id: mockId(),
-      paperId: a.paperId ?? "",
-      text: a.text ?? "",
-      color: a.color ?? "#ffeb3b",
-      comment: a.comment ?? null,
-      codeIds: a.codeIds ?? [],
-      pageNumber: a.pageNumber ?? null,
-      rects: a.rects ?? [],
+      paperId: commandString(a.paperId),
+      sourceId: null,
+      text: commandString(a.text),
+      color: commandString(a.color, "yellow"),
+      comment: commandNullableString(a.comment),
+      codeIds: Array.isArray(a.codeIds) ? a.codeIds : [],
+      page: commandNumber(a.page, 1),
+      rect: isRecord(a.rect) ? a.rect : { x1: 0, y1: 0, x2: 0, y2: 0 },
       createdAt: now(),
-      updatedAt: now(),
     };
     mockStore.highlights.push(hl);
     return { handled: true, result: { ...hl } };
+  }
+  if (cmd === "update_highlight_comment") {
+    const id = commandString(args?.id);
+    const highlight = mockStore.highlights.find((item) => item.id === id);
+    if (highlight) {
+      highlight.comment = commandNullableString(args?.comment);
+      return { handled: true, result: { ...highlight } };
+    }
+    return { handled: true, result: null };
+  }
+  if (cmd === "delete_highlight") {
+    const id = commandString(args?.id);
+    mockStore.highlights = mockStore.highlights.filter((highlight) => highlight.id !== id);
+    return { handled: true, result: undefined };
+  }
+  if (cmd === "assign_code_to_highlight") {
+    const highlightId = commandString(args?.highlightId ?? args?.highlight_id);
+    const codeId = commandString(args?.codeId ?? args?.code_id);
+    const highlight = mockStore.highlights.find((item) => item.id === highlightId);
+    if (highlight && codeId) {
+      const codeIds = new Set(Array.isArray(highlight.codeIds) ? highlight.codeIds : []);
+      codeIds.add(codeId);
+      highlight.codeIds = [...codeIds];
+    }
+    return { handled: true, result: undefined };
+  }
+  if (cmd === "remove_code_from_highlight") {
+    const highlightId = commandString(args?.highlightId ?? args?.highlight_id);
+    const codeId = commandString(args?.codeId ?? args?.code_id);
+    const highlight = mockStore.highlights.find((item) => item.id === highlightId);
+    if (highlight && Array.isArray(highlight.codeIds)) {
+      highlight.codeIds = highlight.codeIds.filter((id: string) => id !== codeId);
+    }
+    return { handled: true, result: undefined };
+  }
+  if (cmd === "get_qualitative_source_highlights") {
+    const sourceId = commandString(args?.sourceId ?? args?.source_id);
+    const result = mockStore.qualitativeSourceHighlights.filter(
+      (highlight) => !sourceId || highlight.sourceId === sourceId,
+    );
+    return { handled: true, result };
+  }
+  if (cmd === "create_qualitative_source_highlight") {
+    const input = commandInput(args);
+    const sourceId = commandString(input.sourceId);
+    const highlight = {
+      id: mockId(),
+      paperId: sourceId,
+      sourceId,
+      text: commandString(input.text),
+      comment: commandNullableString(input.comment),
+      color: commandString(input.color, "yellow"),
+      page: commandNumber(input.page, 1),
+      rect: isRecord(input.rect) ? input.rect : { x1: 0, y1: 0, x2: 0, y2: 0 },
+      createdAt: now(),
+    };
+    mockStore.qualitativeSourceHighlights.push(highlight);
+    return { handled: true, result: { ...highlight } };
+  }
+  if (cmd === "update_qualitative_source_highlight_comment") {
+    const id = commandString(args?.id);
+    const highlight = mockStore.qualitativeSourceHighlights.find((item) => item.id === id);
+    if (highlight) {
+      highlight.comment = commandNullableString(args?.comment);
+      return { handled: true, result: { ...highlight } };
+    }
+    return { handled: true, result: null };
+  }
+  if (cmd === "delete_qualitative_source_highlight") {
+    const id = commandString(args?.id);
+    mockStore.qualitativeSourceHighlights = mockStore.qualitativeSourceHighlights.filter(
+      (highlight) => highlight.id !== id,
+    );
+    mockStore.sourceHighlightCodes = mockStore.sourceHighlightCodes.filter(
+      (assignment) => assignment.sourceHighlightId !== id,
+    );
+    return { handled: true, result: undefined };
+  }
+  if (cmd === "assign_code_to_source_highlight") {
+    const highlightId = commandString(args?.highlightId ?? args?.highlight_id);
+    const codeId = commandString(args?.codeId ?? args?.code_id);
+    const exists = mockStore.sourceHighlightCodes.some(
+      (assignment) => assignment.sourceHighlightId === highlightId && assignment.codeId === codeId,
+    );
+    if (!exists && highlightId && codeId) {
+      mockStore.sourceHighlightCodes.push({
+        id: mockId(),
+        sourceHighlightId: highlightId,
+        codeId,
+        assignedAt: now(),
+      });
+    }
+    return { handled: true, result: undefined };
+  }
+  if (cmd === "remove_code_from_source_highlight") {
+    const highlightId = commandString(args?.highlightId ?? args?.highlight_id);
+    const codeId = commandString(args?.codeId ?? args?.code_id);
+    mockStore.sourceHighlightCodes = mockStore.sourceHighlightCodes.filter(
+      (assignment) => assignment.sourceHighlightId !== highlightId || assignment.codeId !== codeId,
+    );
+    return { handled: true, result: undefined };
+  }
+  if (cmd === "create_note_from_source_highlights") {
+    const sourceId = commandString(args?.sourceId ?? args?.source_id);
+    const highlightIds = Array.isArray(args?.highlightIds)
+      ? args.highlightIds
+      : Array.isArray(args?.highlight_ids)
+        ? args.highlight_ids
+        : [];
+    const idSet = new Set(highlightIds);
+    const source = mockStore.qualitativeSources.find((item) => item.id === sourceId);
+    const selected = mockStore.qualitativeSourceHighlights.filter(
+      (highlight) => highlight.sourceId === sourceId && idSet.has(highlight.id),
+    );
+    const note = {
+      id: mockId(),
+      title: `${source?.title ?? "分析ソース"} のハイライト`,
+      content: selected
+        .map((highlight) => `> ${highlight.text}\n\n${highlight.comment ?? ""}`)
+        .join("\n\n"),
+      tags: ["qualitative-source"],
+      paperId: null,
+      isDraft: 0,
+      draftMeta: "{}",
+      wordCount: selected.reduce((sum, highlight) => sum + commandString(highlight.text).split(/\s+/).filter(Boolean).length, 0),
+      readingTimeMin: 1,
+      createdAt: now(),
+      updatedAt: now(),
+    };
+    mockStore.notes.unshift(note);
+    return { handled: true, result: note.id };
   }
 
   // ── Graph Data（動的生成）──
@@ -1651,6 +1940,7 @@ const MOCK_RESPONSES: Record<string, any> = {
   assign_code_to_source_segment: null,
   get_source_segments: [],
   get_source_segments_by_code: [],
+  analyze_cooccurrence: [],
   delete_source_segment_code: undefined,
 
   // Qualitative — Source Critique

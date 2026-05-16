@@ -9,7 +9,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 
 import { invoke, convertFileSrc, isTauri } from "../../lib/tauriShim";
 
-import type { Paper, Highlight, HighlightColor, HighlightRect } from "../../types";
+import type { Paper, QualitativeSource, Highlight, HighlightColor, HighlightRect } from "../../types";
 import { useHighlights } from "../../hooks/useHighlights";
 import { useUIStore } from "../../stores/useUIStore";
 import { getColorByShortcut } from "../../utils/highlightColors";
@@ -22,14 +22,34 @@ import { useT } from "../../stores/useI18nStore";
 
 interface ReaderViewProps {
   /** 表示する論文のID */
-  paperId: string;
+  paperId?: string;
+  /** 表示する質的分析ソースのID */
+  sourceId?: string;
+  /** 質的分析ソースの所属プロジェクトID（コーディングパネル用） */
+  sourceProjectId?: string;
+  /** 初期表示する右パネルタブ */
+  initialPanelTab?: "highlights" | "coding";
 }
 
-export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
+interface ReaderDocument {
+  id: string;
+  title: string;
+  pdfPath: string | null;
+  kind: "paper" | "qualitativeSource";
+}
+
+export const ReaderView: React.FC<ReaderViewProps> = ({
+  paperId,
+  sourceId,
+  sourceProjectId,
+  initialPanelTab,
+}) => {
   const t = useT();
+  const targetKind = sourceId ? "qualitativeSource" : "paper";
+  const targetId = sourceId ?? paperId ?? "";
   // 論文データ
-  const [paper, setPaper] = useState<Paper | null>(null);
-  const [paperLoading, setPaperLoading] = useState(true);
+  const [documentItem, setDocumentItem] = useState<ReaderDocument | null>(null);
+  const [documentLoading, setDocumentLoading] = useState(true);
 
   // PDFビューア状態
   const [currentPage, setCurrentPage] = useState(1);
@@ -54,7 +74,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
     toggleSelect,
     clearSelection,
     createNoteFromSelected,
-  } = useHighlights(paperId);
+  } = useHighlights(targetId, targetKind);
 
   // UIストア（ノートエディタへの遷移用）
   const openNote = useUIStore((s) => s.openNote);
@@ -67,12 +87,37 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
   /** 論文データの取得 */
   useEffect(() => {
     let cancelled = false;
-    const fetchPaper = async () => {
-      setPaperLoading(true);
+    const fetchDocument = async () => {
+      if (!targetId) {
+        setDocumentItem(null);
+        setDocumentLoading(false);
+        return;
+      }
+      setDocumentLoading(true);
       try {
-        const result = await invoke<Paper>("get_paper", { id: paperId });
+        const result =
+          targetKind === "qualitativeSource"
+            ? await invoke<QualitativeSource>("get_qualitative_source", { id: targetId })
+            : await invoke<Paper>("get_paper", { id: targetId });
         if (!cancelled) {
-          setPaper(result);
+          setDocumentItem(
+            targetKind === "qualitativeSource"
+              ? {
+                  id: result.id,
+                  title: result.title,
+                  pdfPath:
+                    "fileType" in result && result.fileType.toLowerCase() === "pdf"
+                      ? result.filePath
+                      : null,
+                  kind: "qualitativeSource",
+                }
+              : {
+                  id: result.id,
+                  title: result.title,
+                  pdfPath: "pdfPath" in result ? result.pdfPath : null,
+                  kind: "paper",
+                },
+          );
         }
       } catch (err) {
         if (!cancelled) {
@@ -82,15 +127,15 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
         }
       } finally {
         if (!cancelled) {
-          setPaperLoading(false);
+          setDocumentLoading(false);
         }
       }
     };
-    void fetchPaper();
+    void fetchDocument();
     return () => {
       cancelled = true;
     };
-  }, [paperId]);
+  }, [targetId, targetKind]);
 
   // ── PDF Blob URL 管理 ──
   // pdfjs-dist は fetch() で PDF を取得するが、Tauri の asset protocol
@@ -103,7 +148,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
 
   /** PDF Blob URL の生成 */
   useEffect(() => {
-    if (!paper?.pdfPath) {
+    if (!documentItem?.pdfPath) {
       queueMicrotask(() => {
         setPdfBlobUrl(null);
         setPdfLoadError(null);
@@ -111,6 +156,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
       return;
     }
 
+    const pdfPath = documentItem.pdfPath;
     let cancelled = false;
     let objectUrl: string | null = null;
 
@@ -134,7 +180,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
 
           // 方法1: convertFileSrc で asset URL を取得し、fetch → Blob URL
           try {
-            const assetUrl = convertFileSrc(paper.pdfPath!);
+            const assetUrl = convertFileSrc(pdfPath);
             console.info("[ReaderView] PDF asset URL:", assetUrl);
 
             const response = await fetch(assetUrl);
@@ -160,7 +206,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
             );
 
             try {
-              blob = await readViaFsPlugin(paper.pdfPath!);
+              blob = await readViaFsPlugin(pdfPath);
               if (blob.size === 0) {
                 throw new Error("PDF file is empty (0 bytes) via fs plugin", {
                   cause: assetErr,
@@ -191,7 +237,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
           }
         } else {
           // 非 Tauri 環境（ブラウザプレビュー）: パスが https:// の場合はそのまま使用
-          const path = paper.pdfPath!;
+          const path = pdfPath;
           if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("blob:")) {
             objectUrl = path;
           } else {
@@ -207,7 +253,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
         if (!cancelled) {
           const msg = err instanceof Error ? err.message : String(err);
           console.error("[ReaderView] PDF Blob URL 生成失敗:", msg, {
-            pdfPath: paper.pdfPath,
+            pdfPath: documentItem.pdfPath,
             isTauri,
           });
           setPdfLoadError(msg);
@@ -228,7 +274,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [paper?.pdfPath]);
+  }, [documentItem?.pdfPath]);
 
   /** ハイライト追加ハンドラ */
   const handleAddHighlight = useCallback(
@@ -387,7 +433,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
   }, [currentPage, totalPages]);
 
   // ローディング中
-  if (paperLoading) {
+  if (documentLoading) {
     return (
       <div
         className="flex items-center justify-center h-full"
@@ -412,7 +458,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
   }
 
   // 論文が見つからない
-  if (!paper) {
+  if (!documentItem) {
     return (
       <div
         className="flex items-center justify-center h-full"
@@ -440,7 +486,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
   }
 
   // PDF Blob ロード中
-  if (paper?.pdfPath && pdfLoadingBlob) {
+  if (documentItem?.pdfPath && pdfLoadingBlob) {
     return (
       <div
         className="flex items-center justify-center h-full"
@@ -465,7 +511,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
   }
 
   // PDF Blob 生成エラー
-  if (paper?.pdfPath && pdfLoadError) {
+  if (documentItem?.pdfPath && pdfLoadError) {
     return (
       <div
         className="flex items-center justify-center h-full"
@@ -501,7 +547,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
             className="text-xs"
             style={{ color: "var(--color-text-disabled)" }}
           >
-            Path: {paper.pdfPath}
+            Path: {documentItem.pdfPath}
           </span>
         </div>
       </div>
@@ -552,7 +598,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
         onZoomChange={handleZoomChange}
         onColorChange={handleColorChange}
         onToggleSearch={handleToggleSearch}
-        paperTitle={paper.title}
+        paperTitle={documentItem.title}
       />
 
       {/* メインコンテンツ: PDFビューア（左） + ハイライトパネル（右） */}
@@ -652,7 +698,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ paperId }) => {
           onToggleSelect={toggleSelect}
           onClearSelection={clearSelection}
           onCreateNoteFromSelected={handleCreateNoteFromSelected}
-          paperId={paperId}
+          paperId={targetId}
+          targetKind={targetKind}
+          currentProjectId={sourceProjectId}
+          defaultTab={initialPanelTab}
         />
       </div>
     </div>
