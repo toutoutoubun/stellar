@@ -5,6 +5,7 @@
 
 use crate::db::get_pool;
 use crate::db::models::*;
+use crate::utils::text::normalize_nfc_trimmed;
 use sqlx::Row;
 use std::collections::{HashMap, HashSet};
 use tauri::AppHandle;
@@ -322,7 +323,7 @@ fn push_graph_edge(
 }
 
 fn normalize_wikilink_title(title: &str) -> String {
-    title.trim().to_lowercase()
+    normalize_nfc_trimmed(title).to_lowercase()
 }
 
 fn extract_wikilink_titles(content: &str) -> Vec<String> {

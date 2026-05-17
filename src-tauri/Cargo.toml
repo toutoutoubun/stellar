@@ -50,3 +50,4 @@ hmac = "0.12"
 lindera-core = "0.28"
 lindera-tokenizer = { version = "0.28", features = ["ipadic"] }
 lindera-dictionary = "0.28"
+unicode-normalization = "0.1"

@@ -77,6 +77,24 @@ function commandNullableString(value: unknown): string | null {
   return typeof value === "string" ? value : null;
 }
 
+function normalizeText(value: string): string {
+  return value.normalize("NFC");
+}
+
+function commandNormalizedString(value: unknown, fallback = ""): string {
+  return normalizeText(commandString(value, fallback));
+}
+
+function commandNormalizedNullableString(value: unknown): string | null {
+  return typeof value === "string" ? normalizeText(value) : null;
+}
+
+function commandNormalizedStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string").map(normalizeText)
+    : [];
+}
+
 function commandNumber(value: unknown, fallback = 0): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
@@ -202,7 +220,8 @@ const MOCK_EN_STOPWORDS = new Set([
 function normalizeMockToken(token: string): string | null {
   const normalized = token
     .replace(/^[\s'.,!?;:()\[\]{}"“”‘’]+|[\s'.,!?;:()\[\]{}"“”‘’]+$/g, "")
-    .toLowerCase();
+    .toLowerCase()
+    .normalize("NFC");
   if ([...normalized].length < 2) return null;
   if (/^\d+$/.test(normalized)) return null;
   return normalized;
@@ -280,9 +299,9 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     const input = (args?.input ?? {}) as any;
     const note = {
       id: mockId(),
-      title: input.title ?? "",
-      content: input.content ?? "",
-      tags: input.tags ?? [],
+      title: commandNormalizedString(input.title),
+      content: commandNormalizedString(input.content),
+      tags: commandNormalizedStringArray(input.tags),
       paperId: input.paperId ?? null,
       isDraft: 0,
       draftMeta: "{}",
@@ -300,6 +319,9 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const input = (args?.input ?? {}) as any;
       const updated = { ...mockStore.notes[idx], ...input, updatedAt: now() };
+      if (input.title !== undefined) updated.title = commandNormalizedString(input.title, updated.title);
+      if (input.content !== undefined) updated.content = commandNormalizedString(input.content, updated.content);
+      if (input.tags !== undefined) updated.tags = commandNormalizedStringArray(input.tags);
       mockStore.notes[idx] = updated;
       return { handled: true, result: { ...updated } };
     }
@@ -321,8 +343,8 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     const input = (args?.input ?? args ?? {}) as any;
     const project = {
       id: mockId(),
-      name: input.name ?? useI18nStore.getState().t.utils.str_9w7zjx,
-      description: input.description ?? null,
+      name: commandNormalizedString(input.name, useI18nStore.getState().t.utils.str_9w7zjx),
+      description: commandNormalizedNullableString(input.description),
       methodType: input.methodType ?? "thematic",
       createdAt: now(),
       updatedAt: null,
@@ -340,8 +362,8 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     const idx = mockStore.projects.findIndex((p) => p.id === args?.id);
     if (idx !== -1) {
       const proj = mockStore.projects[idx]!;
-      if (updates.name !== undefined) proj.name = updates.name;
-      if (updates.description !== undefined) proj.description = updates.description;
+      if (updates.name !== undefined) proj.name = commandNormalizedString(updates.name, proj.name);
+      if (updates.description !== undefined) proj.description = commandNormalizedNullableString(updates.description);
       if (updates.methodType !== undefined) proj.methodType = updates.methodType;
       proj.updatedAt = now();
       return { handled: true, result: { ...proj } };
@@ -376,18 +398,18 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     const input = (args?.input ?? args ?? {}) as any;
     const paper = {
       id: mockId(),
-      title: input.title ?? useI18nStore.getState().t.utils.str_zgkhcc,
-      authors: input.authors ?? [],
+      title: commandNormalizedString(input.title, useI18nStore.getState().t.utils.str_zgkhcc),
+      authors: commandNormalizedStringArray(input.authors),
       year: input.year ?? null,
-      journal: input.journal ?? null,
-      volume: input.volume ?? null,
-      issue: input.issue ?? null,
-      pages: input.pages ?? null,
-      doi: input.doi ?? null,
-      url: input.url ?? null,
-      abstract: input.abstract ?? null,
+      journal: commandNormalizedNullableString(input.journal),
+      volume: commandNormalizedNullableString(input.volume),
+      issue: commandNormalizedNullableString(input.issue),
+      pages: commandNormalizedNullableString(input.pages),
+      doi: commandNormalizedNullableString(input.doi),
+      url: commandNormalizedNullableString(input.url),
+      abstract: commandNormalizedNullableString(input.abstract),
       pdfPath: input.pdfPath ?? null,
-      tags: input.tags ?? [],
+      tags: commandNormalizedStringArray(input.tags),
       createdAt: now(),
       updatedAt: now(),
     };
@@ -400,6 +422,16 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const input = (args?.input ?? {}) as any;
       const updated = { ...mockStore.papers[idx], ...input, updatedAt: now() };
+      if (input.title !== undefined) updated.title = commandNormalizedString(input.title, updated.title);
+      if (input.authors !== undefined) updated.authors = commandNormalizedStringArray(input.authors);
+      if (input.journal !== undefined) updated.journal = commandNormalizedNullableString(input.journal);
+      if (input.volume !== undefined) updated.volume = commandNormalizedNullableString(input.volume);
+      if (input.issue !== undefined) updated.issue = commandNormalizedNullableString(input.issue);
+      if (input.pages !== undefined) updated.pages = commandNormalizedNullableString(input.pages);
+      if (input.doi !== undefined) updated.doi = commandNormalizedNullableString(input.doi);
+      if (input.url !== undefined) updated.url = commandNormalizedNullableString(input.url);
+      if (input.abstract !== undefined) updated.abstract = commandNormalizedNullableString(input.abstract);
+      if (input.tags !== undefined) updated.tags = commandNormalizedStringArray(input.tags);
       mockStore.papers[idx] = updated;
       return { handled: true, result: { ...updated } };
     }
@@ -677,10 +709,10 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
       id: mockId(),
       projectId: commandString(a.projectId),
       parentId: commandNullableString(a.parentId),
-      name: commandString(a.name, commandString(a.label, useI18nStore.getState().t.utils.str_b194an)),
+      name: commandNormalizedString(a.name, commandString(a.label, useI18nStore.getState().t.utils.str_b194an)),
       color: commandString(a.color, "#6366f1"),
       codeType: commandString(a.codeType, "thematic"),
-      description: commandNullableString(a.description),
+      description: commandNormalizedNullableString(a.description),
       sortOrder: mockStore.codes.length,
       children: [],
       assignmentCount: 0,
@@ -695,10 +727,10 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     if (idx >= 0) {
       const a = commandInput(args);
       const updated = { ...mockStore.codes[idx] };
-      if (a.name != null) updated.name = a.name;
-      if (a.label != null) updated.name = a.label;
+      if (a.name != null) updated.name = commandNormalizedString(a.name, updated.name);
+      if (a.label != null) updated.name = commandNormalizedString(a.label, updated.name);
       if (a.color != null) updated.color = a.color;
-      if (a.description != null) updated.description = a.description;
+      if (a.description != null) updated.description = commandNormalizedString(a.description, updated.description);
       if (a.parentId !== undefined) updated.parentId = a.parentId || null;
       if (a.sortOrder != null) updated.sortOrder = a.sortOrder;
       updated.updatedAt = now();
@@ -873,13 +905,13 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
   if (cmd === "import_qualitative_source") {
     const input = commandInput(args);
     const filePath = commandString(input.filePath);
-    const title = commandString(
+    const title = commandNormalizedString(
       input.title,
       filePath.split(/[\\/]/).pop()?.replace(/\.(docx|pdf|md|markdown)$/i, "") ?? "分析ソース",
     );
     const fileType = filePath.split(".").pop()?.toLowerCase() ?? "md";
     const content = filePath
-      ? `${title}\n\nブラウザプレビューでは本文抽出はTauri実行時に有効です。`
+      ? normalizeText(`${title}\n\nブラウザプレビューでは本文抽出はTauri実行時に有効です。`)
       : "";
     const source = {
       id: mockId(),
@@ -901,10 +933,10 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     if (idx >= 0) {
       const input = commandInput(args);
       const updated = { ...mockStore.qualitativeSources[idx] };
-      if (input.title !== undefined) updated.title = commandString(input.title, updated.title);
+      if (input.title !== undefined) updated.title = commandNormalizedString(input.title, updated.title);
       if (input.sourceType !== undefined) updated.sourceType = commandString(input.sourceType, updated.sourceType);
       if (input.content !== undefined) {
-        updated.content = commandString(input.content);
+        updated.content = commandNormalizedString(input.content);
         updated.wordCount = updated.content.split(/\s+/).filter(Boolean).length;
       }
       updated.updatedAt = now();
@@ -938,10 +970,10 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
       sourceId,
       sourceTitle: source?.title ?? "",
       codeId: commandString(input.codeId),
-      segmentText: commandString(input.segmentText),
+      segmentText: commandNormalizedString(input.segmentText).trim(),
       offsetStart: typeof input.offsetStart === "number" ? input.offsetStart : null,
       offsetEnd: typeof input.offsetEnd === "number" ? input.offsetEnd : null,
-      memo: commandNullableString(input.memo),
+      memo: commandNormalizedNullableString(input.memo),
       assignedAt: now(),
     };
     mockStore.sourceSegments.push(segment);
@@ -1148,9 +1180,9 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
       id: mockId(),
       paperId: commandString(a.paperId),
       sourceId: null,
-      text: commandString(a.text),
+      text: commandNormalizedString(a.text),
       color: commandString(a.color, "yellow"),
-      comment: commandNullableString(a.comment),
+      comment: commandNormalizedNullableString(a.comment),
       codeIds: Array.isArray(a.codeIds) ? a.codeIds : [],
       page: commandNumber(a.page, 1),
       rect: isRecord(a.rect) ? a.rect : { x1: 0, y1: 0, x2: 0, y2: 0 },
@@ -1163,7 +1195,7 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     const id = commandString(args?.id);
     const highlight = mockStore.highlights.find((item) => item.id === id);
     if (highlight) {
-      highlight.comment = commandNullableString(args?.comment);
+      highlight.comment = commandNormalizedNullableString(args?.comment);
       return { handled: true, result: { ...highlight } };
     }
     return { handled: true, result: null };
@@ -1207,8 +1239,8 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
       id: mockId(),
       paperId: sourceId,
       sourceId,
-      text: commandString(input.text),
-      comment: commandNullableString(input.comment),
+      text: commandNormalizedString(input.text),
+      comment: commandNormalizedNullableString(input.comment),
       color: commandString(input.color, "yellow"),
       page: commandNumber(input.page, 1),
       rect: isRecord(input.rect) ? input.rect : { x1: 0, y1: 0, x2: 0, y2: 0 },
@@ -1221,7 +1253,7 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     const id = commandString(args?.id);
     const highlight = mockStore.qualitativeSourceHighlights.find((item) => item.id === id);
     if (highlight) {
-      highlight.comment = commandNullableString(args?.comment);
+      highlight.comment = commandNormalizedNullableString(args?.comment);
       return { handled: true, result: { ...highlight } };
     }
     return { handled: true, result: null };
@@ -1274,10 +1306,10 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     );
     const note = {
       id: mockId(),
-      title: `${source?.title ?? "分析ソース"} のハイライト`,
-      content: selected
+      title: normalizeText(`${source?.title ?? "分析ソース"} のハイライト`),
+      content: normalizeText(selected
         .map((highlight) => `> ${highlight.text}\n\n${highlight.comment ?? ""}`)
-        .join("\n\n"),
+        .join("\n\n")),
       tags: ["qualitative-source"],
       paperId: null,
       isDraft: 0,
@@ -1295,7 +1327,7 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
   /* eslint-disable @typescript-eslint/no-explicit-any */
   if (cmd === "get_graph_data") {
     // mockStore のノートと論文からグラフデータを動的に生成
-    const normalizeTitle = (title: string) => title.trim().toLowerCase();
+    const normalizeTitle = (title: string) => title.trim().normalize("NFC").toLowerCase();
     const extractWikiLinks = (content: string): string[] => {
       const titles: string[] = [];
       const re = /\[\[([^\]]+)\]\]/g;
@@ -1783,10 +1815,10 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
   }
 
   if (cmd === "resolve_wikilink") {
-    const title = String(args?.title ?? "").trim().toLowerCase();
-    const note = mockStore.notes.find((n: any) => n.isDraft !== 1 && String(n.title ?? "").trim().toLowerCase() === title);
+    const title = String(args?.title ?? "").trim().normalize("NFC").toLowerCase();
+    const note = mockStore.notes.find((n: any) => n.isDraft !== 1 && String(n.title ?? "").trim().normalize("NFC").toLowerCase() === title);
     if (note) return { handled: true, result: { id: note.id, itemType: "note" } };
-    const paper = mockStore.papers.find((p: any) => String(p.title ?? "").trim().toLowerCase() === title);
+    const paper = mockStore.papers.find((p: any) => String(p.title ?? "").trim().normalize("NFC").toLowerCase() === title);
     if (paper) return { handled: true, result: { id: paper.id, itemType: "paper" } };
     return { handled: true, result: null };
   }

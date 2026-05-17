@@ -6,6 +6,7 @@
 
 use crate::db::get_pool;
 use crate::db::models::*;
+use crate::utils::text::{normalize_nfc, normalize_nfc_trimmed};
 use sqlx::Row;
 use tauri::AppHandle;
 
@@ -39,7 +40,7 @@ pub async fn full_text_search(
         });
     }
 
-    let trimmed = query.trim().to_string();
+    let trimmed = normalize_nfc_trimmed(&query);
 
     // 検索対象の決定
     let search_papers = item_types
@@ -118,13 +119,13 @@ pub async fn get_link_suggestions(
         }
     }
 
-    let query = query.unwrap_or_default();
-    if query.trim().is_empty() {
+    let query = normalize_nfc_trimmed(&query.unwrap_or_default());
+    if query.is_empty() {
         return Ok(vec![]);
     }
 
-    let like_pattern = format!("%{}%", query.trim());
-    let prefix_pattern = format!("{}%", query.trim());
+    let like_pattern = format!("%{}%", query);
+    let prefix_pattern = format!("{}%", query);
     let max_results: i64 = 10;
 
     // ノートのタイトル候補（前方一致を優先）
@@ -228,7 +229,7 @@ pub async fn get_link_suggestions(
 #[tauri::command]
 pub async fn resolve_wikilink(app: AppHandle, title: String) -> Result<ResolvedWikiLink, String> {
     let pool = get_pool(&app)?;
-    let trimmed = title.trim();
+    let trimmed = normalize_nfc_trimmed(&title);
     if trimmed.is_empty() {
         return Err("WikiLink のタイトルが空です".to_string());
     }
@@ -240,7 +241,7 @@ pub async fn resolve_wikilink(app: AppHandle, title: String) -> Result<ResolvedW
          ORDER BY updated_at DESC
          LIMIT 1",
     )
-    .bind(trimmed)
+    .bind(&trimmed)
     .fetch_optional(pool.as_ref())
     .await
     .map_err(|e| format!("WikiLink ノート解決に失敗: {}", e))?;
@@ -258,7 +259,7 @@ pub async fn resolve_wikilink(app: AppHandle, title: String) -> Result<ResolvedW
          ORDER BY updated_at DESC
          LIMIT 1",
     )
-    .bind(trimmed)
+    .bind(&trimmed)
     .fetch_optional(pool.as_ref())
     .await
     .map_err(|e| format!("WikiLink 論文解決に失敗: {}", e))?;
@@ -495,11 +496,13 @@ fn score_link_candidate(
 }
 
 fn contains_ci(haystack: &str, needle: &str) -> bool {
-    let needle = needle.trim();
+    let needle = normalize_nfc_trimmed(needle);
     if needle.chars().count() < 2 {
         return false;
     }
-    haystack.to_lowercase().contains(&needle.to_lowercase())
+    normalize_nfc(haystack)
+        .to_lowercase()
+        .contains(&needle.to_lowercase())
 }
 
 fn keyword_overlap(a: &str, b: &str) -> usize {
@@ -512,7 +515,8 @@ fn keyword_overlap(a: &str, b: &str) -> usize {
 }
 
 fn keywords(text: &str) -> std::collections::HashSet<String> {
-    text.split(|c: char| !c.is_alphanumeric())
+    normalize_nfc(text)
+        .split(|c: char| !c.is_alphanumeric())
         .map(|w| w.trim().to_lowercase())
         .filter(|w| w.chars().count() >= 4)
         .take(80)
@@ -949,5 +953,10 @@ mod tests {
         let text = "Hello World is a common greeting";
         let snippet = build_snippet(text, "hello");
         assert!(snippet.contains("[[Hello]]"));
+    }
+
+    #[test]
+    fn contains_ci_matches_nfc_and_nfd() {
+        assert!(contains_ci("Sawubona ê", "e\u{0302}"));
     }
 }
