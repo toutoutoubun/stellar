@@ -1,0 +1,9 @@
+// Setswana translations
+// Pending review: currently falls back to English strings.
+
+import type { TranslationKeys } from "./ja";
+import en from "./en";
+
+const tn: TranslationKeys = en;
+
+export default tn;

@@ -7,9 +7,14 @@ import ja from "./ja";
 import en from "./en";
 import fr from "./fr";
 import af from "./af";
+import zu from "./zu";
+import xh from "./xh";
+import nso from "./nso";
+import tn from "./tn";
+import st from "./st";
 
 /** ロケール → 翻訳リソースのマッピング */
-const resources: Record<Locale, TranslationKeys> = { ja, en, fr, af };
+const resources: Record<Locale, TranslationKeys> = { ja, en, fr, af, zu, xh, nso, tn, st };
 
 /** 指定ロケールの翻訳リソースを取得 */
 export function getTranslations(locale: Locale): TranslationKeys {
@@ -17,7 +22,7 @@ export function getTranslations(locale: Locale): TranslationKeys {
 }
 
 /** サポートされているロケール一覧 */
-export const SUPPORTED_LOCALES: Locale[] = ["ja", "en", "fr", "af"];
+export const SUPPORTED_LOCALES: Locale[] = ["ja", "en", "fr", "af", "zu", "xh", "nso", "tn", "st"];
 
 /** ロケールの表示名（各言語のネイティブ名） */
 export const LOCALE_NATIVE_NAMES: Record<Locale, string> = {
@@ -25,6 +30,11 @@ export const LOCALE_NATIVE_NAMES: Record<Locale, string> = {
   en: "English",
   fr: "Français",
   af: "Afrikaans",
+  zu: "isiZulu",
+  xh: "isiXhosa",
+  nso: "Sepedi",
+  tn: "Setswana",
+  st: "Sesotho",
 };
 
 export type { TranslationKeys };
