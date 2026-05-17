@@ -1,11 +1,8 @@
 use crate::db::get_pool;
-use lindera_core::mode::Mode;
-use lindera_dictionary::{DictionaryConfig, DictionaryKind};
-use lindera_tokenizer::tokenizer::{Tokenizer, TokenizerConfig};
+use crate::tokenizer::registry::get_tokenizer_for_locale_or_text;
 use serde::Serialize;
 use sqlx::Row;
-use std::collections::{HashMap, HashSet};
-use std::sync::{Mutex, OnceLock};
+use std::collections::HashMap;
 use tauri::AppHandle;
 
 #[derive(Debug, Clone, Serialize)]
@@ -16,17 +13,11 @@ pub struct CooccurrencePair {
     pub count: usize,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum DetectedLanguage {
-    Japanese,
-    English,
-    Other,
-}
-
 #[tauri::command]
 pub async fn analyze_cooccurrence(
     app: AppHandle,
     segment_id: String,
+    locale: Option<String>,
     window_size: Option<usize>,
     top_n: Option<usize>,
 ) -> Result<Vec<CooccurrencePair>, String> {
@@ -41,98 +32,13 @@ pub async fn analyze_cooccurrence(
     let text: String = row
         .try_get("segment_text")
         .map_err(|e| format!("セグメント本文の読み取りに失敗: {}", e))?;
-    let tokens = tokenize(&text)?;
+    let tokenizer = get_tokenizer_for_locale_or_text(locale.as_deref(), &text);
+    let tokens = tokenizer.tokenize(&text)?;
 
     let window = window_size.unwrap_or(5).clamp(2, 50);
     let limit = top_n.unwrap_or(10).clamp(1, 100);
 
     Ok(count_cooccurrences(&tokens, window, limit))
-}
-
-fn tokenize(text: &str) -> Result<Vec<String>, String> {
-    match detect_language(text) {
-        DetectedLanguage::Japanese => tokenize_japanese(text),
-        DetectedLanguage::English => Ok(tokenize_ascii_words(text, &english_stopwords())),
-        DetectedLanguage::Other => Ok(tokenize_ascii_words(text, &HashSet::new())),
-    }
-}
-
-fn detect_language(text: &str) -> DetectedLanguage {
-    if text.chars().any(is_japanese_char) {
-        DetectedLanguage::Japanese
-    } else if text.chars().any(|ch| ch.is_ascii_alphabetic()) {
-        DetectedLanguage::English
-    } else {
-        DetectedLanguage::Other
-    }
-}
-
-fn tokenize_japanese(text: &str) -> Result<Vec<String>, String> {
-    let tokenizer = japanese_tokenizer()?;
-    let tokenizer = tokenizer
-        .lock()
-        .map_err(|_| "linderaトークナイザのロックに失敗".to_string())?;
-    let stopwords = japanese_stopwords();
-
-    tokenizer
-        .tokenize(text)
-        .map_err(|e| format!("形態素解析に失敗: {}", e))
-        .map(|tokens| {
-            tokens
-                .into_iter()
-                .filter_map(|token| normalize_token(token.text.as_ref()))
-                .filter(|token| !stopwords.contains(token.as_str()))
-                .collect()
-        })
-}
-
-fn japanese_tokenizer() -> Result<&'static Mutex<Tokenizer>, String> {
-    static TOKENIZER: OnceLock<Result<Mutex<Tokenizer>, String>> = OnceLock::new();
-
-    let result = TOKENIZER.get_or_init(|| {
-        create_japanese_tokenizer()
-            .map(Mutex::new)
-            .map_err(|e| format!("lindera初期化に失敗: {}", e))
-    });
-
-    match result {
-        Ok(tokenizer) => Ok(tokenizer),
-        Err(message) => Err(message.clone()),
-    }
-}
-
-fn create_japanese_tokenizer() -> Result<Tokenizer, String> {
-    let dictionary = DictionaryConfig {
-        kind: Some(DictionaryKind::IPADIC),
-        path: None,
-    };
-    let config = TokenizerConfig {
-        dictionary,
-        user_dictionary: None,
-        mode: Mode::Normal,
-    };
-    Tokenizer::from_config(config).map_err(|e| e.to_string())
-}
-
-fn tokenize_ascii_words(text: &str, stopwords: &HashSet<&'static str>) -> Vec<String> {
-    text.split(|ch: char| !ch.is_alphanumeric() && ch != '\'')
-        .filter_map(normalize_token)
-        .filter(|token| !stopwords.contains(token.as_str()))
-        .collect()
-}
-
-fn normalize_token(token: &str) -> Option<String> {
-    let normalized = token
-        .trim_matches(|ch: char| ch == '\'' || ch.is_whitespace() || ch.is_ascii_punctuation())
-        .to_lowercase();
-
-    if normalized.chars().count() < 2 {
-        return None;
-    }
-    if normalized.chars().all(|ch| ch.is_numeric()) {
-        return None;
-    }
-    Some(normalized)
 }
 
 fn count_cooccurrences(
@@ -186,55 +92,6 @@ fn ordered_pair(a: &str, b: &str) -> (String, String) {
     }
 }
 
-fn is_japanese_char(ch: char) -> bool {
-    matches!(
-        ch as u32,
-        0x3040..=0x30ff | 0x3400..=0x4dbf | 0x4e00..=0x9fff | 0xf900..=0xfaff
-    )
-}
-
-fn japanese_stopwords() -> HashSet<&'static str> {
-    [
-        "は",
-        "が",
-        "を",
-        "に",
-        "の",
-        "で",
-        "と",
-        "も",
-        "から",
-        "まで",
-        "より",
-        "など",
-        "こと",
-        "ため",
-        "よる",
-        "おける",
-        "れる",
-        "られる",
-        "する",
-        "した",
-        "して",
-        "これ",
-        "その",
-        "この",
-        "あの",
-        "そのような",
-    ]
-    .into_iter()
-    .collect()
-}
-
-fn english_stopwords() -> HashSet<&'static str> {
-    [
-        "the", "a", "an", "is", "are", "was", "were", "of", "in", "to", "and", "or", "but", "for",
-        "with", "by", "on", "at",
-    ]
-    .into_iter()
-    .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -254,15 +111,5 @@ mod tests {
         assert_eq!(pairs[0].word_a, "foreign");
         assert_eq!(pairs[0].word_b, "ministry");
         assert_eq!(pairs[0].count, 4);
-    }
-
-    #[test]
-    fn english_tokenizer_removes_stopwords() {
-        let tokens = tokenize_ascii_words(
-            "The foreign ministry is in South Africa.",
-            &english_stopwords(),
-        );
-
-        assert_eq!(tokens, vec!["foreign", "ministry", "south", "africa"]);
     }
 }

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { invoke } from "../../lib/tauriShim";
+import { useI18nStore } from "../../stores/useI18nStore";
 import type { CooccurrencePair } from "../../types";
 import { IconActorMap, IconClose, IconRefresh } from "./icons/QualIcons";
 
@@ -17,6 +18,7 @@ export const CooccurrencePanel: React.FC<CooccurrencePanelProps> = ({
   isOpen,
   onClose,
 }) => {
+  const locale = useI18nStore((s) => s.locale);
   const [pairs, setPairs] = useState<CooccurrencePair[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +30,7 @@ export const CooccurrencePanel: React.FC<CooccurrencePanelProps> = ({
     try {
       const result = await invoke<CooccurrencePair[]>("analyze_cooccurrence", {
         segmentId,
+        locale,
         windowSize: WINDOW_SIZE,
         topN: TOP_N,
       });
@@ -39,7 +42,7 @@ export const CooccurrencePanel: React.FC<CooccurrencePanelProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [segmentId]);
+  }, [locale, segmentId]);
 
   useEffect(() => {
     if (!isOpen || !segmentId) return;
