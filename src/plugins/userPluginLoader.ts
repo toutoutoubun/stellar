@@ -41,6 +41,7 @@ export interface InstalledUserPlugin {
 export interface StellarPluginApi {
   version: "0.2";
   React: typeof React;
+  invoke: <T = unknown>(command: string, args?: Record<string, unknown>) => Promise<T>;
   // ── 分析アドオン（v0.1 互換） ──
   registerQualitativeAnalysisAddon: typeof registerQualitativeAnalysisAddon;
   registerQuantitativeAnalysisAddon: typeof registerQuantitativeAnalysisAddon;
@@ -76,6 +77,7 @@ export function getStellarPluginApi(pluginId?: string): StellarPluginApi {
   const api: StellarPluginApi = {
     version: "0.2",
     React,
+    invoke,
     // ── 分析アドオン（v0.1 互換） ──
     registerQualitativeAnalysisAddon,
     registerQuantitativeAnalysisAddon,

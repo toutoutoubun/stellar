@@ -2289,13 +2289,243 @@ pub async fn delete_source_critique(app: AppHandle, id: String) -> Result<(), St
 // レポート生成（Markdown — AIなし・データの機械的な構造化のみ）
 // ════════════════════════════════════════════════════════════════
 
+struct ReportLabels {
+    title: &'static str,
+    method: &'static str,
+    generated_at: &'static str,
+    codebook: &'static str,
+    no_codes: &'static str,
+    code_name: &'static str,
+    kind: &'static str,
+    assignment_count: &'static str,
+    description: &'static str,
+    coding_matrix: &'static str,
+    no_data: &'static str,
+    code: &'static str,
+    timeline: &'static str,
+    no_events: &'static str,
+    approx_suffix: &'static str,
+    importance: &'static str,
+    actor_map: &'static str,
+    no_actors: &'static str,
+    name: &'static str,
+    position: &'static str,
+    influence: &'static str,
+    level: &'static str,
+    relations: &'static str,
+    process_tracing: &'static str,
+    overall_assessment: &'static str,
+    hypothesis_supported: &'static str,
+    hypothesis_rejected: &'static str,
+    insufficient_evidence: &'static str,
+    main_hypothesis: &'static str,
+    alternative_hypothesis: &'static str,
+    test_type: &'static str,
+    result: &'static str,
+    comparative_design: &'static str,
+    no_comparative_designs: &'static str,
+    case: &'static str,
+    framing: &'static str,
+    no_frames: &'static str,
+    problem_definition: &'static str,
+    causal_interpretation: &'static str,
+    moral_evaluation: &'static str,
+    treatment_recommendation: &'static str,
+}
+
+fn report_labels(language: Option<&str>) -> ReportLabels {
+    let key = language
+        .unwrap_or("ja")
+        .split(|c| c == '-' || c == '_')
+        .next()
+        .unwrap_or("ja")
+        .to_ascii_lowercase();
+
+    match key.as_str() {
+        "en" => ReportLabels {
+            title: "Analysis Report",
+            method: "Analysis Method",
+            generated_at: "Generated At",
+            codebook: "Codebook",
+            no_codes: "*No codes registered*",
+            code_name: "Code Name",
+            kind: "Type",
+            assignment_count: "Assignments",
+            description: "Description",
+            coding_matrix: "Coding Matrix",
+            no_data: "*No data*",
+            code: "Code",
+            timeline: "Timeline",
+            no_events: "*No events registered*",
+            approx_suffix: " (approx.)",
+            importance: "Importance",
+            actor_map: "Actor Map",
+            no_actors: "*No actors registered*",
+            name: "Name",
+            position: "Position",
+            influence: "Influence",
+            level: "Level",
+            relations: "Relations",
+            process_tracing: "Process Tracing",
+            overall_assessment: "Overall Assessment",
+            hypothesis_supported: "Hypothesis supported",
+            hypothesis_rejected: "Hypothesis rejected",
+            insufficient_evidence: "Insufficient evidence",
+            main_hypothesis: "Main Hypothesis",
+            alternative_hypothesis: "Alternative Hypothesis",
+            test_type: "Test Type",
+            result: "Result",
+            comparative_design: "Comparative Case Design",
+            no_comparative_designs: "*No comparative designs registered*",
+            case: "Case",
+            framing: "Framing Analysis",
+            no_frames: "*No frames registered*",
+            problem_definition: "Problem Definition",
+            causal_interpretation: "Causal Interpretation",
+            moral_evaluation: "Moral Evaluation",
+            treatment_recommendation: "Treatment Recommendation",
+        },
+        "fr" => ReportLabels {
+            title: "Rapport d'analyse",
+            method: "Méthode d'analyse",
+            generated_at: "Généré le",
+            codebook: "Livre de codes",
+            no_codes: "*Aucun code enregistré*",
+            code_name: "Nom du code",
+            kind: "Type",
+            assignment_count: "Assignations",
+            description: "Description",
+            coding_matrix: "Matrice de codage",
+            no_data: "*Aucune donnée*",
+            code: "Code",
+            timeline: "Chronologie",
+            no_events: "*Aucun événement enregistré*",
+            approx_suffix: " (env.)",
+            importance: "Importance",
+            actor_map: "Carte des acteurs",
+            no_actors: "*Aucun acteur enregistré*",
+            name: "Nom",
+            position: "Position",
+            influence: "Influence",
+            level: "Niveau",
+            relations: "Relations",
+            process_tracing: "Traçage de processus",
+            overall_assessment: "Évaluation globale",
+            hypothesis_supported: "Hypothèse soutenue",
+            hypothesis_rejected: "Hypothèse rejetée",
+            insufficient_evidence: "Preuves insuffisantes",
+            main_hypothesis: "Hypothèse principale",
+            alternative_hypothesis: "Hypothèse alternative",
+            test_type: "Type de test",
+            result: "Résultat",
+            comparative_design: "Design comparatif de cas",
+            no_comparative_designs: "*Aucun design comparatif enregistré*",
+            case: "Cas",
+            framing: "Analyse de cadrage",
+            no_frames: "*Aucun cadre enregistré*",
+            problem_definition: "Définition du problème",
+            causal_interpretation: "Interprétation causale",
+            moral_evaluation: "Évaluation morale",
+            treatment_recommendation: "Recommandation de traitement",
+        },
+        "af" => ReportLabels {
+            title: "Analiseverslag",
+            method: "Ontledingsmetode",
+            generated_at: "Gegenereer op",
+            codebook: "Kodeboek",
+            no_codes: "*Geen kodes geregistreer nie*",
+            code_name: "Kodenaam",
+            kind: "Tipe",
+            assignment_count: "Toekennings",
+            description: "Beskrywing",
+            coding_matrix: "Koderingsmatriks",
+            no_data: "*Geen data nie*",
+            code: "Kode",
+            timeline: "Tydlyn",
+            no_events: "*Geen gebeure geregistreer nie*",
+            approx_suffix: " (ongeveer)",
+            importance: "Belangrikheid",
+            actor_map: "Akteurkaart",
+            no_actors: "*Geen akteurs geregistreer nie*",
+            name: "Naam",
+            position: "Posisie",
+            influence: "Invloed",
+            level: "Vlak",
+            relations: "Verhoudings",
+            process_tracing: "Prosesnasporing",
+            overall_assessment: "Algehele beoordeling",
+            hypothesis_supported: "Hipotese ondersteun",
+            hypothesis_rejected: "Hipotese verwerp",
+            insufficient_evidence: "Onvoldoende bewyse",
+            main_hypothesis: "Hoofhipotese",
+            alternative_hypothesis: "Alternatiewe hipotese",
+            test_type: "Toetstipe",
+            result: "Resultaat",
+            comparative_design: "Vergelykende gevalontwerp",
+            no_comparative_designs: "*Geen vergelykende ontwerpe geregistreer nie*",
+            case: "Geval",
+            framing: "Raamwerk-ontleding",
+            no_frames: "*Geen rame geregistreer nie*",
+            problem_definition: "Probleemdefinisie",
+            causal_interpretation: "Kousale interpretasie",
+            moral_evaluation: "Morele evaluering",
+            treatment_recommendation: "Behandelingsaanbeveling",
+        },
+        _ => ReportLabels {
+            title: "分析レポート",
+            method: "分析手法",
+            generated_at: "生成日時",
+            codebook: "コードブック",
+            no_codes: "*コードが登録されていません*",
+            code_name: "コード名",
+            kind: "種別",
+            assignment_count: "割当数",
+            description: "説明",
+            coding_matrix: "コーディングマトリクス",
+            no_data: "*データなし*",
+            code: "コード",
+            timeline: "タイムライン",
+            no_events: "*イベントが登録されていません*",
+            approx_suffix: "頃",
+            importance: "重要度",
+            actor_map: "アクターマップ",
+            no_actors: "*アクターが登録されていません*",
+            name: "名前",
+            position: "立場",
+            influence: "影響力",
+            level: "レベル",
+            relations: "関係",
+            process_tracing: "プロセス・トレーシング",
+            overall_assessment: "総合評価",
+            hypothesis_supported: "仮説を支持",
+            hypothesis_rejected: "仮説を棄却",
+            insufficient_evidence: "証拠不十分",
+            main_hypothesis: "主仮説",
+            alternative_hypothesis: "対抗仮説",
+            test_type: "テスト種別",
+            result: "結果",
+            comparative_design: "比較ケース設計",
+            no_comparative_designs: "*比較デザインが登録されていません*",
+            case: "ケース",
+            framing: "フレーミング分析",
+            no_frames: "*フレームが登録されていません*",
+            problem_definition: "問題定義",
+            causal_interpretation: "因果解釈",
+            moral_evaluation: "道徳評価",
+            treatment_recommendation: "処方",
+        },
+    }
+}
+
 #[tauri::command]
 pub async fn generate_analysis_report(
     app: AppHandle,
     project_id: String,
     sections: Vec<String>,
+    language: Option<String>,
 ) -> Result<String, String> {
     let pool = get_pool(&app)?;
+    let labels = report_labels(language.as_deref());
 
     // プロジェクト情報
     let proj_row = sqlx::query("SELECT * FROM projects WHERE id = ?")
@@ -2307,16 +2537,19 @@ pub async fn generate_analysis_report(
 
     let project = parse_project(&proj_row)?;
     let mut report = format!(
-        "# 分析レポート: {}\n\n**分析手法**: {}  \n**生成日時**: {}\n\n---\n\n",
+        "# {}: {}\n\n**{}**: {}  \n**{}**: {}\n\n---\n\n",
+        labels.title,
         project.name,
+        labels.method,
         project.method_type,
+        labels.generated_at,
         chrono::Utc::now().format("%Y-%m-%d %H:%M")
     );
 
     for section in &sections {
         match section.as_str() {
             "codebook" => {
-                report.push_str("## コードブック\n\n");
+                report.push_str(&format!("## {}\n\n", labels.codebook));
                 let code_rows = sqlx::query(
                     "SELECT c.*, (
                         SELECT COUNT(*) FROM highlight_codes hc WHERE hc.code_id = c.id
@@ -2332,9 +2565,12 @@ pub async fn generate_analysis_report(
                 .map_err(|e| format!("コード取得に失敗: {}", e))?;
 
                 if code_rows.is_empty() {
-                    report.push_str("*コードが登録されていません*\n\n");
+                    report.push_str(&format!("{}\n\n", labels.no_codes));
                 } else {
-                    report.push_str("| コード名 | 種別 | 割当数 | 説明 |\n");
+                    report.push_str(&format!(
+                        "| {} | {} | {} | {} |\n",
+                        labels.code_name, labels.kind, labels.assignment_count, labels.description
+                    ));
                     report.push_str("|----------|------|--------|------|\n");
                     for row in &code_rows {
                         let name = col_str(row, "name");
@@ -2350,15 +2586,15 @@ pub async fn generate_analysis_report(
                 }
             }
             "matrix" => {
-                report.push_str("## コーディングマトリクス\n\n");
+                report.push_str(&format!("## {}\n\n", labels.coding_matrix));
                 let matrix = get_coding_matrix(app.clone(), project_id.clone()).await?;
                 if matrix.rows.is_empty() || matrix.cols.is_empty() {
-                    report.push_str("*データなし*\n\n");
+                    report.push_str(&format!("{}\n\n", labels.no_data));
                 } else {
                     // ヘッダー
                     let headers: Vec<String> =
                         matrix.cols.iter().map(|c| c.paper_title.clone()).collect();
-                    report.push_str(&format!("| コード | {} |\n", headers.join(" | ")));
+                    report.push_str(&format!("| {} | {} |\n", labels.code, headers.join(" | ")));
                     report.push_str(&format!(
                         "|-{}-|\n",
                         headers
@@ -2386,20 +2622,20 @@ pub async fn generate_analysis_report(
                 }
             }
             "timeline" => {
-                report.push_str("## タイムライン\n\n");
+                report.push_str(&format!("## {}\n\n", labels.timeline));
                 let events = get_timeline_events(app.clone(), project_id.clone()).await?;
                 if events.is_empty() {
-                    report.push_str("*イベントが登録されていません*\n\n");
+                    report.push_str(&format!("{}\n\n", labels.no_events));
                 } else {
                     for event in &events {
                         let date_marker = if event.date_type == "approximate" {
-                            "頃"
+                            labels.approx_suffix
                         } else {
                             ""
                         };
                         report.push_str(&format!(
-                            "- **{}{}** — {} (重要度: {}/5)\n",
-                            event.event_date, date_marker, event.title, event.importance
+                            "- **{}{}** — {} ({}: {}/5)\n",
+                            event.event_date, date_marker, event.title, labels.importance, event.importance
                         ));
                         if let Some(desc) = &event.description {
                             report.push_str(&format!("  {}\n", desc));
@@ -2409,12 +2645,15 @@ pub async fn generate_analysis_report(
                 }
             }
             "actors" => {
-                report.push_str("## アクターマップ\n\n");
+                report.push_str(&format!("## {}\n\n", labels.actor_map));
                 let map = get_actor_map(app.clone(), project_id.clone()).await?;
                 if map.actors.is_empty() {
-                    report.push_str("*アクターが登録されていません*\n\n");
+                    report.push_str(&format!("{}\n\n", labels.no_actors));
                 } else {
-                    report.push_str("| 名前 | 種別 | 立場 | 影響力 | レベル |\n");
+                    report.push_str(&format!(
+                        "| {} | {} | {} | {} | {} |\n",
+                        labels.name, labels.kind, labels.position, labels.influence, labels.level
+                    ));
                     report.push_str("|------|------|------|--------|--------|\n");
                     for actor in &map.actors {
                         report.push_str(&format!(
@@ -2428,7 +2667,7 @@ pub async fn generate_analysis_report(
                     }
                     report.push('\n');
                     if !map.relations.is_empty() {
-                        report.push_str("### 関係\n\n");
+                        report.push_str(&format!("### {}\n\n", labels.relations));
                         for rel in &map.relations {
                             report.push_str(&format!(
                                 "- {} → {} ({})\n",
@@ -2440,24 +2679,36 @@ pub async fn generate_analysis_report(
                 }
             }
             "process_tracing" => {
-                report.push_str("## プロセス・トレーシング\n\n");
+                report.push_str(&format!("## {}\n\n", labels.process_tracing));
                 let pt = get_pt_data(app.clone(), project_id.clone()).await?;
                 let summary = get_pt_summary(app.clone(), project_id.clone()).await?;
+                let overall_verdict = match summary.overall_verdict.as_str() {
+                    "仮説を支持" => labels.hypothesis_supported,
+                    "仮説を棄却" => labels.hypothesis_rejected,
+                    "証拠不十分" => labels.insufficient_evidence,
+                    other => other,
+                };
 
-                report.push_str(&format!("**総合評価**: {}\n\n", summary.overall_verdict));
+                report.push_str(&format!(
+                    "**{}**: {}\n\n",
+                    labels.overall_assessment, overall_verdict
+                ));
 
                 for hw in &pt.hypotheses {
                     let hyp_type = if hw.hypothesis.is_main {
-                        "主仮説"
+                        labels.main_hypothesis
                     } else {
-                        "対抗仮説"
+                        labels.alternative_hypothesis
                     };
                     report.push_str(&format!("### {} ({})\n\n", hw.hypothesis.title, hyp_type));
                     if let Some(desc) = &hw.hypothesis.description {
                         report.push_str(&format!("{}\n\n", desc));
                     }
                     if !hw.evidences.is_empty() {
-                        report.push_str("| テスト種別 | 説明 | 結果 |\n");
+                        report.push_str(&format!(
+                            "| {} | {} | {} |\n",
+                            labels.test_type, labels.description, labels.result
+                        ));
                         report.push_str("|------------|------|------|\n");
                         for ev in &hw.evidences {
                             report.push_str(&format!(
@@ -2470,10 +2721,10 @@ pub async fn generate_analysis_report(
                 }
             }
             "comparative" => {
-                report.push_str("## 比較ケース設計\n\n");
+                report.push_str(&format!("## {}\n\n", labels.comparative_design));
                 let designs = get_comparative_design(app.clone(), project_id.clone()).await?;
                 if designs.is_empty() {
-                    report.push_str("*比較デザインが登録されていません*\n\n");
+                    report.push_str(&format!("{}\n\n", labels.no_comparative_designs));
                 } else {
                     for d in &designs {
                         report.push_str(&format!(
@@ -2483,7 +2734,7 @@ pub async fn generate_analysis_report(
                         if !d.cases.is_empty() && !d.variables.is_empty() {
                             let var_names: Vec<&str> =
                                 d.variables.iter().map(|v| v.name.as_str()).collect();
-                            report.push_str(&format!("| ケース | {} |\n", var_names.join(" | ")));
+                            report.push_str(&format!("| {} | {} |\n", labels.case, var_names.join(" | ")));
                             report.push_str(&format!(
                                 "|-{}-|\n",
                                 var_names
@@ -2518,24 +2769,24 @@ pub async fn generate_analysis_report(
                 }
             }
             "framing" => {
-                report.push_str("## フレーミング分析\n\n");
+                report.push_str(&format!("## {}\n\n", labels.framing));
                 let frames = get_frames(app.clone(), project_id.clone()).await?;
                 if frames.is_empty() {
-                    report.push_str("*フレームが登録されていません*\n\n");
+                    report.push_str(&format!("{}\n\n", labels.no_frames));
                 } else {
                     for frame in &frames {
                         report.push_str(&format!("### {}\n\n", frame.name));
                         if let Some(pd) = &frame.problem_definition {
-                            report.push_str(&format!("- **問題定義**: {}\n", pd));
+                            report.push_str(&format!("- **{}**: {}\n", labels.problem_definition, pd));
                         }
                         if let Some(ci) = &frame.causal_interpretation {
-                            report.push_str(&format!("- **因果解釈**: {}\n", ci));
+                            report.push_str(&format!("- **{}**: {}\n", labels.causal_interpretation, ci));
                         }
                         if let Some(me) = &frame.moral_evaluation {
-                            report.push_str(&format!("- **道徳評価**: {}\n", me));
+                            report.push_str(&format!("- **{}**: {}\n", labels.moral_evaluation, me));
                         }
                         if let Some(tr) = &frame.treatment_recommendation {
-                            report.push_str(&format!("- **処方**: {}\n", tr));
+                            report.push_str(&format!("- **{}**: {}\n", labels.treatment_recommendation, tr));
                         }
                         report.push('\n');
                     }
