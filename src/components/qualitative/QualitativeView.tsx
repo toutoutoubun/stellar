@@ -77,7 +77,7 @@ const QualitativeView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
-  const [newProjectMethod, setNewProjectMethod] = useState("thematic");
+  const [newProjectMethod, setNewProjectMethod] = useState("");
 
   // プロジェクト名インライン編集
   const [renamingProjectId, setRenamingProjectId] = useState<string | null>(null);
@@ -122,9 +122,10 @@ const QualitativeView: React.FC = () => {
   const handleCreateProject = useCallback(async () => {
     if (!newProjectName.trim()) return;
     try {
+      const methodType = newProjectMethod.trim();
       const input: CreateQualProjectInput = {
         name: newProjectName.trim(),
-        methodType: newProjectMethod,
+        ...(methodType ? { methodType } : {}),
       };
       const created = await invoke<QualProject | null>("create_project", { input });
       if (!created) {
@@ -134,6 +135,7 @@ const QualitativeView: React.FC = () => {
       setProjects((prev) => [created, ...prev]);
       setSelectedProjectId(created.id);
       setNewProjectName("");
+      setNewProjectMethod("");
       setShowNewProject(false);
     } catch (err) {
       console.error(t.qualitative.k_2ft95d, err);
@@ -374,23 +376,24 @@ const QualitativeView: React.FC = () => {
                   }}
                   autoFocus
                 />
-                <select
+                <input
+                  type="text"
                   value={newProjectMethod}
                   onChange={(e) => setNewProjectMethod(e.target.value)}
+                  placeholder={t.qualitative.k_method_tag_placeholder}
                   className="w-full text-xs mb-1.5 px-2 py-1"
                   style={{
                     backgroundColor: "var(--color-bg-primary)",
                     color: "var(--color-text-primary)",
                     border: "1px solid var(--color-border-primary)",
                     borderRadius: "4px",
+                    outline: "none",
                   }}
-                >
-                  <option value="thematic">{t.qualitative.k_thematic}</option>
-                  <option value="grounded">{t.qualitative.k_grounded}</option>
-                  <option value="content">{t.qualitative.k_content_analysis}</option>
-                  <option value="historical">{t.qualitative.k_historical}</option>
-                  <option value="comparative">{t.qualitative.k_comparative}</option>
-                </select>
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void handleCreateProject();
+                    if (e.key === "Escape") setShowNewProject(false);
+                  }}
+                />
                 <div className="flex gap-1">
                   <button
                     type="button"
