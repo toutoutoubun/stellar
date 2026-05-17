@@ -5,6 +5,7 @@
 // 比較ケース設計・フレーミング分析・レポート生成
 
 use crate::db::{get_pool, models::*};
+use crate::utils::text::{normalize_nfc, normalize_nfc_trimmed, normalize_opt_nfc};
 use sqlx::Row;
 use std::{collections::HashMap, fs::File, io::Read, path::Path};
 use tauri::AppHandle;
@@ -21,13 +22,15 @@ pub async fn create_project(
     let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
+    let name = normalize_nfc(&input.name);
+    let description = normalize_opt_nfc(input.description);
 
     sqlx::query(
         "INSERT INTO projects (id, name, description, method_type, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
-    .bind(&input.name)
-    .bind(&input.description)
+    .bind(&name)
+    .bind(&description)
     .bind(&input.method_type)
     .bind(&now)
     .bind(&now)
@@ -37,8 +40,8 @@ pub async fn create_project(
 
     Ok(ProjectResponse {
         id,
-        name: input.name,
-        description: input.description,
+        name,
+        description,
         method_type: input.method_type,
         created_at: now.clone(),
         updated_at: Some(now),
@@ -73,8 +76,8 @@ pub async fn update_project(
         .ok_or_else(|| format!("プロジェクトが見つかりません: {}", id))?;
 
     let current = parse_project(&row)?;
-    let name = input.name.unwrap_or(current.name);
-    let description = input.description.or(current.description);
+    let name = normalize_nfc(&input.name.unwrap_or(current.name));
+    let description = normalize_opt_nfc(input.description.or(current.description));
     let method_type = input.method_type.unwrap_or(current.method_type);
 
     sqlx::query("UPDATE projects SET name = ?, description = ?, method_type = ?, updated_at = ? WHERE id = ?")
@@ -176,6 +179,8 @@ pub async fn import_qualitative_source(
             .replace('_', " ")
             .replace('-', " ")
     });
+    let title = normalize_nfc(&title);
+    let content = normalize_nfc(&content);
     let source_type = input
         .source_type
         .unwrap_or_else(|| "primary_source".to_string());
@@ -229,9 +234,9 @@ pub async fn update_qualitative_source(
         .ok_or_else(|| format!("分析ソースが見つかりません: {}", id))?;
 
     let current = parse_qualitative_source(&row)?;
-    let title = input.title.unwrap_or(current.title);
+    let title = normalize_nfc(&input.title.unwrap_or(current.title));
     let source_type = input.source_type.unwrap_or(current.source_type);
-    let content = input.content.unwrap_or(current.content);
+    let content = normalize_nfc(&input.content.unwrap_or(current.content));
     let word_count = count_words(&content);
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -267,9 +272,11 @@ pub async fn assign_code_to_source_segment(
     app: AppHandle,
     input: CreateSourceSegmentCodeDto,
 ) -> Result<SourceSegmentCodeResponse, String> {
-    if input.segment_text.trim().is_empty() {
+    let segment_text = normalize_nfc_trimmed(&input.segment_text);
+    if segment_text.is_empty() {
         return Err("コード化するテキストを選択してください".to_string());
     }
+    let memo = normalize_opt_nfc(input.memo);
 
     let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
@@ -281,10 +288,10 @@ pub async fn assign_code_to_source_segment(
     .bind(&id)
     .bind(&input.source_id)
     .bind(&input.code_id)
-    .bind(input.segment_text.trim())
+    .bind(&segment_text)
     .bind(input.offset_start)
     .bind(input.offset_end)
-    .bind(&input.memo)
+    .bind(&memo)
     .bind(&now)
     .execute(pool.as_ref())
     .await
@@ -414,6 +421,8 @@ pub async fn create_code(app: AppHandle, input: CreateCodeDto) -> Result<CodeRes
     let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
+    let name = normalize_nfc(&input.name);
+    let description = normalize_opt_nfc(input.description);
 
     sqlx::query(
         "INSERT INTO codes (id, project_id, parent_id, name, description, color, code_type, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -421,8 +430,8 @@ pub async fn create_code(app: AppHandle, input: CreateCodeDto) -> Result<CodeRes
     .bind(&id)
     .bind(&input.project_id)
     .bind(&input.parent_id)
-    .bind(&input.name)
-    .bind(&input.description)
+    .bind(&name)
+    .bind(&description)
     .bind(&input.color)
     .bind(&input.code_type)
     .bind(input.sort_order)
@@ -436,8 +445,8 @@ pub async fn create_code(app: AppHandle, input: CreateCodeDto) -> Result<CodeRes
         id,
         project_id: input.project_id,
         parent_id: input.parent_id,
-        name: input.name,
-        description: input.description,
+        name,
+        description,
         color: input.color,
         code_type: input.code_type,
         sort_order: input.sort_order,
@@ -463,8 +472,8 @@ pub async fn update_code(
         .ok_or_else(|| format!("コードが見つかりません: {}", id))?;
 
     let current = parse_code(&row)?;
-    let name = input.name.unwrap_or(current.name);
-    let description = input.description.or(current.description);
+    let name = normalize_nfc(&input.name.unwrap_or(current.name));
+    let description = normalize_opt_nfc(input.description.or(current.description));
     let color = input.color.unwrap_or(current.color);
     let code_type = input.code_type.unwrap_or(current.code_type);
     let parent_id = match input.parent_id {
@@ -2636,7 +2645,7 @@ fn normalize_extracted_text(text: &str) -> String {
         lines.pop();
     }
 
-    lines.join("\n")
+    normalize_nfc(&lines.join("\n"))
 }
 
 fn count_words(text: &str) -> i32 {

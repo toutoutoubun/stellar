@@ -4,6 +4,7 @@
 // FTS5 インデックスはトリガーで自動同期される
 
 use crate::db::{get_pool, models::*};
+use crate::utils::text::{normalize_nfc, normalize_opt_nfc};
 use tauri::AppHandle;
 
 // ────────────────────────────────────────────────────────────
@@ -67,14 +68,16 @@ pub async fn create_highlight(
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
     let rect_json = serde_json::to_string(&input.rect).map_err(|e| e.to_string())?;
+    let text = normalize_nfc(&input.text);
+    let comment = normalize_opt_nfc(input.comment);
 
     sqlx::query(
         "INSERT INTO highlights (id, paper_id, text, comment, color, page, rect, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
     .bind(&input.paper_id)
-    .bind(&input.text)
-    .bind(&input.comment)
+    .bind(&text)
+    .bind(&comment)
     .bind(&input.color)
     .bind(input.page)
     .bind(&rect_json)
@@ -86,8 +89,8 @@ pub async fn create_highlight(
     Ok(HighlightResponse {
         id,
         paper_id: input.paper_id,
-        text: input.text,
-        comment: input.comment,
+        text,
+        comment,
         color: input.color,
         page: input.page,
         rect: input.rect,
@@ -108,14 +111,16 @@ pub async fn create_qualitative_source_highlight(
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
     let rect_json = serde_json::to_string(&input.rect).map_err(|e| e.to_string())?;
+    let text = normalize_nfc(&input.text);
+    let comment = normalize_opt_nfc(input.comment);
 
     sqlx::query(
         "INSERT INTO qualitative_source_highlights (id, source_id, text, comment, color, page, rect, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
     .bind(&input.source_id)
-    .bind(&input.text)
-    .bind(&input.comment)
+    .bind(&text)
+    .bind(&comment)
     .bind(&input.color)
     .bind(input.page)
     .bind(&rect_json)
@@ -127,8 +132,8 @@ pub async fn create_qualitative_source_highlight(
     Ok(HighlightResponse {
         id,
         paper_id: input.source_id,
-        text: input.text,
-        comment: input.comment,
+        text,
+        comment,
         color: input.color,
         page: input.page,
         rect: input.rect,
@@ -160,7 +165,7 @@ pub async fn update_highlight_comment(
     let comment_value = if comment.is_empty() {
         None
     } else {
-        Some(comment)
+        Some(normalize_nfc(&comment))
     };
 
     sqlx::query("UPDATE highlights SET comment = ? WHERE id = ?")
@@ -200,7 +205,7 @@ pub async fn update_qualitative_source_highlight_comment(
     let comment_value = if comment.is_empty() {
         None
     } else {
-        Some(comment)
+        Some(normalize_nfc(&comment))
     };
 
     sqlx::query("UPDATE qualitative_source_highlights SET comment = ? WHERE id = ?")

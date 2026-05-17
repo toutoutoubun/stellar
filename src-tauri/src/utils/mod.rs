@@ -4,3 +4,4 @@
 
 pub mod metadata;
 pub mod pdf;
+pub mod text;

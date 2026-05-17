@@ -1,4 +1,5 @@
 use super::Tokenizer;
+use crate::utils::text::normalize_nfc;
 use std::collections::HashSet;
 
 pub struct AsciiTokenizer {
@@ -34,6 +35,7 @@ pub(crate) fn normalize_token(token: &str) -> Option<String> {
     let normalized = token
         .trim_matches(|ch: char| ch == '\'' || ch.is_whitespace() || ch.is_ascii_punctuation())
         .to_lowercase();
+    let normalized = normalize_nfc(&normalized);
 
     if normalized.chars().count() < 2 {
         return None;
@@ -74,5 +76,13 @@ mod tests {
         let tokens = tokenizer.tokenize("IsiZulu and isiXhosa terms").unwrap();
 
         assert_eq!(tokens, vec!["isizulu", "and", "isixhosa", "terms"]);
+    }
+
+    #[test]
+    fn tokenizer_normalizes_decomposed_unicode_to_nfc() {
+        let tokenizer = AsciiTokenizer::new();
+        let tokens = tokenizer.tokenize("e\u{0302} ê").unwrap();
+
+        assert_eq!(tokens, vec!["ê", "ê"]);
     }
 }
