@@ -5,4 +5,6 @@
 // import "./myQualitativeAddon";
 // import "./myQuantitativeAddon";
 
+import "./sentimentContextAddon";
+
 export {};
