@@ -315,9 +315,7 @@ const MOCK_EN_STOPWORDS = new Set([
 
 function normalizeMockToken(token: string): string | null {
   const normalized = token
-    .replace(/^[\s'.,!?;:()[\]{}"“”‘’]+|[\s'.,!?;:()[\]{}"“”‘’]+$/g, "")
-    .toLowerCase();
-    .replace(/^[\s'.,!?;:()\[\]{}"“”‘’]+|[\s'.,!?;:()\[\]{}"“”‘’]+$/g, "")
+    .replace(/^[\s'.,!?;:()\[\]{}"“”‘’]+|[\s'.,!?;:()[\]{}"“”‘’]+$/g, "")
     .toLowerCase()
     .normalize("NFC");
   if ([...normalized].length < 2) return null;
