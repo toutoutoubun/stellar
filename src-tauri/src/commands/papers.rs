@@ -6,6 +6,7 @@
 use crate::commands::links::fetch_backlinks_for;
 use crate::db::get_pool;
 use crate::db::models::*;
+use crate::utils::text::{normalize_nfc, normalize_opt_nfc, normalize_vec_nfc};
 use sqlx::Row;
 use tauri::AppHandle;
 
@@ -167,24 +168,35 @@ pub async fn create_paper(app: AppHandle, input: CreatePaperDto) -> Result<Paper
     let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
-    let authors_json = serde_json::to_string(&input.authors).map_err(|e| e.to_string())?;
-    let tags_json = serde_json::to_string(&input.tags).map_err(|e| e.to_string())?;
+    let title = normalize_nfc(&input.title);
+    let authors = normalize_vec_nfc(input.authors);
+    let journal = normalize_opt_nfc(input.journal);
+    let volume = normalize_opt_nfc(input.volume);
+    let issue = normalize_opt_nfc(input.issue);
+    let pages = normalize_opt_nfc(input.pages);
+    let doi = normalize_opt_nfc(input.doi);
+    let url = normalize_opt_nfc(input.url);
+    let r#abstract = normalize_opt_nfc(input.r#abstract);
+    let pdf_path = input.pdf_path;
+    let tags = normalize_vec_nfc(input.tags);
+    let authors_json = serde_json::to_string(&authors).map_err(|e| e.to_string())?;
+    let tags_json = serde_json::to_string(&tags).map_err(|e| e.to_string())?;
 
     sqlx::query(
         "INSERT INTO papers (id, title, authors, year, journal, volume, issue, pages, doi, url, abstract, pdf_path, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
-    .bind(&input.title)
+    .bind(&title)
     .bind(&authors_json)
     .bind(input.year)
-    .bind(&input.journal)
-    .bind(&input.volume)
-    .bind(&input.issue)
-    .bind(&input.pages)
-    .bind(&input.doi)
-    .bind(&input.url)
-    .bind(&input.r#abstract)
-    .bind(&input.pdf_path)
+    .bind(&journal)
+    .bind(&volume)
+    .bind(&issue)
+    .bind(&pages)
+    .bind(&doi)
+    .bind(&url)
+    .bind(&r#abstract)
+    .bind(&pdf_path)
     .bind(&tags_json)
     .bind(&now)
     .bind(&now)
@@ -194,18 +206,18 @@ pub async fn create_paper(app: AppHandle, input: CreatePaperDto) -> Result<Paper
 
     Ok(PaperResponse {
         id,
-        title: input.title,
-        authors: input.authors,
+        title,
+        authors,
         year: input.year,
-        journal: input.journal,
-        volume: input.volume,
-        issue: input.issue,
-        pages: input.pages,
-        doi: input.doi,
-        url: input.url,
-        r#abstract: input.r#abstract,
-        pdf_path: input.pdf_path,
-        tags: input.tags,
+        journal,
+        volume,
+        issue,
+        pages,
+        doi,
+        url,
+        r#abstract,
+        pdf_path,
+        tags,
         created_at: now.clone(),
         updated_at: now,
     })
@@ -235,18 +247,18 @@ pub async fn update_paper(
     let current = parse_paper_sqlx(&row)?;
 
     // DTO の Some フィールドのみ更新、None なら既存値を維持
-    let title = input.title.unwrap_or(current.title);
-    let authors = input.authors.unwrap_or(current.authors);
+    let title = normalize_nfc(&input.title.unwrap_or(current.title));
+    let authors = normalize_vec_nfc(input.authors.unwrap_or(current.authors));
     let year = input.year.or(current.year);
-    let journal = input.journal.or(current.journal);
-    let volume = input.volume.or(current.volume);
-    let issue = input.issue.or(current.issue);
-    let pages = input.pages.or(current.pages);
-    let doi = input.doi.or(current.doi);
-    let url = input.url.or(current.url);
-    let r#abstract = input.r#abstract.or(current.r#abstract);
+    let journal = normalize_opt_nfc(input.journal.or(current.journal));
+    let volume = normalize_opt_nfc(input.volume.or(current.volume));
+    let issue = normalize_opt_nfc(input.issue.or(current.issue));
+    let pages = normalize_opt_nfc(input.pages.or(current.pages));
+    let doi = normalize_opt_nfc(input.doi.or(current.doi));
+    let url = normalize_opt_nfc(input.url.or(current.url));
+    let r#abstract = normalize_opt_nfc(input.r#abstract.or(current.r#abstract));
     let pdf_path = input.pdf_path.or(current.pdf_path);
-    let tags = input.tags.unwrap_or(current.tags);
+    let tags = normalize_vec_nfc(input.tags.unwrap_or(current.tags));
 
     let authors_json = serde_json::to_string(&authors).map_err(|e| e.to_string())?;
     let tags_json = serde_json::to_string(&tags).map_err(|e| e.to_string())?;

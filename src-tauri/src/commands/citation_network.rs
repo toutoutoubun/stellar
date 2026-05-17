@@ -4,6 +4,7 @@
 
 use crate::db::get_pool;
 use crate::db::models::*;
+use crate::utils::text::{normalize_nfc, normalize_nfc_trimmed};
 use sqlx::Row;
 use tauri::AppHandle;
 
@@ -130,7 +131,7 @@ fn parse_ss_relation_item(item: &serde_json::Value, wrapper_key: &str) -> Option
 }
 
 fn normalize_doi_identifier(doi: &str) -> String {
-    doi.trim()
+    normalize_nfc_trimmed(doi)
         .trim_start_matches("https://doi.org/")
         .trim_start_matches("http://doi.org/")
         .trim_start_matches("doi:")
@@ -179,7 +180,7 @@ fn graph_paper_url(identifier: &str) -> String {
 }
 
 fn normalize_title_for_match(title: &str) -> String {
-    title
+    normalize_nfc(title)
         .chars()
         .filter(|c| c.is_alphanumeric())
         .flat_map(char::to_lowercase)

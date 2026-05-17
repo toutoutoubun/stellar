@@ -6,6 +6,7 @@
 use crate::commands::links::fetch_backlinks_for;
 use crate::db::get_pool;
 use crate::db::models::*;
+use crate::utils::text::{normalize_nfc, normalize_vec_nfc};
 use sqlx::Row;
 use tauri::AppHandle;
 
@@ -156,14 +157,17 @@ pub async fn create_note(app: AppHandle, input: CreateNoteDto) -> Result<NoteRes
     let pool = get_pool(&app)?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
-    let tags_json = serde_json::to_string(&input.tags).map_err(|e| e.to_string())?;
+    let title = normalize_nfc(&input.title);
+    let content = normalize_nfc(&input.content);
+    let tags = normalize_vec_nfc(input.tags);
+    let tags_json = serde_json::to_string(&tags).map_err(|e| e.to_string())?;
 
     sqlx::query(
         "INSERT INTO notes (id, title, content, paper_id, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&id)
-    .bind(&input.title)
-    .bind(&input.content)
+    .bind(&title)
+    .bind(&content)
     .bind(&input.paper_id)
     .bind(&tags_json)
     .bind(&now)
@@ -174,10 +178,10 @@ pub async fn create_note(app: AppHandle, input: CreateNoteDto) -> Result<NoteRes
 
     Ok(NoteResponse {
         id,
-        title: input.title,
-        content: input.content,
+        title,
+        content,
         paper_id: input.paper_id,
-        tags: input.tags,
+        tags,
         created_at: now.clone(),
         updated_at: now,
         // 新規ノートはドラフトではない
@@ -211,14 +215,14 @@ pub async fn update_note(
 
     let current = parse_note_sqlx(&row)?;
 
-    let title = input.title.unwrap_or(current.title);
-    let content = input.content.unwrap_or(current.content);
+    let title = normalize_nfc(&input.title.unwrap_or(current.title));
+    let content = normalize_nfc(&input.content.unwrap_or(current.content));
     // paper_id は二重 Option: Some(Some(x))=変更, Some(None)=解除, None=変更なし
     let paper_id = match input.paper_id {
         Some(new_val) => new_val,
         None => current.paper_id,
     };
-    let tags = input.tags.unwrap_or(current.tags);
+    let tags = normalize_vec_nfc(input.tags.unwrap_or(current.tags));
     let tags_json = serde_json::to_string(&tags).map_err(|e| e.to_string())?;
 
     sqlx::query("UPDATE notes SET title=?, content=?, paper_id=?, tags=?, updated_at=? WHERE id=?")
@@ -351,7 +355,8 @@ pub async fn create_note_from_highlights(
     // 新規ノートとして保存
     let note_id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
-    let note_title = format!("{} — ハイライトノート", paper_title);
+    let note_title = normalize_nfc(&format!("{} — ハイライトノート", paper_title));
+    let markdown = normalize_nfc(&markdown);
 
     sqlx::query(
         "INSERT INTO notes (id, title, content, paper_id, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -446,8 +451,10 @@ pub async fn create_note_from_source_highlights(
 
     let note_id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
-    let title = format!("ハイライト: {}", source_title);
-    let tags_json = serde_json::to_string(&vec!["qualitative-source"]).unwrap_or("[]".to_string());
+    let title = normalize_nfc(&format!("ハイライト: {}", source_title));
+    let markdown = normalize_nfc(&markdown);
+    let tags = vec!["qualitative-source".to_string()];
+    let tags_json = serde_json::to_string(&tags).unwrap_or("[]".to_string());
 
     sqlx::query(
         "INSERT INTO notes (id, title, content, paper_id, tags, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, ?, ?)",
@@ -467,7 +474,7 @@ pub async fn create_note_from_source_highlights(
         title,
         content: markdown,
         paper_id: None,
-        tags: vec!["qualitative-source".to_string()],
+        tags,
         created_at: now.clone(),
         updated_at: now,
         is_draft: None,

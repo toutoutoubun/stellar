@@ -46,7 +46,7 @@ Your thoughts are your own.
 
 ## Features
 
-### 📚 Library
+### Library
 
 Manage papers, books, and sources. Tag, categorize, search.
 
@@ -55,7 +55,7 @@ Manage papers, books, and sources. Tag, categorize, search.
 <!-- TODO: Add screenshot -->
 </details>
 
-### ✍️ Editor
+### Editor
 
 Write in Markdown with WikiLink support. Connect ideas as you go. Fast, distraction-free, keyboard-driven.
 
@@ -64,7 +64,7 @@ Write in Markdown with WikiLink support. Connect ideas as you go. Fast, distract
 <!-- TODO: Add screenshot -->
 </details>
 
-### 🔗 Citation Network
+### Citation Network
 
 Visualize how your sources connect. See citation relationships as an interactive graph. Find patterns in your research that spreadsheets can't show.
 
@@ -73,7 +73,7 @@ Visualize how your sources connect. See citation relationships as an interactive
 <!-- TODO: Add screenshot -->
 </details>
 
-### 🔬 Qualitative Analysis
+### Qualitative Analysis
 
 Code text data. Build themes. Run qualitative analysis — without paying hundreds of dollars a year for commercial software.
 
@@ -82,7 +82,7 @@ Code text data. Build themes. Run qualitative analysis — without paying hundre
 <!-- TODO: Add screenshot -->
 </details>
 
-### 📤 Export
+### Export
 
 Output as PDF, Word, or HTML. Take your work anywhere.
 
@@ -163,10 +163,10 @@ Stellar speaks four languages:
 
 | Language | Status |
 |----------|--------|
-| 🇯🇵 日本語 | ✅ Full |
-| 🇬🇧 English | ✅ Full |
-| 🇫🇷 Français | ✅ Full |
-| 🇿🇦 Afrikaans | ✅ Full |
+| 日本語 | ✅ Full |
+| English | ✅ Full |
+| Français | ✅ Full |
+| Afrikaans | ✅ Full |
 
 Want to add a language? See [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -200,6 +200,15 @@ You might **not** like Stellar if:
 - [ ] Mobile companion app (read-only)
 - [ ] Plugin system for community extensions
 - [ ] More languages (contributions welcome)
+
+---
+
+## Support this project
+
+Stellar is free and MIT-licensed. If it saves you money on commercial research software, consider supporting its development.
+
+- [GitHub Sponsors](https://github.com/sponsors/toutoutoubun) — recurring or one-time support
+- [Stellar Theme Pack vol.1](https://tami-tou.booth.pm/items/8367971) — custom themes on Booth
 
 ---
 
