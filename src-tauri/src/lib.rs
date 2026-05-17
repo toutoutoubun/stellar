@@ -7,6 +7,7 @@ mod commands;
 mod db;
 mod models;
 mod server;
+mod tokenizer;
 mod utils;
 
 use db::AppDb;

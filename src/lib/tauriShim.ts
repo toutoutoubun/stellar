@@ -208,9 +208,19 @@ function normalizeMockToken(token: string): string | null {
   return normalized;
 }
 
-function tokenizeMockCooccurrenceText(text: string): string[] {
+function tokenizeMockCooccurrenceText(text: string, locale?: string): string[] {
   const hasJapanese = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/.test(text);
-  const stopwords = hasJapanese ? MOCK_JA_STOPWORDS : MOCK_EN_STOPWORDS;
+  const normalizedLocale = locale?.trim().toLowerCase().split(/[-_]/)[0] ?? "";
+  const stopwords =
+    normalizedLocale === "ja" || (!normalizedLocale && hasJapanese)
+      ? MOCK_JA_STOPWORDS
+      : normalizedLocale === "zu" ||
+          normalizedLocale === "xh" ||
+          normalizedLocale === "nso" ||
+          normalizedLocale === "tn" ||
+          normalizedLocale === "st"
+        ? new Set<string>()
+        : MOCK_EN_STOPWORDS;
   const matches = text.match(/[A-Za-z0-9']+|[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaffー]+/g) ?? [];
   return matches
     .map(normalizeMockToken)
@@ -221,8 +231,9 @@ function buildMockCooccurrencePairs(
   text: string,
   windowSize = 5,
   topN = 10,
+  locale?: string,
 ): Array<{ wordA: string; wordB: string; count: number }> {
-  const tokens = tokenizeMockCooccurrenceText(text);
+  const tokens = tokenizeMockCooccurrenceText(text, locale);
   const window = Math.min(Math.max(Math.trunc(windowSize), 2), 50);
   const limit = Math.min(Math.max(Math.trunc(topN), 1), 100);
   const counts = new Map<string, number>();
@@ -961,6 +972,7 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
         commandString(segment?.segmentText),
         commandNumber(args?.windowSize, 5),
         commandNumber(args?.topN, 10),
+        typeof args?.locale === "string" ? args.locale : undefined,
       ),
     };
   }

@@ -443,7 +443,7 @@ export interface GraphNodeExtended extends GraphNode {
 export type SettingsTab = 'appearance' | 'data' | 'addons' | 'shortcuts' | 'citation' | 'language';
 
 /** 対応ロケール */
-export type Locale = 'ja' | 'en' | 'fr' | 'af';
+export type Locale = 'ja' | 'en' | 'fr' | 'af' | 'zu' | 'xh' | 'nso' | 'tn' | 'st';
 
 /** 外観設定 */
 export interface AppearanceSettings {

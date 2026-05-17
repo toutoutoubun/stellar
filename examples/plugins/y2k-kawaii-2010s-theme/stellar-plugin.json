@@ -1,0 +1,10 @@
+{
+  "id": "y2k-kawaii-2010s-theme",
+  "name": "Y2K Kawaii 2010s Theme",
+  "version": "1.0.0",
+  "description": "A glossy 2010s Japanese Y2K kawaii theme pack for Stellar.",
+  "author": "Stellar + Codex",
+  "entry": "index.js",
+  "capabilities": ["theme"],
+  "minStellarVersion": "0.4.0"
+}
