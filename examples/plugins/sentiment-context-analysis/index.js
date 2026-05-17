@@ -2,6 +2,7 @@ const PLUGIN_ID = "sentiment-context-analysis.panel";
 const DEFAULT_WINDOW_SIZE = 5;
 const DEFAULT_TOP_N = 80;
 const STORAGE_PREFIX = "stellar.sentimentContextAnalysis";
+let stellarInvoke = null;
 
 const DEFAULT_LEXICON = [
   "良い,1,positive",
@@ -321,6 +322,7 @@ const styles = {
 export function register(api) {
   const React = api.React;
   const h = React.createElement;
+  stellarInvoke = typeof api.invoke === "function" ? api.invoke.bind(api) : null;
 
   api.registerQualitativeAnalysisAddon({
     id: PLUGIN_ID,
@@ -1541,6 +1543,18 @@ function csvCell(value) {
 }
 
 async function invoke(command, args) {
+  if (typeof stellarInvoke === "function") {
+    return stellarInvoke(command, args || {});
+  }
+
+  const apiInvoke =
+    typeof window !== "undefined" && typeof window.StellarPluginApi?.invoke === "function"
+      ? window.StellarPluginApi.invoke
+      : null;
+  if (apiInvoke) {
+    return apiInvoke(command, args || {});
+  }
+
   const bridge = typeof window !== "undefined" ? window.__TAURI__ : null;
   const invokeFn =
     bridge?.core?.invoke ||

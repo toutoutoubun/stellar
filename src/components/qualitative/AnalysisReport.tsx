@@ -8,7 +8,9 @@ import { HelpTooltip } from "./HelpTooltip";
 import { IconReport, IconCopy } from "./icons/QualIcons";
 import { useNoteStore } from "../../stores/useNoteStore";
 import { toast } from "../ui/Toast";
-import { useT } from "../../stores/useI18nStore";
+import { useT, useI18nStore } from "../../stores/useI18nStore";
+import { getTranslations, LOCALE_NATIVE_NAMES, SUPPORTED_LOCALES } from "../../i18n";
+import type { Locale } from "../../types";
 
 interface AnalysisReportProps {
   projectId: string;
@@ -28,11 +30,26 @@ interface ReportSections {
   framing: boolean;
 }
 
+function getSectionLabels(translations: ReturnType<typeof getTranslations>): Record<keyof ReportSections, string> {
+  return {
+    codebook: translations.qualitative.k_7z1tpa,
+    matrix: translations.qualitative.k_5l342g,
+    timeline: translations.qualitative.k_3mh737,
+    actors: translations.qualitative.k_yybalk,
+    process_tracing: translations.qualitative.k_vz7qeo,
+    comparative: translations.qualitative.k_2mss8j,
+    framing: translations.qualitative.k_37exdr,
+  };
+}
+
 export const AnalysisReport: React.FC<AnalysisReportProps> = ({
   projectId,
 }) => {
   const t = useT();
+  const currentLocale = useI18nStore((s) => s.locale);
   const [report, setReport] = useState<string | null>(null);
+  const [reportLanguage, setReportLanguage] = useState<Locale>(currentLocale);
+  const [generatedReportLanguage, setGeneratedReportLanguage] = useState<Locale | null>(null);
   const [loading, setLoading] = useState(false);
   const [exportingNote, setExportingNote] = useState(false);
   const createNote = useNoteStore((s) => s.createNote);
@@ -54,22 +71,24 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
       const result = await invoke<string>("generate_analysis_report", {
         projectId,
         sections: sectionList,
+        language: reportLanguage,
       });
       setReport(result);
+      setGeneratedReportLanguage(reportLanguage);
     } catch (err) {
       console.error(t.qualitative.k_8gkv65, err);
       setReport(`${t.common.error ?? "Error"}: ${typeof err === "string" ? err : t.qualitative.k_xbkqi6}`);
     } finally {
       setLoading(false);
     }
-  }, [projectId, sections]);
+  }, [projectId, sections, reportLanguage, t.common.error, t.qualitative.k_8gkv65, t.qualitative.k_xbkqi6]);
 
   const handleCopy = useCallback(() => {
     if (report) {
       void navigator.clipboard.writeText(report);
       toast.success(t.qualitative.k_rexm4q);
     }
-  }, [report]);
+  }, [report, t.qualitative.k_rexm4q]);
 
   const SECTION_LABELS: { key: keyof ReportSections; label: string }[] = [
     { key: "codebook", label: t.qualitative.k_7z1tpa },
@@ -81,20 +100,18 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
     { key: "framing", label: t.qualitative.k_37exdr },
   ];
 
-  const SECTION_LABELS_MAP: Record<string, string> = Object.fromEntries(
-    SECTION_LABELS.map(({ key, label }) => [key, label]),
-  );
-
   /** レポートをノートに出力 */
   const handleExportToNote = useCallback(async () => {
     if (!report) return;
     setExportingNote(true);
     try {
+      const exportT = getTranslations(generatedReportLanguage ?? reportLanguage);
+      const exportSectionLabels = getSectionLabels(exportT);
       const selectedNames = (Object.keys(sections) as (keyof ReportSections)[])
         .filter((k) => sections[k])
-        .map((k) => SECTION_LABELS_MAP[k] ?? k);
-      const title = t.qualitative.k_report_title_fmt.replace("${names}", `${selectedNames.slice(0, 3).join(t.stats.k_9ob)}${selectedNames.length > 3 ? "…" : ""}`);
-      const tags = [t.qualitative.k_it0yjj, t.qualitative.k_pbsye];
+        .map((k) => exportSectionLabels[k] ?? k);
+      const title = exportT.qualitative.k_report_title_fmt.replace("${names}", `${selectedNames.slice(0, 3).join(exportT.stats.k_9ob)}${selectedNames.length > 3 ? "…" : ""}`);
+      const tags = [exportT.qualitative.k_it0yjj, exportT.qualitative.k_pbsye];
       await createNote({ title, content: report, tags });
       toast.success(t.qualitative.k_fpwqww);
     } catch (err) {
@@ -103,7 +120,7 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
     } finally {
       setExportingNote(false);
     }
-  }, [report, sections, createNote]);
+  }, [report, sections, createNote, generatedReportLanguage, reportLanguage, t.notes.createFailed, t.qualitative.k_fpwqww, t.qualitative.k_pszidi]);
 
   const toggleSection = (key: keyof ReportSections) => {
     setSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -145,15 +162,14 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
         style={{ color: "var(--color-text-primary)" }}
       >
         <IconReport size={16} />
-        分析レポート生成
+        {t.qualitative.k_report_generation_title}
       </h3>
 
       <p
         className="text-xs mb-4"
         style={{ color: "var(--color-text-secondary)", lineHeight: "1.6" }}
       >
-        プロジェクトのデータからMarkdown形式の分析レポートを生成します。
-        含めるセクションを選択してください。
+        {t.qualitative.k_report_generation_desc}
       </p>
 
       {/* セクション選択 */}
@@ -171,7 +187,7 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
             className="text-xs font-semibold"
             style={{ color: "var(--color-text-primary)" }}
           >
-            セクション選択
+            {t.qualitative.k_report_section_selection}
           </span>
           <button
             type="button"
@@ -187,6 +203,33 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
             {allSelected ? t.qualitative.k_clj61 : t.qualitative.k_cmd8u}
           </button>
         </div>
+
+        <label className="block mb-4">
+          <span
+            className="block text-xs font-semibold mb-1.5"
+            style={{ color: "var(--color-text-primary)" }}
+          >
+            {t.qualitative.k_report_language}
+          </span>
+          <select
+            value={reportLanguage}
+            onChange={(e) => setReportLanguage(e.target.value as Locale)}
+            className="w-full text-xs px-2 py-1.5"
+            style={{
+              backgroundColor: "var(--color-bg-primary)",
+              color: "var(--color-text-primary)",
+              border: "1px solid var(--color-border-primary)",
+              borderRadius: "6px",
+              outline: "none",
+            }}
+          >
+            {SUPPORTED_LOCALES.map((loc) => (
+              <option key={loc} value={loc}>
+                {LOCALE_NATIVE_NAMES[loc]}
+              </option>
+            ))}
+          </select>
+        </label>
 
         <div className="grid grid-cols-2 gap-2">
           {SECTION_LABELS.map(({ key, label }) => (
@@ -239,7 +282,7 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
               className="text-sm font-semibold"
               style={{ color: "var(--color-text-primary)" }}
             >
-              生成されたレポート
+              {t.qualitative.k_generated_report}
             </h4>
             <div className="flex items-center gap-2">
               <button
@@ -275,7 +318,7 @@ export const AnalysisReport: React.FC<AnalysisReportProps> = ({
                 }}
               >
                 <IconCopy size={11} />
-                コピー
+                {t.settings.data.copyCode}
               </button>
             </div>
           </div>

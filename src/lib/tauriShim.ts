@@ -59,6 +59,102 @@ function now(): string {
   return new Date().toISOString();
 }
 
+function mockReportLabels(language: unknown): {
+  title: string;
+  method: string;
+  generatedAt: string;
+  empty: string;
+  sections: Record<string, string>;
+} {
+  const key = commandString(language, "ja").split(/[-_]/)[0]?.toLowerCase();
+  if (key === "en") {
+    return {
+      title: "Analysis Report",
+      method: "Analysis Method",
+      generatedAt: "Generated At",
+      empty: "*No data*",
+      sections: {
+        codebook: "Codebook",
+        matrix: "Coding Matrix",
+        timeline: "Timeline",
+        actors: "Actor Map",
+        process_tracing: "Process Tracing",
+        comparative: "Comparative Case Design",
+        framing: "Framing Analysis",
+      },
+    };
+  }
+  if (key === "fr") {
+    return {
+      title: "Rapport d'analyse",
+      method: "Méthode d'analyse",
+      generatedAt: "Généré le",
+      empty: "*Aucune donnée*",
+      sections: {
+        codebook: "Livre de codes",
+        matrix: "Matrice de codage",
+        timeline: "Chronologie",
+        actors: "Carte des acteurs",
+        process_tracing: "Traçage de processus",
+        comparative: "Design comparatif de cas",
+        framing: "Analyse de cadrage",
+      },
+    };
+  }
+  if (key === "af") {
+    return {
+      title: "Analiseverslag",
+      method: "Ontledingsmetode",
+      generatedAt: "Gegenereer op",
+      empty: "*Geen data nie*",
+      sections: {
+        codebook: "Kodeboek",
+        matrix: "Koderingsmatriks",
+        timeline: "Tydlyn",
+        actors: "Akteurkaart",
+        process_tracing: "Prosesnasporing",
+        comparative: "Vergelykende gevalontwerp",
+        framing: "Raamwerk-ontleding",
+      },
+    };
+  }
+  return {
+    title: "分析レポート",
+    method: "分析手法",
+    generatedAt: "生成日時",
+    empty: "*データなし*",
+    sections: {
+      codebook: "コードブック",
+      matrix: "コーディングマトリクス",
+      timeline: "タイムライン",
+      actors: "アクターマップ",
+      process_tracing: "プロセス・トレーシング",
+      comparative: "比較ケース設計",
+      framing: "フレーミング分析",
+    },
+  };
+}
+
+function buildMockAnalysisReport(args?: Record<string, unknown>): string {
+  const projectId = commandString(args?.projectId ?? args?.project_id);
+  const project = mockStore.projects.find((item) => item.id === projectId);
+  const sections = Array.isArray(args?.sections) ? args.sections.map(String) : [];
+  const labels = mockReportLabels(args?.language);
+  const lines = [
+    `# ${labels.title}: ${project?.name ?? "Project"}`,
+    "",
+    `**${labels.method}**: ${project?.methodType ?? "thematic"}  `,
+    `**${labels.generatedAt}**: ${new Date().toISOString().slice(0, 16).replace("T", " ")}`,
+    "",
+    "---",
+    "",
+  ];
+  for (const section of sections) {
+    lines.push(`## ${labels.sections[section] ?? section}`, "", labels.empty, "");
+  }
+  return lines.join("\n");
+}
+
 type UnknownRecord = Record<string, unknown>;
 
 function isRecord(value: unknown): value is UnknownRecord {
@@ -201,7 +297,7 @@ const MOCK_EN_STOPWORDS = new Set([
 
 function normalizeMockToken(token: string): string | null {
   const normalized = token
-    .replace(/^[\s'.,!?;:()\[\]{}"“”‘’]+|[\s'.,!?;:()\[\]{}"“”‘’]+$/g, "")
+    .replace(/^[\s'.,!?;:()[\]{}"“”‘’]+|[\s'.,!?;:()[\]{}"“”‘’]+$/g, "")
     .toLowerCase();
   if ([...normalized].length < 2) return null;
   if (/^\d+$/.test(normalized)) return null;
@@ -1277,6 +1373,10 @@ function handleDynamic(cmd: string, args?: Record<string, unknown>): { handled: 
     };
     mockStore.notes.unshift(note);
     return { handled: true, result: note.id };
+  }
+
+  if (cmd === "generate_analysis_report") {
+    return { handled: true, result: buildMockAnalysisReport(args) };
   }
 
   // ── Graph Data（動的生成）──
