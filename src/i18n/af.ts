@@ -871,9 +871,14 @@ const af: TranslationKeys = {
   // ============================================================
   library: {
     k_69gmr7: "Voeg by van PDF",
+    k_uri_tab: "Voeg by van URI",
     k_fc9gz4: "Voeg by van URL",
     k_mjxfup: "Voeg by van DOI",
     k_cqu9fk: "Handmatige inskrywing",
+    k_uri_required: "Voer asseblief 'n URI in",
+    k_uri_invalid: "Kon nie die URI interpreteer nie. Voer 'n URL, DOI, doi:, of arxiv:-waarde in.",
+    k_uri_label: "URI / DOI / URL",
+    k_uri_fetch_hint: "Voer 'n URL, DOI, doi:10.xxxx, of arxiv:xxxx in en klik \"Haal\"",
     k_svpfs8: "Voer asseblief 'n URL in",
     k_2uf93e: "Metadata herwin",
     k_qr44fw: "Failed to retrieve metadata: ${String(e)}",

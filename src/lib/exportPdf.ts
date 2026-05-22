@@ -270,21 +270,56 @@ export function exportHtmlBlob(content: string, title: string): Blob {
 
 /**
  * PDF エクスポート — ブラウザの印刷ダイアログ経由。
- * 新しいウィンドウに学術スタイルの HTML を表示して window.print() を呼ぶ。
- * 呼び出し側でクリック直後に開いたウィンドウを渡すと、ポップアップブロックを避けられる。
+ * 既定では隠し iframe に学術スタイルの HTML を描画して window.print() を呼ぶ。
+ * 新しいウィンドウを開かないため、ブラウザのポップアップブロックを避けられる。
  */
 export function exportPdf(content: string, title: string, targetWindow?: Window | null): void {
   const bodyHtml = markdownToHtml(content);
   const fullHtml = buildAcademicHtml(bodyHtml, title);
 
-  const printWindow = targetWindow ?? window.open("", "_blank");
-  if (!printWindow) {
+  if (targetWindow) {
+    targetWindow.document.write(fullHtml);
+    targetWindow.document.close();
+    setTimeout(() => {
+      targetWindow.print();
+    }, 500);
+    return;
+  }
+
+  const iframe = document.createElement("iframe");
+  iframe.title = title;
+  iframe.setAttribute("aria-hidden", "true");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.style.opacity = "0";
+  document.body.appendChild(iframe);
+
+  const printDocument = iframe.contentDocument ?? iframe.contentWindow?.document;
+  const printWindow = iframe.contentWindow;
+  if (!printDocument || !printWindow) {
+    iframe.remove();
     throw new Error(useI18nStore.getState().t.utils.str_oxfjvb);
   }
-  printWindow.document.write(fullHtml);
-  printWindow.document.close();
-  // 少し待ってからprint（フォント読み込み等のため）
+
+  const cleanup = () => {
+    setTimeout(() => {
+      if (iframe.parentNode) iframe.remove();
+    }, 1000);
+  };
+
+  printWindow.addEventListener("afterprint", cleanup, { once: true });
+  printDocument.open();
+  printDocument.write(fullHtml);
+  printDocument.close();
+
+  // 少し待ってから印刷（HTML描画・フォント読み込み等のため）
   setTimeout(() => {
+    printWindow.focus();
     printWindow.print();
+    setTimeout(cleanup, 120000);
   }, 500);
 }

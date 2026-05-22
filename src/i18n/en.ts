@@ -872,9 +872,14 @@ const en: TranslationKeys = {
   // ============================================================
   library: {
     k_69gmr7: "Add from PDF",
+    k_uri_tab: "Add from URI",
     k_fc9gz4: "Add from URL",
     k_mjxfup: "Add from DOI",
     k_cqu9fk: "Manual Entry",
+    k_uri_required: "Please enter a URI",
+    k_uri_invalid: "Could not interpret the URI. Enter a URL, DOI, doi:, or arxiv: value.",
+    k_uri_label: "URI / DOI / URL",
+    k_uri_fetch_hint: "Enter a URL, DOI, doi:10.xxxx, or arxiv:xxxx and click \"Fetch\"",
     k_svpfs8: "Please enter a URL",
     k_2uf93e: "Metadata retrieved",
     k_qr44fw: "Failed to retrieve metadata: ${String(e)}",

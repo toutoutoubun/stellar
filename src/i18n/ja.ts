@@ -870,9 +870,14 @@ const ja = {
   // ============================================================
   library: {
     k_69gmr7: "PDFから追加",
+    k_uri_tab: "URIから追加",
     k_fc9gz4: "URLから追加",
     k_mjxfup: "DOIから追加",
     k_cqu9fk: "手動入力",
+    k_uri_required: "URIを入力してください",
+    k_uri_invalid: "URIを解釈できませんでした。URL、DOI、doi:、arxiv: 形式で入力してください。",
+    k_uri_label: "URI / DOI / URL",
+    k_uri_fetch_hint: "URL、DOI、doi:10.xxxx、arxiv:xxxx を入力して「取得」をクリックしてください",
     k_svpfs8: "URLを入力してください",
     k_2uf93e: "メタデータを取得しました",
     k_qr44fw: "メタデータの取得に失敗しました: ${String(e)}",

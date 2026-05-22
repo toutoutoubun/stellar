@@ -203,16 +203,8 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(({
       setMenuOpen(false);
 
       const title = activeNote.title || t.notes.untitled;
-      let printWindow: Window | null = null;
 
       try {
-        if (format === "pdf") {
-          printWindow = window.open("", "_blank");
-          if (!printWindow) {
-            throw new Error(t.utils.str_oxfjvb);
-          }
-        }
-
         // exportPdf.ts は marked (CDN external) を静的 import するため、
         // 全エクスポート関数を動的 import で遅延ロードする
         const ep = await import("../../lib/exportPdf");
@@ -235,8 +227,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(({
           }
 
           case "pdf":
-            ep.exportPdf(editorContent, title, printWindow);
-            printWindow = null;
+            ep.exportPdf(editorContent, title);
             toast.info(t.notes.k_cuig0f);
             break;
 
@@ -249,9 +240,6 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(({
           }
         }
       } catch (err) {
-        if (printWindow && !printWindow.closed) {
-          printWindow.close();
-        }
         const msg = err instanceof Error ? err.message : t.notes.k_jp7lg2;
         toast.error(msg);
       }
