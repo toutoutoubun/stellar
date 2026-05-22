@@ -13,6 +13,7 @@ import { NoteEditor, type NoteEditorHandle } from "./NoteEditor";
 import { DraftCitationPanel } from "./DraftCitationPanel";
 import { NoteContextPanel } from "./NoteContextPanel";
 import { useT } from "../../stores/useI18nStore";
+import { toast } from "../ui/Toast";
 
 interface DraftNoteEditorProps {
   noteId: string;
@@ -97,6 +98,20 @@ export const DraftNoteEditor: React.FC<DraftNoteEditorProps> = ({ noteId }) => {
     noteEditorRef.current?.scrollToLine(line);
   }, []);
 
+  /** 下書きを Markdown として書き出す */
+  const handleExportMarkdown = useCallback(async () => {
+    if (!activeNote) return;
+
+    try {
+      const title = activeNote.title || t.notes.untitled;
+      const { exportMarkdownFile } = await import("../../lib/exportPdf");
+      exportMarkdownFile(editorContent, title);
+      toast.success(t.notes.k_s8vwhj.replace("${title}", title));
+    } catch {
+      toast.error(t.notes.k_jp7lg2);
+    }
+  }, [activeNote, editorContent, t]);
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* ツールバー — NoteEditor の上に追加ボタンを配置 */}
@@ -138,6 +153,43 @@ export const DraftNoteEditor: React.FC<DraftNoteEditorProps> = ({ noteId }) => {
         </span>
 
         <div className="flex-1" />
+
+        {/* Markdown 書き出し */}
+        <button
+          type="button"
+          onClick={() => void handleExportMarkdown()}
+          className="flex items-center justify-center"
+          style={{
+            width: "28px",
+            height: "28px",
+            borderRadius: "6px",
+            color: "var(--color-text-secondary)",
+            transition: "color 120ms ease-out",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = "var(--color-accent-primary)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = "var(--color-text-secondary)";
+          }}
+          title="Markdown (.md) を書き出し"
+          aria-label="Markdown (.md) を書き出し"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+        </button>
 
         {/* 引用スタイルセレクター */}
         <div className="relative">
