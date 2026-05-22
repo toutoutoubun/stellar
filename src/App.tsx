@@ -7,12 +7,11 @@
 // OnboardingFlow で初回起動時のセットアップ
 
 import type React from "react";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, useCallback } from "react";
 import { Titlebar } from "./components/layout/Titlebar";
 import { Sidebar } from "./components/layout/Sidebar";
 import { MainPane } from "./components/layout/MainPane";
 import { ContextPanel } from "./components/layout/ContextPanel";
-import { SearchModal } from "./components/search/SearchModal";
 import { ToastContainer } from "./components/ui/Toast";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import {
@@ -24,6 +23,10 @@ import { useThemeStore } from "./stores/useThemeStore";
 import { useUIStore } from "./stores/useUIStore";
 import type { TransitionDirection } from "./stores/useUIStore";
 import { useTauriEvents } from "./hooks/useTauriEvents";
+
+const SearchModal = lazy(() =>
+  import("./components/search/SearchModal").then((m) => ({ default: m.SearchModal }))
+);
 
 // ============================================================
 // 画面遷移アニメーション用ラッパー
@@ -101,10 +104,12 @@ const AppContent: React.FC = () => {
   const transitionDirection = useUIStore((s) => s.transitionDirection);
   const clearTransition = useUIStore((s) => s.clearTransition);
   const mainPaneContent = useUIStore((s) => s.mainPaneContent);
+  const searchModalOpen = useUIStore((s) => s.searchModalOpen);
 
   // チュートリアルオーバーレイの状態
   // 初回オンボーディング完了後、まだチュートリアルを見ていなければ自動表示
   const [tutorialOpen, setTutorialOpen] = useState(() => !isTutorialSeen());
+  const [searchModalLoaded, setSearchModalLoaded] = useState(searchModalOpen);
 
   const handleOpenTutorial = useCallback(() => {
     setTutorialOpen(true);
@@ -116,6 +121,12 @@ const AppContent: React.FC = () => {
 
   // Tauri イベントリスナー
   useTauriEvents();
+
+  // 検索モーダルは初回表示まで読み込まない。読み込み後は非表示時も状態を保持する。
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- cache the lazy modal after the first open
+    if (searchModalOpen) setSearchModalLoaded(true);
+  }, [searchModalOpen]);
 
   // テーマ変更時に data-theme 属性を更新
   useEffect(() => {
@@ -198,8 +209,12 @@ const AppContent: React.FC = () => {
         </main>
       </div>
 
-      {/* 全文検索モーダル（常時マウント、visibility:hidden で非表示） */}
-      <SearchModal />
+      {/* 全文検索モーダル（初回表示時に読み込み、その後は非表示でもマウント維持） */}
+      {searchModalLoaded && (
+        <Suspense fallback={null}>
+          <SearchModal />
+        </Suspense>
+      )}
 
       {/* トースト通知コンテナ */}
       <ToastContainer />
