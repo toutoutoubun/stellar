@@ -1,6 +1,6 @@
 const PLUGIN_ID = "sentiment-context-analysis.panel";
 const DEFAULT_WINDOW_SIZE = 5;
-const DEFAULT_TOP_N = 80;
+const DEFAULT_TOP_N = 50;
 const STORAGE_PREFIX = "stellar.sentimentContextAnalysis";
 let stellarInvoke = null;
 
@@ -342,7 +342,6 @@ function SentimentContextPanel({ api, context }) {
   const projectId = context?.projectId || context?.project?.id || "";
 
   const [codes, setCodes] = React.useState([]);
-  const [sources, setSources] = React.useState([]);
   const [scope, setScope] = React.useState("sources");
   const [locale, setLocale] = React.useState("auto");
   const [windowSize, setWindowSize] = React.useState(DEFAULT_WINDOW_SIZE);
@@ -382,7 +381,6 @@ function SentimentContextPanel({ api, context }) {
     async function loadMeta() {
       if (!projectId) {
         setCodes([]);
-        setSources([]);
         setNotice("質的分析プロジェクトを開くと利用できます。");
         return;
       }
@@ -390,26 +388,14 @@ function SentimentContextPanel({ api, context }) {
       setLoadingMeta(true);
       setError("");
       try {
-        const [tree, sourceList] = await Promise.all([
-          invoke("get_code_tree", { projectId }),
-          invoke("get_qualitative_sources", { projectId }),
-        ]);
+        const tree = await invoke("get_code_tree", { projectId });
         if (cancelled) return;
         const flatCodes = flattenCodeTree(Array.isArray(tree) ? tree : []);
-        const normalizedSources = (Array.isArray(sourceList) ? sourceList : []).filter((source) =>
-          sourceText(source).trim(),
-        );
         setCodes(flatCodes);
-        setSources(normalizedSources);
-        setNotice(
-          normalizedSources.length > 0
-            ? "全分析ソース、またはコード付きセグメントを対象に分析できます。"
-            : "分析ソースを追加すると利用できます。",
-        );
+        setNotice("全分析ソースは分析時に読み込みます。コード付きセグメントも選択できます。");
       } catch (err) {
         if (cancelled) return;
         setCodes([]);
-        setSources([]);
         setError(`プロジェクト情報の取得に失敗しました: ${toErrorMessage(err)}`);
       } finally {
         if (!cancelled) setLoadingMeta(false);
@@ -476,7 +462,7 @@ function SentimentContextPanel({ api, context }) {
     setNotice("分析対象テキストを取得中...");
 
     try {
-      const segments = await loadAnalysisSegments(scope, sources, selectedCodes);
+      const segments = await loadAnalysisSegments(projectId, scope, selectedCodes);
       if (segments.length === 0) {
         setResult(null);
         setNotice("分析できるテキストがありません。分析ソースまたはコード付きセグメントを確認してください。");
@@ -511,7 +497,6 @@ function SentimentContextPanel({ api, context }) {
     projectId,
     scope,
     selectedCodes,
-    sources,
     stopwordText,
     targetText,
     topN,
@@ -529,8 +514,7 @@ function SentimentContextPanel({ api, context }) {
     });
   }, []);
 
-  const hasScopeInput =
-    scope === "sources" ? sources.length > 0 : selectedCodes.length > 0;
+  const hasScopeInput = scope === "sources" ? Boolean(projectId) : selectedCodes.length > 0;
   const disabled = loading || loadingMeta || !projectId || !hasScopeInput;
 
   return h(
@@ -580,7 +564,7 @@ function SentimentContextPanel({ api, context }) {
             onChange: (event) => setScope(event.target.value),
             style: styles.input,
           },
-          h("option", { value: "sources" }, `全分析ソース (${sources.length})`),
+          h("option", { value: "sources" }, "全分析ソース"),
           h("option", { value: "coded" }, `全コード付きセグメント (${codes.length} コード)`),
           ...codes.map((code) =>
             h(
@@ -975,9 +959,10 @@ function SentimentTermTable({ h, rows }) {
   );
 }
 
-async function loadAnalysisSegments(scope, sources, selectedCodes) {
+async function loadAnalysisSegments(projectId, scope, selectedCodes) {
   if (scope === "sources") {
-    return sources
+    const sourceList = await invoke("get_qualitative_sources", { projectId });
+    return (Array.isArray(sourceList) ? sourceList : [])
       .map((source) => ({
         id: `source:${source.id}`,
         sourceId: source.id,
@@ -1013,6 +998,7 @@ function analyzeTokenizedSegments(tokenizedSegments, lexicon, targets, options) 
   const contextCountMap = new Map();
   const sentimentTermMap = new Map();
   const concordanceRows = [];
+  const lexiconIndex = buildLexiconIndex(lexicon);
   let tokenCount = 0;
   let hitCount = 0;
   let totalScore = 0;
@@ -1031,7 +1017,7 @@ function analyzeTokenizedSegments(tokenizedSegments, lexicon, targets, options) 
         const beforeTokens = tokens.slice(beforeStart, matchStart);
         const afterTokens = tokens.slice(afterStart, afterEnd);
         const contextTokens = tokens.slice(beforeStart, afterEnd);
-        const sentimentHits = findSentimentHits(contextTokens, lexicon);
+        const sentimentHits = findSentimentHits(contextTokens, lexiconIndex);
         const score = sentimentHits.reduce((sum, hit) => sum + hit.entry.score, 0);
         const label = labelFromScore(score);
 
@@ -1182,10 +1168,27 @@ function parseStopwords(text) {
   );
 }
 
-function findSentimentHits(tokens, lexicon) {
-  const hits = [];
+function buildLexiconIndex(lexicon) {
+  const index = new Map();
   for (const entry of lexicon) {
-    for (const start of findTermMatches(tokens, entry.tokens)) {
+    const firstToken = entry.tokens[0];
+    if (!firstToken) continue;
+    const entries = index.get(firstToken) || [];
+    entries.push(entry);
+    index.set(firstToken, entries);
+  }
+  for (const entries of index.values()) {
+    entries.sort((a, b) => b.tokens.length - a.tokens.length || a.normalizedTerm.localeCompare(b.normalizedTerm, "ja"));
+  }
+  return index;
+}
+
+function findSentimentHits(tokens, lexiconIndex) {
+  const hits = [];
+  for (let start = 0; start < tokens.length; start += 1) {
+    const candidates = lexiconIndex.get(tokens[start]) || [];
+    for (const entry of candidates) {
+      if (!matchesTermAt(tokens, start, entry.tokens)) continue;
       hits.push({ entry, start });
     }
   }
@@ -1196,16 +1199,17 @@ function findTermMatches(tokens, termTokens) {
   if (termTokens.length === 0 || tokens.length < termTokens.length) return [];
   const matches = [];
   for (let start = 0; start <= tokens.length - termTokens.length; start += 1) {
-    let matched = true;
-    for (let offset = 0; offset < termTokens.length; offset += 1) {
-      if (tokens[start + offset] !== termTokens[offset]) {
-        matched = false;
-        break;
-      }
-    }
-    if (matched) matches.push(start);
+    if (matchesTermAt(tokens, start, termTokens)) matches.push(start);
   }
   return matches;
+}
+
+function matchesTermAt(tokens, start, termTokens) {
+  if (start + termTokens.length > tokens.length) return false;
+  for (let offset = 0; offset < termTokens.length; offset += 1) {
+    if (tokens[start + offset] !== termTokens[offset]) return false;
+  }
+  return true;
 }
 
 function updateTargetSummary(summaries, target, score, label) {
