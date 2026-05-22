@@ -6,16 +6,8 @@
 import type React from "react";
 import { Component, Suspense, lazy, useState } from "react";
 import { useUIStore } from "../../stores/useUIStore";
-import { LibraryView } from "../library/LibraryView";
-import { NoteEditor } from "../notes/NoteEditor";
-import { NoteList } from "../notes/NoteList";
-import { SettingsView } from "../settings/SettingsView";
 import { GraphErrorBoundary } from "../graph/GraphErrorBoundary";
-import { DraftNoteEditor } from "../notes/DraftNoteEditor";
-import { SplitView } from "./SplitView";
-import { GraphView } from "../graph/GraphView";
 import { useI18nStore } from "../../stores/useI18nStore";
-import { SearchResultsView } from "../search/SearchResultsView";
 import { getWorkspaceViewAddon } from "../../plugins/addonRegistry";
 
 // ── ビュー単位の ErrorBoundary ──────────────────────────
@@ -73,6 +65,30 @@ const ReaderView = lazy(() =>
   import("../reader/ReaderView").then((m) => ({ default: m.ReaderView }))
 );
 
+const LibraryView = lazy(() =>
+  import("../library/LibraryView").then((m) => ({ default: m.LibraryView }))
+);
+const NoteList = lazy(() =>
+  import("../notes/NoteList").then((m) => ({ default: m.NoteList }))
+);
+const NoteEditor = lazy(() =>
+  import("../notes/NoteEditor").then((m) => ({ default: m.NoteEditor }))
+);
+const DraftNoteEditor = lazy(() =>
+  import("../notes/DraftNoteEditor").then((m) => ({ default: m.DraftNoteEditor }))
+);
+const SplitView = lazy(() =>
+  import("./SplitView").then((m) => ({ default: m.SplitView }))
+);
+const GraphView = lazy(() =>
+  import("../graph/GraphView").then((m) => ({ default: m.GraphView }))
+);
+const SearchResultsView = lazy(() =>
+  import("../search/SearchResultsView").then((m) => ({ default: m.SearchResultsView }))
+);
+const SettingsView = lazy(() =>
+  import("../settings/SettingsView").then((m) => ({ default: m.SettingsView }))
+);
 const QualitativeView = lazy(() => import("../qualitative/QualitativeView"));
 const DataStudioView = lazy(() => import("../quantitative/DataStudioView"));
 
@@ -443,7 +459,7 @@ export const MainPane: React.FC = () => {
       className="h-full overflow-hidden"
       style={{ backgroundColor: "var(--color-bg-primary)" }}
     >
-      {renderContent()}
+      <Suspense fallback={<LazyFallback />}>{renderContent()}</Suspense>
     </div>
   );
 };

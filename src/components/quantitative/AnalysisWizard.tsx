@@ -14,11 +14,13 @@ import {
   computeDescriptive,
   computeFrequencyTable,
   buildCorrelationMatrix,
+} from "../../lib/stats/descriptive";
+import {
   independentTTest,
   mannWhitneyU,
   chiSquareTest,
   linearRegression,
-} from "../../lib/stats";
+} from "../../lib/stats/inference";
 import { useT, useI18nStore } from "../../stores/useI18nStore";
 
 // ── 分析手法定義 ──

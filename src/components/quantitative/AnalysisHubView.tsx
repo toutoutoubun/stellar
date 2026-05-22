@@ -3,20 +3,41 @@
 // 2パネルレイアウト: 左300px固定、右flex-1
 
 import type React from "react";
-import { useState, useCallback, useMemo } from "react";
+import { lazy, Suspense, useState, useCallback, useMemo } from "react";
 import { useQuantitativeStore } from "../../stores/useQuantitativeStore";
 import { useNoteStore } from "../../stores/useNoteStore";
 import { toast } from "../ui/Toast";
-import { AnalysisWizard } from "./AnalysisWizard";
-import { DescriptiveResult } from "./results/DescriptiveResult";
-import { InferentialResult } from "./results/InferentialResult";
-import { SurveyResult } from "./results/SurveyResult";
-import { TextAnalysisView } from "./results/TextAnalysisView";
-import { NetworkAnalysisView } from "./results/NetworkAnalysisView";
-import { ReportBuilder } from "./ReportBuilder";
 import type { Analysis } from "../../types";
 import { useI18nStore } from "../../stores/useI18nStore";
 import { getQuantitativeAnalysisAddons } from "../../plugins/analysisAddons";
+
+const AnalysisWizard = lazy(() =>
+  import("./AnalysisWizard").then((m) => ({ default: m.AnalysisWizard }))
+);
+const ReportBuilder = lazy(() =>
+  import("./ReportBuilder").then((m) => ({ default: m.ReportBuilder }))
+);
+const DescriptiveResult = lazy(() =>
+  import("./results/DescriptiveResult").then((m) => ({ default: m.DescriptiveResult }))
+);
+const InferentialResult = lazy(() =>
+  import("./results/InferentialResult").then((m) => ({ default: m.InferentialResult }))
+);
+const SurveyResult = lazy(() =>
+  import("./results/SurveyResult").then((m) => ({ default: m.SurveyResult }))
+);
+const TextAnalysisView = lazy(() =>
+  import("./results/TextAnalysisView").then((m) => ({ default: m.TextAnalysisView }))
+);
+const NetworkAnalysisView = lazy(() =>
+  import("./results/NetworkAnalysisView").then((m) => ({ default: m.NetworkAnalysisView }))
+);
+
+const ResultLoadingFallback: React.FC = () => (
+  <div className="flex h-full items-center justify-center text-sm" style={{ color: "var(--color-text-tertiary)" }}>
+    {useI18nStore.getState().t.layout.loading}
+  </div>
+);
 
 // ── 分析カテゴリ定義 ──
 const ANALYSIS_GROUPS: {
@@ -757,23 +778,27 @@ export const AnalysisHubView: React.FC = () => {
         className="flex-1 overflow-hidden"
         style={{ backgroundColor: "var(--color-bg-primary)" }}
       >
-        {renderResult()}
+        <Suspense fallback={<ResultLoadingFallback />}>{renderResult()}</Suspense>
       </div>
 
       {/* ── 分析ウィザードモーダル ── */}
       {wizardOpen && (
-        <AnalysisWizard
-          onClose={() => setWizardOpen(false)}
-          onComplete={(analysisId) => {
-            setWizardOpen(false);
-            setSelectedAnalysisId(analysisId);
-          }}
-        />
+        <Suspense fallback={null}>
+          <AnalysisWizard
+            onClose={() => setWizardOpen(false)}
+            onComplete={(analysisId) => {
+              setWizardOpen(false);
+              setSelectedAnalysisId(analysisId);
+            }}
+          />
+        </Suspense>
       )}
 
       {/* ── レポートビルダーモーダル ── */}
       {reportOpen && (
-        <ReportBuilder onClose={() => setReportOpen(false)} />
+        <Suspense fallback={null}>
+          <ReportBuilder onClose={() => setReportOpen(false)} />
+        </Suspense>
       )}
     </div>
   );

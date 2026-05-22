@@ -3,15 +3,30 @@
 // 2カラムレイアウト: 左=DatasetList / 右=タブ（インポート | 変数定義 | データプレビュー）
 
 import type React from "react";
-import { useEffect, useCallback, useState } from "react";
+import { lazy, Suspense, useEffect, useCallback, useState } from "react";
 import { useQuantitativeStore } from "../../stores/useQuantitativeStore";
 import { DatasetList } from "./DatasetList";
-import { CsvImporter } from "./CsvImporter";
-import { VariableManager } from "./VariableManager";
-import { DataPreviewTable } from "./DataPreviewTable";
-import { AnalysisHubView } from "./AnalysisHubView";
 import type { DataStudioTab } from "../../types";
 import { useI18nStore } from "../../stores/useI18nStore";
+
+const CsvImporter = lazy(() =>
+  import("./CsvImporter").then((m) => ({ default: m.CsvImporter }))
+);
+const VariableManager = lazy(() =>
+  import("./VariableManager").then((m) => ({ default: m.VariableManager }))
+);
+const DataPreviewTable = lazy(() =>
+  import("./DataPreviewTable").then((m) => ({ default: m.DataPreviewTable }))
+);
+const AnalysisHubView = lazy(() =>
+  import("./AnalysisHubView").then((m) => ({ default: m.AnalysisHubView }))
+);
+
+const TabLoadingFallback: React.FC = () => (
+  <div className="flex h-full items-center justify-center text-sm" style={{ color: "var(--color-text-tertiary)" }}>
+    {useI18nStore.getState().t.layout.loading}
+  </div>
+);
 
 // ── タブ定義 ──
 const TABS: { key: DataStudioTab; label: string; icon: React.ReactNode }[] = [
@@ -259,7 +274,7 @@ const DataStudioView: React.FC = () => {
 
         {/* タブコンテンツ */}
         <div className="flex-1 overflow-hidden">
-          {renderTabContent()}
+          <Suspense fallback={<TabLoadingFallback />}>{renderTabContent()}</Suspense>
         </div>
       </div>
     </div>
