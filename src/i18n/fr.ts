@@ -871,9 +871,14 @@ const fr: TranslationKeys = {
   // ============================================================
   library: {
     k_69gmr7: "Ajouter depuis un PDF",
+    k_uri_tab: "Ajouter depuis un URI",
     k_fc9gz4: "Ajouter depuis une URL",
     k_mjxfup: "Ajouter depuis un DOI",
     k_cqu9fk: "Saisie manuelle",
+    k_uri_required: "Veuillez entrer un URI",
+    k_uri_invalid: "Impossible d'interpréter l'URI. Entrez une URL, un DOI, doi: ou arxiv:.",
+    k_uri_label: "URI / DOI / URL",
+    k_uri_fetch_hint: "Entrez une URL, un DOI, doi:10.xxxx ou arxiv:xxxx puis cliquez sur « Récupérer »",
     k_svpfs8: "Veuillez entrer une URL",
     k_2uf93e: "Métadonnées récupérées",
     k_qr44fw: "Échec de la récupération des métadonnées : ${String(e)}",

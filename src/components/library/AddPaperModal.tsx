@@ -1,6 +1,6 @@
 // src/components/library/AddPaperModal.tsx
 // Stellar — 論文追加モーダル
-// 3タブ構成: URLから追加 / DOIから追加 / 手動入力
+// PDF / URI / URL / DOI / 手動入力から論文を追加
 // メタデータプレビュー → 編集可能 → 保存
 
 import type React from "react";
@@ -14,11 +14,12 @@ import { invoke, openFileDialog } from "../../lib/tauriShim";
 import { useI18nStore } from "../../stores/useI18nStore";
 
 /** タブの種別 */
-type AddPaperTab = "pdf" | "url" | "doi" | "manual";
+type AddPaperTab = "pdf" | "uri" | "url" | "doi" | "manual";
 
 /** タブ定義 */
 const TABS: { key: AddPaperTab; label: string }[] = [
   { key: "pdf", label: useI18nStore.getState().t.library.k_69gmr7 },
+  { key: "uri", label: useI18nStore.getState().t.library.k_uri_tab },
   { key: "url", label: useI18nStore.getState().t.library.k_fc9gz4 },
   { key: "doi", label: useI18nStore.getState().t.library.k_mjxfup },
   { key: "manual", label: useI18nStore.getState().t.library.k_cqu9fk },
@@ -73,6 +74,88 @@ const SkeletonForm: React.FC = () => (
   </div>
 );
 
+type MetadataWithPdf = Partial<CreatePaperInput> & {
+  pdf_url?: string;
+  pdfUrl?: string;
+};
+
+type ResolvedBibliographicUri =
+  | { kind: "doi"; doi: string; sourceUrl?: string }
+  | { kind: "url"; url: string };
+
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function trimDoi(value: string): string {
+  return safeDecode(value.trim())
+    .replace(/^doi:\s*/i, "")
+    .replace(/^urn:doi:\s*/i, "")
+    .replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, "")
+    .replace(/^doi\.org\//i, "")
+    .trim()
+    .replace(/[.,;)\]]+$/g, "");
+}
+
+function extractDoi(value: string): string | null {
+  const normalized = trimDoi(value);
+  if (normalized.startsWith("10.") && normalized.includes("/")) return normalized;
+
+  const decoded = safeDecode(value);
+  const match = decoded.match(/10\.\d{4,9}\/[^\s"'<>|{}\\^`[\]]+/i);
+  if (!match) return null;
+
+  const doi = trimDoi(match[0]);
+  return doi.startsWith("10.") && doi.includes("/") ? doi : null;
+}
+
+function extractArxivId(value: string): string | null {
+  const trimmed = value.trim();
+  const direct = trimmed.match(/^(?:arxiv:|urn:arxiv:|arxiv:\/\/)(.+)$/i);
+  const url = trimmed.match(/^https?:\/\/arxiv\.org\/(?:abs|pdf)\/([^?#]+?)(?:\.pdf)?(?:[?#].*)?$/i);
+  const id = direct?.[1] ?? url?.[1] ?? null;
+  if (!id) return null;
+  return id.trim().replace(/\.pdf$/i, "").replace(/^abs\//i, "").replace(/^pdf\//i, "");
+}
+
+function normalizeHttpUrl(value: string): string | null {
+  const trimmed = value.trim();
+  const candidate = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    const parsed = new URL(candidate);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+function resolveBibliographicUri(input: string): ResolvedBibliographicUri | null {
+  const raw = input.trim();
+  if (!raw) return null;
+
+  const arxivId = extractArxivId(raw);
+  if (arxivId) {
+    return {
+      kind: "doi",
+      doi: `10.48550/arXiv.${arxivId}`,
+      sourceUrl: `https://arxiv.org/abs/${arxivId}`,
+    };
+  }
+
+  const doi = extractDoi(raw);
+  if (doi) {
+    const sourceUrl = /^https?:\/\//i.test(raw) ? raw : undefined;
+    return { kind: "doi", doi, sourceUrl };
+  }
+
+  const url = normalizeHttpUrl(raw);
+  return url ? { kind: "url", url } : null;
+}
+
 export const AddPaperModal: React.FC<AddPaperModalProps> = ({
   open,
   onClose,
@@ -87,6 +170,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
   const [saving, setSaving] = useState(false);
 
   // URL / DOI 入力用
+  const [uriInput, setUriInput] = useState("");
   const [urlInput, setUrlInput] = useState("");
   const [doiInput, setDoiInput] = useState("");
 
@@ -107,6 +191,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
     setAuthorsText("");
     setTagsText("");
     setFetched(false);
+    setUriInput("");
     setUrlInput("");
     setDoiInput("");
     setDownloadPdf(false);
@@ -147,6 +232,68 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
     []
   );
 
+  const applyMetadataWithPdf = useCallback(
+    (
+      data: MetadataWithPdf,
+      overrides: Partial<CreatePaperInput> = {},
+    ) => {
+      const fetchedPdfUrl = data.pdfUrl ?? data.pdf_url ?? null;
+      if (fetchedPdfUrl) {
+        setPdfDownloadUrl(fetchedPdfUrl);
+        setDownloadPdf(true);
+      }
+
+      const formData = { ...data };
+      delete formData.pdf_url;
+      delete formData.pdfUrl;
+      applyMetadata({ ...formData, ...overrides });
+    },
+    [applyMetadata],
+  );
+
+  // ── URIからメタデータ取得 ──
+  const handleFetchFromUri = useCallback(async () => {
+    if (!uriInput.trim()) {
+      toast.warning(useI18nStore.getState().t.library.k_uri_required);
+      return;
+    }
+
+    const resolved = resolveBibliographicUri(uriInput);
+    if (!resolved) {
+      toast.warning(useI18nStore.getState().t.library.k_uri_invalid);
+      return;
+    }
+
+    setFetching(true);
+    setFetched(false);
+    setPdfDownloadUrl(null);
+    try {
+      if (resolved.kind === "doi") {
+        const data = await invoke<MetadataWithPdf>(
+          "fetch_metadata_by_doi",
+          { doi: resolved.doi },
+        );
+        applyMetadataWithPdf(data, {
+          doi: resolved.doi,
+          ...(resolved.sourceUrl ? { url: resolved.sourceUrl } : {}),
+        });
+      } else {
+        const data = await invoke<MetadataWithPdf>(
+          "fetch_metadata_from_url",
+          { url: resolved.url },
+        );
+        applyMetadataWithPdf(data, { url: resolved.url });
+      }
+      toast.success(useI18nStore.getState().t.library.k_2uf93e);
+    } catch (e) {
+      const errMsg = String(e).replace(/^Error:\s*/i, "");
+      console.error("[AddPaperModal] URI メタデータ取得失敗:", e);
+      toast.error(useI18nStore.getState().t.library.k_qr44fw.replace("${String(e)}", errMsg));
+    } finally {
+      setFetching(false);
+    }
+  }, [uriInput, applyMetadataWithPdf]);
+
   // ── URLからメタデータ取得 ──
   const handleFetchFromUrl = useCallback(async () => {
     if (!urlInput.trim()) {
@@ -158,21 +305,11 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
     setPdfDownloadUrl(null);
     try {
       // バックエンドは PaperMetadata を返す（pdf_url フィールド含む）
-      const data = await invoke<Partial<CreatePaperInput> & { pdf_url?: string; pdfUrl?: string }>(
+      const data = await invoke<MetadataWithPdf>(
         "fetch_metadata_from_url",
         { url: urlInput.trim() }
       );
-      // pdf_url を保持（camelCase / snake_case 両対応）
-      const fetchedPdfUrl = data.pdfUrl ?? data.pdf_url ?? null;
-      if (fetchedPdfUrl) {
-        setPdfDownloadUrl(fetchedPdfUrl);
-        setDownloadPdf(true); // PDF URL がある場合はデフォルトでチェックON
-      }
-      // pdf_url / pdfUrl はフォームには不要なので除去してから適用
-      const formData = { ...data };
-      delete formData.pdf_url;
-      delete formData.pdfUrl;
-      applyMetadata({ ...formData, url: urlInput.trim() });
+      applyMetadataWithPdf(data, { url: urlInput.trim() });
       toast.success(useI18nStore.getState().t.library.k_2uf93e);
     } catch (e) {
       const errMsg = String(e).replace(/^Error:\s*/i, "");
@@ -181,7 +318,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
     } finally {
       setFetching(false);
     }
-  }, [urlInput, applyMetadata]);
+  }, [urlInput, applyMetadataWithPdf]);
 
   // ── DOIからメタデータ取得 ──
   const handleFetchFromDoi = useCallback(async () => {
@@ -194,21 +331,11 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
     setPdfDownloadUrl(null);
     try {
       // バックエンドは PaperMetadata を返す（pdfUrl フィールド含む）
-      const data = await invoke<Partial<CreatePaperInput> & { pdf_url?: string; pdfUrl?: string }>(
+      const data = await invoke<MetadataWithPdf>(
         "fetch_metadata_by_doi",
         { doi: doiInput.trim() }
       );
-      // pdfUrl を保持（camelCase / snake_case 両対応）
-      const fetchedPdfUrl = data.pdfUrl ?? data.pdf_url ?? null;
-      if (fetchedPdfUrl) {
-        setPdfDownloadUrl(fetchedPdfUrl);
-        setDownloadPdf(true);
-      }
-      // pdf_url / pdfUrl はフォームには不要なので除去してから適用
-      const formData = { ...data };
-      delete formData.pdf_url;
-      delete formData.pdfUrl;
-      applyMetadata({ ...formData, doi: doiInput.trim() });
+      applyMetadataWithPdf(data, { doi: doiInput.trim() });
       toast.success(useI18nStore.getState().t.library.k_2uf93e);
     } catch (e) {
       const errMsg = String(e).replace(/^Error:\s*/i, "");
@@ -217,7 +344,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
     } finally {
       setFetching(false);
     }
-  }, [doiInput, applyMetadata]);
+  }, [doiInput, applyMetadataWithPdf]);
 
   // ── フォームフィールド更新 ──
   const updateField = useCallback(
@@ -311,7 +438,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
 
       // URL/DOIタブで「PDFも一緒に保存する」がON かつ PDF URL がある場合、
       // バックエンドの download_pdf_from_url を呼んで PDF をダウンロード
-      if ((activeTab === "url" || activeTab === "doi") && downloadPdf && pdfDownloadUrl) {
+      if ((activeTab === "uri" || activeTab === "url" || activeTab === "doi") && downloadPdf && pdfDownloadUrl) {
         try {
           // 保存直後の最新 paper を取得して ID を得る
           const { useLibraryStore } = await import("../../stores/useLibraryStore");
@@ -685,7 +812,99 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
         </div>
       )}
 
-      {/* ── Tab 1: URLから追加 ── */}
+      {/* ── Tab 1: URIから追加 ── */}
+      {activeTab === "uri" && (
+        <div className="flex flex-col gap-4">
+          {/* URI入力 + 取得ボタン */}
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <Input
+                label={useI18nStore.getState().t.library.k_uri_label}
+                value={uriInput}
+                onChange={(e) => setUriInput(e.target.value)}
+                placeholder="doi:10.1234/xxxxx / https://... / arxiv:2301.12345"
+                fullWidth
+                icon={
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M8 12h8" />
+                    <path d="M12 8v8" />
+                  </svg>
+                }
+              />
+            </div>
+            <Button
+              variant="primary"
+              onClick={() => void handleFetchFromUri()}
+              loading={fetching}
+              disabled={!uriInput.trim()}
+            >
+              {useI18nStore.getState().t.library.k_fetch_btn}
+            </Button>
+          </div>
+
+          {/* PDFダウンロードオプション */}
+          <label className="flex items-center gap-2 text-xs cursor-pointer">
+            <div
+              className="flex items-center justify-center"
+              style={{
+                width: "16px",
+                height: "16px",
+                borderRadius: "4px",
+                border: downloadPdf
+                  ? "none"
+                  : "1.5px solid var(--color-border-primary)",
+                backgroundColor: downloadPdf
+                  ? "var(--color-accent-primary)"
+                  : "transparent",
+                transition: "all var(--transition-fast)",
+              }}
+              onClick={() => setDownloadPdf((v) => !v)}
+            >
+              {downloadPdf && (
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+            </div>
+            <span style={{ color: "var(--color-text-secondary)" }}>
+              {useI18nStore.getState().t.library.k_save_pdf_together}
+              {pdfDownloadUrl && (
+                <span
+                  style={{
+                    color: "var(--color-accent-primary)",
+                    marginLeft: "4px",
+                    fontSize: "10px",
+                  }}
+                >
+                  {useI18nStore.getState().t.library.k_pdf_url_detected}
+                </span>
+              )}
+            </span>
+          </label>
+
+          {/* メタデータプレビュー / スケルトン / フォーム */}
+          {fetching ? (
+            <SkeletonForm />
+          ) : fetched ? (
+            renderFormFields()
+          ) : (
+            <div
+              className="flex flex-col items-center justify-center py-8 gap-2"
+              style={{ color: "var(--color-text-disabled)" }}
+            >
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <p className="text-xs">{useI18nStore.getState().t.library.k_uri_fetch_hint}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Tab 2: URLから追加 ── */}
       {activeTab === "url" && (
         <div className="flex flex-col gap-4">
           {/* URL入力 + 取得ボタン */}
@@ -776,7 +995,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
         </div>
       )}
 
-      {/* ── Tab 2: DOIから追加 ── */}
+      {/* ── Tab 3: DOIから追加 ── */}
       {activeTab === "doi" && (
         <div className="flex flex-col gap-4">
           {/* DOI入力 + 取得ボタン */}
@@ -867,7 +1086,7 @@ export const AddPaperModal: React.FC<AddPaperModalProps> = ({
         </div>
       )}
 
-      {/* ── Tab 3: 手動入力 ── */}
+      {/* ── Tab 4: 手動入力 ── */}
       {activeTab === "manual" && renderFormFields()}
     </Modal>
   );
